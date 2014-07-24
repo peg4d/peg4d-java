@@ -1,9 +1,5 @@
 package org.peg4d;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import org.peg4d.Memo.ObjectMemo;
 
 public class PackratParser extends RecursiveDecentParser {
@@ -12,15 +8,16 @@ public class PackratParser extends RecursiveDecentParser {
 		super(peg, source);
 	}
 	
+	@Override
 	public void initMemo() {
-		if(MainOption.MemoFactor == -1) {  /* default */
+		if(Main.MemoFactor == -1) {  /* default */
 			this.memoMap = new PackratMemo(this.source.length());
 		}
-		else if(MainOption.MemoFactor == 0) {
+		else if(Main.MemoFactor == 0) {
 			this.memoMap = new NoMemo();
 		}
 		else {
-			this.memoMap = new FastFifoMemo(MainOption.MemoFactor);
+			this.memoMap = new FastFifoMemo(Main.MemoFactor);
 		}
 
 //		if(Main.MemoFactor == -1) {
@@ -93,7 +90,7 @@ public class PackratParser extends RecursiveDecentParser {
 //		if(Main.VerboseStatCall) {
 //			next.countCall(this, label.symbol, pos);
 //		}
-		Pego generated = next.performMatch(left, this);
+		Pego generated = next.simpleMatch(left, this);
 		if(generated.isFailure()) {
 			this.memoMap.setMemo(pos, label, null, (int)(generated.startIndex - pos));
 		}
@@ -103,6 +100,7 @@ public class PackratParser extends RecursiveDecentParser {
 		return generated;
 	}
 
+	@Override
 	public Pego matchNonTerminal(Pego left, PegNonTerminal label) {
 		Peg next = this.getRule(label.symbol);
 		long pos = this.getPosition();
@@ -117,7 +115,7 @@ public class PackratParser extends RecursiveDecentParser {
 //		if(Main.VerboseStatCall) {
 //			next.countCall(this, label.symbol, pos);
 //		}
-		Pego generated = next.performMatch(left, this);
+		Pego generated = next.simpleMatch(left, this);
 		if(generated.isFailure()) {
 			this.memoMap.setMemo(pos, next, null, (int)(generated.startIndex - pos));
 		}

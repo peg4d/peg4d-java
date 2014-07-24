@@ -74,7 +74,7 @@ public class FileSource extends ParserSource {
 		if(this.debug != null) {
 			char c2 = this.debug.charAt(n);
 			if(c != c2) {
-				MainOption._Exit(1, "different " + this.fileName + " pos=" + n + "c='"+(int)c+"', c2='"+(int)c2+"'");
+				Main._Exit(1, "different " + this.fileName + " pos=" + n + "c='"+(int)c+"', c2='"+(int)c2+"'");
 			}
 		}
 		return c;
@@ -111,7 +111,7 @@ public class FileSource extends ParserSource {
 			if(!s.equals(s2)) {
 				System.out.println("s1: " + s);
 				System.out.println("s2: " + s2);
-				MainOption._Exit(1, "different " + this.fileName + " pos=" + startIndex + " end=" + endIndex);
+				Main._Exit(1, "different " + this.fileName + " pos=" + startIndex + " end=" + endIndex);
 			}
 		}
 		return s;

@@ -13,14 +13,14 @@ public class PEG4dParser extends RecursiveDecentParser {
 	}
 	
 	public void initMemo() {
-		if(MainOption.MemoFactor == -1) {  /* default */
+		if(Main.MemoFactor == -1) {  /* default */
 			this.memoMap = new FastFifoMemo(256);
 		}
-		else if(MainOption.MemoFactor == 0) {
+		else if(Main.MemoFactor == 0) {
 			this.memoMap = new NoMemo(); //new PackratMemo(this.source.length());
 		}
 		else {
-			this.memoMap = new FastFifoMemo(MainOption.MemoFactor);
+			this.memoMap = new FastFifoMemo(Main.MemoFactor);
 		}
 	}
 	

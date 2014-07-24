@@ -19,7 +19,7 @@ public class UStringBuilder {
 	public final void append(String Source) {
 		if(!this.isEmpty(Source)) {
 			this.slist.add(Source);
-			this.lastChar = MainOption._GetChar(Source, Source.length()-1);
+			this.lastChar = Main._GetChar(Source, Source.length()-1);
 		}
 	}
 
@@ -125,11 +125,11 @@ public class UStringBuilder {
 	}
 
 	@Override public final String toString() {
-		return MainOption._SourceBuilderToString(this);
+		return Main._SourceBuilderToString(this);
 	}
 	
 	public final void show() {
 		String s = this.toString();
-		MainOption._PrintLine(s);
+		Main._PrintLine(s);
 	}
 }

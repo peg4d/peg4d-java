@@ -126,7 +126,7 @@ public abstract class ParserContext {
 
 	public final void showErrorMessage(String msg) {
 		System.out.println(this.source.formatErrorMessage("error", this.sourcePosition, msg));
-		MainOption._Exit(1, msg);
+		Main._Exit(1, msg);
 	}
 	
 	public boolean hasNode() {
@@ -138,7 +138,7 @@ public abstract class ParserContext {
 		this.initMemo();
 		Peg start = this.getRule(startPoint);
 		if(start == null) {
-			MainOption._Exit(1, "undefined start rule: " + startPoint );
+			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
 		Pego pego = start.simpleMatch(new Pego("#toplevel"), this);
 		if(pego.isFailure()) {
@@ -210,7 +210,7 @@ public abstract class ParserContext {
 //		if(Main.VerboseStatCall) {
 //			next.countCall(this, e.symbol, this.getPosition());
 //		}
-		return next.performMatch(left, this);
+		return next.simpleMatch(left, this);
 	}
 
 	public final Pego matchString(Pego left, PegString e) {
@@ -241,10 +241,10 @@ public abstract class ParserContext {
 
 	public Pego matchOptional(Pego left, PegOptional e) {
 		long pos = this.getPosition();
-		int markerId = this.pushNewMarker();
-		Pego parsedNode = e.inner.performMatch(left, this);
+		int markerId = this.markObjectStack();
+		Pego parsedNode = e.inner.simpleMatch(left, this);
 		if(parsedNode.isFailure()) {
-			this.popBack(markerId);
+			this.rollbackObjectStack(markerId);
 			this.rollback(pos);
 			return left;
 		}
@@ -254,15 +254,15 @@ public abstract class ParserContext {
 	public Pego matchRepeat(Pego left, PegRepeat e) {
 		Pego prevNode = left;
 		int count = 0;
-		int markerId = this.pushNewMarker();
+		int markerId = this.markObjectStack();
 		while(this.hasChar()) {
 			long pos = this.getPosition();
-			markerId = this.pushNewMarker();
-			Pego node = e.inner.performMatch(prevNode, this);
+			markerId = this.markObjectStack();
+			Pego node = e.inner.simpleMatch(prevNode, this);
 			if(node.isFailure()) {
 				assert(pos == this.getPosition());
 				if(count < e.atleast) {
-					this.popBack(markerId);
+					this.rollbackObjectStack(markerId);
 					return node;
 				}
 				break;
@@ -277,19 +277,19 @@ public abstract class ParserContext {
 			}
 			count = count + 1;
 			if(!this.hasChar()) {
-				markerId = this.pushNewMarker();
+				markerId = this.markObjectStack();
 			}
 		}
-		this.popBack(markerId);
+		this.rollbackObjectStack(markerId);
 		return prevNode;
 	}
 
 	public Pego matchAnd(Pego left, PegAnd e) {
 		Pego node = left;
 		long pos = this.getPosition();
-		int markerId = this.pushNewMarker();
-		node = e.inner.performMatch(node, this);
-		this.popBack(markerId);
+		int markerId = this.markObjectStack();
+		node = e.inner.simpleMatch(node, this);
+		this.rollbackObjectStack(markerId);
 		this.rollback(pos);
 		return node;
 	}
@@ -297,9 +297,9 @@ public abstract class ParserContext {
 	public Pego matchNot(Pego left, PegNot e) {
 		Pego node = left;
 		long pos = this.getPosition();
-		int markerId = this.pushNewMarker();
-		node = e.inner.performMatch(node, this);
-		this.popBack(markerId);
+		int markerId = this.markObjectStack();
+		node = e.inner.simpleMatch(node, this);
+		this.rollbackObjectStack(markerId);
 		this.rollback(pos);
 		if(node.isFailure()) {
 			return left;
@@ -309,11 +309,11 @@ public abstract class ParserContext {
 
 	public Pego matchSequence(Pego left, PegSequence e) {
 		long pos = this.getPosition();
-		int markerId = this.pushNewMarker();
+		int markerId = this.markObjectStack();
 		for(int i = 0; i < e.size(); i++) {
-			Pego parsedNode = e.get(i).performMatch(left, this);
+			Pego parsedNode = e.get(i).simpleMatch(left, this);
 			if(parsedNode.isFailure()) {
-				this.popBack(markerId);
+				this.rollbackObjectStack(markerId);
 				this.rollback(pos);
 				return parsedNode;
 			}
@@ -326,12 +326,12 @@ public abstract class ParserContext {
 		Pego node = left;
 		long pos = this.getPosition();
 		for(int i = 0; i < e.size(); i++) {
-			int markerId = this.pushNewMarker();
-			node = e.get(i).performMatch(left, this);
+			int markerId = this.markObjectStack();
+			node = e.get(i).simpleMatch(left, this);
 			if(!node.isFailure()) {
 				break;
 			}
-			this.popBack(markerId);
+			this.rollbackObjectStack(markerId);
 			this.setPosition(pos);
 		}
 		return node;
@@ -361,11 +361,11 @@ public abstract class ParserContext {
 		return l;
 	}
 	
-	protected final int pushNewMarker() {
+	protected int markObjectStack() {
 		return this.logStack.id;
 	}
 
-	protected final void popBack(int markerId) {
+	protected void rollbackObjectStack(int markerId) {
 		ObjectLog cur = this.logStack;
 		if(cur.id > markerId) {
 			ObjectLog unused = this.logStack;
@@ -442,12 +442,12 @@ public abstract class ParserContext {
 	public Pego matchNewObject(Pego left, PegNewObject e) {
 		Pego leftNode = left;
 		long startIndex = this.getPosition();
-		if(MainOption.VerboseStatCall) {
+		if(Main.VerboseStatCall) {
 			this.count(e, startIndex);
 		}
 		if(e.predictionIndex > 0) {
 			for(int i = 0; i < e.predictionIndex; i++) {
-				Pego node = e.get(i).performMatch(left, this);
+				Pego node = e.get(i).simpleMatch(left, this);
 				if(node.isFailure()) {
 					this.rollback(startIndex);
 					return node;
@@ -455,15 +455,15 @@ public abstract class ParserContext {
 				assert(left == node);
 			}
 		}
-		int markerId = this.pushNewMarker();
+		int markerId = this.markObjectStack();
 		Pego newnode = this.newPegObject(e.nodeName, e, startIndex);
 		if(e.leftJoin) {
 			this.pushSetter(newnode, -1, leftNode);
 		}
 		for(int i = e.predictionIndex; i < e.size(); i++) {
-			Pego node = e.get(i).performMatch(newnode, this);
+			Pego node = e.get(i).simpleMatch(newnode, this);
 			if(node.isFailure()) {
-				this.popBack(markerId);
+				this.rollbackObjectStack(markerId);
 				this.rollback(startIndex);
 				return node;
 			}
@@ -505,7 +505,7 @@ public abstract class ParserContext {
 
 	public Pego matchSetter(Pego left, PegSetter e) {
 		long pos = left.startIndex;
-		Pego node = e.inner.performMatch(left, this);
+		Pego node = e.inner.simpleMatch(left, this);
 		if(node.isFailure() || left == node) {
 			return node;
 		}
@@ -549,7 +549,7 @@ public abstract class ParserContext {
 	}
 
 //	public PegObject matchCatch(PegObject left, PegCatch e) {
-//		e.inner.performMatch(left, this);
+//		e.inner.simpleMatch(left, this);
 //		return left;
 //	}
 
@@ -587,7 +587,7 @@ public abstract class ParserContext {
 	protected final void count(Peg e, long pos) {
 		e.statCallCount += 1;
 		statCallCount += 1;
-		if(MainOption.VerboseStatCall) {
+		if(Main.VerboseStatCall) {
 			checkCountMap();
 			Long key = Memo.makekey(pos, e);
 			Peg p = this.countMap.get(key);
@@ -673,9 +673,9 @@ public abstract class ParserContext {
 	public void endStatInfo(Pego parsedObject) {
 		statErapsedTime = (System.currentTimeMillis() - statErapsedTime);
 		System.gc(); // meaningless ?
-		if(MainOption.VerboseStat) {
+		if(Main.VerboseStat) {
 			System.gc(); // meaningless ?
-			if(MainOption.VerbosePeg) {
+			if(Main.VerbosePeg) {
 				System.out.println("parsed:\n" + parsedObject);
 				if(this.hasChar()) {
 					System.out.println("** uncosumed: '" + this.source + "' **");
@@ -685,7 +685,7 @@ public abstract class ParserContext {
 			long statFileLength = this.source.getFileLength();
 			long statReadLength = this.source.statReadLength;
 			double fileKps = (statFileLength) / (statErapsedTime / 1000.0);
-			System.out.println("parser: " + this.getClass().getSimpleName() + " -O" + MainOption.OptimizedLevel + " -Xw" + MainOption.MemoFactor + " optimized peg: " + this.statOptimizedPeg );
+			System.out.println("parser: " + this.getClass().getSimpleName() + " -O" + Main.OptimizationLevel + " -Xw" + Main.MemoFactor + " optimized peg: " + this.statOptimizedPeg );
 			System.out.println("file: " + this.source.fileName + " filesize: " + KMunit(statFileLength, "Kb", "Mb"));
 			System.out.println("IO: " + this.source.statIOCount +" read/file: " + ratio((double)statReadLength/statFileLength) + " pagesize: " + Nunit(FileSource.PageSize, "bytes") + " read: " + KMunit(statReadLength, "Kb", "Mb"));
 			System.out.println("erapsed time: " + Nunit(statErapsedTime, "msec") + " speed: " + kpx(fileKps,"KiB/s") + " " + mpx(fileKps, "MiB/s"));

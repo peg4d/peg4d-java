@@ -40,7 +40,7 @@
 			<fileset dir="." includes="lib/**" />
 			<exclude name="**/*Test.class" />
 			<manifest>
-				<attribute name="Main-Class" value="org.peg4d.MainOption" />
+				<attribute name="Main-Class" value="org.peg4d.Main" />
 			</manifest>
 			<zipfileset src="${jline_jar}" />
 		</jar>

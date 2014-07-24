@@ -1,24 +1,35 @@
 package org.peg4d;
 
 
-class PegFormatter {
+public class PegFormatter {
 
+	public String getDesc() {
+		return "PEG4d ";
+	}
+	
+	public void formatHeader(UStringBuilder sb) {
+		
+	}
+
+	public void formatFooter(UStringBuilder sb) {
+		
+	}
+	
 	public void formatRule(UStringBuilder sb, String ruleName, Peg e) {
-		PegFormatter fmt = new PegFormatter();
-		sb.append(ruleName);
-		sb.append(fmt.getNewLine(), fmt.getSetter(), " ");
+		sb.appendNewLine(ruleName);
+		sb.append(this.getNewLine(), this.getSetter(), " ");
 		if(e instanceof PegChoice) {
 			for(int i = 0; i < e.size(); i++) {
 				if(i > 0) {
-					sb.append(fmt.getNewLine(), "/ ");
+					sb.append(this.getNewLine(), "/ ");
 				}
-				e.get(i).stringfy(sb, fmt);
+				e.get(i).stringfy(sb, this);
 			}
 		}
 		else {
-			e.stringfy(sb, fmt);
+			e.stringfy(sb, this);
 		}
-		sb.append(getNewLine(), fmt.getSemiColon());
+		sb.append(getNewLine(), this.getSemiColon());
 	}
 
 	public String getNewLine() {
@@ -54,7 +65,7 @@ class PegFormatter {
 	}
 
 	public void formatTagging(UStringBuilder sb, PegTagging e) {
-		sb.append("[", e.symbol, "]");
+		sb.append(e.symbol);
 	}
 	
 	public void formatMessage(UStringBuilder sb, PegMessage e) {
@@ -163,7 +174,7 @@ class PegFormatter {
 			sb.append("<{^ ");
 		}
 		else {
-			sb.append("<{");
+			sb.append("<{ ");
 		}
 		this.format(sb, e);
 		sb.append(" }>");

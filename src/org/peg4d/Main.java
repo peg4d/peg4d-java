@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-public class MainOption {
+public class Main {
 	public final static String  ProgName  = "PEG4d";
 	public final static String  CodeName  = "yokohama";
 	public final static int     MajorVersion = 1;
@@ -22,6 +22,12 @@ public class MainOption {
 
 	// -p konoha.peg
 	private static String GrammarFile = null; // default
+
+	// -s StartingPoint
+	private static String StartingPoint = "TopLevel";  // default
+
+	// -f format
+	private static String PegFormat = null;  // default
 
 	// -d driver
 	private static String DriverName = "peg";  // default
@@ -53,8 +59,8 @@ public class MainOption {
 	// --verbose:optimized
 	public static boolean VerboseOptimized = false;
 
-	// --verbose:bun
-	public static boolean VerboseBunMode = false;
+	// --test
+	public static boolean TestMode = false;
 	
 	// --verbose:stat
 	public static boolean VerboseStat = false;
@@ -62,22 +68,19 @@ public class MainOption {
 
 	// --parser
 	public static String ParserType = "--parser";
-
-	// --disable-memo
-	public static boolean NonMemoPegMode = false;
 	
-	// --valid
-	public static boolean ValidateJsonMode = false;
-	
-	public static String InputJsonFile = "";
-
-	// --parser
-	public static int OptimizedLevel = 2;
+	// -O
+	public static int OptimizationLevel = 2;
 	public static int MemoFactor = -1;
 
 	public final static void main(String[] args) {
 		parseCommandArguments(args);
 		Grammar peg = GrammarFile == null ? Grammar.PEG4d : Grammar.load(GrammarFile);
+		if(PegFormat != null) {
+			PegFormatter fmt = loadFormatter(PegFormat);
+			peg.show(StartingPoint, fmt);
+			return;
+		}
 		if(InputFileName != null) {
 			loadScript(peg, InputFileName);
 		}
@@ -99,8 +102,39 @@ public class MainOption {
 			index = index + 1;
 			if ((argument.equals("-p") || argument.equals("--peg")) && (index < args.length)) {
 				GrammarFile = args[index];
-				ParseOnlyMode  = true;
 				index = index + 1;
+			}
+			else if ((argument.equals("-s") || argument.equals("--start")) && (index < args.length)) {
+				StartingPoint = args[index];
+				index = index + 1;
+			}
+			else if ((argument.equals("-f") || argument.equals("--format")) && (index < args.length)) {
+				PegFormat = args[index];
+				index = index + 1;
+			}
+			else if(argument.startsWith("-M")) {
+				Main.MemoFactor  = UCharset.parseInt(argument.substring(2), 256);
+			}
+			else if (argument.startsWith("-O")) {
+				OptimizationLevel = UCharset.parseInt(argument.substring(2), 256);
+			}
+			else if (argument.equals("-i")) {
+				ShellMode = true;
+			}
+			else if (argument.equals("-c")) {
+				RecognitionOnlyMode = true;
+			}
+			else if(argument.startsWith("--test")) {
+				TestMode = true;
+			}
+			else if(argument.startsWith("--stat")) {
+				VerboseStat = true;
+			}
+			else if(argument.equals("--packrat")) {
+				ParserType = argument;
+			}
+			else if(argument.equals("--monadic")) {  //--monadic
+				ParserType = argument;
 			}
 			else if ((argument.equals("-d") || argument.equals("--driver")) && (index < args.length)) {
 				DriverName = args[index];
@@ -110,43 +144,11 @@ public class MainOption {
 				OutputFileName = args[index];
 				index = index + 1;
 			}
-			else if (argument.startsWith("-O")) {
-				if(argument.equals("-O0")) {
-					OptimizedLevel = 0;
-				}
-				if(argument.equals("-O1")) {
-					OptimizedLevel = 1;  // Peephole
-				}
-				if(argument.equals("-O2")) {
-					OptimizedLevel = 2;  // inlining
-				}
-				if(argument.equals("-O3")) {
-					OptimizedLevel = 3;  // prediction
-				}
-				if(argument.equals("-O4")) {
-					OptimizedLevel = 4;  // experimental
-				}
-				if(argument.equals("-O5")) {
-					OptimizedLevel = 5;  // experimental
-				}
-			}
-			else if (argument.equals("-i")) {
-				ShellMode = true;
-			}
-			else if (argument.equals("-c")) {
-				RecognitionOnlyMode = true;
-			}
 			else if (argument.equals("--bigdata")) {
 				BigDataOption = true;
 			}
-			else if (argument.equals("--parse-only")) {
-				ParseOnlyMode = true;
-			}
 			else if(argument.startsWith("--verbose")) {
-				if(argument.equals("--verbose:bun")) {
-					VerboseBunMode = true;
-				}
-				else if(argument.equals("--verbose:stat")) {
+				if(argument.equals("--verbose:stat")) {
 					VerboseStat = true;
 				}
 				else if(argument.equals("--verbose:stat2")) {
@@ -160,16 +162,8 @@ public class MainOption {
 					VerboseMode = true;
 				}
 			}
-			else if (argument.equals("--valid")) {
-				GrammarFile = "sample/jsonObject.peg";
-				ParseOnlyMode  = true;
-				ValidateJsonMode = true;
-			}
 			else if(argument.startsWith("--parser:")) {
 				ParserType = argument;
-			}
-			else if(argument.startsWith("-Xw")) {
-				MainOption.MemoFactor  = (int)UCharset._ParseInt(argument.substring(3));
 			}
 			else {
 				ShowUsage("unknown option: " + argument);
@@ -178,9 +172,6 @@ public class MainOption {
 		if (index < args.length) {
 			InputFileName = args[index];
 			index++;
-			if(ValidateJsonMode && index < args.length) {
-				InputJsonFile = args[index];
-			}
 		}
 		else {
 			ShellMode = true;
@@ -189,83 +180,56 @@ public class MainOption {
 
 	public final static void ShowUsage(String Message) {
 		System.out.println(ProgName + " :");
-		System.out.println("  --peg|-p  FILE          Parser Only Mode");
-		System.out.println("  --lang|-l  FILE         Language file");
-		System.out.println("  --driver|-d  NAME       Driver");
-		System.out.println("  --out|-o  FILE          Output filename");
-		System.out.println("  --bigdata               Expecting BigData Processing");
-		System.out.println("  --parser:NAME           (Option) Alternative parser");
+		System.out.println("  --peg|-p <FILE>          Specify PEG file");
+		System.out.println("  --start|-s <NAME>        Specify StartPoint default: TopLevel");
+		System.out.println("  --format|-f <type>       Specify PEG formatter");
+		System.out.println("  --packrat                Packrat Parser");
+		System.out.println("  -M<num>                  Memo Factor -M0 => No Memo");
 		System.out.println("  --verbose               Printing Debug infomation");
 		System.out.println("  --verbose:peg           Printing Peg/Debug infomation");
 		System.out.println("  --verbose:bun           Printing Peg/Bun infomation");
-		MainOption._Exit(0, Message);
+		Main._Exit(0, Message);
 	}
-//
-//	private final static UMap<Class<?>> driverMap = new UMap<Class<?>>();
-//	static {
-//		driverMap.put("py", org.libbun.drv.PythonDriver.class);
-//		driverMap.put("python", org.libbun.drv.PythonDriver.class);
-//		driverMap.put("ll", org.libbun.drv.LLVMDriver.class);
-//		driverMap.put("llvm", org.libbun.drv.LLVMDriver.class);
-//		driverMap.put("jvm", JvmDriver.class);
-//		driverMap.put("jvm-debug", JvmDriver.DebuggableJvmDriver.class);
-//		driverMap.put("peg", org.libbun.drv.PegDumpper.class);
-//		driverMap.put("json", org.libbun.drv.JsonDriver.class);
-//	}
-//
-//	private static BunDriver loadDriverImpl(String driverName) {
-//		try {
-//			return (BunDriver) driverMap.get(driverName).newInstance();
-//		}
-//		catch(Exception e) {
-//		}
-//		return null;
-//	}
-//	
-//	private static BunDriver loadDriver(String driverName) {
-//		BunDriver d = loadDriverImpl(driverName);
-//		if(d == null) {
-//			System.out.println("Supported driver list:");
-//			UList<String> driverList = driverMap.keys();
-//			for(int i = 0; i < driverList.size(); i++) {
-//				String k = driverList.ArrayValues[i];
-//				d = loadDriverImpl(k);
-//				if(d != null) {
-//					System.out.println("\t" + k + " - " + d.getDesc());
-//				}
-//			}
-//			MainOption._Exit(1, "undefined driver: " + driverName);
-//		}
-//		return d;
-//	}
-//
-////	public final static ParserContext newParserContext(ParserSource source) {
-////		ParserContext p = null;
-////		if(inParseAndValidateJson) {
-////			p = new ValidParserContext(source);
-////		}
-////		if(ParserType.equalsIgnoreCase("--parser:packrat")) {
-////			p = new PackratParser(source);
-////		}
-////		if(ParserType.equalsIgnoreCase("--parser:simple")) {
-////			p = new RecursiveDecentParser(source);
-////		}
-////		if(p == null) {
-////			p = new PEG4dParser(source);  // best parser
-////		}
-////		if(Main.RecognitionOnlyMode) {
-////			p.setRecognitionOnly(true);
-////		}
-////		return p;
-////	}
-//	
+
+	private final static UMap<Class<?>> driverMap = new UMap<Class<?>>();
+	static {
+		driverMap.put("peg4d", PegFormatter.class);
+		driverMap.put("pegjs", PegJSFormatter.class);
+	}
+
+	private static PegFormatter loadDriverImpl(String driverName) {
+		try {
+			return (PegFormatter) driverMap.get(driverName).newInstance();
+		}
+		catch(Exception e) {
+		}
+		return null;
+	}
+	
+	private static PegFormatter loadFormatter(String driverName) {
+		PegFormatter d = loadDriverImpl(driverName);
+		if(d == null) {
+			System.out.println("Supported formatter list:");
+			UList<String> driverList = driverMap.keys();
+			for(int i = 0; i < driverList.size(); i++) {
+				String k = driverList.ArrayValues[i];
+				d = loadDriverImpl(k);
+				if(d != null) {
+					System.out.println("\t" + k + " - " + d.getDesc());
+				}
+			}
+			Main._Exit(1, "undefined formatter: " + driverName);
+		}
+		return d;
+	}
 
 	private static void loadScript(Grammar peg, String fileName) {
-		String startPoint = "TopLevel";
-		ParserContext p = peg.newParserContext(MainOption.loadSource(fileName));
+		String startPoint = StartingPoint;
+		ParserContext p = peg.newParserContext(Main.loadSource(fileName));
 		while(p.hasNode()) {
+			p.beginStatInfo();
 			Pego pego = p.parseNode(startPoint);
-			System.out.println(pego);
+			p.endStatInfo(pego);
 		}
 	}
 
@@ -341,12 +305,12 @@ public class MainOption {
 //	}
 
 	public final static void performShell(Grammar peg) {
-		MainOption._PrintLine(ProgName + Version + " (" + CodeName + ") on " + MainOption._GetPlatform());
-		MainOption._PrintLine(Copyright);
-		MainOption._PrintLine("Tips: \\Name to switch the starting point to Name");
+		Main._PrintLine(ProgName + Version + " (" + CodeName + ") on " + Main._GetPlatform());
+		Main._PrintLine(Copyright);
+		Main._PrintLine("Tips: \\Name to switch the starting point to Name");
 		int linenum = 1;
 		String line = null;
-		String startPoint = "TopLevel";
+		String startPoint = StartingPoint;
 		while ((line = readMultiLine(startPoint + ">>> ", "    ")) != null) {
 			if(line.startsWith("\\")) {
 				startPoint = switchStaringPoint(peg, line.substring(1), startPoint);
@@ -398,7 +362,7 @@ public class MainOption {
 			}
 			if(level < 0) {
 				line = "";
-				MainOption._PrintLine(" .. canceled");
+				Main._PrintLine(" .. canceled");
 			}
 		}
 		ConsoleReader.getHistory().addToHistory(line);
@@ -450,7 +414,7 @@ public class MainOption {
 
 	public final static ParserSource loadSource(String fileName) {
 		//ZLogger.VerboseLog(ZLogger.VerboseFile, "loading " + FileName);
-		InputStream Stream = MainOption.class.getResourceAsStream("/" + fileName);
+		InputStream Stream = Main.class.getResourceAsStream("/" + fileName);
 		if (Stream == null) {
 			try {
 				File f = new File(fileName);
@@ -459,7 +423,7 @@ public class MainOption {
 				}
 				Stream = new FileInputStream(fileName);
 			} catch (FileNotFoundException e) {
-				MainOption._Exit(1, "file not found: " + fileName);
+				Main._Exit(1, "file not found: " + fileName);
 				return null;
 			}
 		}
@@ -479,7 +443,7 @@ public class MainOption {
 		}
 		catch(IOException e) {
 			e.printStackTrace();
-			MainOption._Exit(1, "file error: " + fileName);
+			Main._Exit(1, "file error: " + fileName);
 		}
 		return null;
 	}
@@ -501,8 +465,8 @@ public class MainOption {
 	}
 
 	public final static void _Exit(int status, String message) {
-		if(MainOption.VerboseMode) {
-			System.err.println("EXIT " + MainOption._GetStackInfo(3) + " " + message);
+		if(Main.VerboseMode) {
+			System.err.println("EXIT " + Main._GetStackInfo(3) + " " + message);
 		}
 		else {
 			System.err.println("EXIT " + message);
@@ -513,12 +477,12 @@ public class MainOption {
 	public static boolean DebugMode = false;
 
 	public final static void _PrintDebug(String msg) {
-		if(MainOption.DebugMode) {
-			_PrintLine("DEBUG " + MainOption._GetStackInfo(3) + ": " + msg);
+		if(Main.DebugMode) {
+			_PrintLine("DEBUG " + Main._GetStackInfo(3) + ": " + msg);
 		}
 	}
 
-	private final static String _GetStackInfo(int depth) {
+	public final static String _GetStackInfo(int depth) {
 		String LineNumber = " ";
 		Exception e =  new Exception();
 		StackTraceElement[] Elements = e.getStackTrace();
@@ -546,7 +510,7 @@ public class MainOption {
 	}
 
 	public static String _SourceBuilderToString(UStringBuilder sb) {
-		return MainOption._SourceBuilderToString(sb, 0, sb.slist.size());
+		return Main._SourceBuilderToString(sb, 0, sb.slist.size());
 	}
 
 	public static String _SourceBuilderToString(UStringBuilder sb, int beginIndex, int endIndex) {

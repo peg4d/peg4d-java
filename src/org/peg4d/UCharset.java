@@ -20,6 +20,7 @@ public class UCharset {
 		this.parse(charSet);
 	}
 
+	@Override
 	public final String toString() {
 		return this.text;
 	}
@@ -29,7 +30,7 @@ public class UCharset {
 			return this.asciiBitMap[ch];
 		}
 		if(this.utfBitMap != null) {
-			return this.utfBitMap.hasKey(MainOption._CharToString(ch));
+			return this.utfBitMap.hasKey(Main._CharToString(ch));
 		}
 		return false;
 	}
@@ -44,7 +45,7 @@ public class UCharset {
 			return this.asciiBitMap[ch];
 		}
 		if(this.utfBitMap != null) {
-			return this.utfBitMap.hasKey(MainOption._CharToString(ch));
+			return this.utfBitMap.hasKey(Main._CharToString(ch));
 		}
 		return false;
 	}
@@ -59,7 +60,7 @@ public class UCharset {
 			if(this.utfBitMap == null) {
 				this.utfBitMap = new UMap<String>();
 			}
-			String key = MainOption._CharToString(ch);
+			String key = Main._CharToString(ch);
 			this.utfBitMap.put(key, key);
 		}
 	}
@@ -113,7 +114,7 @@ public class UCharset {
 		sb.append(OpenChar);
 		int i = 0;
 		for(; i < Text.length(); i = i + 1) {
-			char ch = MainOption._GetChar(Text, i);
+			char ch = Main._GetChar(Text, i);
 			if(ch == '\n') {
 				sb.append(SlashChar);
 				sb.append("n");
@@ -143,7 +144,7 @@ public class UCharset {
 		sb.append(OpenQuote);
 		int i = 0;
 		for(; i < Text.length(); i = i + 1) {
-			char ch = MainOption._GetChar(Text, i);
+			char ch = Main._GetChar(Text, i);
 			if(ch == '\n') {
 				sb.append("\\n");
 			}
@@ -187,26 +188,25 @@ public class UCharset {
 		return UCharset._QuoteString("\"", Text, "\"");
 	}
 
-	public final static double _ParseFloat(String Text) {
-		try {
-			return Double.parseDouble(Text);
-		}
-		catch(NumberFormatException e) {
-			//ZLogger.VerboseException(e);
-		}
-		return 0.0;
-	}
+//	public final static double _ParseFloat(String Text) {
+//		try {
+//			return Double.parseDouble(Text);
+//		}
+//		catch(NumberFormatException e) {
+//			//ZLogger.VerboseException(e);
+//		}
+//		return 0.0;
+//	}
 
-	public final static long _ParseInt(String Text) {
+	public final static int parseInt(String Text, int defval) {
 		try {
-			return Long.parseLong(Text);
+			return Integer.parseInt(Text);
 		}
 		catch(NumberFormatException e) {
 			e.printStackTrace();
 		}
-		return 0L;
+		return defval;
 	}
-
 
 }
 
@@ -224,7 +224,7 @@ class CharacterReader {
 
 	private char read(int pos) {
 		if(pos < this.text.length()) {
-			return MainOption._GetChar(this.text, pos);
+			return Main._GetChar(this.text, pos);
 		}
 		return 0;
 	}
@@ -288,4 +288,5 @@ class CharacterReader {
 		return (char)c;
 	}
 }
+
 
