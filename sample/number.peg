@@ -1,0 +1,15 @@
+
+// PEG4d sample
+// <{ }>, # are PEG4d operators
+// see www.libbun.org/peg
+
+TopLevel
+ = Number
+ ;
+
+Number
+ = <{ [0-9]+ ('.' [0-9]+ #float / '' #int) }>
+ ;
+
+
+

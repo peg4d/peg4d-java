@@ -1,0 +1,732 @@
+(../libbun2/sample/bun-c.peg:265) [warning] no object is generated
+      / LBRK STATIC@ TypeQualifier@* AssignmentExpression@ RBRK
+                   ^
+(../libbun2/sample/bun-c.peg:266) [warning] no object is generated
+      / LBRK TypeQualifier@+ STATIC@ AssignmentExpression@ RBRK
+                                   ^
+(../libbun2/sample/bun-c.peg:267) [warning] no object is generated
+      / LBRK TypeQualifier@* STAR@ RBRK
+                                 ^
+(../libbun2/sample/bun-c.peg:268) [warning] no object is generated
+      / LPAR ParameterTypeList@ RPAR
+                              ^
+(../libbun2/sample/bun-c.peg:502) [warning] no object is generated
+    / OREQU)@ #c.assignmentoperator >>
+            ^
+(../libbun2/sample/bun-c.peg:211) [warning] no object is generated
+    = << StructDeclarator@ (COMMA StructDeclarator@)* #c.structdeclaratorlist >>
+                         ^
+(../libbun2/sample/bun-c.peg:211) [warning] no object is generated
+    = << StructDeclarator@ (COMMA StructDeclarator@)* #c.structdeclaratorlist >>
+                                                  ^
+(../libbun2/sample/bun-c.peg:376) [warning] no object is generated
+    / << CONTINUE@ SEMI #continue>>
+                 ^
+(../libbun2/sample/bun-c.peg:377) [warning] no object is generated
+    / << BREAK@ SEMI #break >>
+              ^
+(../libbun2/sample/bun-c.peg:378) [warning] no object is generated
+    / << RETURN@ Expression@? SEMI #return >>
+               ^
+(../libbun2/sample/bun-c.peg:394) [warning] no object is generated
+    = LBRK@ Expression@ RBRK@
+          ^
+(../libbun2/sample/bun-c.peg:394) [warning] no object is generated
+    = LBRK@ Expression@ RBRK@
+                            ^
+(../libbun2/sample/bun-c.peg:634) [warning] no object is generated
+	Identifier = << !Keyword IdNondigit@ IdChar@* Spacing #name >>;
+	                                   ^
+(../libbun2/sample/bun-c.peg:634) [warning] no object is generated
+	Identifier = << !Keyword IdNondigit@ IdChar@* Spacing #name >>;
+	                                           ^
+(../libbun2/sample/bun-c.peg:734) [warning] no object is generated
+	CharacterConstant = << "L"? "'" Char@* "'" Spacing #characterconstant >>;
+	                                    ^
+(../libbun2/sample/bun-c.peg:425) [warning] no object is generated
+    / << SIZEOF #c.sizeof (UnaryExpression@ / LPAR@ TypeName@ RPAR@ ) >>
+                                                  ^
+(../libbun2/sample/bun-c.peg:425) [warning] no object is generated
+    / << SIZEOF #c.sizeof (UnaryExpression@ / LPAR@ TypeName@ RPAR@ ) >>
+                                                                  ^
+(../libbun2/sample/bun-c.peg:754) [warning] no object is generated
+	StringLiteral = << "L"? (["] StringChar@* ["] Spacing)+ #string >>;
+	                                       ^
+(../libbun2/sample/bun-c.peg:274) [warning] no object is generated
+    = << ( STAR@ TypeQualifier@* )+ #c.pointer >>
+               ^
+(../libbun2/sample/bun-c.peg:165) [warning] no object is generated
+    / REGISTER)@ #c.storageclassspecifier >>
+               ^
+(../libbun2/sample/bun-c.peg:399) [warning] no object is generated
+    = LPAR@ ArgumentExpressionList@? RPAR@
+          ^
+(../libbun2/sample/bun-c.peg:399) [warning] no object is generated
+    = LPAR@ ArgumentExpressionList@? RPAR@
+                                         ^
+TopLevel
+	= TranslationUnit
+	;
+TranslationUnit
+	= Spacing ExternalDeclaration+ EOT
+	;
+Spacing
+	= (WhiteSpace / LongComment / LineComment / Pragma)*
+	;
+WhiteSpace
+	= [ \n\r\t\u000B\u000C]
+	;
+LongComment
+	= '/*' (!'*/' .)* '*/'
+	;
+LineComment
+	= '//' (!'\n' .)*
+	;
+Pragma
+	= '#' (!'\n' .)*
+	;
+ExternalDeclaration
+	= FunctionDefinition
+	/ Declaration
+	;
+FunctionDefinition
+	= <{ DeclarationSpecifiers^3 Declarator^0 (DeclarationList^1)? CompoundStatement^2 #function }>
+	;
+DeclarationSpecifiers
+	= (StorageClassSpecifier / TypeQualifier / FunctionSpecifier / Attribute)* TypedefName (StorageClassSpecifier / TypeQualifier / FunctionSpecifier / Attribute)*
+	/ (StorageClassSpecifier / TypeSpecifier / TypeQualifier / FunctionSpecifier / Attribute)+
+	;
+StorageClassSpecifier
+	= <{ ( TYPEDEF / EXTERN / STATIC / AUTO / REGISTER ) #c.storageclassspecifier }>
+	;
+TYPEDEF
+	= 'typedef' !IdChar Spacing
+	;
+IdChar
+	= [a-zA-Z0-9_]
+	/ [A-Z]
+	/ [0-9]
+	/ [_]
+	/ UniversalCharacter
+	;
+UniversalCharacter
+	= '\\u' HexQuad
+	/ '\\U' HexQuad HexQuad
+	;
+HexQuad
+	= HexDigit HexDigit HexDigit HexDigit
+	;
+HexDigit
+	= [a-fA-F0-9]
+	/ [A-F]
+	/ [0-9]
+	;
+EXTERN
+	= 'extern' !IdChar Spacing
+	;
+STATIC
+	= 'static' !IdChar Spacing
+	;
+AUTO
+	= 'auto' !IdChar Spacing
+	;
+REGISTER
+	= 'register' !IdChar Spacing
+	;
+TypeQualifier
+	= <{ CONST #c.const }>
+	/ RESTRICT
+	/ VOLATILE
+	/ DECLSPEC LPAR Identifier RPAR
+	;
+CONST
+	= 'const' !IdChar Spacing
+	;
+RESTRICT
+	= 'restrict' !IdChar Spacing
+	;
+VOLATILE
+	= 'volatile' !IdChar Spacing
+	;
+DECLSPEC
+	= '__declspec' !IdChar Spacing
+	;
+LPAR
+	= '(' Spacing
+	;
+Identifier
+	= <{ !Keyword IdNondigit IdChar* Spacing #name }>
+	;
+Keyword
+	= ( 'auto' / 'break' / 'case' / 'char' / 'const' / 'continue' / 'default' / 'double' / 'do' / 'else' / 'enum' / 'extern' / 'float' / 'for' / 'goto' / 'if' / 'int' / 'inline' / 'long' / 'register' / 'restrict' / 'return' / 'short' / 'signed' / 'sizeof' / 'static' / 'struct' / 'switch' / 'typedef' / 'union' / 'unsigned' / 'void' / 'volatile' / 'while' / '_Bool' / '_Complex' / '_Imaginary' / '_stdcall' / '__declspec' / '__attribute__' / '__asm' ) !IdChar
+	;
+IdNondigit
+	= [a-zA-Z_]
+	/ [A-Z]
+	/ [_]
+	/ UniversalCharacter
+	;
+RPAR
+	= ')' Spacing
+	;
+FunctionSpecifier
+	= <{ INLINE #c.inline }>
+	/ <{ STDCALL #c.stdcall }>
+	;
+INLINE
+	= 'inline' !IdChar Spacing
+	;
+STDCALL
+	= '_stdcall' !IdChar Spacing
+	;
+Attribute
+	= <{ ATTRIBUTE #c.attribute LPAR LPAR ( PostfixExpression^ / TypeQualifier^ / Identifier^ ) (AttributeParamList^)? RPAR RPAR }>
+	;
+ATTRIBUTE
+	= '__attribute__' !IdChar Spacing
+	;
+PostfixExpression
+	= ( PrimaryExpression / LPAR TypeName RPAR LWING InitializerList COMMA? RWING ) <{^ (FunctionCall #apply / Index #index / DOT #field Identifier^ / PTR #ptr Identifier^ / INC #inc / DEC #dec)^ }>*
+	;
+PrimaryExpression
+	= Identifier
+	/ Constant
+	/ StringLiteral
+	/ LPAR Expression RPAR
+	;
+Constant
+	= FloatConstant
+	/ IntegerConstant
+	/ EnumerationConstant
+	/ CharacterConstant
+	;
+FloatConstant
+	= <{ ( DecimalFloatConstant / HexFloatConstant ) FloatSuffix? #float }> Spacing
+	;
+DecimalFloatConstant
+	= Fraction Exponent?
+	/ [0-9]+ Exponent
+	;
+Fraction
+	= [0-9]* '.' [0-9]+
+	/ [0-9]+ '.'
+	;
+Exponent
+	= [eE] [+\-]? [0-9]+
+	;
+HexFloatConstant
+	= HexPrefix HexFraction BinaryExponent?
+	/ HexPrefix HexDigit+ BinaryExponent
+	;
+HexPrefix
+	= '0x'
+	/ '0X'
+	;
+HexFraction
+	= HexDigit* '.' HexDigit+
+	/ HexDigit+ '.'
+	;
+BinaryExponent
+	= [pP] [+\-]? [0-9]+
+	;
+FloatSuffix
+	= [flFL]
+	;
+IntegerConstant
+	= <{ ( DecimalConstant / HexConstant / OctalConstant ) IntegerSuffix? #integer }> Spacing
+	;
+DecimalConstant
+	= [1-9] [0-9]*
+	;
+HexConstant
+	= HexPrefix HexDigit+
+	;
+OctalConstant
+	= '0' [0-7]*
+	;
+IntegerSuffix
+	= [uU] Lsuffix?
+	/ Lsuffix [uU]?
+	;
+Lsuffix
+	= 'll'
+	/ 'LL'
+	/ [lL]
+	;
+EnumerationConstant
+	= Identifier
+	;
+CharacterConstant
+	= <{ 'L'? "'" Char* "'" Spacing #characterconstant }>
+	;
+Char
+	= Escape
+	/ !['\n\\] .
+	;
+Escape
+	= SimpleEscape
+	/ OctalEscape
+	/ HexEscape
+	/ UniversalCharacter
+	;
+SimpleEscape
+	= '\\' ['\"?\\abfnrtv]
+	;
+OctalEscape
+	= '\\' [0-7] [0-7]? [0-7]?
+	;
+HexEscape
+	= '\\x' HexDigit+
+	;
+StringLiteral
+	= <{ 'L'? (["] StringChar* ["] Spacing)+ #string }>
+	;
+StringChar
+	= Escape
+	/ ![\"\n\\] .
+	;
+Expression
+	= AssignmentExpression <{^ COMMA AssignmentExpression^ #expression }>*
+	;
+AssignmentExpression
+	= <{ UnaryExpression^ AssignmentOperator^ AssignmentExpression^ #assign }>
+	/ ConditionalExpression
+	;
+UnaryExpression
+	= PostfixExpression
+	/ INC UnaryExpression
+	/ DEC UnaryExpression
+	/ UnaryOperator CastExpression
+	/ <{ SIZEOF #c.sizeof ( UnaryExpression^ / LPAR^ TypeName^ RPAR^ ) }>
+	;
+INC
+	= '++' Spacing
+	;
+DEC
+	= '--' Spacing
+	;
+UnaryOperator
+	= AND
+	/ STAR
+	/ PLUS
+	/ MINUS
+	/ TILDA
+	/ BANG
+	;
+AND
+	= '&' ![&] Spacing
+	;
+STAR
+	= '*' ![=] Spacing
+	;
+PLUS
+	= '+' ![+=] Spacing
+	;
+MINUS
+	= '-' ![\-=>] Spacing
+	;
+TILDA
+	= '~' Spacing
+	;
+BANG
+	= '!' ![=] Spacing
+	;
+CastExpression
+	= <{ ((LPAR TypeName RPAR)^)+ UnaryExpression^ #c.castexpression }>
+	/ UnaryExpression
+	;
+TypeName
+	= <{ SpecifierQualifierList^ (AbstractDeclarator^)? #c.typename }>
+	;
+SpecifierQualifierList
+	= (TypeQualifier* TypedefName TypeQualifier*)^
+	/ ((TypeSpecifier / TypeQualifier)^)+
+	;
+TypedefName
+	= <{ Identifier^ #c.typedefname }>
+	;
+TypeSpecifier
+	= <{ VOID #Tvoid }>
+	/ <{ CHAR #Tchar }>
+	/ <{ SHORT #Tshort }>
+	/ <{ INT #Tint }>
+	/ <{ LONG #Tlong }>
+	/ <{ FLOAT #Tfloat }>
+	/ <{ DOUBLE #Tdouble }>
+	/ <{ SIGNED #Tsigned }>
+	/ <{ UNSIGNED #Tunsigned }>
+	/ <{ BOOL #Tbool }>
+	/ <{ COMPLEX #Tcomplex }>
+	/ <{ StructOrUnionSpecifier #Tstructorunion }>
+	/ <{ EnumSpecifier #Tenum }>
+	;
+VOID
+	= 'void' !IdChar Spacing
+	;
+CHAR
+	= 'char' !IdChar Spacing
+	;
+SHORT
+	= 'short' !IdChar Spacing
+	;
+INT
+	= 'int' !IdChar Spacing
+	;
+LONG
+	= 'long' !IdChar Spacing
+	;
+FLOAT
+	= 'float' !IdChar Spacing
+	;
+DOUBLE
+	= 'double' !IdChar Spacing
+	;
+SIGNED
+	= 'signed' !IdChar Spacing
+	;
+UNSIGNED
+	= 'unsigned' !IdChar Spacing
+	;
+BOOL
+	= '_Bool' !IdChar Spacing
+	;
+COMPLEX
+	= '_Complex' !IdChar Spacing
+	;
+StructOrUnionSpecifier
+	= StructOrUnion^ ( (Identifier^)? LWING (StructDeclaration^)+ RWING / Identifier^ )
+	;
+StructOrUnion
+	= <{ STRUCT #c.struct }>
+	/ <{ UNION #c.union }>
+	;
+STRUCT
+	= 'struct' !IdChar Spacing
+	;
+UNION
+	= 'union' !IdChar Spacing
+	;
+LWING
+	= '{' Spacing
+	;
+StructDeclaration
+	= <{ SpecifierQualifierList StructDeclaratorList^ SEMI #c.structdeclaration }>
+	;
+StructDeclaratorList
+	= <{ StructDeclarator (COMMA StructDeclarator)* #c.structdeclaratorlist }>
+	;
+StructDeclarator
+	= (Declarator^)? COLON ConstantExpression^
+	/ Declarator^
+	;
+Declarator
+	= (Pointer^)? DirectDeclarator^
+	;
+Pointer
+	= <{ (STAR (TypeQualifier^)*)+ #c.pointer }>
+	;
+DirectDeclarator
+	= ( Identifier^ / LPAR Declarator^ RPAR ) (<{ LBRK (TypeQualifier^)* (AssignmentExpression^)? RBRK #arraysize }> / LBRK STATIC^ (TypeQualifier^)* AssignmentExpression^ RBRK / LBRK (TypeQualifier^)+ STATIC^ AssignmentExpression^ RBRK / LBRK (TypeQualifier^)* STAR^ RBRK / LPAR ParameterTypeList^ RPAR / LPAR (IdentifierList^)? RPAR)*
+	;
+LBRK
+	= '[' Spacing
+	;
+RBRK
+	= ']' Spacing
+	;
+ParameterTypeList
+	= ParameterList^ (COMMA ELLIPSIS)?
+	;
+ParameterList
+	= ParameterDeclaration <{^ COMMA ParameterDeclaration^ #param }>*
+	;
+ParameterDeclaration
+	= DeclarationSpecifiers <{^ (Declarator / AbstractDeclarator)^ #c.parameterdeclaration }>?
+	;
+AbstractDeclarator
+	= Pointer? DirectAbstractDeclarator
+	/ Pointer
+	;
+DirectAbstractDeclarator
+	= ( LPAR AbstractDeclarator RPAR / LBRK (AssignmentExpression / STAR)? RBRK / LPAR ParameterTypeList? RPAR ) (LBRK (AssignmentExpression / STAR)? RBRK / LPAR ParameterTypeList? RPAR)*
+	;
+COMMA
+	= ',' Spacing
+	;
+ELLIPSIS
+	= '...' Spacing
+	;
+IdentifierList
+	= <{ Identifier^ (COMMA Identifier^)* #c.identifierlist }>
+	;
+COLON
+	= ':' ![>] Spacing
+	;
+ConstantExpression
+	= ConditionalExpression
+	;
+ConditionalExpression
+	= LogicalORExpression <{^ QUERY #query Expression^ COLON LogicalORExpression^ }>*
+	;
+LogicalORExpression
+	= LogicalANDExpression <{^ OROR #oror LogicalANDExpression^ }>*
+	;
+LogicalANDExpression
+	= InclusiveORExpression <{^ ANDAND #andand InclusiveORExpression^ }>*
+	;
+InclusiveORExpression
+	= ExclusiveORExpression <{^ OR #or ExclusiveORExpression^ }>*
+	;
+ExclusiveORExpression
+	= ANDExpression <{^ HAT #hat ANDExpression^ }>*
+	;
+ANDExpression
+	= EqualityExpression <{^ AND #and EqualityExpression^ }>*
+	;
+EqualityExpression
+	= RelationalExpression <{^ ( EQUEQU #equequ / BANGEQU #bangequ ) RelationalExpression^ }>*
+	;
+RelationalExpression
+	= ShiftExpression <{^ ( LE #le / GE #ge / LT #lt / GT #gt ) ShiftExpression^ }>*
+	;
+ShiftExpression
+	= AdditiveExpression <{^ ( LEFT #left / RIGHT #right ) AdditiveExpression^ }>*
+	;
+AdditiveExpression
+	= MultiplicativeExpression <{^ ( PLUS #add / MINUS #sub ) MultiplicativeExpression^ }>*
+	;
+MultiplicativeExpression
+	= CastExpression <{^ ( STAR #mul / DIV #div / MOD #mod ) CastExpression^ }>*
+	;
+DIV
+	= '/' ![=] Spacing
+	;
+MOD
+	= '%' ![=>] Spacing
+	;
+LEFT
+	= '<<' ![=] Spacing
+	;
+RIGHT
+	= '>>' ![=] Spacing
+	;
+LE
+	= '<=' Spacing
+	;
+GE
+	= '>=' Spacing
+	;
+LT
+	= '<' ![=] Spacing
+	;
+GT
+	= '>' ![=] Spacing
+	;
+EQUEQU
+	= '==' Spacing
+	;
+BANGEQU
+	= '!=' Spacing
+	;
+HAT
+	= '^' ![=] Spacing
+	;
+OR
+	= '|' ![=] Spacing
+	;
+ANDAND
+	= '&&' Spacing
+	;
+OROR
+	= '||' Spacing
+	;
+QUERY
+	= '?' Spacing
+	;
+SEMI
+	= ';' Spacing
+	;
+RWING
+	= '}' Spacing
+	;
+EnumSpecifier
+	= ENUM ( (Identifier^)? LWING EnumeratorList^ COMMA? RWING / Identifier^ )
+	;
+ENUM
+	= 'enum' !IdChar Spacing
+	;
+EnumeratorList
+	= Enumerator <{^ (COMMA Enumerator^)* #c.enumeratorlist }>
+	;
+Enumerator
+	= EnumerationConstant (EQU ConstantExpression)?
+	;
+EQU
+	= '=' !'=' Spacing
+	;
+SIZEOF
+	= 'sizeof' !IdChar Spacing
+	;
+AssignmentOperator
+	= <{ ( EQU / STAREQU / DIVEQU / MODEQU / PLUSEQU / MINUSEQU / LEFTEQU / RIGHTEQU / ANDEQU / HATEQU / OREQU ) #c.assignmentoperator }>
+	;
+STAREQU
+	= '*=' Spacing
+	;
+DIVEQU
+	= '/=' Spacing
+	;
+MODEQU
+	= '%=' Spacing
+	;
+PLUSEQU
+	= '+=' Spacing
+	;
+MINUSEQU
+	= '-=' Spacing
+	;
+LEFTEQU
+	= '<<=' Spacing
+	;
+RIGHTEQU
+	= '>>=' Spacing
+	;
+ANDEQU
+	= '&=' Spacing
+	;
+HATEQU
+	= '^=' Spacing
+	;
+OREQU
+	= '|=' Spacing
+	;
+InitializerList
+	= <{ (Designation^)? Initializer^ (COMMA (Designation^)? Initializer^)* #c.initializerlist }>
+	;
+Designation
+	= <{ (Designator^)+ EQU #c.designation }>
+	;
+Designator
+	= LBRK ConstantExpression RBRK
+	/ DOT Identifier
+	;
+DOT
+	= '.' Spacing
+	;
+Initializer
+	= AssignmentExpression^
+	/ LWING (InitializerList^)* COMMA? RWING
+	;
+FunctionCall
+	= LPAR (ArgumentExpressionList^)? RPAR
+	;
+ArgumentExpressionList
+	= AssignmentExpression <{^ COMMA AssignmentExpression^ #c.argumentexpressionlist }>*
+	;
+Index
+	= LBRK Expression^ RBRK
+	;
+PTR
+	= '->' Spacing
+	;
+AttributeParamList
+	= LPAR (AttributeParam^ (COMMA AttributeParam^)*)? RPAR
+	;
+AttributeParam
+	= <{ ( IntegerConstant^ / Identifier^ / StringLiteral^ #attributeparam ) }>
+	;
+DeclarationList
+	= Declaration+
+	;
+Declaration
+	= DeclarationNoAttribute^ ((Attribute / Assembler)^)? SEMI
+	;
+DeclarationNoAttribute
+	= DeclarationSpecifiers^ (InitDeclaratorList^)?
+	;
+InitDeclaratorList
+	= InitDeclarator^ (COMMA InitDeclarator^)*
+	;
+InitDeclarator
+	= <{ (Pointer^)? DirectDeclarator^ (EQU Initializer^)? #assign }>
+	;
+Assembler
+	= ASM LPAR (StringLiteral (COMMA StringLiteral)*)? RPAR
+	;
+ASM
+	= '__asm' !IdChar Spacing
+	;
+CompoundStatement
+	= <{ LWING ((Declaration / Statement)^)* RWING #block }>
+	;
+Statement
+	= LabeledStatement
+	/ CompoundStatement
+	/ ExpressionStatement
+	/ SelectionStatement
+	/ IterationStatement
+	/ JumpStatement
+	;
+LabeledStatement
+	= Identifier COLON Statement
+	/ <{ CASE ConstantExpression^ COLON Statement^ #case }>
+	/ <{ DEFAULT COLON Statement^ #default }>
+	;
+CASE
+	= 'case' !IdChar Spacing
+	;
+DEFAULT
+	= 'default' !IdChar Spacing
+	;
+ExpressionStatement
+	= <{ (Expression^)? SEMI #c.expressionstatement }>
+	;
+SelectionStatement
+	= <{ IF LPAR Expression^ RPAR Statement^ (ELSE Statement^)? #if }>
+	/ <{ SWITCH LPAR Expression^ RPAR Statement^ #switch }>
+	;
+IF
+	= 'if' !IdChar Spacing
+	;
+ELSE
+	= 'else' !IdChar Spacing
+	;
+SWITCH
+	= 'switch' !IdChar Spacing
+	;
+IterationStatement
+	= <{ WHILE LPAR Expression^ RPAR Statement^ #while }>
+	/ <{ DO Statement^ WHILE LPAR Expression^ RPAR SEMI #c.dowhile }>
+	/ <{ FOR LPAR (Expression^)? SEMI (Expression^)? SEMI (Expression^)? RPAR Statement^ #for }>
+	/ <{ FOR LPAR Declaration^ (Expression^)? SEMI (Expression^)? RPAR Statement^ #for }>
+	;
+WHILE
+	= 'while' !IdChar Spacing
+	;
+DO
+	= 'do' !IdChar Spacing
+	;
+FOR
+	= 'for' !IdChar Spacing
+	;
+JumpStatement
+	= GOTO Identifier SEMI
+	/ <{ CONTINUE^ SEMI #continue }>
+	/ <{ BREAK^ SEMI #break }>
+	/ <{ RETURN^ (Expression^)? SEMI #return }>
+	;
+GOTO
+	= 'goto' !IdChar Spacing
+	;
+CONTINUE
+	= 'continue' !IdChar Spacing
+	;
+BREAK
+	= 'break' !IdChar Spacing
+	;
+RETURN
+	= 'return' !IdChar Spacing
+	;
+EOT
+	= !.
+	;

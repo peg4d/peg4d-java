@@ -1,0 +1,6 @@
+
+// PEG4d sample
+// Check the input has no CR(13) character.
+// See http://peg4d.org/ for more information.
+
+TopLevel = (!'\r' .)*; 

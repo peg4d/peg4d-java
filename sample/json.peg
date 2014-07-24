@@ -1,0 +1,91 @@
+TopLevel
+	= WS Value WS
+	;
+WS
+	= [ \t\n\r]*
+	;
+Value
+	= False
+	/ Null
+	/ True
+	/ Object
+	/ Array
+	/ Number
+	/ String
+	;
+False
+	= <{ 'false' #false }>
+	;
+Null
+	= <{ 'null' #null }>
+	;
+True
+	= <{ 'true' #true }>
+	;
+Object
+	= BeginObject <{ (Member^ (ValueSeparator Member^)*)? #object }> EndObject
+	;
+BeginObject
+	= WS '{' WS
+	;
+Member
+	= <{ String^ NameSeparator Value^ #keyvalue }>
+	;
+String
+	= QuotationMark <{ ('\\"' / !QuotationMark .)* #string }> QuotationMark
+	;
+QuotationMark
+	= '"'
+	;
+NameSeparator
+	= WS ':' WS
+	;
+ValueSeparator
+	= WS ',' WS
+	;
+EndObject
+	= WS '}' WS
+	;
+Array
+	= BeginArray <{ (Value^ (ValueSeparator Value^)*)? #array }> EndArray
+	;
+BeginArray
+	= WS '[' WS
+	;
+EndArray
+	= WS ']' WS
+	;
+Number
+	= <{ Minus? Int Frac? Exp? #number }>
+	;
+Minus
+	= '-'
+	;
+Int
+	= Zero
+	/ Digit1_9 DIGIT*
+	;
+Zero
+	= '0'
+	;
+Digit1_9
+	= [1-9]
+	;
+DIGIT
+	= [0-9]
+	;
+Frac
+	= DecimalPoint DIGIT+
+	;
+DecimalPoint
+	= '.'
+	;
+Exp
+	= E (Minus / Plus)? DIGIT+
+	;
+E
+	= [eE]
+	;
+Plus
+	= '+'
+	;

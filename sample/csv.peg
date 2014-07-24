@@ -1,0 +1,12 @@
+TopLevel
+	= <{ (Line^)* #array }>
+	;
+Line
+	= <{ CSV^ (',' CSV^)* ( '\n' / EOT ) #array }>
+	;
+CSV
+	= [ \t]* <{ (![,\n] .)* #value }>
+	;
+EOT
+	= !.
+	;

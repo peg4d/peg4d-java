@@ -1,0 +1,40 @@
+TopLevel
+	= Prolog? _* DTD? _* Element WS*
+	;
+Prolog
+	= '<?xml' (!'?>' .)* '?>'
+	;
+_
+	= [ \t\r\n]
+	;
+DTD
+	= '<!' (!'>' .)* '>'
+	;
+Element
+	= <{ '<' Name^ (_+ Attribute^)* _* ( '/>' / '>' Content^ '</' Name '>' ) #xml }>
+	;
+Name
+	= <{ [A-Za-z:] ('-' / [A-Za-z0-9:._])* #name }>
+	;
+Attribute
+	= <{ Name^ _* '=' _* String^ #attr }>
+	;
+String
+	= '"' <{ (!'"' .)* #string }> '"'
+	;
+Content
+	= (_* Element^ / _* CDATA^ / _* Comment / CharData)*
+	;
+CDATA
+	= '<![CDATA[' <{ (!']]>' .)* #cdata }> ']]>'
+	;
+Comment
+	= '<!--' (!'-->' .)* '-->'
+	;
+CharData
+	= <{ (!'<' .)+ #string }>
+	;
+WS
+	= Comment
+	/ _+
+	;
