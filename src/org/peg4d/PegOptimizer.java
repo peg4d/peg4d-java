@@ -296,7 +296,7 @@ class PegOptimizer extends PegTransformer {
 			return left;
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			return left;
 		}
 	}
@@ -321,7 +321,7 @@ class PegOptimizer extends PegTransformer {
 			return context.foundFailure(this);
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			long pos = context.getPosition();
 			if(context.charAt(pos) == this.symbol) {
 				context.consume(1);
@@ -349,7 +349,7 @@ class PegOptimizer extends PegTransformer {
 				return context.foundFailure(this);
 			}
 		}
-		protected final long fastMatchNextAny(long left, MonadicParser context) {
+		protected final int fastMatchNextAny(int left, MonadicParser context) {
 			if(context.hasChar()) {
 				context.consume(1);
 				return left;
@@ -379,7 +379,7 @@ class PegOptimizer extends PegTransformer {
 			return left;
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			long pos = context.getPosition();
 			if(context.match(this.symbol)) {
 				context.setPosition(pos);
@@ -409,7 +409,7 @@ class PegOptimizer extends PegTransformer {
 			return left;
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			if(this.symbol == context.getChar()) {
 				return context.foundFailure2(this);
 			}
@@ -439,7 +439,7 @@ class PegOptimizer extends PegTransformer {
 			return left;
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			long pos = context.getPosition();
 			if(context.match(this.charset)) {
 				context.setPosition(pos);
@@ -464,7 +464,7 @@ class PegOptimizer extends PegTransformer {
 			return left;
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			context.match(this.symbol);
 			return left;
 		}
@@ -482,7 +482,7 @@ class PegOptimizer extends PegTransformer {
 			return left;
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			context.match(this.charset);
 			return left;
 		}
@@ -515,9 +515,9 @@ class PegOptimizer extends PegTransformer {
 			return left;
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			long pos = context.getPosition();
-			long node = this.repeated.fastMatch(left, context);
+			int node = this.repeated.fastMatch(left, context);
 			if(PEGUtils.isFailure(node)) {
 				context.setPosition(pos);
 				return node;
@@ -556,10 +556,10 @@ class PegOptimizer extends PegTransformer {
 			return left;
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			while(context.hasChar()) {
 				long pos = context.getPosition();
-				long node = this.repeated.fastMatch(left, context);
+				int node = this.repeated.fastMatch(left, context);
 				if(PEGUtils.isFailure(node) || pos == context.getPosition()) {
 					context.setPosition(pos);
 					break;
@@ -594,7 +594,7 @@ class PegOptimizer extends PegTransformer {
 			return left;
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			long pos = context.getPosition();
 			char ch = context.charAt(pos);
 			if(!this.charset.match(ch)) {
@@ -631,7 +631,7 @@ class PegOptimizer extends PegTransformer {
 			return left;
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			long pos = context.getPosition();
 			for(;context.hasChar();pos++) {
 				char ch = context.charAt(pos);
@@ -686,12 +686,12 @@ class PegOptimizer extends PegTransformer {
 			return node;
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			long pos = context.getPosition();
 			String token = context.substring(pos, pos + this.pretextSize);
 			Peg e = this.map.get(token);
 			if(e != null) {
-				long node2 = e.fastMatch(left, context);
+				int node2 = e.fastMatch(left, context);
 				if(PEGUtils.isFailure(node2)) {
 					context.setPosition(pos);
 				}
@@ -712,7 +712,7 @@ class PegOptimizer extends PegTransformer {
 			return context.foundFailure(this);
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			return context.foundFailure2(this);
 		}
 	}
@@ -775,7 +775,7 @@ class PegOptimizer extends PegTransformer {
 			return context.foundFailure(this);
 		}
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			char ch = context.getChar();
 			if(ch < 128) {
 				if(caseOf[ch] != null) {
@@ -838,7 +838,7 @@ class PegOptimizer extends PegTransformer {
 		}
 
 		@Override
-		public long fastMatch(long left, MonadicParser context) {
+		public int fastMatch(int left, MonadicParser context) {
 			char ch = context.getChar();
 			if(ch < 128) {
 				if(caseOf[ch] == null) {

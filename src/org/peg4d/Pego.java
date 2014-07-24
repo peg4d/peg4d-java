@@ -113,11 +113,16 @@ public class Pego {
 	}
 
 	public final void set(int index, Pego node) {
-		if(!(index < this.size())){
-			this.expandAstToSize(index+1);
+		if(index == -1) {
+			this.append(node);
 		}
-		this.AST[index] = node;
-		node.parent = this;
+		else {
+			if(!(index < this.size())){
+				this.expandAstToSize(index+1);
+			}
+			this.AST[index] = node;
+			node.parent = this;
+		}
 	}
 	
 	public final void resizeAst(int size) {
@@ -249,7 +254,12 @@ public class Pego {
 			sb.appendNewLine("");
 			sb.openIndent("{" + this.tag);
 			for(int i = 0; i < this.size(); i++) {
-				this.AST[i].stringfy(sb);
+				if(this.AST[i] == null) {
+					sb.appendNewLine("null");
+				}
+				else {
+					this.AST[i].stringfy(sb);
+				}
 			}
 			sb.closeIndent("}");
 		}
@@ -329,6 +339,25 @@ public class Pego {
 
 	public final Pego getParent() {
 		return this.parent;
+	}
+
+	public void setTag(String tag) {
+		this.tag = tag;
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void setMessage(String message) {
+		this.message = message;
+	}
+
+	public static Pego newPego(ParserSource source, long startIndex, int length, int size) {
+		Pego pego =  new Pego("#new", source, null, startIndex);
+		pego.length = length;
+		if(size > 0) {
+			pego.expandAstToSize(size);
+		}
+		return pego;
 	}
 
 //	public final boolean isUntyped() {

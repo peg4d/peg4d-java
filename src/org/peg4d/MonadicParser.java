@@ -1,44 +1,20 @@
 package org.peg4d;
 
+import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
 
 public class MonadicParser extends ParserContext {
 
 	public MonadicParser(Grammar peg, ParserSource source) {
 		super(peg, source, 0, source.length());
+		if(!this.isRecognitionOnly()) {
+			this.quadLog = new int[4096 * 4];
+		}
 	}
 
 	@Override
 	public void initMemo() {
 		this.memoMap = new NoMemo();
-	}
-
-	String s0(long oid) {
-		if(oid == 1) {
-			return "toplevel";
-		}
-		long pos = PEGUtils.getpos(oid);
-		if(PEGUtils.isFailure(oid)) {
-			return this.source.formatErrorMessage("syntax error", pos, "");
-		}
-		else {
-			Peg e = this.peg.getPeg(oid);
-			return "object " + pos + " peg=" + e;
-		}
-	}
-
-	String S(long oid) {
-		if(oid == 1) {
-			return "toplevel";
-		}
-		long pos = PEGUtils.getpos(oid);
-		if(PEGUtils.isFailure(oid)) {
-			return this.source.formatErrorMessage("syntax error", pos, "failure:");
-		}
-		else {
-			Peg e = this.peg.getPeg(oid);
-			return "pego(" + pos + "," + e.pegid2 + ")";
-		}
 	}
 
 	@Override
@@ -49,18 +25,24 @@ public class MonadicParser extends ParserContext {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
 		long pos = this.getPosition();
-		long oid = start.fastMatch(1, this);
+		int oid = start.fastMatch(1, this);
 		Pego pego = null;
 		if(PEGUtils.isFailure(oid)) {
-			pego = new Pego("#error", this.source, null, PEGUtils.getpos(oid));
-			pego.message = this.source.formatErrorMessage("syntax error", PEGUtils.getpos(oid), "");
+			Peg e = this.peg.getPeg(this.failurePosition);
+			pego = new Pego("#error", this.source, null, PEGUtils.getpos(this.failurePosition));
+			pego.message = this.source.formatErrorMessage("syntax error", PEGUtils.getpos(this.failurePosition), " by " + e);
 			System.out.println(pego.message);
 //			if(pos == this.getPosition()) {
 			this.setPosition(this.endPosition);  // skip 
 //			}
 		}
 		else {
-			pego = this.createObject(this.markObjectStack(), oid);
+			if(oid == this.bigDataOid) {
+				return bigPego;
+			}
+			else {
+				pego = this.createObject(oid);
+			}
 		}
 //		else {
 //			pego = new Pego("#toplevel", this.source, this.peg.getPeg(oid), PEGUtils.getpos(oid));
@@ -72,193 +54,329 @@ public class MonadicParser extends ParserContext {
 		return pego;
 	}
 		
-	private long failureObjectId = 0;
-	public final long foundFailure2(Peg e) {
-		if(this.sourcePosition >= PEGUtils.getpos(this.failureObjectId)) {  // adding error location
-			this.failureObjectId = PEGUtils.failure(this.sourcePosition, e);
+	private long failurePosition = 0;
+	public final int foundFailure2(Peg e) {
+		if(this.sourcePosition >= PEGUtils.getpos(this.failurePosition)) {  // adding error location
+			this.failurePosition = PEGUtils.failure(this.sourcePosition, e);
 		}
-		return this.failureObjectId;
+		return 0; //this.failureObjectId;
 	}
 	
 	public final long refoundFailure2(Peg e, long pos) {
-		this.failureObjectId = PEGUtils.failure(pos, e);
-		return this.failureObjectId;
+		this.failurePosition = PEGUtils.failure(pos, e);
+		return 0; //this.failureObjectId;
 	}
 
-	long[] logTriple = new long[256 * 3];
+	//[0]
+	//new oid pos len
+	//tag oid tag msg
+	//set oid idx child
+	//add oid child
+	private int[] quadLog = null;
 	int stackTop = 0;
-	UList<Pego> objectList = new UList<Pego>(new Pego[16]);
+
+	public final static int OpNew2 = 0;
+	public final static int OpTag2 = 1;
+	public final static int OpSet2 = 2;
+	public final static int OpNop2 = 3;
+	public final static int OpMask2 = 7; // 1 | (1 << 1) | 1 << 2;
 	
-	public final static int OpPosition = 0;
-	public final static int OpTagging  = 1;
-	public final static int OpMessage  = 2;
-	public final static int OpAppend   = 3;
-	public final static int OpSetter   = 4;
-	
-	private int getop(long op) {
-		return (int)op;
-	}
-
-	private int getindex(long op) {
-		return getop(op)-OpSetter;
-	}
-
-	private int getmark(long op) {
-		return (int)(op >> 32);
-	}
-
-	private long makeop(int mark, int index) {
-		return ((long)mark << 32) | (index + OpSetter);
+	private int getop2(int op) {
+		return op & OpMask2;
 	}
 	
-	void log(long op, long parent, long data) {
-		if(!(stackTop < this.logTriple.length)) {
-			long[] newlog = new long[logTriple.length * 2];
-			System.arraycopy(this.logTriple, 0, newlog, 0, this.logTriple.length);
-			this.logTriple = newlog;
+	private int getext3(int op) {
+		return op >> 3;
+	}
+
+	private int makeop2(int op, int ext3) {
+		return ext3 << 3 | op;
+	}
+	
+	void log4(int op, int ext, int oid, int data1, int data2) {
+		if(this.quadLog != null) {
+			if(!(stackTop + 4 < this.quadLog.length)) {
+				int[] newlog = new int[quadLog.length * 4];
+				System.arraycopy(this.quadLog, 0, newlog, 0, this.quadLog.length);
+				this.quadLog = newlog;
+			}
+			this.quadLog[this.stackTop]   = oid;
+			this.quadLog[this.stackTop+1] = makeop2(op, ext);
+			this.quadLog[this.stackTop+2] = data1;
+			this.quadLog[this.stackTop+3] = data2;
+			this.stackTop += 4;
 		}
-		this.logTriple[this.stackTop] = parent;
-		this.logTriple[this.stackTop+1] = op;
-		this.logTriple[this.stackTop+2] = data;
-		this.stackTop += 3;
 	}
 
+	private int readOid(int mark) {
+		return this.quadLog[mark];
+	}
+
+	private int readOp(int mark) {
+		return this.getop2(this.quadLog[mark+1]);
+	}
+
+	private int readExt3(int mark) {
+		return this.getext3(this.quadLog[mark+1]);
+	}
+
+	private void writeExt3(int mark, int ext3) {
+		this.quadLog[mark+1] = makeop2(this.getop2(this.quadLog[mark+1]), ext3);
+	}
+
+	private void writeData(int mark, int data) {
+		this.quadLog[mark+2] = data;
+	}
+
+	private void writeData2(int mark, int data) {
+		this.quadLog[mark+3] = data;
+	}
+
+	private int readData(int mark) {
+		return this.quadLog[mark+2];
+	}
+
+	private int readData2(int mark) {
+		return this.quadLog[mark+3];
+	}
+
+	int unusedObjectId = 2;
+	int lazyNewObject(long pos) {
+		int oid = this.unusedObjectId;
+		log4(OpNew2, 0, oid, (int)pos, 0);
+		this.unusedObjectId += 1;
+		return oid;
+	}
+
+	int searchOid(int oid) {
+		for(int i = this.stackTop - 4; i >= 0; i -= 4) {
+			if(readOid(i) == oid) {
+				if(readOp(i) == OpNew2) {
+					return i;
+				}
+				int diff = readExt3(i);
+				if(diff > 0) {
+					return i - diff * 4;
+				}
+			}
+		}
+		assert(oid == 0); // this not happens
+		return -1;
+	}
+	
+	int makediff(int oid) {
+		return (this.stackTop - this.searchOid(oid)) / 4;
+	}
+
+	void lazyTagging(int oid, PegTagging e) {
+		if(bigDataOid == oid) {
+			//this.bigPego.tag = e.symbol;
+			return;
+		}
+		if(readOid(this.stackTop) == oid && readOp(this.stackTop) == OpTag2) {
+			writeData(this.stackTop, e.pegid2);
+		}
+		else {
+			log4(OpTag2, makediff(oid), oid, e.pegid2, 0);
+		}
+	}
+
+	void lazyMessaging(int oid, PegMessage e) {
+		if(bigDataOid == oid) {
+			this.bigPego.message = e.symbol;
+			return;
+		}
+		if(readOid(this.stackTop) == oid && readOp(this.stackTop) == OpTag2) {
+			writeData2(this.stackTop, e.pegid2);
+		}
+		else {
+			log4(OpTag2, makediff(oid), oid, 0, e.pegid2);
+		}
+	}
+	
+	private static int BigDataSize = 256;
+	int bigDataOid = 0;
+	Pego bigPego = null;
+	UList<Pego> bigList = null;
+	
+	void lazySetter(int oid, int index, int child) {
+		if(bigDataOid == oid) {
+			//System.out.println("child big data: " + mark + " " + child + " stackTop" + stackTop);
+			Pego p = createObject(child);
+			bigList.add(p);
+		}
+		else {
+			int mark = this.searchOid(oid);
+			int size = readExt3(mark);
+			if(index == -1) {
+				size++;
+				index = size-1;
+			}
+			else {
+				if(index < size) {
+					size = index + 1;
+				}
+			}
+			writeExt3(mark, size);
+			log4(OpSet2, makediff(oid), oid, index, child);
+			if(size > BigDataSize && this.bigDataOid == 0) {
+				this.bigDataOid = oid;
+				this.bigPego = createObject(oid);
+				this.bigList = new UList<Pego>(new Pego[BigDataSize*5]);
+				System.out.println("found big data: " + oid + " " + size);
+			}
+		}
+	}
+
+	void lazyCapture(int mark, int length) {
+		writeData2(mark, length);
+	}
+	
+	void dumpStack(int s, int top) {
+		for(int i = s; i < top; i += 4) {
+			int op = this.readOp(i);
+			int oid = this.readOid(i);
+			int n = i / 4;
+			if(op == OpNew2) {
+				System.out.println("[" + n + "] NEW:" + oid + " pos=" + readData(i) + " length = " + readData2(i) + " size=" + readExt3(i));
+			}
+			else if(op >= OpSet2) {
+				System.out.println("[" + n + "] SET:" + oid + " " + readData(i) + " " + readData2(i) + " diff= " + readExt3(i));
+			}
+			else if(op == OpTag2) {
+				String tag = " ";
+				if(readData(i) > 0) {
+					PegTagging tagging = (PegTagging)this.peg.getPeg(readData(i));
+					tag = tagging.symbol + " ";
+				}
+				String msg = " ";
+				if(readData2(i) > 0) {
+					PegMessage message = (PegMessage)this.peg.getPeg(readData2(i));
+					tag = "`"+message.symbol + "` ";
+				}
+				System.out.println("[" + n + "] TAG:" + oid + " " + tag + " " + msg + " diff= " + readExt3(i));
+			}
+		}
+	}
+	
+	public Pego createObjectImpl(int s, int top, int getoid) {
+		long offset = 0;
+		HashMap<Integer, Pego> m = new HashMap<Integer, Pego>();
+		Pego cur = null;
+		for(int i = s; i < top; i += 4) {
+			int op = this.readOp(i);
+			int oid = this.readOid(i);
+			if(op == OpNew2) {
+				cur = Pego.newPego(this.source, offset + readData(i), readData2(i), readExt3(i));
+				m.put(oid, cur);
+			}
+			else if(op >= OpSet2) {
+				int index = readData(i);
+				Integer cid = readData2(i);
+				Pego parent = m.get(oid);
+				Pego child = m.get(cid);
+				parent.set(index, child);
+				child.checkNullEntry();
+				m.remove(cid);
+//				System.out.println("[" + n + "] SET:" + oid + " " + readData(i) + " " + readData2(i) + " diff= " + readExt3(i));
+			}
+			else if(op == OpTag2) {
+				if(readData(i) > 0) {
+					PegTagging tagging = (PegTagging)this.peg.getPeg(readData(i));
+					Pego p = m.get(oid);
+					p.setTag(tagging.symbol);
+				}
+				if(readData2(i) > 0) {
+					PegMessage message = (PegMessage)this.peg.getPeg(readData2(i));
+					Pego p = m.get(oid);
+					p.setTag(message.symbol);
+				}
+				//System.out.println("[" + n + "] TAG:" + oid + " " + tag + " " + msg + " diff= " + readExt3(i));
+			}
+		}
+		Integer[] key = m.keySet().toArray(new Integer[1]);
+		if(m.size() > 1) {
+			System.out.println("droped size: " + (m.size() - 1));
+			for(Integer k : key) {
+				if(k != getoid) {
+					System.out.println("oid: " + k + " " + m.get(k));
+				}
+			}
+		}
+		return m.get(getoid);
+	}
+
+	
 	@Override
 	protected final int markObjectStack() {
 		return this.stackTop;
 	}
 
 	@Override
-	protected final void rollbackObjectStack(int markerId) {
-		if(this.stackTop > markerId) {
-//			System.out.println("**released: ");
-//			dumpStack(markerId, this.stackTop);
-//			System.out.println("****: " + Main._GetStackInfo(4));
+	protected final void rollbackObjectStack(int mark) {
+		if(mark < this.stackTop) {
+			assert(readOp(mark) == OpNew2);
+			//System.out.println("dispose " + this.readOid(mark));
+			this.unusedObjectId = this.readOid(mark);
 		}
-		this.stackTop = markerId;
+		this.stackTop = mark;
 	}
 	
-	protected final void pushSetter(long parent, int mark, int index, long child) {
-		long op = makeop(mark, index);
-		//System.out.println("mark, index = " + mark + ", " + index + " <> " + getindex(op) + ", " + getmark(op));
-		assert(index == getindex(op));
-		assert(mark  == getmark(op));
-		log(op, parent, child);
-	}
-	
-	void dumpStack(int s, int top) {
-		for(int i = s; i < top; i += 3) {
-			long oid = this.logTriple[i];
-			long op = this.logTriple[i+1];
-			int  iop = getop(op);
-			int n = i / 3;
-			if(iop == OpAppend) {
-				System.out.println("[" + n + "] ADD:" + S(oid) + " " + S(this.logTriple[i+2]) + " mark= " + getmark(op));
-			}
-			else if(iop >= OpSetter) {
-				System.out.println("[" + n + "] SET:" + S(oid) + " " + getindex(op) + " " + S(this.logTriple[i+2]) + " mark= " + getmark(op));
-			}
-			else if(iop == OpPosition) {
-				System.out.println("[" + n + "] POS:" + S(oid) + " pos=" + logTriple[i+2]);
-			}
-			else if(iop == OpTagging) {
-				PegTagging tagging = (PegTagging)this.peg.getPeg(this.logTriple[i+2]);
-				System.out.println("[" + n + "] TAG:" + S(oid) + " " + tagging.symbol);
-			}
-			else if(iop == OpMessage) {
-				PegMessage message = (PegMessage)this.peg.getPeg(this.logTriple[i+2]);
-				System.out.println("[" + n + "] ALT:" + S(oid) + " `" + message.symbol + "`");
-			}
-		}
-	}
-	
-	protected final Pego createObjectImpl(int bottom, int top, long oid) {
-		int size = 0;
-		//System.out.println("creating: "+ S(oid) + " range[" + 0 + ", " + top + "]");
-		Peg created = this.peg.getPeg(oid);
-		Pego o = new Pego(null, this.source, created, PEGUtils.getpos(oid));
-		for(int i = bottom; i < top; i += 3) {
-//			System.out.println("oid: [" + i + "] op:" + this.logTriple[i+1] + "  " + S(this.logTriple[i]) + " ?= " + S(oid));
-			if(this.logTriple[i] == oid) {
-				long op = this.logTriple[i+1];
-				int  iop = getop(op);
-				if(iop == OpAppend) {
-					int mark = getmark(op);
-					this.logTriple[i+1] = makeop(mark, size);
-					size++;
-				}
-				else if(iop >= OpSetter) {
-					if(size < getindex(op) + 1) {
-						size = getindex(op) + 1;
-					}
-				}
-				else if(iop == OpPosition) {
-					o.setEndPosition(this.logTriple[i+2]);
-				}
-				else if(iop == OpTagging) {
-					PegTagging tagging = (PegTagging)this.peg.getPeg(this.logTriple[i+2]);
-					o.tag = tagging.symbol;
-				}
-				else if(iop == OpMessage) {
-					PegMessage message = (PegMessage)this.peg.getPeg(this.logTriple[i+2]);
-					o.message = message.symbol;
-				}
-			}
-		}
-		if(size > 0) {
-			o.expandAstToSize(size);		
-			for(int i = bottom; i < top; i += 3) {
-				if(this.logTriple[i] == oid) {
-					long op = (int)this.logTriple[i+1];
-					if(getindex(op) >= 0) {
-						int mark = getmark(op);
-						Pego node = createObjectImpl(mark, i, this.logTriple[i+2]);
-						o.set(getindex(op), node);
-					}
-				}
-			}
-			o.checkNullEntry();
-		}
-		return o;
-	}
-	protected final Pego createObject(int top, long oid) {
+	protected final Pego createObject(int oid) {
+		Pego pego = null;
 		//dumpStack(0, top);
-		return createObjectImpl(0, top, oid);
+		if(this.quadLog != null) {
+			pego = createObjectImpl(this.searchOid(oid), this.stackTop, oid);
+		}
+		else {
+			pego = new Pego("#empty");
+		}
+		if(pego == null) {
+			//dumpStack(0, top);
+			System.out.println("created: " + pego);
+			assert(pego != null);
+		}
+		return pego;
 	}
 	
-	public long matchNewObject(long left, PegNewObject e) {
-		long leftNode = left;
+	public int matchNewObject(int left, PegNewObject e) {
 		long startIndex = this.getPosition();
 		if(Main.VerboseStatCall) {
 			this.count(e, startIndex);
 		}
 		if(e.predictionIndex > 0) {
 			for(int i = 0; i < e.predictionIndex; i++) {
-				long node = e.get(i).fastMatch(left, this);
-				if(PEGUtils.isFailure(node)) {
+				int right = e.get(i).fastMatch(left, this);
+				if(PEGUtils.isFailure(right)) {
 					this.rollback(startIndex);
-					return node;
+					return right;
 				}
-				assert(left == node);
+				assert(left == right);
 			}
 		}
-		int markerId = this.markObjectStack();
-		long newnode = PEGUtils.objectId(startIndex, e);
-		//System.out.println("new " + S(newnode));
+		int mark = this.markObjectStack();
+		int newnode = lazyNewObject(startIndex);
+		this.statObjectCount += 1;
+		//this.showPosition("new " + newnode + " " + e + mark/4);
 		if(e.leftJoin) {
-			this.pushSetter(newnode, 0, -1, leftNode);
+			this.lazySetter(newnode, 0, left);
 		}
 		for(int i = e.predictionIndex; i < e.size(); i++) {
-			//System.out.println("newO B i= " +i + ", pos=" + this.getPosition() + ", "+ S(newnode) + " e=" + e.get(i));
-			long node = e.get(i).fastMatch(newnode, this);
-			//System.out.println("newO A i= " +i + ", pos=" + this.getPosition() + ", " + S(newnode) +"=>" +S(node));
-			if(PEGUtils.isFailure(node)) {
-				this.rollbackObjectStack(markerId);
+			//System.out.println("newO B i= " +i + ", pos=" + this.getPosition() + ", "+ newnode + " e=" + e.get(i));
+			int right = e.get(i).fastMatch(newnode, this);
+			if(PEGUtils.isFailure(right)) {
+//				this.showPosition("dispose " + newnode + " " + e + mark/4);				
+				this.rollbackObjectStack(mark);
 				this.rollback(startIndex);
-				return node;
+				return right;
+			}
+			if(newnode != right) {
+				//this.showPosition("dropping new oid " + newnode +"=>" + right + " by " + e.get(i) + " IN " + e);
+				//System.out.println("mark=" + markToIgnoreUnsetObject + " search.. " + this.searchOid(right) + " < " + this.stackTop);
+				this.rollbackObjectStack(this.searchOid(right));
 			}
 		}
-		this.log(OpPosition, newnode, this.getPosition());
+		this.lazyCapture(mark, (int)(this.getPosition() - startIndex));
 		return newnode;
 	}
 	
@@ -266,11 +384,11 @@ public class MonadicParser extends ParserContext {
 	long statExportSize  = 0;
 	long statExportFailure  = 0;
 
-	public long matchExport(long left, PegExport e) {
+	public int matchExport(int left, PegExport e) {
 		int markerId = this.markObjectStack();
-		long node = e.inner.fastMatch(left, this);
+		int node = e.inner.fastMatch(left, this);
 		if(!PEGUtils.isFailure(node)) {
-			Pego pego = createObject(this.markObjectStack(), node);
+			Pego pego = createObject(node);
 			this.statExportCount += 1;
 			this.statExportSize += pego.length;
 			this.pushBlockingQueue(pego);
@@ -293,17 +411,18 @@ public class MonadicParser extends ParserContext {
 		}
 	}
 
-	public long matchSetter(long left, PegSetter e) {
+	public int matchSetter(int left, PegSetter e) {
 		int mark = this.markObjectStack();
-		long right = e.inner.fastMatch(left, this);
+		int right = e.inner.fastMatch(left, this);
 		if(PEGUtils.isFailure(right) || left == right) {
+			this.rollbackObjectStack(mark);
 			return right;
 		}
-		this.pushSetter(left, mark, e.index, right);
+		this.lazySetter(left, e.index, right);
 		return left;
 	}
 	
-	public long matchIndent(long left, PegIndent e) {
+	public int matchIndent(int left, PegIndent e) {
 		String indent = this.source.getIndentText(PEGUtils.getpos(left));
 		if(this.match(indent)) {
 			return left;
@@ -311,7 +430,7 @@ public class MonadicParser extends ParserContext {
 		return this.foundFailure2(e);
 	}
 
-	public long matchIndex(long left, PegIndex e) {
+	public int matchIndex(int left, PegIndex e) {
 //		TODO
 //		String text = left.textAt(e.index, null);
 //		if(text != null) {
