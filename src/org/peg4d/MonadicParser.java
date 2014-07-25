@@ -175,10 +175,10 @@ public class MonadicParser extends ParserContext {
 			return;
 		}
 		if(readOid(this.stackTop) == oid && readOp(this.stackTop) == OpTag2) {
-			writeData(this.stackTop, e.pegid2);
+			writeData(this.stackTop, e.uniqueId);
 		}
 		else {
-			log4(OpTag2, makediff(oid), oid, e.pegid2, 0);
+			log4(OpTag2, makediff(oid), oid, e.uniqueId, 0);
 		}
 	}
 
@@ -188,10 +188,10 @@ public class MonadicParser extends ParserContext {
 			return;
 		}
 		if(readOid(this.stackTop) == oid && readOp(this.stackTop) == OpTag2) {
-			writeData2(this.stackTop, e.pegid2);
+			writeData2(this.stackTop, e.uniqueId);
 		}
 		else {
-			log4(OpTag2, makediff(oid), oid, 0, e.pegid2);
+			log4(OpTag2, makediff(oid), oid, 0, e.uniqueId);
 		}
 	}
 	

@@ -64,7 +64,7 @@ public abstract class Memo {
 	protected abstract ObjectMemo getMemo(Peg keypeg, long keypos);
 
 	public final static long makekey(long pos, Peg keypeg) {
-		return (pos << 24) | keypeg.pegid2;
+		return (pos << 24) | keypeg.uniqueId;
 	}
 	
 	class FifoMap extends LinkedHashMap<Long, ObjectMemo> {

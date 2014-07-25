@@ -27,8 +27,10 @@ public abstract class Peg {
 	public final static int Debug             = 1 << 24;
 	
 	Grammar    base;
-	int        flag     = 0;
-	int        pegid2   = 0;
+	int        flag       = 0;
+	short      uniqueId   = 0;
+	short      semanticId = 0;
+	
 	String     ruleName = null;
 
 	ParserSource source = null;
@@ -38,7 +40,8 @@ public abstract class Peg {
 		this.base = base;
 		this.flag = flag;
 		base.pegList.add(this);
-		this.pegid2 = base.pegList.size();
+		this.uniqueId = (short)base.pegList.size();
+		this.semanticId = this.uniqueId;
 	}
 		
 	protected abstract Peg clone(Grammar base, PegTransformer tr);
