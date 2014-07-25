@@ -1,0 +1,72 @@
+
+// PEG4d
+// http://konoha4e.org/peg4d
+
+// Jul 25 00:36:36 konoha13.local coreaudiod[198]: Disabled automatic stack shots because audio IO is active
+//  <Warning>
+
+TopLevel
+ = <{ #array (Log^)* }>
+ ;
+
+Log 
+ = <{ #Log 
+     <{ MONTH    #Month      }>^ ' ' 
+     <{ DAY      #Day        }>^ ' '
+     <{ TIME     #Time       }>^ ' '
+     <{ HOST     #Host       }>^ ' '
+     <{ PROCESS  #Name       }>^ '['
+     <{ PID      #ProcessId  }>^ ']'
+     Misc^    Level^             ': '    
+     <{ DATA     #Data       }>^ '\n'?
+   }>
+ ;
+
+DAY
+ = [0-3 ] [0-9]
+ ;
+
+
+MONTH
+ = 'Jan' / 'Feb' / 'Mar' / 'Apr' / 'May' / 'Jun'
+ / 'Jul' / 'Aug' / 'Sep' / 'Oct' / 'Nov' / 'Dec'
+ ;
+
+DAY
+ = [0-3 ] [0-9]
+ ;
+
+TIME
+ = [0-9] [0-9] ':' [0-9] [0-9] ':' [0-9] [0-9]
+ ;
+
+HOST
+ = (!' ' .)*
+ ;
+
+PROCESS
+ = (!'[' .)*
+ ;
+
+PID
+ = [0-9]+
+ ;
+
+Misc
+ = (' (' <{ (!')' .)* #Misc }> ')')
+ / <{ `` #Misc }>
+ ;
+
+Level
+ = (' <' <{ (!'>' .)* #Level }> '>') 
+   / <{ `Unknown` #Level }>
+   ;
+
+DATA
+ = (!('\n' (MONTH / !.)) .)*
+ ;
+
+
+
+
+
