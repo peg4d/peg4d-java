@@ -39,6 +39,12 @@ public class UCharset {
 		return this.utfBitMap != null;
 	}
 	
+	public final String key() {
+		return text;  // fixme
+	}
+
+	
+	
 	
 	public final boolean match(char ch) {
 		if(ch < 128) {
@@ -207,6 +213,7 @@ public class UCharset {
 		}
 		return defval;
 	}
+
 
 }
 

@@ -102,32 +102,31 @@ public class Grammar {
 		UMap<String> visited = new UMap<String>();
 		for(int i = 0; i < list.size(); i++) {
 			String ruleName = list.ArrayValues[i];
-			Peg e = this.pegMap.get(ruleName, null);
-			e.ruleName = ruleName;
-			e.verify2(e, this, ruleName, visited);
+			Peg nonTerminal = this.pegMap.get(ruleName, null);
+			nonTerminal.verify2(ruleName, nonTerminal, ruleName, visited);
 			visited.clear();
 			if(Main.VerbosePeg && !Main.VerboseStat) {
-				if(e.is(Peg.HasNewObject)) {
+				if(nonTerminal.is(Peg.HasNewObject)) {
 					ruleName = "object " + ruleName; 
 				}
-				if(!e.is(Peg.HasNewObject) && !e.is(Peg.HasSetter)) {
+				if(!nonTerminal.is(Peg.HasNewObject) && !nonTerminal.is(Peg.HasSetter)) {
 					ruleName = "text " + ruleName; 
 				}
-				if(e.is(Peg.CyclicRule)) {
+				if(nonTerminal.is(Peg.CyclicRule)) {
 					ruleName += "*"; 
 				}
-				System.out.println(e.format(ruleName));
+				System.out.println(nonTerminal.format(ruleName));
 			}
 		}
 		/* to complete the verification of cyclic rules */
 		PegNormaizer norm = new PegNormaizer();
 		for(int i = 0; i < list.size(); i++) {
 			String ruleName = list.ArrayValues[i];
-			Peg e = this.pegMap.get(ruleName, null);
-			e.verify2(e, this, e.ruleName, null);
+			Peg nonTerminal = this.pegMap.get(ruleName, null);
+			nonTerminal.verify2(ruleName, nonTerminal, ruleName, null);
 			norm.setRuleName(ruleName);
-			Peg ne = e.clone(this, norm);
-			if(ne != e) {
+			Peg ne = nonTerminal.clone(this, norm);
+			if(ne != nonTerminal) {
 				this.pegMap.put(ruleName, ne);
 			}
 		}
@@ -152,7 +151,6 @@ public class Grammar {
 				ne = e.clone(this, optimizer);
 				pegCache.put(key, ne);
 			}
-			ne.ruleName = key;
 			this.pegList.add(ne);
 		}
 		return pegCache;
@@ -165,7 +163,6 @@ public class Grammar {
 		}
 		@Override
 		public Peg transform(Grammar base, Peg e) {
-			e.ruleName = ruleName;
 			if(e instanceof PegChoice) {
 				return this.flattenChoice((PegChoice)e);
 			}
@@ -269,9 +266,71 @@ public class Grammar {
 		System.out.println(sb.toString());
 	}
 	
+	// factory
+	
+	UMap<Peg> semMap = new UMap<Peg>();
+	private static String prefixString = "t\b";
+	private static String prefixCharacter = "c\b";
+	private static String prefixNot = "!\b";
+	private static String prefixOptional = "?\b";
+	
+	Peg newString(String text) {
+		Peg e = semMap.get(prefixString + text);
+		if(e == null) {
+			e = new PegString(this, 0, text);
+			semMap.put(prefixString + text, e);
+		}
+		return e;
+	}
+
+	Peg newAny() {
+		Peg e = semMap.get("");
+		if(e == null) {
+			e = new PegAny(this, 0);
+			semMap.put("", e);
+		}
+		return e;
+	}
+	
+	Peg newCharacter(String text) {
+		UCharset u = new UCharset(text);
+		String key = prefixCharacter + u.key();
+		Peg e = semMap.get(key);
+		if(e == null) {
+			e = new PegCharacter(this, 0, u);
+			semMap.put(key, e);
+		}
+		return e;
+	}
+
+	Peg newOptional(Peg p) {
+		String key = prefixOptional + p.key();
+		Peg e = semMap.get("");
+		if(e == null) {
+			e = new PegOptional(this, 0, p);
+			semMap.put(key, e);
+		}
+		return e;
+	}
+
+	Peg newNot(Peg p) {
+		String key = prefixNot + p.key();
+		Peg e = semMap.get("");
+		if(e == null) {
+			e = new PegNot(this, 0, p);
+			semMap.put(key, e);
+		}
+		return e;
+	}
+
+
+	
+
 }
 
 class PEG4dGrammar extends Grammar {
+	
+	
 	
 	static boolean parse(Grammar loadingGrammar, ParserContext context, Pego pego) {
 		//System.out.println("DEBUG? parsed: " + node);		
@@ -320,7 +379,6 @@ class PEG4dGrammar extends Grammar {
 
 	private static Peg toParsingExpression(Grammar loadingGrammar, String ruleName, Pego node) {
 		Peg e = toParsingExpressionImpl(loadingGrammar, ruleName, node);
-		e.ruleName = ruleName;
 		e.source = node.getSource();
 		e.sourcePosition = (int)node.getSourcePosition();
 		//System.out.println("seq: " + e.getClass() + ", size="+e.size());

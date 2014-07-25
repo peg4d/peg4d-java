@@ -16,13 +16,15 @@ public abstract class Peg {
 	public final static int HasSetter         = 1 << 11;
 	public final static int HasTagging        = 1 << 12;
 	public final static int HasMessage        = 1 << 13;
-	public final static int HasPipe           = 1 << 14;
-	public final static int HasCatch          = 1 << 15;
-	public final static int HasContext        = 1 << 16;
+	public final static int HasContext        = 1 << 14;
+	public final static int HasReserved       = 1 << 15;
+	public final static int hasReserved       = 1 << 16;
 	public final static int Mask = HasNonTerminal | HasString | HasCharacter | HasAny
 	                             | HasRepetation | HasOptional | HasChoice | HasAnd | HasNot
 	                             | HasNewObject | HasSetter | HasTagging | HasMessage 
-	                             | HasPipe | HasCatch | HasContext;
+	                             | HasReserved | hasReserved | HasContext;
+	public final static int StackedObjectOperation = 1 << 17;
+	public final static int PossibleDifferentRight = 1 << 18;
 	
 	public final static int Debug             = 1 << 24;
 	
@@ -31,7 +33,7 @@ public abstract class Peg {
 	short      uniqueId   = 0;
 	short      semanticId = 0;
 	
-	String     ruleName = null;
+//	String     ruleName = null;
 
 	ParserSource source = null;
 	int       sourcePosition = 0;
@@ -47,7 +49,7 @@ public abstract class Peg {
 	protected abstract Peg clone(Grammar base, PegTransformer tr);
 	protected abstract void stringfy(UStringBuilder sb, PegFormatter fmt);
 	protected abstract void makeList(String startRule, Grammar parser, UList<String> list, UMap<String> set);
-	protected abstract void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited);
+	protected abstract void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited);
 	public abstract Pego simpleMatch(Pego left, ParserContext context);
 	public abstract int fastMatch(int left, MonadicParser context);
 	
@@ -104,10 +106,10 @@ public abstract class Peg {
 	@Override public String toString() {
 		UStringBuilder sb = new UStringBuilder();
 		this.stringfy(sb, new PegFormatter());
-		if(this.ruleName != null) {
-			sb.append(" defined in ");
-			sb.append(this.ruleName);
-		}
+//		if(this.ruleName != null) {
+//			sb.append(" defined in ");
+//			sb.append(this.ruleName);
+//		}
 		return sb.toString();
 	}
 
@@ -202,6 +204,10 @@ public abstract class Peg {
 
 	int statCallCount = 0;
 	int statRepeatCount = 0;
+
+	public String key() {
+		return "#" + this.uniqueId;
+	}
 	
 }
 
@@ -220,8 +226,7 @@ abstract class PegTerm extends Peg {
 	protected void makeList(String startRule, Grammar rules, UList<String> list, UMap<String> set) {
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		this.ruleName = visitingName;
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 	}
 	@Override
 	public final int size() {
@@ -253,23 +258,22 @@ class PegNonTerminal extends PegTerm {
 		fmt.formatNonTerminal(sb, this);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		Peg next = rules.getRule(this.symbol);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		Peg next = this.base.getRule(this.symbol);
 		if( next == null && !Main.VerboseStat) {
 			Main._PrintLine(this.source.formatErrorMessage("error", this.sourcePosition, "undefined label: " + this.symbol));
-			rules.foundError = true;
+			this.base.foundError = true;
 			return;
 		}
-		if(startRule.ruleName.equals(this.symbol)) {
-			startRule.set(CyclicRule);
+		if(ruleName.equals(this.symbol)) {
+			nonTerminal.set(CyclicRule);
 		}
 		else if(visited != null && !visited.hasKey(this.symbol)) {
 			visited.put(this.symbol, this.symbol);
-			this.verify2(startRule, rules, this.symbol, visited);
+			this.verify2(ruleName, nonTerminal, this.symbol, visited);
 		}
 		this.derived(next);
-		startRule.derived(this);
+		nonTerminal.derived(this);
 	}
 	@Override
 	public Object getPrediction() {
@@ -318,9 +322,9 @@ class PegString extends PegTerm {
 		fmt.formatString(sb, this);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		startRule.derived(this);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		nonTerminal.derived(this);
 	}
 	@Override
 	public Object getPrediction() {
@@ -362,9 +366,9 @@ class PegAny extends PegTerm {
 		fmt.formatAny(sb, this);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		startRule.derived(this);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		nonTerminal.derived(this);
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -407,10 +411,10 @@ class PegCharacter extends PegTerm {
 		fmt.formatCharacter(sb, this);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
 		this.set(Peg.HasCharacter);
-		startRule.derived(this);
+		nonTerminal.derived(this);
 	}
 	@Override
 	public Object getPrediction() {
@@ -456,9 +460,8 @@ abstract class PegUnary extends Peg {
 		this.inner.makeList(startRule, parser, list, set);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		this.ruleName = visitingName;
-		this.inner.verify2(startRule, rules, visitingName, visited);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		this.inner.verify2(ruleName, nonTerminal, visitingName, visited);
 		this.derived(this.inner);
 	}
 }
@@ -481,9 +484,9 @@ class PegOptional extends PegUnary {
 	}
 
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		startRule.derived(this);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		nonTerminal.derived(this);
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -522,9 +525,9 @@ class PegRepeat extends PegUnary {
 		fmt.formatRepeat(sb, this);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		startRule.derived(this);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		nonTerminal.derived(this);
 	}
 	@Override
 	public Object getPrediction() {
@@ -586,10 +589,10 @@ class PegAnd extends PegUnary {
 		fmt.formatAnd(sb, this);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
 		this.set(Peg.HasAnd);
-		startRule.derived(this);
+		nonTerminal.derived(this);
 		if(visited == null) { /* in the second phase */
 			if(this.inner.is(Peg.HasNewObject) || this.inner.is(Peg.HasSetter)) {
 				this.report("warning", "ignored object operation");
@@ -639,9 +642,9 @@ class PegNot extends PegUnary {
 		return context.matchNot(left, this);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		startRule.derived(this);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		nonTerminal.derived(this);
 		if(visited == null) { /* in the second phase */
 			if(this.inner.hasObjectOperation()) {
 				this.report("warning", "ignored object operation");
@@ -701,11 +704,10 @@ abstract class PegList extends Peg {
 		}
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		this.ruleName = visitingName;
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		for(int i = 0; i < this.size(); i++) {
 			Peg e  = this.get(i);
-			e.verify2(startRule, rules, visitingName, visited);
+			e.verify2(ruleName, nonTerminal, visitingName, visited);
 			this.derived(e);
 		}
 	}
@@ -735,9 +737,9 @@ class PegSequence extends PegList {
 	}
 
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		startRule.derived(this);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		nonTerminal.derived(this);
 	}
 	
 	@Override
@@ -852,17 +854,17 @@ class PegChoice extends PegList {
 	}
 	
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		startRule.derived(this);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		nonTerminal.derived(this);
 		if(visited == null) {  // in the second phase
 			this.predictable = -1;
 			this.predicted = null; // reset
 			if(this.getPrediction() == null) {
-				rules.statUnpredictableChoice += 1;
+				this.base.statUnpredictableChoice += 1;
 			}
 			else {
-				rules.statPredictableChoice += 1;
+				this.base.statPredictableChoice += 1;
 			}
 		}
 	}
@@ -905,9 +907,9 @@ class PegSetter extends PegUnary {
 		return context.matchSetter(left, this);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		startRule.derived(this);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		nonTerminal.derived(this);
 		if(visited == null) { /* in the second phase */
 			if(!this.inner.is(Peg.HasNewObject)) {
 				this.report("warning", "no object is generated");
@@ -939,10 +941,10 @@ class PegTagging extends PegTerm {
 		fmt.formatTagging(sb, this);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
 		//rules.addObjectLabel(this.symbol);
-		startRule.derived(this);
+		nonTerminal.derived(this);
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -974,9 +976,9 @@ class PegMessage extends PegTerm {
 		fmt.formatMessage(sb, this);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		startRule.derived(this);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		nonTerminal.derived(this);
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -1015,7 +1017,6 @@ class PegNewObject extends PegList {
 		Peg ne = tr.transform(base, this);
 		if(ne == null) {
 			PegList l = new PegNewObject(base, this.flag, this.size(), this.leftJoin);
-			l.ruleName = this.ruleName;
 			for(int i = 0; i < this.size(); i++) {
 				l.list.add(this.get(i).clone(base, tr));
 			}
@@ -1041,9 +1042,9 @@ class PegNewObject extends PegList {
 	}
 
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		startRule.derived(this);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		nonTerminal.derived(this);
 	}
 	@Override
 	public Object getPrediction() {
@@ -1075,9 +1076,9 @@ class PegExport extends PegUnary {
 		fmt.formatExport(sb, this);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		startRule.derived(this);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		nonTerminal.derived(this);
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -1106,9 +1107,9 @@ class PegIndent extends PegTerm {
 	}
 
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		startRule.derived(this);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		nonTerminal.derived(this);
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -1138,9 +1139,9 @@ class PegIndex extends PegTerm {
 		fmt.formatIndex(sb, this);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		super.verify2(startRule, rules, visitingName, visited);
-		startRule.derived(this);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		nonTerminal.derived(this);
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -1158,7 +1159,6 @@ abstract class PegOptimized extends Peg {
 	PegOptimized (Peg orig) {
 		super(orig.base, orig.flag);
 		this.orig = orig;
-		this.ruleName = orig.ruleName;
 	}
 	@Override
 	protected Peg clone(Grammar base, PegTransformer tr) {
@@ -1169,9 +1169,8 @@ abstract class PegOptimized extends Peg {
 		this.orig.stringfy(sb, fmt);
 	}
 	@Override
-	protected void verify2(Peg startRule, Grammar rules, String visitingName, UMap<String> visited) {
-		this.ruleName = visitingName;
-		this.orig.verify2(startRule, rules, visitingName, visited);
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		this.orig.verify2(ruleName, nonTerminal, visitingName, visited);
 		this.derived(this.orig);
 	}
 	@Override

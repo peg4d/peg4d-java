@@ -268,7 +268,7 @@ class PegOptimizer extends PegTransformer {
 			return false;
 		}
 		if(this.peg.optimizationLevel < 2) {
-			if(e.is(Peg.HasTagging) || e.is(Peg.HasPipe) || e.is(Peg.HasMessage) || e.is(Peg.HasContext)) {
+			if(e.is(Peg.HasTagging) || e.is(Peg.HasReserved) || e.is(Peg.HasMessage) || e.is(Peg.HasContext)) {
 				return false;
 			}
 		}
