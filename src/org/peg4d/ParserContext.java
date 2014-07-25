@@ -102,15 +102,15 @@ public abstract class ParserContext {
 		return false;
 	}
 	
-	protected final long matchZeroMore(UCharset charset) {
-		for(;this.hasChar(); this.consume(1)) {
-			char ch = this.source.charAt(this.sourcePosition);
-			if(!charset.match(ch)) {
-				break;
-			}
-		}
-		return this.sourcePosition;
-	}
+//	protected final long matchZeroMore(UCharset charset) {
+//		for(;this.hasChar(); this.consume(1)) {
+//			char ch = this.source.charAt(this.sourcePosition);
+//			if(!charset.match(ch)) {
+//				break;
+//			}
+//		}
+//		return this.sourcePosition;
+//	}
 	
 	public final String formatErrorMessage(String msg1, String msg2) {
 		return this.source.formatErrorMessage(msg1, this.sourcePosition, msg2);
@@ -130,7 +130,7 @@ public abstract class ParserContext {
 	}
 	
 	public boolean hasNode() {
-		this.matchZeroMore(UCharset.WhiteSpaceNewLine);
+//		this.matchZeroMore(UCharset.WhiteSpaceNewLine);
 		return this.sourcePosition < this.endPosition;
 	}
 
@@ -704,10 +704,6 @@ public abstract class ParserContext {
 			long used =  heap - usedMemory;
 			System.out.println("heap: " + KMunit(heap, "KiB", "MiB") + " used: " + KMunit(used, "KiB", "MiB") + " heap/file: " + ratio((double) heap/ (statFileLength)));
 			System.out.println();
-			if(this.sourcePosition != this.endPosition) {
-				this.source.formatErrorMessage("unconsumed", this.sourcePosition, "please report this file to kimio !!");
-				Main._Exit(1, "Abort!!");
-			}
 		}
 	}
 	

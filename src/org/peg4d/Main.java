@@ -26,11 +26,11 @@ public class Main {
 	// -s StartingPoint
 	private static String StartingPoint = "TopLevel";  // default
 
+	// -t output
+	private static String OutputType = "pego";  // default
+
 	// -f format
 	private static String PegFormat = null;  // default
-
-	// -d driver
-	private static String DriverName = "peg";  // default
 
 	// -i
 	private static boolean ShellMode = false;
@@ -136,8 +136,8 @@ public class Main {
 			else if(argument.equals("--monadic")) {  //--monadic
 				ParserType = argument;
 			}
-			else if ((argument.equals("-d") || argument.equals("--driver")) && (index < args.length)) {
-				DriverName = args[index];
+			else if ((argument.equals("-t") || argument.equals("--target")) && (index < args.length)) {
+				OutputType = args[index];
 				index = index + 1;
 			}
 			else if ((argument.equals("-o") || argument.equals("--out")) && (index < args.length)) {
@@ -180,14 +180,16 @@ public class Main {
 
 	public final static void ShowUsage(String Message) {
 		System.out.println(ProgName + " :");
-		System.out.println("  --peg|-p <FILE>          Specify PEG file");
-		System.out.println("  --start|-s <NAME>        Specify StartPoint default: TopLevel");
-		System.out.println("  --format|-f <type>       Specify PEG formatter");
-		System.out.println("  --packrat                Packrat Parser");
-		System.out.println("  -M<num>                  Memo Factor -M0 => No Memo");
-		System.out.println("  --verbose               Printing Debug infomation");
-		System.out.println("  --verbose:peg           Printing Peg/Debug infomation");
-		System.out.println("  --verbose:bun           Printing Peg/Bun infomation");
+		System.out.println("  -p <FILE>                 Specify PEG file  default: PEG4d grammar");
+		System.out.println("  -s | --start <NAME>       Specify Non-Terminal as the starting point. default: TopLevel");
+		System.out.println("  -t <type>                 Specify output type. default: pego");
+		System.out.println("     pego|none|json|csv");
+		System.out.println("  -c                        Invoke as checker (without output generation). Exit 1 when failed");
+		System.out.println("  -f | --format<type>       Specify PEG formatter");
+		System.out.println("  --packrat                 Packrat Parser");
+		System.out.println("  -M<num>                   Memo Factor -M0 => No Memo");
+		System.out.println("  --verbose                 Printing Debug infomation");
+		System.out.println("  --verbose:peg             Printing Peg/Debug infomation");
 		Main._Exit(0, Message);
 	}
 
@@ -225,11 +227,21 @@ public class Main {
 
 	private static void loadScript(Grammar peg, String fileName) {
 		String startPoint = StartingPoint;
+		Main.printVerbose("FileName", fileName);
+		Main.printVerbose("Grammar", peg.getName());
+		Main.printVerbose("StartingPoint", StartingPoint);
 		ParserContext p = peg.newParserContext(Main.loadSource(fileName));
-		while(p.hasNode()) {
-			p.beginStatInfo();
-			Pego pego = p.parseNode(startPoint);
-			p.endStatInfo(pego);
+		//while(p.hasNode()) {
+		p.beginStatInfo();
+		Pego pego = p.parseNode(startPoint);
+		p.endStatInfo(pego);
+		//}
+		if(p.hasChar()) {
+			long pos = p.getPosition();
+			if(pos > 0) {
+				p.showPosition("consumed", pos-1);
+			}
+			p.showPosition("unconsumed", pos);
 		}
 	}
 
@@ -464,6 +476,14 @@ public class Main {
 		System.err.println(message);
 	}
 
+	public final static void printVerbose(String head, Object message) {
+		if(Main.VerboseMode) {
+			System.out.println(head + ": " + message);
+		}
+	}
+
+	
+	
 	public final static void _Exit(int status, String message) {
 		if(Main.VerboseMode) {
 			System.err.println("EXIT " + Main._GetStackInfo(3) + " " + message);

@@ -4,6 +4,7 @@ package org.peg4d;
 public class Grammar {
 	public final static PEG4dGrammar PEG4d = new PEG4dGrammar();
 
+	String              name;
 	UList<Peg>          pegList;
 	UMap<Peg>           pegMap;
 	UMap<Peg>           optimizedPegMap;
@@ -21,9 +22,14 @@ public class Grammar {
 		this.optimizationLevel = Main.OptimizationLevel;
 	}
 
+	public String getName() {
+		return this.name;
+	}
+
 	public final boolean loadGrammarFile(String fileName) {
 		PEG4dGrammar peg4d = Grammar.PEG4d;
 		ParserContext p = peg4d.newParserContext(Main.loadSource(fileName));
+		this.name = fileName;
 		p.setRecognitionOnly(false);
 		while(p.hasNode()) {
 			Pego pego = p.parseNode("TopLevel");
@@ -409,6 +415,7 @@ public class Grammar {
 	}
 
 
+
 	
 
 }
@@ -564,6 +571,7 @@ class PEG4dGrammar extends Grammar {
 		super();
 		this.optimizationLevel = 2;
 		this.loadPEG4dGrammar();
+		this.name = "PEG4d";
 	}
 	
 	@Override
