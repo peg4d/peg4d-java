@@ -289,8 +289,8 @@ class PEG4dGrammar extends Grammar {
 			return true;
 		}
 		if(pego.is("#error")) {
-			char c = pego.source.charAt(pego.startIndex);
-			System.out.println(pego.source.formatErrorMessage("error", pego.startIndex, "syntax error: ascii=" + (int)c));
+			char c = pego.getSource().charAt(pego.getSourcePosition());
+			System.out.println(pego.formatSourceMessage("error", "syntax error: ascii=" + (int)c));
 			return false;
 		}
 		System.out.println("Unknown peg node: " + pego);
@@ -321,8 +321,8 @@ class PEG4dGrammar extends Grammar {
 	private static Peg toParsingExpression(Grammar loadingGrammar, String ruleName, Pego node) {
 		Peg e = toParsingExpressionImpl(loadingGrammar, ruleName, node);
 		e.ruleName = ruleName;
-		e.source = node.source;
-		e.sourcePosition = (int)node.startIndex;
+		e.source = node.getSource();
+		e.sourcePosition = (int)node.getSourcePosition();
 		//System.out.println("seq: " + e.getClass() + ", size="+e.size());
 		return e;
 	}	

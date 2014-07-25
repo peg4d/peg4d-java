@@ -675,14 +675,14 @@ class PegOptimizer extends PegTransformer {
 		}
 		
 		public Pego simpleMatchDebug(Pego left, ParserContext context) {
-			long pos = context.getPosition();
+//			long pos = context.getPosition();
 			Pego node = super.simpleMatch(left, context);
-			context.setPosition(pos);
-			Pego node2 = this.simpleMatch(left, context);
-			if(!node.equals2(node2)) {
-				context.setPosition(pos);
-				context.showPosition("mismatched: " + this + "  size=" + this.list.size());
-			}
+//			context.setPosition(pos);
+//			Pego node2 = this.simpleMatch(left, context);
+//			if(!node.equals2(node2)) {
+//				context.setPosition(pos);
+//				context.showPosition("mismatched: " + this + "  size=" + this.list.size());
+//			}
 			return node;
 		}
 		@Override

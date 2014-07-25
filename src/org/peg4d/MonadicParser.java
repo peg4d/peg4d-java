@@ -29,9 +29,10 @@ public class MonadicParser extends ParserContext {
 		Pego pego = null;
 		if(PEGUtils.isFailure(oid)) {
 			Peg e = this.peg.getPeg(this.failurePosition);
-			pego = new Pego("#error", this.source, null, PEGUtils.getpos(this.failurePosition));
-			pego.message = this.source.formatErrorMessage("syntax error", PEGUtils.getpos(this.failurePosition), " by " + e);
-			System.out.println(pego.message);
+			pego = Pego.newSource("#error", this.source, PEGUtils.getpos(this.failurePosition));
+			String msg = this.source.formatErrorMessage("syntax error", PEGUtils.getpos(this.failurePosition), " by " + e);
+			pego.setMessage(msg);
+			System.out.println(msg);
 //			if(pos == this.getPosition()) {
 			this.setPosition(this.endPosition);  // skip 
 //			}
@@ -53,7 +54,7 @@ public class MonadicParser extends ParserContext {
 //		}
 		return pego;
 	}
-		
+	
 	private long failurePosition = 0;
 	public final int foundFailure2(Peg e) {
 		if(this.sourcePosition >= PEGUtils.getpos(this.failurePosition)) {  // adding error location
@@ -183,7 +184,7 @@ public class MonadicParser extends ParserContext {
 
 	void lazyMessaging(int oid, PegMessage e) {
 		if(bigDataOid == oid) {
-			this.bigPego.message = e.symbol;
+			this.bigPego.setMessage(e.symbol);
 			return;
 		}
 		if(readOid(this.stackTop) == oid && readOp(this.stackTop) == OpTag2) {
@@ -329,7 +330,7 @@ public class MonadicParser extends ParserContext {
 			pego = createObjectImpl(this.searchOid(oid), this.stackTop, oid);
 		}
 		else {
-			pego = new Pego("#empty");
+			pego = Pego.newSource("#empty", this.source, 0);
 		}
 		if(pego == null) {
 			//dumpStack(0, top);
@@ -390,7 +391,7 @@ public class MonadicParser extends ParserContext {
 		if(!PEGUtils.isFailure(node)) {
 			Pego pego = createObject(node);
 			this.statExportCount += 1;
-			this.statExportSize += pego.length;
+			this.statExportSize += pego.getLength();
 			this.pushBlockingQueue(pego);
 		}
 		else {
@@ -400,6 +401,7 @@ public class MonadicParser extends ParserContext {
 	}
 
 	private BlockingQueue<Pego> queue = null; 
+	
 	@Override
 	protected void pushBlockingQueue(Pego pego) {
 		if(this.queue != null) {

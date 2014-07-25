@@ -140,11 +140,12 @@ public abstract class ParserContext {
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
-		Pego pego = start.simpleMatch(new Pego("#toplevel"), this);
+		Pego pego = start.simpleMatch(Pego.newSource("#toplevel", this.source, 0), this);
 		if(pego.isFailure()) {
 			pego = this.newErrorObject();
-			pego.message = this.source.formatErrorMessage("syntax error", pego.startIndex, "");
-			System.out.println(pego.message);
+			String msg = this.source.formatErrorMessage("syntax error", pego.getSourcePosition(), "");
+			pego.setMessage(msg);
+			System.out.println(msg);
 		}
 		return pego;
 	}
@@ -157,7 +158,7 @@ public abstract class ParserContext {
 	
 	public final void setRecognitionOnly(boolean checkMode) {
 		if(checkMode) {
-			this.successResult = new Pego("#success", this.source, null, 0);
+			this.successResult = Pego.newSource("#success", this.source, 0);
 		}
 		else {
 			this.successResult = null;
@@ -170,34 +171,33 @@ public abstract class ParserContext {
 	
 	public final Pego newPegObject(String name, Peg created, long pos) {
 		if(this.isRecognitionOnly()) {
-			this.successResult.startIndex = pos;
+			this.successResult.setSourcePosition(pos);
 			return this.successResult;
 		}
 		else {
 			this.statObjectCount = this.statObjectCount + 1;
-			Pego node = new Pego(name, this.source, created, pos);
+			Pego node = Pego.newSource("#new", this.source, pos);
 			return node;
 		}
 	}
 	
-	protected final Pego foundFailureNode = new Pego(null, this.source, null, 0);
+	private long failurePosition = 0;
+	private final Pego foundFailureNode = Pego.newSource(null, this.source, 0);
 
 	public final Pego newErrorObject() {
-		Pego node = newPegObject("#error", this.foundFailureNode.createdPeg, this.foundFailureNode.startIndex);
+		Pego node = newPegObject("#error", this.peg.getPeg(failurePosition), PEGUtils.getpos(this.failurePosition));
 		return node;
 	}
 	
-	public final Pego foundFailure(Peg created) {
-		if(this.sourcePosition >= this.foundFailureNode.startIndex) {  // adding error location
-			this.foundFailureNode.startIndex = this.sourcePosition;
-			this.foundFailureNode.createdPeg = created;
+	public final Pego foundFailure(Peg e) {
+		if(this.sourcePosition >= PEGUtils.getpos(this.failurePosition)) {  // adding error location
+			this.failurePosition = PEGUtils.failure(this.sourcePosition, e);
 		}
 		return this.foundFailureNode;
 	}
 
-	public final Pego refoundFailure(Peg created, long pos) {
-		this.foundFailureNode.startIndex = pos;
-		this.foundFailureNode.createdPeg = created;
+	public final Pego refoundFailure(Peg e, long pos) {
+		this.failurePosition = PEGUtils.failure(pos, e);
 		return this.foundFailureNode;
 	}
 
@@ -417,7 +417,7 @@ public abstract class ParserContext {
 					cur = cur.next;
 				}
 				if(entryList.size() > 0) {
-					newnode.expandAstToSize(entryList.size());
+					newnode = Pego.newAst(newnode, entryList.size());
 					int index = 0;
 					for(int i = entryList.size() - 1; i >= 0; i--) {
 						ObjectLog l = entryList.ArrayValues[i];
@@ -435,7 +435,7 @@ public abstract class ParserContext {
 				}
 				entryList = null;
 			}
-			newnode.setSource(startIndex, this.getPosition());
+			newnode.setLength((int)(this.getPosition() - startIndex));
 		}
 	}
 	
@@ -483,7 +483,7 @@ public abstract class ParserContext {
 		Pego pego = e.inner.simpleMatch(left, this);
 		if(!pego.isFailure()) {
 			this.statExportCount += 1;
-			this.statExportSize += pego.length;
+			this.statExportSize += pego.getLength();
 			this.pushBlockingQueue(pego);
 		}
 		else {
@@ -504,13 +504,13 @@ public abstract class ParserContext {
 	}
 
 	public Pego matchSetter(Pego left, PegSetter e) {
-		long pos = left.startIndex;
+		long pos = left.getSourcePosition();
 		Pego node = e.inner.simpleMatch(left, this);
 		if(node.isFailure() || left == node) {
 			return node;
 		}
 		if(this.isRecognitionOnly()) {
-			left.startIndex = pos;
+			left.setSourcePosition(pos);
 		}
 		else {
 			this.pushSetter(left, e.index, node);
@@ -519,18 +519,18 @@ public abstract class ParserContext {
 	}
 
 	public Pego matchTag(Pego left, PegTagging e) {
-		left.tag = e.symbol;
+		left.setTag(e.symbol);
 		return left;
 	}
 
 	public Pego matchMessage(Pego left, PegMessage e) {
-		left.message = e.symbol;
-		left.startIndex = this.getPosition();
+		left.setMessage(e.symbol);
+		//left.startIndex = this.getPosition();
 		return left;
 	}
 	
 	public Pego matchIndent(Pego left, PegIndent e) {
-		String indent = left.source.getIndentText(left.startIndex);
+		String indent = left.getSource().getIndentText(left.getSourcePosition());
 		//System.out.println("###" + indent + "###");
 		if(this.match(indent)) {
 			return left;

@@ -75,30 +75,30 @@ public class PackratParser extends RecursiveDecentParser {
 //		}
 	}
 	
-	// Bugs existed -O0, but they disappeared !!
-	public Pego matchNonTerminal0(Pego left, PegNonTerminal label) {
-		Peg next = this.getRule(label.symbol);
-		long pos = this.getPosition();
-		ObjectMemo m = this.memoMap.getMemo(label, pos);
-		if(m != null) {
-			if(m.generated == null) {
-				return this.refoundFailure(label, pos+m.consumed);
-			}
-			setPosition(pos + m.consumed);
-			return m.generated;
-		}
-//		if(Main.VerboseStatCall) {
-//			next.countCall(this, label.symbol, pos);
+//	// Bugs existed -O0, but they disappeared !!
+//	public Pego matchNonTerminal0(Pego left, PegNonTerminal label) {
+//		Peg next = this.getRule(label.symbol);
+//		long pos = this.getPosition();
+//		ObjectMemo m = this.memoMap.getMemo(label, pos);
+//		if(m != null) {
+//			if(m.generated == null) {
+//				return this.refoundFailure(label, pos+m.consumed);
+//			}
+//			setPosition(pos + m.consumed);
+//			return m.generated;
 //		}
-		Pego generated = next.simpleMatch(left, this);
-		if(generated.isFailure()) {
-			this.memoMap.setMemo(pos, label, null, (int)(generated.startIndex - pos));
-		}
-		else {
-			this.memoMap.setMemo(pos, label, generated, (int)(this.getPosition() - pos));
-		}
-		return generated;
-	}
+////		if(Main.VerboseStatCall) {
+////			next.countCall(this, label.symbol, pos);
+////		}
+//		Pego generated = next.simpleMatch(left, this);
+//		if(generated.isFailure()) {
+//			this.memoMap.setMemo(pos, label, null, (int)(generated.getSourcePosition() - pos));
+//		}
+//		else {
+//			this.memoMap.setMemo(pos, label, generated, (int)(this.getPosition() - pos));
+//		}
+//		return generated;
+//	}
 
 	@Override
 	public Pego matchNonTerminal(Pego left, PegNonTerminal label) {
@@ -117,7 +117,7 @@ public class PackratParser extends RecursiveDecentParser {
 //		}
 		Pego generated = next.simpleMatch(left, this);
 		if(generated.isFailure()) {
-			this.memoMap.setMemo(pos, next, null, (int)(generated.startIndex - pos));
+			this.memoMap.setMemo(pos, next, null, (int)(generated.getSourcePosition() - pos));
 		}
 		else {
 			this.memoMap.setMemo(pos, next, generated, (int)(this.getPosition() - pos));

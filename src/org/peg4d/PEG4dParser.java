@@ -1,9 +1,5 @@
 package org.peg4d;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import org.peg4d.Memo.ObjectMemo;
 
 public class PEG4dParser extends RecursiveDecentParser {
@@ -12,6 +8,7 @@ public class PEG4dParser extends RecursiveDecentParser {
 		super(peg, source);
 	}
 	
+	@Override
 	public void initMemo() {
 		if(Main.MemoFactor == -1) {  /* default */
 			this.memoMap = new FastFifoMemo(256);
@@ -24,6 +21,7 @@ public class PEG4dParser extends RecursiveDecentParser {
 		}
 	}
 	
+	@Override
 	public Pego matchNewObject(Pego left, PegNewObject e) {
 		long pos = this.getPosition();
 		ObjectMemo m = this.memoMap.getMemo(e, pos);
@@ -36,7 +34,7 @@ public class PEG4dParser extends RecursiveDecentParser {
 		}
 		Pego generated = super.matchNewObject(left, e);
 		if(generated.isFailure()) {
-			this.memoMap.setMemo(pos, e, null, (int)(generated.startIndex - pos));
+			this.memoMap.setMemo(pos, e, null, (int)(generated.getSourcePosition() - pos));
 		}
 		else {
 			this.memoMap.setMemo(pos, e, generated, (int)(this.getPosition() - pos));
