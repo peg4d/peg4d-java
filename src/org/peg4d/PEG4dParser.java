@@ -1,6 +1,6 @@
 package org.peg4d;
 
-import org.peg4d.Memo.ObjectMemo;
+import org.peg4d.MemoMap.ObjectMemo;
 
 public class PEG4dParser extends RecursiveDecentParser {
 
@@ -11,13 +11,13 @@ public class PEG4dParser extends RecursiveDecentParser {
 	@Override
 	public void initMemo() {
 		if(Main.MemoFactor == -1) {  /* default */
-			this.memoMap = new FastFifoMemo(256);
+			this.memoMap = new OpenHashMemo(256);
 		}
 		else if(Main.MemoFactor == 0) {
 			this.memoMap = new NoMemo(); //new PackratMemo(this.source.length());
 		}
 		else {
-			this.memoMap = new FastFifoMemo(Main.MemoFactor);
+			this.memoMap = new OpenHashMemo(Main.MemoFactor);
 		}
 	}
 	

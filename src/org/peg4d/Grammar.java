@@ -269,56 +269,141 @@ public class Grammar {
 	// factory
 	
 	UMap<Peg> semMap = new UMap<Peg>();
+	private static String prefixNonTerminal = "L\b";
 	private static String prefixString = "t\b";
 	private static String prefixCharacter = "c\b";
 	private static String prefixNot = "!\b";
+	private static String prefixAnd = "&\b";
+	private static String prefixOneMore = "+\b";
+	private static String prefixZeroMore = "*\b";
 	private static String prefixOptional = "?\b";
+	private static String prefixSetter  = "S\b";
+	private static String prefixTagging = "T\b";
+	private static String prefixMessage = "M\b";
 	
-	Peg newString(String text) {
-		Peg e = semMap.get(prefixString + text);
+	private Peg getsem(String t) {
+		return semMap.get(t);
+		//return null;
+	}
+
+	private void putsem(String t, Peg e) {
+		semMap.put(t, e);
+	}
+
+	public final Peg newNonTerminal(String text) {
+		Peg e = getsem(prefixNonTerminal + text);
+		if(e == null) {
+			e = new PegNonTerminal(this, 0, text);
+			putsem(prefixNonTerminal + text, e);
+		}
+		return e;
+	}
+
+	public final Peg newString(String text) {
+		Peg e = getsem(prefixString + text);
 		if(e == null) {
 			e = new PegString(this, 0, text);
-			semMap.put(prefixString + text, e);
+			putsem(prefixString + text, e);
 		}
 		return e;
 	}
 
-	Peg newAny() {
-		Peg e = semMap.get("");
+	public final Peg newAny() {
+		Peg e = getsem("");
 		if(e == null) {
 			e = new PegAny(this, 0);
-			semMap.put("", e);
+			putsem("", e);
 		}
 		return e;
 	}
 	
-	Peg newCharacter(String text) {
+	public final Peg newCharacter(String text) {
 		UCharset u = new UCharset(text);
 		String key = prefixCharacter + u.key();
-		Peg e = semMap.get(key);
+		Peg e = getsem(key);
 		if(e == null) {
 			e = new PegCharacter(this, 0, u);
-			semMap.put(key, e);
+			putsem(key, e);
 		}
 		return e;
 	}
 
-	Peg newOptional(Peg p) {
+	public final Peg newOptional(Peg p) {
 		String key = prefixOptional + p.key();
-		Peg e = semMap.get("");
+		Peg e = getsem(key);
 		if(e == null) {
 			e = new PegOptional(this, 0, p);
-			semMap.put(key, e);
+			putsem(key, e);
 		}
 		return e;
 	}
 
-	Peg newNot(Peg p) {
+	public final Peg newOneMore(Peg p) {
+		String key = prefixOneMore + p.key();
+		Peg e = getsem(key);
+		if(e == null) {
+			e = new PegRepeat(this, 0, p, 1);
+			putsem(key, e);
+		}
+		return e;
+	}
+
+	public final Peg newZeroMore(Peg p) {
+		String key = prefixZeroMore + p.key();
+		Peg e = getsem(key);
+		if(e == null) {
+			e = new PegRepeat(this, 0, p, 0);
+			putsem(key, e);
+		}
+		return e;
+	}
+
+	public final Peg newAnd(Peg p) {
+		String key = prefixAnd + p.key();
+		Peg e = getsem(key);
+		if(e == null) {
+			e = new PegAnd(this, 0, p);
+			putsem(key, e);
+		}
+		return e;
+	}
+
+	public final Peg newNot(Peg p) {
 		String key = prefixNot + p.key();
-		Peg e = semMap.get("");
+		Peg e = getsem(key);
 		if(e == null) {
 			e = new PegNot(this, 0, p);
-			semMap.put(key, e);
+			putsem(key, e);
+		}
+		return e;
+	}
+
+	public final Peg newSetter(Peg p, int index) {
+		String key = prefixSetter + index + p.key();
+		Peg e = getsem(key);
+		if(e == null) {
+			e = new PegSetter(this, 0, p, index);
+			putsem(key, e);
+		}
+		return e;
+	}
+
+	public final Peg newTagging(String tag) {
+		String key = prefixTagging + tag;
+		Peg e = getsem(key);
+		if(e == null) {
+			e = new PegTagging(this, 0, tag);
+			putsem(key, e);
+		}
+		return e;
+	}
+
+	public final Peg newMessage(String msg) {
+		String key = prefixMessage + msg;
+		Peg e = getsem(key);
+		if(e == null) {
+			e = new PegMessage(this, 0, msg);
+			putsem(key, e);
 		}
 		return e;
 	}
@@ -387,16 +472,27 @@ class PEG4dGrammar extends Grammar {
 	
 	private static Peg toParsingExpressionImpl(Grammar loadingGrammar, String ruleName, Pego pego) {
 		if(pego.is("#PegNonTerminal")) {
-			return new PegNonTerminal(loadingGrammar, 0, pego.getText());
+			String nonTerminalSymbol = pego.getText();
+			if(ruleName.equals(nonTerminalSymbol)) {
+				Peg e = loadingGrammar.getRule(ruleName);
+				if(e != null) {
+					// self-redefinition
+					return e;  // FIXME
+				}
+			}
+			if(nonTerminalSymbol.equals("indent") && !loadingGrammar.hasRule("indent")) {
+				loadingGrammar.setRule("indent", new PegIndent(loadingGrammar, 0));
+			}
+			return new PegNonTerminal(loadingGrammar, 0, nonTerminalSymbol);
 		}
 		if(pego.is("#PegString")) {
-			return new PegString(loadingGrammar, 0, UCharset._UnquoteString(pego.getText()));
+			return loadingGrammar.newString(UCharset._UnquoteString(pego.getText()));
 		}
 		if(pego.is("#PegCharacter")) {
-			return new PegCharacter(loadingGrammar, 0, pego.getText());
+			return loadingGrammar.newCharacter(pego.getText());
 		}
 		if(pego.is("#PegAny")) {
-			return new PegAny(loadingGrammar, 0);
+			return loadingGrammar.newAny();
 		}
 		if(pego.is("#PegChoice")) {
 			PegChoice l = new PegChoice(loadingGrammar, 0, pego.size());
@@ -413,25 +509,25 @@ class PEG4dGrammar extends Grammar {
 			return l;
 		}
 		if(pego.is("#PegNot")) {
-			return new PegNot(loadingGrammar, 0, toParsingExpression(loadingGrammar, ruleName, pego.get(0)));
+			return loadingGrammar.newNot(toParsingExpression(loadingGrammar, ruleName, pego.get(0)));
 		}
 		if(pego.is("#PegAnd")) {
-			return new PegAnd(loadingGrammar, 0, toParsingExpression(loadingGrammar, ruleName, pego.get(0)));
+			return loadingGrammar.newAnd(toParsingExpression(loadingGrammar, ruleName, pego.get(0)));
 		}
 		if(pego.is("#PegOneMore")) {
-			return new PegRepeat(loadingGrammar, 0, toParsingExpression(loadingGrammar, ruleName, pego.get(0)), 1);
+			return loadingGrammar.newOneMore(toParsingExpression(loadingGrammar, ruleName, pego.get(0)));
 		}
 		if(pego.is("#PegZeroMore")) {
-			return new PegRepeat(loadingGrammar, 0, toParsingExpression(loadingGrammar, ruleName, pego.get(0)), 0);
+			return loadingGrammar.newZeroMore(toParsingExpression(loadingGrammar, ruleName, pego.get(0)));
 		}
 		if(pego.is("#PegOptional")) {
-			return new PegOptional(loadingGrammar, 0, toParsingExpression(loadingGrammar, ruleName, pego.get(0)));
+			return loadingGrammar.newOptional(toParsingExpression(loadingGrammar, ruleName, pego.get(0)));
 		}
 		if(pego.is("#PegTagging")) {
-			return new PegTagging(loadingGrammar, 0, pego.getText());
+			return loadingGrammar.newTagging(pego.getText());
 		}
 		if(pego.is("#PegMessage")) {
-			return new PegMessage(loadingGrammar, 0, pego.getText());
+			return loadingGrammar.newMessage(pego.getText());
 		}
 		if(pego.is("##PegNewObjectJoin")) {
 			Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));
@@ -452,7 +548,7 @@ class PEG4dGrammar extends Grammar {
 			if(indexString.length() > 0) {
 				index = UCharset.parseInt(indexString, -1);
 			}
-			return new PegSetter(loadingGrammar, 0, toParsingExpression(loadingGrammar, ruleName, pego.get(0)), index);
+			return loadingGrammar.newSetter(toParsingExpression(loadingGrammar, ruleName, pego.get(0)), index);
 		}
 //		if(node.is("#pipe")) {
 //			return new PegPipe(node.getText());

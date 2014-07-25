@@ -150,7 +150,7 @@ public abstract class ParserContext {
 		return pego;
 	}
 	
-	protected Memo memoMap = null;
+	protected MemoMap memoMap = null;
 	public abstract void initMemo();
 	
 	
@@ -589,7 +589,7 @@ public abstract class ParserContext {
 		statCallCount += 1;
 		if(Main.VerboseStatCall) {
 			checkCountMap();
-			Long key = Memo.makekey(pos, e);
+			Long key = MemoMap.makekey(pos, e);
 			Peg p = this.countMap.get(key);
 			if(p != null) {
 				assert(p == e);

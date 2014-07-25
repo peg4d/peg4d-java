@@ -1,6 +1,6 @@
 package org.peg4d;
 
-import org.peg4d.Memo.ObjectMemo;
+import org.peg4d.MemoMap.ObjectMemo;
 
 public class PackratParser extends RecursiveDecentParser {
 
