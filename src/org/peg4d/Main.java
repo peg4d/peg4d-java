@@ -142,6 +142,12 @@ public class Main {
 			}
 			else if ((argument.equals("-o") || argument.equals("--out")) && (index < args.length)) {
 				OutputFileName = args[index];
+				if(OutputFileName.endsWith(".csv")) {
+					OutputType = "csv";
+				}
+				if(OutputFileName.endsWith(".json")) {
+					OutputType = "json";
+				}
 				index = index + 1;
 			}
 			else if (argument.equals("--bigdata")) {
@@ -242,6 +248,15 @@ public class Main {
 				p.showPosition("consumed", pos-1);
 			}
 			p.showPosition("unconsumed", pos);
+		}
+		if(OutputType.equalsIgnoreCase("pego")) {
+			System.out.println(pego);
+		}
+		else if(OutputType.equalsIgnoreCase("json")) {
+			new Generator(OutputFileName).printJSON(pego);
+		}
+		else if(OutputType.equalsIgnoreCase("csv")) {
+			new Generator(OutputFileName).printCSV(pego, 0.9);
 		}
 	}
 

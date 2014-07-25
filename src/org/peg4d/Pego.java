@@ -381,5 +381,31 @@ public class Pego {
 		return pego;
 	}
 
+	public String getTag() {
+		return this.tag;
+	}
+
+	public final Pego getPath(String path) {
+		int loc = path.indexOf('#', 1);
+		if(loc == -1) {
+			return this.getPathByTag(path);
+		}
+		else {
+			String[] paths = path.split("#");
+			Main._Exit(1, "TODO: path = " + paths.length + ", " + paths[0]);
+			return null;
+		}
+	}
+	
+	private final Pego getPathByTag(String tag) {
+		for(int i = 0; i < this.size(); i++) {
+			Pego p = this.get(i);
+			if(p.is(tag)) {
+				return p;
+			}
+		}
+		return null;
+	}
+
 }
 
