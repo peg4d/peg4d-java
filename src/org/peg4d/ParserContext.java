@@ -704,6 +704,10 @@ public abstract class ParserContext {
 			long used =  heap - usedMemory;
 			System.out.println("heap: " + KMunit(heap, "KiB", "MiB") + " used: " + KMunit(used, "KiB", "MiB") + " heap/file: " + ratio((double) heap/ (statFileLength)));
 			System.out.println();
+			if(this.sourcePosition != this.endPosition) {
+				this.source.formatErrorMessage("unconsumed", this.sourcePosition, "please report this file to kimio !!");
+				Main._Exit(1, "Abort!!");
+			}
 		}
 	}
 	
