@@ -2,8 +2,7 @@ package org.peg4d;
 
 public abstract class ParserSource {
 	public String fileName;
-	long statIOCount = 0;
-	long statReadLength = 0;
+	public Stat stat = null;
 	
 	public ParserSource(String fileName, long linenum) {
 		this.fileName = fileName;

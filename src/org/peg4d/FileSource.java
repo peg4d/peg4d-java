@@ -48,9 +48,11 @@ public class FileSource extends ParserSource {
 		this.readMainBuffer(this.buffer_offset);
 		//this.debug = new StringSource(fileName);
 	}
+	@Override
 	public final long length() {
 		return this.fileLength;
 	}
+	@Override
 	public final long getFileLength() {
 		return this.fileLength;
 	}
@@ -58,6 +60,7 @@ public class FileSource extends ParserSource {
 		return (pos / PageSize) * PageSize;
 	}
 
+	@Override
 	public final char charAt(long n) {
 		int buffer_pos = (int)(n - this.buffer_offset);
 		if(!(buffer_pos >= 0 && buffer_pos < PageSize)) {
@@ -80,6 +83,7 @@ public class FileSource extends ParserSource {
 		return c;
 	}
 	
+	@Override
 	public final String substring(long startIndex, long endIndex) {
 		if(endIndex > startIndex) {
 			try {
@@ -125,8 +129,9 @@ public class FileSource extends ParserSource {
 			for(int i = readsize; i < b.length; i++) {
 				b[i] = 0;
 			}
-			this.statIOCount += 1;
-			this.statReadLength += b.length;
+			if(this.stat != null) {
+				stat.readFile(b.length);
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

@@ -7,11 +7,12 @@ import java.util.Map;
 
 public abstract class MemoMap {
 	protected final static int FifoSize = 64;
+	long AssuredLength = Integer.MAX_VALUE;
 
-	int memoHit = 0;
-	int memoMiss = 0;
-	int memoSize = 0;
-	int statMemoSlotCount = 0;
+	int MemoHit = 0;
+	int MemoMiss = 0;
+	int MemoSize = 0;
+//	int statMemoSlotCount = 0;
 
 	public final class ObjectMemo {
 		ObjectMemo next;
@@ -31,7 +32,7 @@ public abstract class MemoMap {
 		}
 		else {
 			ObjectMemo m = new ObjectMemo();
-			this.memoSize += 1;
+//			this.memoSize += 1;
 			return m;
 		}
 	}
@@ -101,6 +102,12 @@ public abstract class MemoMap {
 			return super.put(key, value);
 		}
 	}
+	
+	protected void stat(Stat stat) {
+		stat.setCount("MemoHit", this.MemoHit);
+		stat.setCount("MemoMiss", this.MemoMiss);
+		stat.setRatio("Hit/Miss", this.MemoHit, this.MemoMiss);
+	}
 }
 
 class NoMemo extends MemoMap {
@@ -110,9 +117,9 @@ class NoMemo extends MemoMap {
 
 	@Override
 	protected ObjectMemo getMemo(Peg keypeg, long keypos) {
+		this.MemoMiss += 1;
 		return null;
 	}
-	
 }
 
 class PackratMemo extends MemoMap {
@@ -138,16 +145,15 @@ class PackratMemo extends MemoMap {
 		ObjectMemo m = this.memoMap.get(keypos);
 		while(m != null) {
 			if(m.keypeg == keypeg) {
-				this.memoHit += 1;
+				this.MemoHit += 1;
 				return m;
 			}
 			m = m.next;
 		}
-		this.memoMiss += 1;
+		this.MemoMiss += 1;
 		return m;
 	}
 }
-
 
 class DirectMemo extends MemoMap {
 	protected Map<Long, ObjectMemo> memoMap;
@@ -175,19 +181,20 @@ class DirectMemo extends MemoMap {
 	protected final ObjectMemo getMemo(Peg keypeg, long keypos) {
 		ObjectMemo m = this.memoMap.get(MemoMap.makekey(keypos, keypeg));
 		if(m != null) {
-			this.memoHit += 1;
+			this.MemoHit += 1;
 		}
 		else {
-			this.memoMiss += 1;
+			this.MemoMiss += 1;
 		}
 		return m;
 	}
 }
 
 class OpenHashMemo extends MemoMap {
-	
 	private ObjectMemo[] memoArray;
-	
+	private long statSetCount = 0;
+	private long statExpireCount = 0;
+
 	OpenHashMemo(int slotSize) {
 		this.memoArray = new ObjectMemo[slotSize * 111 + 1];
 		for(int i = 0; i < this.memoArray.length; i++) {
@@ -198,24 +205,38 @@ class OpenHashMemo extends MemoMap {
 	@Override
 	protected final void setMemo(long keypos, Peg keypeg, Pego generated, int consumed) {
 		long key = PEGUtils.objectId(keypos, keypeg);
-		int hash =  ((int)key % memoArray.length);
+		int hash =  (Math.abs((int)key) % memoArray.length);
 		ObjectMemo m = this.memoArray[hash];
+		if(m.key != 0) {
+			long diff = keypos - PEGUtils.getpos(m.key);
+			if(diff > 0 && diff < 80) {
+				this.statExpireCount += 1;
+			}
+		}
 		m.key = key;
 		m.generated = generated;
 		m.consumed = consumed;
+		this.statSetCount += 1;
 	}
 
 	@Override
 	protected final ObjectMemo getMemo(Peg keypeg, long keypos) {
 		long key = PEGUtils.objectId(keypos, keypeg);
-		int hash =  ((int)key % memoArray.length);
+		int hash =  (Math.abs((int)key) % memoArray.length);
 		ObjectMemo m = this.memoArray[hash];
 		if(m.key == key) {
-			this.memoHit += 1;
+			this.MemoHit += 1;
 			return m;
 		}
-		this.memoMiss += 1;
+		this.MemoMiss += 1;
 		return null;
+	}
+
+	@Override
+	protected final void stat(Stat stat) {
+		super.stat(stat);
+		stat.setCount("MemoSize", this.memoArray.length);
+		stat.setRatio("MemoCollision80", this.statExpireCount, this.statSetCount);
 	}
 
 }
@@ -282,12 +303,12 @@ class FastFifoMemo extends MemoMap {
 		ObjectMemo m = this.getA(keypos);
 		while(m != null) {
 			if(m.keypeg == keypeg) {
-				this.memoHit += 1;
+				this.MemoHit += 1;
 				return m;
 			}
 			m = m.next;
 		}
-		this.memoMiss += 1;
+		this.MemoMiss += 1;
 		return m;
 	}
 

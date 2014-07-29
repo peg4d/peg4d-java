@@ -137,6 +137,10 @@ public class PegFormatter {
 		sb.append(" |>");
 	}
 
+	public void formatCaptureTagging(UStringBuilder sb, PegCaptureTagging e) {
+		this.format(sb, "#< ", e, " >");
+	}
+
 	protected void format(UStringBuilder sb, PegList l) {
 		for(int i = 0; i < l.size(); i++) {
 			if(i > 0) {

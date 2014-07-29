@@ -342,8 +342,8 @@ public class MonadicParser extends ParserContext {
 	
 	public int matchNewObject(int left, PegNewObject e) {
 		long startIndex = this.getPosition();
-		if(Main.VerboseStatCall) {
-			this.count(e, startIndex);
+		if(this.stat != null) {
+			this.stat.countRepeatCall(e, startIndex);
 		}
 		if(e.predictionIndex > 0) {
 			for(int i = 0; i < e.predictionIndex; i++) {
@@ -357,7 +357,6 @@ public class MonadicParser extends ParserContext {
 		}
 		int mark = this.markObjectStack();
 		int newnode = lazyNewObject(startIndex);
-		this.statObjectCount += 1;
 		//this.showPosition("new " + newnode + " " + e + mark/4);
 		if(e.leftJoin) {
 			this.lazySetter(newnode, 0, left);
@@ -378,6 +377,9 @@ public class MonadicParser extends ParserContext {
 			}
 		}
 		this.lazyCapture(mark, (int)(this.getPosition() - startIndex));
+		if(this.stat != null) {
+			this.stat.countObjectCreation();
+		}
 		return newnode;
 	}
 	

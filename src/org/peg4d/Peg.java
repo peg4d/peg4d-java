@@ -202,9 +202,6 @@ public abstract class Peg {
 		}
 	}
 
-	int statCallCount = 0;
-	int statRepeatCount = 0;
-
 	public String key() {
 		return "#" + this.uniqueId;
 	}
@@ -948,7 +945,8 @@ class PegTagging extends PegTerm {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchTag(left, this);
+		left.setTag(this.symbol);
+		return left;
 	}
 	@Override
 	public int fastMatch(int left, MonadicParser context) {
@@ -956,6 +954,47 @@ class PegTagging extends PegTerm {
 		return left;
 	}
 }
+
+class PegCaptureTagging extends PegUnary {
+	public PegCaptureTagging(Grammar base, int flag, Peg inner) {
+		super(base, Peg.HasTagging | flag, inner);
+	}
+	@Override
+	protected Peg clone(Grammar base, PegTransformer tr) {
+		Peg ne = tr.transform(base, this);
+		if(ne == null) {
+			ne = new PegCaptureTagging(base, this.flag, this.inner);
+		}
+		return ne;
+	}
+	@Override
+	protected final void stringfy(UStringBuilder sb, PegFormatter fmt) {
+		fmt.formatCaptureTagging(sb, this);
+	}
+	@Override
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		super.verify2(ruleName, nonTerminal, visitingName, visited);
+		//rules.addObjectLabel(this.symbol);
+		nonTerminal.derived(this);
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		long pos = context.getPosition();
+		Pego right = this.inner.simpleMatch(left, context);
+		String msg = "#error";
+		if(!right.isFailure()) {
+			msg = "#" + context.substring(pos, context.getPosition());
+		}
+		left.setTag(msg);
+		return left;
+	}
+	@Override
+	public int fastMatch(int left, MonadicParser context) {
+		this.inner.fastMatch(left, context); // TODO
+		return left;
+	}
+}
+
 
 class PegMessage extends PegTerm {
 	String symbol;

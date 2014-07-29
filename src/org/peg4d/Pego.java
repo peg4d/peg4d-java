@@ -192,14 +192,6 @@ public class Pego {
 		}
 	}
 	
-	public final int count() {
-		int count = 1;
-		for(int i = 0; i < this.size(); i++) {
-			count = count + this.get(i).count();
-		}
-		return count;
-	}
-
 	public final void checkNullEntry() {
 		for(int i = 0; i < this.size(); i++) {
 			if(this.get(i) == null) {

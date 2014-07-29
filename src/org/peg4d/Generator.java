@@ -202,6 +202,10 @@ public class Generator {
 
 	private final void writeJSON(String lf, String indent, Pego pego) {
 		if(pego.size() > 0) {
+//			if(pego.size() == 1) {
+//				writeJSON(lf, indent, pego.get(0));  // flatten
+//			}
+//			else 
 			if(isJSONArray(pego)) {
 				writeJSONArray(lf, indent, pego);
 			}

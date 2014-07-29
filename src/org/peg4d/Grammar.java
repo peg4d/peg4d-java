@@ -404,6 +404,16 @@ public class Grammar {
 		return e;
 	}
 
+	public Peg newCaptureTagging(Peg p) {
+		String key = prefixTagging + p.key();
+		Peg e = getsem(key);
+		if(e == null) {
+			e = new PegCaptureTagging(this, 0, p);
+			putsem(key, e);
+		}
+		return e;
+	}
+
 	public final Peg newMessage(String msg) {
 		String key = prefixMessage + msg;
 		Peg e = getsem(key);
@@ -413,6 +423,7 @@ public class Grammar {
 		}
 		return e;
 	}
+
 
 
 
@@ -532,6 +543,9 @@ class PEG4dGrammar extends Grammar {
 		}
 		if(pego.is("#PegTagging")) {
 			return loadingGrammar.newTagging(pego.getText());
+		}
+		if(pego.is("#PegCaptureTagging")) {
+			return loadingGrammar.newCaptureTagging(toParsingExpression(loadingGrammar, ruleName, pego.get(0)));
 		}
 		if(pego.is("#PegMessage")) {
 			return loadingGrammar.newMessage(pego.getText());
@@ -682,7 +696,12 @@ class PEG4dGrammar extends Grammar {
 //	ObjectLabel 
 //	  = << '#' [A-z0-9_.]+ #PegTagging>>
 //	  ;
-		Peg _Tagging = O(s("#"), one(c("A-Za-z0-9_.")), L("#PegTagging"));
+		Peg _Tagging = O(s("#"), 
+			choice(
+					seq(s("<"), opt(n("_")), set(n("Expr")), opt(n("_")), L("#PegCaptureTagging"), s(">")), 
+					seq(one(c("A-Za-z0-9_.")), L("#PegTagging"))
+			)
+		);
 //	Index
 //	  = << [0-9] #PegIndex >>
 //	  ;

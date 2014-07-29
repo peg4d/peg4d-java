@@ -1,7 +1,7 @@
 TopLevel
-	= Prolog? _* DTD? _* Element WS*
+	= PROLOG? _* DTD? _* Element WS*
 	;
-Prolog
+PROLOG
 	= '<?xml' (!'?>' .)* '?>'
 	;
 _
@@ -11,11 +11,13 @@ DTD
 	= '<!' (!'>' .)* '>'
 	;
 Element
-	= <{ '<' Name^ (_+ Attribute^)* _* ( '/>' / '>' Content^ '</' Name '>' ) #xml }>
+	= <{ '<' Name^ (_+ Attribute^)* _* ( '/>' / '>' Content '</' NAME '>' ) #xml }> _*
 	;
 Name
-	= <{ [A-Za-z:] ('-' / [A-Za-z0-9:._])* #name }>
+	= <{ NAME #name }>
 	;
+NAME    = [A-Za-z:] ('-' / [A-Za-z0-9:._])*;
+
 Attribute
 	= <{ Name^ _* '=' _* String^ #attr }>
 	;
@@ -23,18 +25,21 @@ String
 	= '"' <{ (!'"' .)* #string }> '"'
 	;
 Content
-	= (_* Element^ / _* CDATA^ / _* Comment / CharData)*
+	= (Element^ / CDataSec^ / COMMENT / CharData^)*
+	;
+CDataSec
+	= '<![CDATA[' <{ (!']]>' '<![CDATA[' .)* CDATA? #cdata }> ']]>' _*
 	;
 CDATA
-	= '<![CDATA[' <{ (!']]>' .)* #cdata }> ']]>'
+	= '<![CDATA[' (!']]>' '<![CDATA[' .)* CDATA? ']]>'
 	;
-Comment
-	= '<!--' (!'-->' .)* '-->'
+COMMENT
+	= '<!--' (!'-->' .)* '-->' _*
 	;
 CharData
-	= <{ (!'<' .)+ #string }>
+	= <{ (!'<' .)+ #cdata }> / ''
 	;
 WS
-	= Comment
+	= COMMENT
 	/ _+
 	;
