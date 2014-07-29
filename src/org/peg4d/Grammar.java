@@ -65,39 +65,37 @@ public class Grammar {
 	}
 	
 	public final void setRule(String ruleName, Peg e) {
-		Peg checked = this.checkPegRule(ruleName, e);
-		if(checked != null) {
-			this.pegMap.put(ruleName, checked);
-		}
+		this.pegMap.put(ruleName, e);
+//		Peg checked = this.checkPegRule(ruleName, e);
+//		if(checked != null) {
+//			this.pegMap.put(ruleName, checked);
+//		}
 	}
 
-	private Peg checkPegRule(String name, Peg e) {
-		if(e instanceof PegChoice) {
-			UList<Peg> newlist = new UList<Peg>(new Peg[e.size()]);
-			for(int i = 0; i < e.size(); i++) {
-				newlist.add(this.checkPegRule(name, e.get(i)));
-			}
-//			if(Main.FastMatchMode) {
-//				this.checkMemoMode(newnode, newnode, 0);
+//	private Peg checkPegRule(String name, Peg e) {
+//		if(e instanceof PegChoice) {
+//			UList<Peg> newlist = new UList<Peg>(new Peg[e.size()]);
+//			for(int i = 0; i < e.size(); i++) {
+//				newlist.add(this.checkPegRule(name, e.get(i)));
 //			}
-			if(newlist.size() == 1) {
-				return newlist.ArrayValues[0];
-			}
-			((PegChoice)e).list = newlist;
-			return e;
-		}
-		if(e instanceof PegNonTerminal) {  // self reference
-			if(name.equals(((PegNonTerminal) e).symbol)) {
-				Peg defined = this.pegMap.get(name, null);
-				if(defined == null) {
-					e.warning("undefined self reference: " + name);
-				}
-//				System.out.println("name " + name + ", " + ((PegLabel) e).symbol + " " + defined);
-				return defined;
-			}
-		}
-		return e;
-	}
+//			if(newlist.size() == 1) {
+//				return newlist.ArrayValues[0];
+//			}
+//			((PegChoice)e).list = newlist;
+//			return e;
+//		}
+//		if(e instanceof PegNonTerminal) {  // self reference
+//			if(name.equals(((PegNonTerminal) e).symbol)) {
+//				Peg defined = this.pegMap.get(name, null);
+//				if(defined == null) {
+//					e.warning("undefined self reference: " + name);
+//				}
+////				System.out.println("name " + name + ", " + ((PegLabel) e).symbol + " " + defined);
+//				return defined;
+//			}
+//		}
+//		return e;
+//	}
 		
 	public final void check() {
 		this.objectLabelMap = new UMap<String>();
