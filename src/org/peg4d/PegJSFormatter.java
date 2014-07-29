@@ -10,6 +10,12 @@ public class PegJSFormatter extends PegFormatter {
 	public String getSemiColon() {
 		return "";
 	}
+
+	@Override
+	public void formatRuleName(UStringBuilder sb, String ruleName, Peg e) {
+		sb.append(ruleName);
+	}
+
 	@Override
 	public void formatTagging(UStringBuilder sb, PegTagging e) {
 		//sb.append(e.symbol);

@@ -16,7 +16,8 @@ public class PegFormatter {
 	}
 	
 	public void formatRule(UStringBuilder sb, String ruleName, Peg e) {
-		sb.appendNewLine(ruleName);
+		sb.appendNewLine();
+		this.formatRuleName(sb, ruleName, e);
 		sb.append(this.getNewLine(), this.getSetter(), " ");
 		if(e instanceof PegChoice) {
 			for(int i = 0; i < e.size(); i++) {
@@ -32,6 +33,7 @@ public class PegFormatter {
 		sb.append(getNewLine(), this.getSemiColon());
 	}
 
+	
 	public String getNewLine() {
 		return "\n\t";
 	}
@@ -44,8 +46,17 @@ public class PegFormatter {
 		return ";";
 	}
 
+	public void formatRuleName(UStringBuilder sb, String ruleName, Peg e) {
+		if(e.is(Peg.HasNewObject)) {
+			sb.append(ruleName);
+		}
+		else {
+			sb.append(ruleName.toUpperCase());
+		}
+	}
+
 	public void formatNonTerminal(UStringBuilder sb, PegNonTerminal e) {
-		sb.append(e.symbol);
+		this.formatRuleName(sb, e.symbol, e);
 	}
 
 	public void formatString(UStringBuilder sb, PegString e) {
