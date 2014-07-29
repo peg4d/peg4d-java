@@ -33,11 +33,6 @@ public class PegJSFormatter extends PegFormatter {
 	}
 
 	@Override
-	public void formatCaptureTagging(UStringBuilder sb, PegCaptureTagging e) {
-		this.format(sb, null, e, null);
-	}
-
-	@Override
 	public void formatExport(UStringBuilder sb, PegExport e) {
 		sb.append("&(");
 		e.inner.stringfy(sb, this);

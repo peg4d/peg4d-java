@@ -281,6 +281,9 @@ public class Grammar {
 	private static String prefixOneMore = "+\b";
 	private static String prefixZeroMore = "*\b";
 	private static String prefixOptional = "?\b";
+	private static String prefixSequence = " \b";
+	private static String prefixChoice = "/\b";
+	
 	private static String prefixSetter  = "S\b";
 	private static String prefixTagging = "T\b";
 	private static String prefixMessage = "M\b";
@@ -384,6 +387,40 @@ public class Grammar {
 		}
 		return e;
 	}
+	public Peg newChoice(UList<Peg> l) {
+		if(l.size() == 1) {
+			return l.ArrayValues[0];
+		}
+		String key = prefixChoice;
+		for(int i = 0; i < l.size(); i++) {
+			key += l.ArrayValues[i].key();
+		}
+		Peg e = getsem(key);
+		if(e == null) {
+			e = new PegChoice(this, 0, l);
+			putsem(key, e);
+		}
+		return e;
+	}
+
+	public Peg newSequence(UList<Peg> l) {
+		if(l.size() == 1) {
+			return l.ArrayValues[0];
+		}
+		if(l.size() == 0) {
+			return this.newString("");
+		}
+		String key = prefixSequence;
+		for(int i = 0; i < l.size(); i++) {
+			key += l.ArrayValues[i].key();
+		}
+		Peg e = getsem(key);
+		if(e == null) {
+			e = new PegSequence(this, 0, l);
+			putsem(key, e);
+		}
+		return e;
+	}
 
 	public final Peg newSetter(Peg p, int index) {
 		String key = prefixSetter + index + p.key();
@@ -405,16 +442,6 @@ public class Grammar {
 		return e;
 	}
 
-	public Peg newCaptureTagging(Peg p) {
-		String key = prefixTagging + p.key();
-		Peg e = getsem(key);
-		if(e == null) {
-			e = new PegCaptureTagging(this, 0, p);
-			putsem(key, e);
-		}
-		return e;
-	}
-
 	public final Peg newMessage(String msg) {
 		String key = prefixMessage + msg;
 		Peg e = getsem(key);
@@ -425,10 +452,27 @@ public class Grammar {
 		return e;
 	}
 
+	public static void addChoice(UList<Peg> l, Peg e) {
+		if(e instanceof PegChoice) {
+			for(int i = 0; i < e.size(); i++) {
+				l.add(e.get(i));
+			}
+		}
+		else if(e != null) {
+			l.add(e);
+		}
+	}
 
-
-
-	
+	public static void addSequence(UList<Peg> l, Peg e) {
+		if(e instanceof PegSequence) {
+			for(int i = 0; i < e.size(); i++) {
+				l.add(e.get(i));
+			}
+		}
+		else if(e != null) {
+			l.add(e);
+		}
+	}
 
 }
 
@@ -514,19 +558,28 @@ class PEG4dGrammar extends Grammar {
 			return loadingGrammar.newAny();
 		}
 		if(pego.is("#PegChoice")) {
-			PegChoice l = new PegChoice(loadingGrammar, 0, pego.size());
+			UList<Peg> l = new UList<Peg>(new Peg[pego.size()]);
 			for(int i = 0; i < pego.size(); i++) {
-				l.list.add(toParsingExpression(loadingGrammar, ruleName, pego.get(i)));
+				Peg e = toParsingExpression(loadingGrammar, ruleName, pego.get(i));
+				Grammar.addChoice(l, e);
 			}
-			return l;
+			return loadingGrammar.newChoice(l);
 		}
 		if(pego.is("#PegSequence")) {
-			PegSequence l = new PegSequence(loadingGrammar, 0, pego.size());
+			UList<Peg> l = new UList<Peg>(new Peg[pego.size()]);
 			for(int i = 0; i < pego.size(); i++) {
-				l.list.add(toParsingExpression(loadingGrammar, ruleName, pego.get(i)));
+				Peg e = toParsingExpression(loadingGrammar, ruleName, pego.get(i));
+				Grammar.addSequence(l, e);
 			}
-			return l;
+			return loadingGrammar.newSequence(l);
 		}
+		if(pego.is("#PegTagging")) {
+			return loadingGrammar.newTagging(pego.getText());
+		}
+		if(pego.is("#PegMessage")) {
+			return loadingGrammar.newMessage(pego.getText());
+		}
+
 		if(pego.is("#PegNot")) {
 			return loadingGrammar.newNot(toParsingExpression(loadingGrammar, ruleName, pego.get(0)));
 		}
@@ -541,15 +594,6 @@ class PEG4dGrammar extends Grammar {
 		}
 		if(pego.is("#PegOptional")) {
 			return loadingGrammar.newOptional(toParsingExpression(loadingGrammar, ruleName, pego.get(0)));
-		}
-		if(pego.is("#PegTagging")) {
-			return loadingGrammar.newTagging(pego.getText());
-		}
-		if(pego.is("#PegCaptureTagging")) {
-			return loadingGrammar.newCaptureTagging(toParsingExpression(loadingGrammar, ruleName, pego.get(0)));
-		}
-		if(pego.is("#PegMessage")) {
-			return loadingGrammar.newMessage(pego.getText());
 		}
 		if(pego.is("##PegNewObjectJoin")) {
 			Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));
