@@ -23,7 +23,7 @@ public abstract class Peg {
 	                             | HasRepetation | HasOptional | HasChoice | HasAnd | HasNot
 	                             | HasNewObject | HasSetter | HasTagging | HasMessage 
 	                             | HasReserved | hasReserved | HasContext;
-	public final static int StackedObjectOperation = 1 << 17;
+	public final static int LeftObjectOperation    = 1 << 17;
 	public final static int PossibleDifferentRight = 1 << 18;
 	
 	public final static int Debug             = 1 << 24;
@@ -32,9 +32,8 @@ public abstract class Peg {
 	int        flag       = 0;
 	short      uniqueId   = 0;
 	short      semanticId = 0;
+	int        refc       = 0;
 	
-//	String     ruleName = null;
-
 	ParserSource source = null;
 	int       sourcePosition = 0;
 	
@@ -78,8 +77,6 @@ public abstract class Peg {
 		return true;
 	}
 
-//	public abstract void accept(PegVisitor visitor);
-
 	public final boolean is(int uflag) {
 		return ((this.flag & uflag) == uflag);
 	}
@@ -112,20 +109,6 @@ public abstract class Peg {
 //		}
 		return sb.toString();
 	}
-
-//	protected Pego performMatch(Pego left, ParserContext context) {
-//		if(this.is(Peg.Debug)) {
-//			Pego node2 = this.simpleMatch(left, context);
-//			String msg = "matched";
-//			if(node2.isFailure()) {
-//				msg = "failed";
-//			}
-//			String line = context.formatErrorMessage(msg, this.toString());
-//			System.out.println(line + "\n\tnode #" + left + "# => #" + node2 + "#");
-//			return node2;
-//		}
-//		return this.simpleMatch(left, context);
-//	}
 
 	public final String format(String name, PegFormatter fmt) {
 		UStringBuilder sb = new UStringBuilder();

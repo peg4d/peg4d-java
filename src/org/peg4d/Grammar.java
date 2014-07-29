@@ -286,8 +286,11 @@ public class Grammar {
 	private static String prefixMessage = "M\b";
 	
 	private Peg getsem(String t) {
-		return semMap.get(t);
-		//return null;
+		Peg e = semMap.get(t);
+		if(e != null) {
+			e.refc += 1;
+		}
+		return e;
 	}
 
 	private void putsem(String t, Peg e) {
