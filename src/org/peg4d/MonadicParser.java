@@ -7,9 +7,7 @@ public class MonadicParser extends ParserContext {
 
 	public MonadicParser(Grammar peg, ParserSource source) {
 		super(peg, source, 0, source.length());
-		if(!this.isRecognitionOnly()) {
-			this.quadLog = new int[4096 * 4];
-		}
+		this.log = new OLog();
 	}
 
 	@Override
@@ -24,7 +22,6 @@ public class MonadicParser extends ParserContext {
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
-		long pos = this.getPosition();
 		int oid = start.fastMatch(1, this);
 		Pego pego = null;
 		if(PEGUtils.isFailure(oid)) {
@@ -33,25 +30,11 @@ public class MonadicParser extends ParserContext {
 			String msg = this.source.formatErrorMessage("syntax error", PEGUtils.getpos(this.failurePosition), " by " + e);
 			pego.setMessage(msg);
 			System.out.println(msg);
-//			if(pos == this.getPosition()) {
 			this.setPosition(this.endPosition);  // skip 
-//			}
 		}
 		else {
-			if(oid == this.bigDataOid) {
-				return bigPego;
-			}
-			else {
-				pego = this.createObject(oid);
-			}
+			pego = this.log.createObject(oid);
 		}
-//		else {
-//			pego = new Pego("#toplevel", this.source, this.peg.getPeg(oid), PEGUtils.getpos(oid));
-//			pego.expandAstToSize(this.objectList.size());
-//			for(int i = 0; i < this.objectList.size(); i++) {
-//				pego.append(this.objectList.ArrayValues[i]);
-//			}
-//		}
 		return pego;
 	}
 	
@@ -73,142 +56,182 @@ public class MonadicParser extends ParserContext {
 	//tag oid tag msg
 	//set oid idx child
 	//add oid child
-	private int[] quadLog = null;
-	int stackTop = 0;
 
-	public final static int OpNew2 = 0;
-	public final static int OpTag2 = 1;
-	public final static int OpSet2 = 2;
-	public final static int OpNop2 = 3;
-	public final static int OpMask2 = 7; // 1 | (1 << 1) | 1 << 2;
+	OLog log;
 	
-	private int getop2(int op) {
-		return op & OpMask2;
-	}
-	
-	private int getext3(int op) {
-		return op >> 3;
+	@Override
+	protected final int markObjectStack() {
+		return this.log.stackTop;
 	}
 
-	private int makeop2(int op, int ext3) {
-		return ext3 << 3 | op;
+	@Override
+	protected final void rollbackObjectStack(int mark) {
+		this.log.rollbackObjectStack(mark);
 	}
 	
-	void log4(int op, int ext, int oid, int data1, int data2) {
-		if(this.quadLog != null) {
-			if(!(stackTop + 4 < this.quadLog.length)) {
-				int[] newlog = new int[quadLog.length * 4];
-				System.arraycopy(this.quadLog, 0, newlog, 0, this.quadLog.length);
-				this.quadLog = newlog;
-			}
-			this.quadLog[this.stackTop]   = oid;
-			this.quadLog[this.stackTop+1] = makeop2(op, ext);
-			this.quadLog[this.stackTop+2] = data1;
-			this.quadLog[this.stackTop+3] = data2;
-			this.stackTop += 4;
-		}
-	}
+	class OLog {
+		private int[] quadLog = null;
+		private int stackTop = 0;
 
-	private int readOid(int mark) {
-		return this.quadLog[mark];
-	}
-
-	private int readOp(int mark) {
-		return this.getop2(this.quadLog[mark+1]);
-	}
-
-	private int readExt3(int mark) {
-		return this.getext3(this.quadLog[mark+1]);
-	}
-
-	private void writeExt3(int mark, int ext3) {
-		this.quadLog[mark+1] = makeop2(this.getop2(this.quadLog[mark+1]), ext3);
-	}
-
-	private void writeData(int mark, int data) {
-		this.quadLog[mark+2] = data;
-	}
-
-	private void writeData2(int mark, int data) {
-		this.quadLog[mark+3] = data;
-	}
-
-	private int readData(int mark) {
-		return this.quadLog[mark+2];
-	}
-
-	private int readData2(int mark) {
-		return this.quadLog[mark+3];
-	}
-
-	int unusedObjectId = 2;
-	int lazyNewObject(long pos) {
-		int oid = this.unusedObjectId;
-		log4(OpNew2, 0, oid, (int)pos, 0);
-		this.unusedObjectId += 1;
-		return oid;
-	}
-
-	int searchOid(int oid) {
-		for(int i = this.stackTop - 4; i >= 0; i -= 4) {
-			if(readOid(i) == oid) {
-				if(readOp(i) == OpNew2) {
-					return i;
-				}
-				int diff = readExt3(i);
-				if(diff > 0) {
-					return i - diff * 4;
-				}
+		OLog () {
+			if(!isRecognitionOnly()) {
+				this.quadLog = new int[4096 * 4];
 			}
 		}
-		assert(oid == 0); // this not happens
-		return -1;
-	}
 	
-	int makediff(int oid) {
-		return (this.stackTop - this.searchOid(oid)) / 4;
-	}
+		public final static int OpNew = 0;
+		public final static int OpTag = 1;
+		public final static int OpSet = 2;
+		public final static int OpNop2 = 3;
+		public final static int OpMask2 = 7; // 1 | (1 << 1) | 1 << 2;
+	
+		private int getop2(int op) {
+			return op & OpMask2;
+		}
+		
+		private int getext3(int op) {
+			return op >> 3;
+		}
+	
+		private int makeop2(int op, int ext3) {
+			return ext3 << 3 | op;
+		}
+	
+		void log4(int op, int ext, int oid, int data1, int data2) {
+			if(this.quadLog != null) {
+				if(!(stackTop + 4 < this.quadLog.length)) {
+					int[] newlog = new int[quadLog.length * 4];
+					System.arraycopy(this.quadLog, 0, newlog, 0, this.quadLog.length);
+					this.quadLog = newlog;
+				}
+				this.quadLog[this.stackTop]   = oid;
+				this.quadLog[this.stackTop+1] = makeop2(op, ext);
+				this.quadLog[this.stackTop+2] = data1;
+				this.quadLog[this.stackTop+3] = data2;
+				this.stackTop += 4;
+			}
+		}
+		
+		private int readObjectIdAt(int mark) {
+			return this.quadLog[mark];
+		}
 
-	void lazyTagging(int oid, PegTagging e) {
-		if(bigDataOid == oid) {
-			//this.bigPego.tag = e.symbol;
-			return;
+		private int readLogOperatorAt(int mark) {
+			return this.getop2(this.quadLog[mark+1]);
 		}
-		if(readOid(this.stackTop) == oid && readOp(this.stackTop) == OpTag2) {
-			writeData(this.stackTop, e.uniqueId);
-		}
-		else {
-			log4(OpTag2, makediff(oid), oid, e.uniqueId, 0);
-		}
-	}
 
-	void lazyMessaging(int oid, PegMessage e) {
-		if(bigDataOid == oid) {
-			this.bigPego.setMessage(e.symbol);
-			return;
+		private int readShortDataAt(int mark) {
+			return this.getext3(this.quadLog[mark+1]);
 		}
-		if(readOid(this.stackTop) == oid && readOp(this.stackTop) == OpTag2) {
-			writeData2(this.stackTop, e.uniqueId);
+
+		private void writeExt3(int mark, int ext3) {
+			this.quadLog[mark+1] = makeop2(this.getop2(this.quadLog[mark+1]), ext3);
 		}
-		else {
-			log4(OpTag2, makediff(oid), oid, 0, e.uniqueId);
+
+		private void writeData(int mark, int data) {
+			this.quadLog[mark+2] = data;
 		}
-	}
 	
-	private static int BigDataSize = 256;
-	int bigDataOid = 0;
-	Pego bigPego = null;
-	UList<Pego> bigList = null;
-	
-	void lazySetter(int oid, int index, int child) {
-		if(bigDataOid == oid) {
-			//System.out.println("child big data: " + mark + " " + child + " stackTop" + stackTop);
-			Pego p = createObject(child);
-			bigList.add(p);
+		private void writeData2(int mark, int data) {
+			this.quadLog[mark+3] = data;
 		}
-		else {
-			int mark = this.searchOid(oid);
-			int size = readExt3(mark);
+	
+		private int readData(int mark) {
+			return this.quadLog[mark+2];
+		}
+	
+		private int readData2(int mark) {
+			return this.quadLog[mark+3];
+		}
+		
+		void dump(int bottom, int top) {
+			for(int i = bottom; i < top; i += 4) {
+				int op = this.readLogOperatorAt(i);
+				int oid = this.readObjectIdAt(i);
+				int n = i / 4;
+				if(op == OpNew) {
+					System.out.println("[" + n + "] NEW:" + oid + " pos=" + readData(i) + " length = " + readData2(i) + " size=" + readShortDataAt(i));
+				}
+				else if(op >= OpSet) {
+					System.out.println("[" + n + "] SET:" + oid + " " + readData(i) + " " + readData2(i) + " diff= " + readShortDataAt(i));
+				}
+				else if(op == OpTag) {
+					String tag = " ";
+					if(readData(i) > 0) {
+						PegTagging tagging = (PegTagging)peg.getPeg(readData(i));
+						tag = tagging.symbol + " ";
+					}
+					String msg = " ";
+					if(readData2(i) > 0) {
+						PegMessage message = (PegMessage)peg.getPeg(readData2(i));
+						tag = "`"+message.symbol + "` ";
+					}
+					System.out.println("[" + n + "] TAG:" + oid + " " + tag + " " + msg + " diff= " + readShortDataAt(i));
+				}
+				else {
+					System.out.println("[" + n + "] OP?:" + oid + " " + op + "  diff= " + readShortDataAt(i));
+				}
+			}
+		}
+	
+		int unusedObjectId = 2;
+		
+		int newObjectId(long pos) {
+			int oid = this.unusedObjectId;
+			log4(OpNew, 0, oid, (int)pos, 0);
+			this.unusedObjectId += 1;
+			return oid;
+		}
+		
+		void rollbackObjectStack(int mark) {
+			if(mark < this.stackTop) {
+				assert(readLogOperatorAt(mark) == OpNew);
+				this.unusedObjectId = this.readObjectIdAt(mark);
+			}
+			this.stackTop = mark;
+		}
+	
+		int searchMarkByObjectId(int oid) {
+			for(int i = this.stackTop - 4; i >= 0; i -= 4) {
+				if(readObjectIdAt(i) == oid) {
+					if(readLogOperatorAt(i) == OpNew) {
+						return i;
+					}
+					int diff = readShortDataAt(i);
+					if(diff > 0) {
+						return i - diff * 4;
+					}
+				}
+			}
+			assert(oid == 0); // this not happens
+			return -1;
+		}
+		
+		int makediff(int oid) {
+			return (this.stackTop - this.searchMarkByObjectId(oid)) / 4;
+		}
+
+		void lazyTagging(int oid, PegTagging e) {
+			if(readObjectIdAt(this.stackTop) == oid && readLogOperatorAt(this.stackTop) == OpTag) {
+				writeData(this.stackTop, e.uniqueId);
+			}
+			else {
+				log4(OpTag, makediff(oid), oid, e.uniqueId, 0);
+			}
+		}
+	
+		void lazyMessaging(int oid, PegMessage e) {
+			if(readObjectIdAt(this.stackTop) == oid && readLogOperatorAt(this.stackTop) == OpTag) {
+				writeData2(this.stackTop, e.uniqueId);
+			}
+			else {
+				log4(OpTag, makediff(oid), oid, 0, e.uniqueId);
+			}
+		}
+				
+		void lazySetter(int oid, int index, int child) {
+			int mark = this.searchMarkByObjectId(oid);
+			int size = readShortDataAt(mark);
 			if(index == -1) {
 				size++;
 				index = size-1;
@@ -219,125 +242,96 @@ public class MonadicParser extends ParserContext {
 				}
 			}
 			writeExt3(mark, size);
-			log4(OpSet2, makediff(oid), oid, index, child);
-			if(size > BigDataSize && this.bigDataOid == 0) {
-				this.bigDataOid = oid;
-				this.bigPego = createObject(oid);
-				this.bigList = new UList<Pego>(new Pego[BigDataSize*5]);
-				System.out.println("found big data: " + oid + " " + size);
-			}
+			log4(OpSet, makediff(oid), oid, index, child);
 		}
-	}
+	
+		void lazyCaptureString(int mark, int oid, int length) {
+			writeData2(mark, length);
+//			this.dump(mark, this.stackTop);
+//			this.createObjectImpl(mark, this.stackTop);
+		}
 
-	void lazyCapture(int mark, int length) {
-		writeData2(mark, length);
-	}
-	
-	void dumpStack(int s, int top) {
-		for(int i = s; i < top; i += 4) {
-			int op = this.readOp(i);
-			int oid = this.readOid(i);
-			int n = i / 4;
-			if(op == OpNew2) {
-				System.out.println("[" + n + "] NEW:" + oid + " pos=" + readData(i) + " length = " + readData2(i) + " size=" + readExt3(i));
+		private HashMap<Integer, Pego> objectMap = new HashMap<Integer, Pego>();
+		
+		private Pego get(int oid) {
+			Pego p = this.objectMap.get(oid);
+			if(p == null) {
+				System.out.println("GET?: "+ oid);
 			}
-			else if(op >= OpSet2) {
-				System.out.println("[" + n + "] SET:" + oid + " " + readData(i) + " " + readData2(i) + " diff= " + readExt3(i));
-			}
-			else if(op == OpTag2) {
-				String tag = " ";
-				if(readData(i) > 0) {
-					PegTagging tagging = (PegTagging)this.peg.getPeg(readData(i));
-					tag = tagging.symbol + " ";
-				}
-				String msg = " ";
-				if(readData2(i) > 0) {
-					PegMessage message = (PegMessage)this.peg.getPeg(readData2(i));
-					tag = "`"+message.symbol + "` ";
-				}
-				System.out.println("[" + n + "] TAG:" + oid + " " + tag + " " + msg + " diff= " + readExt3(i));
-			}
+			return p;
 		}
-	}
-	
-	public Pego createObjectImpl(int s, int top, int getoid) {
-		long offset = 0;
-		HashMap<Integer, Pego> m = new HashMap<Integer, Pego>();
-		Pego cur = null;
-		for(int i = s; i < top; i += 4) {
-			int op = this.readOp(i);
-			int oid = this.readOid(i);
-			if(op == OpNew2) {
-				cur = Pego.newPego(this.source, offset + readData(i), readData2(i), readExt3(i));
-				m.put(oid, cur);
-			}
-			else if(op >= OpSet2) {
-				int index = readData(i);
-				Integer cid = readData2(i);
-				Pego parent = m.get(oid);
-				Pego child = m.get(cid);
-				parent.set(index, child);
-				child.checkNullEntry();
-				m.remove(cid);
-//				System.out.println("[" + n + "] SET:" + oid + " " + readData(i) + " " + readData2(i) + " diff= " + readExt3(i));
-			}
-			else if(op == OpTag2) {
-				if(readData(i) > 0) {
-					PegTagging tagging = (PegTagging)this.peg.getPeg(readData(i));
-					Pego p = m.get(oid);
-					p.setTag(tagging.symbol);
-				}
-				if(readData2(i) > 0) {
-					PegMessage message = (PegMessage)this.peg.getPeg(readData2(i));
-					Pego p = m.get(oid);
-					p.setTag(message.symbol);
-				}
-				//System.out.println("[" + n + "] TAG:" + oid + " " + tag + " " + msg + " diff= " + readExt3(i));
-			}
+		
+		private void put(int oid, Pego pego) {
+			System.out.println("PUT: "+ oid);
+			this.objectMap.put(oid, pego);
 		}
-		Integer[] key = m.keySet().toArray(new Integer[1]);
-		if(m.size() > 1) {
-			System.out.println("droped size: " + (m.size() - 1));
-			for(Integer k : key) {
-				if(k != getoid) {
-					System.out.println("oid: " + k + " " + m.get(k));
-				}
-			}
-		}
-		return m.get(getoid);
-	}
 
-	
-	@Override
-	protected final int markObjectStack() {
-		return this.stackTop;
-	}
+		private Pego get_and_remove(int parent, int oid) {
+			Integer key = oid;
+			Pego p = this.objectMap.get(key);
+			this.objectMap.remove(key);
+			System.out.println("REMOVE: "+ oid + " to parent " + parent);
+			return p;
+		}
 
-	@Override
-	protected final void rollbackObjectStack(int mark) {
-		if(mark < this.stackTop) {
-			assert(readOp(mark) == OpNew2);
-			//System.out.println("dispose " + this.readOid(mark));
-			this.unusedObjectId = this.readOid(mark);
+		private void createObjectImpl(int bottom, int top) {
+			long offset = 0;
+			for(int i = bottom; i < top; i += 4) {
+				int op = this.readLogOperatorAt(i);
+				int oid = this.readObjectIdAt(i);
+				if(op == OpNew) {
+					Pego pego = Pego.newPego(source, offset + readData(i), readData2(i), readShortDataAt(i));
+					this.put(oid, pego);
+				}
+				else if(op >= OpSet) {
+					int index = readData(i);
+					int cid = readData2(i);
+					Pego parent = this.get(oid);
+					Pego child = this.get_and_remove(oid, cid);
+					parent.set(index, child);
+					child.checkNullEntry();
+	//				System.out.println("[" + n + "] SET:" + oid + " " + readData(i) + " " + readData2(i) + " diff= " + readExt3(i));
+				}
+				else if(op == OpTag) {
+					if(readData(i) > 0) {
+						PegTagging tagging = (PegTagging)peg.getPeg(readData(i));
+						Pego p = this.get(oid);
+						p.setTag(tagging.symbol);
+					}
+					if(readData2(i) > 0) {
+						PegMessage message = (PegMessage)peg.getPeg(readData2(i));
+						Pego p = this.get(oid);
+						p.setTag(message.symbol);
+					}
+					//System.out.println("[" + n + "] TAG:" + oid + " " + tag + " " + msg + " diff= " + readExt3(i));
+				}
+			}
+			this.rollbackObjectStack(bottom);
+//			Integer[] key = m.keySet().toArray(new Integer[1]);
+//			if(m.size() > 1) {
+//				System.out.println("droped size: " + (m.size() - 1));
+//				for(Integer k : key) {
+//					if(k != getoid) {
+//						System.out.println("oid: " + k + " " + m.get(k));
+//					}
+//				}
+//			}
+//			return m.get(getoid);
 		}
-		this.stackTop = mark;
-	}
-	
-	protected final Pego createObject(int oid) {
-		Pego pego = null;
-		//dumpStack(0, top);
-		if(this.quadLog != null) {
-			pego = createObjectImpl(this.searchOid(oid), this.stackTop, oid);
+				
+		protected final Pego createObject(int oid) {
+			Pego pego = null;
+			if(this.quadLog != null) {
+				dump(0, this.stackTop);
+				createObjectImpl(0, this.stackTop);
+				pego = get(oid);
+			}
+			if(pego == null) {  // debug
+				//dumpStack(0, top);
+				pego = Pego.newSource("#empty", source, 0);
+			}
+			return pego;
 		}
-		else {
-			pego = Pego.newSource("#empty", this.source, 0);
-		}
-		if(pego == null) {
-			//dumpStack(0, top);
-			System.out.println("created: " + pego);
-			assert(pego != null);
-		}
-		return pego;
 	}
 	
 	public int matchNewObject(int left, PegNewObject e) {
@@ -356,10 +350,10 @@ public class MonadicParser extends ParserContext {
 			}
 		}
 		int mark = this.markObjectStack();
-		int newnode = lazyNewObject(startIndex);
+		int newnode = log.newObjectId(startIndex);
 		//this.showPosition("new " + newnode + " " + e + mark/4);
 		if(e.leftJoin) {
-			this.lazySetter(newnode, 0, left);
+			this.log.lazySetter(newnode, 0, left);
 		}
 		for(int i = e.predictionIndex; i < e.size(); i++) {
 			//System.out.println("newO B i= " +i + ", pos=" + this.getPosition() + ", "+ newnode + " e=" + e.get(i));
@@ -373,10 +367,10 @@ public class MonadicParser extends ParserContext {
 			if(newnode != right) {
 				//this.showPosition("dropping new oid " + newnode +"=>" + right + " by " + e.get(i) + " IN " + e);
 				//System.out.println("mark=" + markToIgnoreUnsetObject + " search.. " + this.searchOid(right) + " < " + this.stackTop);
-				this.rollbackObjectStack(this.searchOid(right));
+				this.rollbackObjectStack(this.log.searchMarkByObjectId(right));
 			}
 		}
-		this.lazyCapture(mark, (int)(this.getPosition() - startIndex));
+		this.log.lazyCaptureString(mark, newnode, (int)(this.getPosition() - startIndex));
 		if(this.stat != null) {
 			this.stat.countObjectCreation();
 		}
@@ -391,7 +385,7 @@ public class MonadicParser extends ParserContext {
 		int markerId = this.markObjectStack();
 		int node = e.inner.fastMatch(left, this);
 		if(!PEGUtils.isFailure(node)) {
-			Pego pego = createObject(node);
+			Pego pego = log.createObject(node);
 			this.statExportCount += 1;
 			this.statExportSize += pego.getLength();
 			this.pushBlockingQueue(pego);
@@ -422,7 +416,7 @@ public class MonadicParser extends ParserContext {
 			this.rollbackObjectStack(mark);
 			return right;
 		}
-		this.lazySetter(left, e.index, right);
+		this.log.lazySetter(left, e.index, right);
 		return left;
 	}
 	

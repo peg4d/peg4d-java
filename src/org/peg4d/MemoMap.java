@@ -63,9 +63,9 @@ public abstract class MemoMap {
 	protected abstract void setMemo(long keypos, Peg keypeg, Pego generated, int consumed);
 	protected abstract ObjectMemo getMemo(Peg keypeg, long keypos);
 
-	public final static long makekey(long pos, Peg keypeg) {
-		return (pos << 24) | keypeg.uniqueId;
-	}
+//	public final static long makekey(long pos, Peg keypeg) {
+//		return (pos << 24) | keypeg.uniqueId;
+//	}
 	
 	class FifoMap extends LinkedHashMap<Long, ObjectMemo> {
 		private static final long serialVersionUID = 6725894996600788028L;
@@ -174,12 +174,12 @@ class DirectMemo extends MemoMap {
 		m.keypeg = keypeg;
 		m.generated = generated;
 		m.consumed = consumed;
-		this.memoMap.put(MemoMap.makekey(keypos, keypeg), m);
+		this.memoMap.put(PEGUtils.objectId(keypos, keypeg), m);
 	}
 
 	@Override
 	protected final ObjectMemo getMemo(Peg keypeg, long keypos) {
-		ObjectMemo m = this.memoMap.get(MemoMap.makekey(keypos, keypeg));
+		ObjectMemo m = this.memoMap.get(PEGUtils.objectId(keypos, keypeg));
 		if(m != null) {
 			this.MemoHit += 1;
 		}

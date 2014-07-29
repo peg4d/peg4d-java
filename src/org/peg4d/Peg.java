@@ -950,7 +950,7 @@ class PegTagging extends PegTerm {
 	}
 	@Override
 	public int fastMatch(int left, MonadicParser context) {
-		context.lazyTagging(left, this);
+		context.log.lazyTagging(left, this);
 		return left;
 	}
 }
@@ -1025,7 +1025,7 @@ class PegMessage extends PegTerm {
 	}
 	@Override
 	public int fastMatch(int left, MonadicParser context) {
-		context.lazyMessaging(left, this);
+		context.log.lazyMessaging(left, this);
 		return left;
 	}
 }
