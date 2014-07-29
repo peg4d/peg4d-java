@@ -421,9 +421,6 @@ public abstract class ParserContext {
 	public Pego matchNewObject(Pego left, PegNewObject e) {
 		Pego leftNode = left;
 		long startIndex = this.getPosition();
-		if(this.stat != null) {
-			this.stat.countRepeatCall(e, startIndex);
-		}
 		if(e.predictionIndex > 0) {
 			for(int i = 0; i < e.predictionIndex; i++) {
 				Pego node = e.get(i).simpleMatch(left, this);

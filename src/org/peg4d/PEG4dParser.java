@@ -32,6 +32,9 @@ public class PEG4dParser extends RecursiveDecentParser {
 			setPosition(pos + m.consumed);
 			return m.generated;
 		}
+		if(this.stat != null) {
+			this.stat.countRepeatCall(e, pos);
+		}
 		Pego generated = super.matchNewObject(left, e);
 		if(generated.isFailure()) {
 			this.memoMap.setMemo(pos, e, null, (int)(generated.getSourcePosition() - pos));
