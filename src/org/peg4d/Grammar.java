@@ -111,7 +111,7 @@ public class Grammar {
 			Peg nonTerminal = this.pegMap.get(ruleName, null);
 			nonTerminal.verify2(ruleName, nonTerminal, ruleName, visited);
 			visited.clear();
-			if(Main.VerbosePeg && !Main.VerboseStat) {
+			if(Main.VerbosePeg && Main.StatLevel == 0) {
 				if(nonTerminal.is(Peg.HasNewObject)) {
 					ruleName = "object " + ruleName; 
 				}

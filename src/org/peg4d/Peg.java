@@ -138,7 +138,7 @@ public abstract class Peg {
 	}
 
 	protected final void report(String type, String msg) {
-		if(!Main.VerboseStat) {
+		if(Main.StatLevel == 0) {
 			if(this.source != null) {
 				System.out.println(this.source.formatErrorMessage(type, this.sourcePosition-1, msg));
 			}
@@ -149,7 +149,7 @@ public abstract class Peg {
 	}
 	
 	protected void warning(String msg) {
-		if(Main.VerbosePeg && !Main.VerboseStat) {
+		if(Main.VerbosePeg && Main.StatLevel == 0) {
 			Main._PrintLine("PEG warning: " + msg);
 		}
 	}
@@ -257,7 +257,7 @@ class PegNonTerminal extends PegTerm {
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		Peg next = this.base.getRule(this.symbol);
-		if( next == null && !Main.VerboseStat) {
+		if( next == null && Main.StatLevel == 0) {
 			Main._PrintLine(this.source.formatErrorMessage("error", this.sourcePosition, "undefined label: " + this.symbol));
 			this.base.foundError = true;
 			return;

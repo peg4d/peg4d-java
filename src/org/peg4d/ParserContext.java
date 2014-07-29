@@ -97,17 +97,7 @@ public abstract class ParserContext {
 		}
 		return false;
 	}
-	
-//	protected final long matchZeroMore(UCharset charset) {
-//		for(;this.hasChar(); this.consume(1)) {
-//			char ch = this.source.charAt(this.sourcePosition);
-//			if(!charset.match(ch)) {
-//				break;
-//			}
-//		}
-//		return this.sourcePosition;
-//	}
-	
+		
 	public final String formatErrorMessage(String msg1, String msg2) {
 		return this.source.formatErrorMessage(msg1, this.sourcePosition, msg2);
 	}
@@ -126,7 +116,6 @@ public abstract class ParserContext {
 	}
 	
 	public boolean hasNode() {
-//		this.matchZeroMore(UCharset.WhiteSpaceNewLine);
 		return this.sourcePosition < this.endPosition;
 	}
 
@@ -149,7 +138,6 @@ public abstract class ParserContext {
 	
 	protected MemoMap memoMap = null;
 	public abstract void initMemo();
-	
 	
 	protected Pego successResult = null;
 	
@@ -203,9 +191,6 @@ public abstract class ParserContext {
 
 	public Pego matchNonTerminal(Pego left, PegNonTerminal e) {
 		Peg next = this.getRule(e.symbol);
-//		if(Main.VerboseStatCall) {
-//			next.countCall(this, e.symbol, this.getPosition());
-//		}
 		return next.simpleMatch(left, this);
 	}
 
@@ -232,8 +217,6 @@ public abstract class ParserContext {
 		}
 		return this.foundFailure(e);
 	}
-
-
 
 	public Pego matchOptional(Pego left, PegOptional e) {
 		long pos = this.getPosition();
@@ -547,13 +530,17 @@ public abstract class ParserContext {
 		return this.foundFailure(e);
 	}
 
-	public void beginStatInfo() {
-		this.stat = new Stat(this.peg, this.source);
-		this.stat.initRepeatCounter();
-		this.stat.start();
+	public void beginPeformStat() {
+		if(Main.StatLevel > 0) {
+			this.stat = new Stat(this.peg, this.source);
+			if(Main.StatLevel == 2) {
+				this.stat.initRepeatCounter();
+			}
+			this.stat.start();
+		}
 	}
 
-	public void endStatInfo(Pego pego) {
+	public void endPerformStat(Pego pego) {
 		if(stat != null) {
 			stat.end(pego, this);
 		}

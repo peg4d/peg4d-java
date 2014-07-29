@@ -204,12 +204,14 @@ public class UCharset {
 //		return 0.0;
 //	}
 
-	public final static int parseInt(String Text, int defval) {
-		try {
-			return Integer.parseInt(Text);
-		}
-		catch(NumberFormatException e) {
-			e.printStackTrace();
+	public final static int parseInt(String text, int defval) {
+		if(text.length() > 0) {
+			try {
+				return Integer.parseInt(text);
+			}
+			catch(NumberFormatException e) {
+				//e.printStackTrace();
+			}
 		}
 		return defval;
 	}

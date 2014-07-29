@@ -41,9 +41,6 @@ public class Main {
 	//
 	private static String InputFileName = null;
 	
-	// --bigdata
-	private static boolean BigDataOption = false;
-
 	// -o
 	private static String OutputFileName = null;
 
@@ -63,8 +60,7 @@ public class Main {
 	public static boolean TestMode = false;
 	
 	// --verbose:stat
-	public static boolean VerboseStat = false;
-	public static boolean VerboseStatCall = false;
+	public static int StatLevel = 0;
 
 	// --parser
 	public static String ParserType = "--parser";
@@ -128,7 +124,8 @@ public class Main {
 				TestMode = true;
 			}
 			else if(argument.startsWith("--stat")) {
-				VerboseStat = true;
+				StatLevel = UCharset.parseInt(argument.substring(6), 1);
+				OutputType = "none";
 			}
 			else if(argument.equals("--packrat")) {
 				ParserType = argument;
@@ -150,16 +147,12 @@ public class Main {
 				}
 				index = index + 1;
 			}
-			else if (argument.equals("--bigdata")) {
-				BigDataOption = true;
-			}
 			else if(argument.startsWith("--verbose")) {
 				if(argument.equals("--verbose:stat")) {
-					VerboseStat = true;
+					StatLevel = 1;
 				}
 				else if(argument.equals("--verbose:stat2")) {
-					VerboseStat = true;
-					VerboseStatCall = true;
+					StatLevel = 2;
 				}
 				else if(argument.equals("--verbose:peg")) {
 					VerbosePeg = true;
@@ -238,9 +231,9 @@ public class Main {
 		Main.printVerbose("StartingPoint", StartingPoint);
 		ParserContext p = peg.newParserContext(Main.loadSource(fileName));
 		//while(p.hasNode()) {
-		p.beginStatInfo();
+		p.beginPeformStat();
 		Pego pego = p.parseNode(startPoint);
-		p.endStatInfo(pego);
+		p.endPerformStat(pego);
 		//}
 		if(p.hasChar()) {
 			long pos = p.getPosition();
