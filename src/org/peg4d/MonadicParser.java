@@ -184,9 +184,11 @@ public class MonadicParser extends ParserContext {
 		}
 		
 		void rollbackObjectStack(int mark) {
+			assert(mark <= this.stackTop);
 			if(mark < this.stackTop) {
 				assert(readLogOperatorAt(mark) == OpNew);
 				this.unusedObjectId = this.readObjectIdAt(mark);
+				System.out.println("BACK to " + mark + " unused_oid=" + this.unusedObjectId);
 			}
 			this.stackTop = mark;
 		}
@@ -247,8 +249,8 @@ public class MonadicParser extends ParserContext {
 	
 		void lazyCaptureString(int mark, int oid, int length) {
 			writeData2(mark, length);
-//			this.dump(mark, this.stackTop);
-//			this.createObjectImpl(mark, this.stackTop);
+			this.dump(mark, this.stackTop);
+			this.createObjectImpl(mark, this.stackTop);
 		}
 
 		private HashMap<Integer, Pego> objectMap = new HashMap<Integer, Pego>();

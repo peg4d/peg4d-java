@@ -12,6 +12,10 @@ public class Grammar {
 	public boolean      foundError = false;
 	public int          optimizationLevel;
 	
+	int statOptimizedPeg = 0;
+	int statInlineCount = 0;
+	int statChoice = 0;
+
 	int statUnpredictableChoice = 0;
 	int statPredictableChoice = 0;
 	

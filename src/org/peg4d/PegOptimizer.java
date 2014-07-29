@@ -4,13 +4,9 @@ package org.peg4d;
 class PegOptimizer extends PegTransformer {
 	Grammar peg;
 	UMap<Peg> pegCache;
-	int statOptimizedPeg = 0;
-	int statInlineCount = 0;
-	int statChoice = 0;
-	int statPredictableChoice = 0;
 	
-	PegOptimizer(Grammar ruleSet, UMap<Peg> cacheMap) {
-		this.peg = ruleSet;
+	PegOptimizer(Grammar peg, UMap<Peg> cacheMap) {
+		this.peg = peg;
 		this.pegCache = cacheMap;
 	}
 	
@@ -37,7 +33,7 @@ class PegOptimizer extends PegTransformer {
 			}
 			return this.peepHoleTransform(base, e);
 		}
-		return null;
+		return e;
 	}
 	
 	private final Peg extractInline(Grammar base, PegNonTerminal label) {
@@ -54,7 +50,7 @@ class PegOptimizer extends PegTransformer {
 			n = next.clone(base, this);
 			pegCache.put(ruleName, n);
 		}				
-		this.statInlineCount += 1;
+		this.peg.statInlineCount += 1;
 		log(label, "inlining: " + ruleName);
 		return n;
 	}
@@ -104,8 +100,8 @@ class PegOptimizer extends PegTransformer {
 		}
 		PegChoice newChoice = new PegChoice(base, orig.flag, flatList);
 		Object predicted = newChoice.getPrediction();
-		this.statPredictableChoice += newChoice.predictable;
-		this.statChoice += newChoice.size();
+		this.peg.statPredictableChoice += newChoice.predictable;
+		this.peg.statChoice += newChoice.size();
 		if(newChoice.predictable > 0) {
 			if(this.peg.optimizationLevel >= 3 && newChoice.predictable == newChoice.size()) {
 				if(newChoice.pretextSize > 1 && newChoice.predictable > 2) {
@@ -253,14 +249,14 @@ class PegOptimizer extends PegTransformer {
 //		if(Main.VerbosePeg) {
 //			System.out.println("optimized: " + msg);
 //		}
-		this.statOptimizedPeg += 1;
+		this.peg.statOptimizedPeg += 1;
 	}
 
 	final void log2(Peg orig, String msg) {
 //		if(Main.VerbosePeg) {
 //			System.out.println("optimized: " + msg);
 //		}
-		this.statOptimizedPeg += 1;
+		this.peg.statOptimizedPeg += 1;
 	}
 
 	private final boolean isTextMatchOnly(Peg e) {

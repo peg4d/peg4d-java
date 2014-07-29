@@ -245,9 +245,6 @@ class Stat {
 		this.UnconsumedLength = p.endPosition - p.getPosition();
 		this.statFileLength = p.source.getFileLength();
 
-		this.Latency = (statFileLength) / (ErapsedTime / 1000.0);
-
-
 		long total = Runtime.getRuntime().totalMemory();
 		long free =  Runtime.getRuntime().freeMemory();
 		this.HeapSize = total - free;
@@ -263,8 +260,8 @@ class Stat {
 		this.setCount1("ReadFileSize", this.statReadLength);
 		this.setRatio1("IO Ratio", this.statReadLength, this.statFileLength);
 
-		this.setCount("ErapsedTime[ms]", this.ErapsedTime);
-		this.setRatio("Latency", this.statReadLength, this.ErapsedTime);
+		this.setCount("ErapsedTime", this.ErapsedTime);  // ms
+		this.setRatio("Latency", this.ConsumedLength, this.ErapsedTime);
 
 		this.setCount("ConsumedLength", this.ConsumedLength);
 		this.setCount1("UnconsumedLength", this.UnconsumedLength);
@@ -292,29 +289,16 @@ class Stat {
 
 		this.statObject(pego);
 
-		
-		//showHistgram();
-//		if(Main.VerboseStat) {
-//			System.out.println("parser: " + this.getClass().getSimpleName() + " -O" + Main.OptimizationLevel + " -Xw" + Main.MemoFactor + " optimized peg: " + this.statOptimizedPeg );
-//			System.out.println("file: " + this.source.fileName + " filesize: " + KMunit(statFileLength, "Kb", "Mb"));
-//			System.out.println("IO: " + this.source.statIOCount +" read/file: " + ratio((double)statReadLength/statFileLength) + " pagesize: " + Nunit(FileSource.PageSize, "bytes") + " read: " + KMunit(statReadLength, "Kb", "Mb"));
-//			System.out.println("erapsed time: " + Nunit(statErapsedTime, "msec") + " speed: " + kpx(fileKps,"KiB/s") + " " + mpx(fileKps, "MiB/s"));
-//			System.out.println("backtrack raito: " + ratio((double)this.statBacktrackSize / statCharLength) + " backtrack: " + this.statBacktrackSize + " length: " + this.source.length() + ", consumed: " + statCharLength);
-//			System.out.println("backtrack_count: " + this.statBacktrackCount + " average: " + ratio((double)this.statBacktrackSize / this.statBacktrackCount) + " worst: " + this.statWorstBacktrack);
-//			System.out.println("object: created: " + this.statObjectCount + " used: " + usedObject + " disposal ratio u/c " + ratio((double)usedObject/this.statObjectCount) + " stacks: " + maxLog);
-//			System.out.println("stream: exported: " + this.statExportCount + ", size: " + this.statExportSize + " failure: " + this.statExportFailure);
-//			System.out.println("calls: " + this.statCallCount + " repeated: " + this.statRepeatCount + " r/c: " + ratio((double)this.statRepeatCount/this.statCallCount));
-//			System.out.println("memo hit: " + this.memoMap.memoHit + ", miss: " + this.memoMap.memoMiss + 
-//					", ratio: " + ratio(((double)this.memoMap.memoHit / (this.memoMap.memoMiss))) + ", consumed memo:" + this.memoMap.memoSize +" slots: " + this.memoMap.statMemoSlotCount);
-//			System.out.println("heap: " + KMunit(heap, "KiB", "MiB") + " used: " + KMunit(used, "KiB", "MiB") + " heap/file: " + ratio((double) heap/ (statFileLength)));
-//			System.out.println();
-//		}
+		this.writeCSV();
 	}
+	
+	private UMap<vData> csvMap = new UMap<vData>();
 	
 	private void set (vData data) {
 		UStringBuilder sb = new UStringBuilder();
 		data.stringfy(sb, false);
 		System.out.println(sb.toString());
+		this.csvMap.put(data.key, data);
 	}
 	
 	private abstract class vData {
@@ -397,57 +381,59 @@ class Stat {
 			this.set(new vRatio(key, v, v2));
 		}
 	}
-	
 
+	public final void write(String text) {
+		System.out.print(text);
+	}
 	
+	private final void CSV(UStringBuilder sb, String key) {
+		vData d = this.csvMap.get(key);
+		if(d != null) {
+			d.stringfy(sb, true);
+		}
+		else {
+			sb.append(key);
+		}
+		sb.append(",");
+	}
+
+	public final void writeCSV() {
+		UStringBuilder sb = new UStringBuilder();
+		this.CSV(sb, "Parser");
 		
-//	private String ratio(double num) {
-//		return String.format("%.3f", num);
-//	}
-//	private String Punit(String unit) {
-//		return "[" + unit +"]";
-//	}
-//
-//	private String Kunit(long num) {
-//		return String.format("%.3f", (double)num / 1024);
-//	}
-//	
-//	private String Munit(double num) {
-//		return String.format("%.3f", num/(1024*1024));
-//	}
-//
-//	private String Nunit(long num, String unit) {
-//		return num + Punit(unit);
-//	}
-//
-//	private String Kunit(long num, String unit) {
-//		return ratio((double)num / 1024) + Punit(unit);
-//	}
-//	
-//	private String Munit(long num, String unit) {
-//		return ratio((double)num/(1024*1024)) + Punit(unit);
-//	}
-//
-//	private String KMunit(long num, String unit, String unit2) {
-//		return Kunit(num, unit) + " " + Munit(num, unit2);
-//	}
-//
-//	private String kpx(double num) {
-//		return ratio(num / 1024);
-//	}
-//
-//	private String kpx(double num, String unit) {
-//		return kpx(num) + Punit(unit);
-//	}
-//
-//	private String mpx(double num) {
-//		return ratio(num / (1024*1024));
-//	}
-//
-//	private String mpx(double num, String unit) {
-//		return mpx(num) + Punit(unit);
-//	}
+		this.CSV(sb, "FileName");
+		this.CSV(sb, "FileSize");
+		this.CSV(sb, "ErapsedTime");
+		this.CSV(sb, "Latency");
+		this.CSV(sb, "ConsumedLength");
+		this.CSV(sb, "BacktrackLength");
+		this.CSV(sb, "Backtrack/Consumed");
+		this.CSV(sb, "Backtrack");
+		this.CSV(sb, "WorstBacktrack");
+		this.CSV(sb, "BacktrackAverage");
+		this.CSV(sb, "Backtrack1");
+		this.CSV(sb, "Backtrack2");
+		this.CSV(sb, "Backtrack4");
+		this.CSV(sb, "Backtrack8");
+		this.CSV(sb, "Backtrack16");
+		this.CSV(sb, "Backtrack32");
+		this.CSV(sb, "Backtrack64");
+		this.CSV(sb, "Backtrack128");
+		this.CSV(sb, "MemoHit");
+		this.CSV(sb, "MemoMiss");
+		this.CSV(sb, "Hit/Miss");
+		
+		this.CSV(sb, "UsedObject");
+		this.CSV(sb, "DisposedObject");
+		this.CSV(sb, "Disposal/Used");
+		this.CSV(sb, "NewObject");
+		this.CSV(sb, "New/Creation");
+		this.CSV(sb, "ObjectEdge");
+		this.CSV(sb, "ObjectNode");
+		this.CSV(sb, "ObjectDepth");
 
-
-
+		System.out.println(sb.toString());
+	}
+	
+	
 }
