@@ -245,11 +245,12 @@ class PegNonTerminal extends PegTerm {
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		Peg next = this.base.getRule(this.symbol);
-		if( next == null && Main.StatLevel == 0) {
+		if( next == null) {
 			Main._PrintLine(this.source.formatErrorMessage("error", this.sourcePosition, "undefined label: " + this.symbol));
 			this.base.foundError = true;
 			return;
 		}
+		this.nextRule = next;
 		next.refc = this.refc;
 		if(ruleName.equals(this.symbol)) {
 			nonTerminal.set(CyclicRule);
@@ -270,7 +271,8 @@ class PegNonTerminal extends PegTerm {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchNonTerminal(left, this);
+		Peg next = context.getRule(this.symbol);
+		return next.simpleMatch(left, context);
 	}
 	@Override
 	public int fastMatch(int left, MonadicParser context) {

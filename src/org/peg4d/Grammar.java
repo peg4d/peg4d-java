@@ -7,7 +7,7 @@ public class Grammar {
 	String              name;
 	UList<Peg>          pegList;
 	UMap<Peg>           pegMap;
-	UMap<Peg>           optimizedPegMap;
+//	UMap<Peg>           optimizedPegMap;
 	UMap<String>        objectLabelMap = null;
 	public boolean      foundError = false;
 	public int          optimizationLevel;
@@ -38,7 +38,7 @@ public class Grammar {
 				break;
 			}
 		}
-		this.check();
+		this.verify();
 		return this.foundError;
 	}
 	
@@ -64,77 +64,103 @@ public class Grammar {
 	public final void setRule(String ruleName, Peg e) {
 		this.pegMap.put(ruleName, e);
 	}
-		
-	public final void check() {
-		this.objectLabelMap = new UMap<String>();
+
+	public final void verify() {
+		//this.objectLabelMap = new UMap<String>();
 		this.foundError = false;
-		UList<String> list = this.pegMap.keys();
-		UMap<String> visited = new UMap<String>();
-		for(int i = 0; i < list.size(); i++) {
-			String ruleName = list.ArrayValues[i];
+		UList<String> nameList = this.pegMap.keys();
+		NonTerminalChecker nc = new NonTerminalChecker();
+		for(int i = 0; i < nameList.size(); i++) {
+			String ruleName = nameList.ArrayValues[i];
 			Peg nonTerminal = this.pegMap.get(ruleName, null);
-			nonTerminal.verify2(ruleName, nonTerminal, ruleName, visited);
-			visited.clear();
-			if(Main.VerbosePeg && Main.StatLevel == 0) {
-				if(nonTerminal.is(Peg.HasNewObject)) {
-					ruleName = "object " + ruleName; 
-				}
-				if(!nonTerminal.is(Peg.HasNewObject) && !nonTerminal.is(Peg.HasSetter)) {
-					ruleName = "text " + ruleName; 
-				}
-				if(nonTerminal.is(Peg.CyclicRule)) {
-					ruleName += "*"; 
-				}
-				System.out.println(nonTerminal.format(ruleName));
-			}
+			nc.verify(ruleName, nonTerminal);
 		}
-		/* to complete the verification of cyclic rules */
-		PegNormaizer norm = new PegNormaizer();
-		for(int i = 0; i < list.size(); i++) {
-			String ruleName = list.ArrayValues[i];
-			Peg nonTerminal = this.pegMap.get(ruleName, null);
-			nonTerminal.verify2(ruleName, nonTerminal, ruleName, null);
-			norm.setRuleName(ruleName);
-			Peg ne = nonTerminal.clone(this, norm);
-			if(ne != nonTerminal) {
-				this.pegMap.put(ruleName, ne);
-			}
-		}
+//		for(int i = 0; i < nameList.size(); i++) {
+//			String ruleName = nameList.ArrayValues[i];
+//			Peg nonTerminal = this.pegMap.get(ruleName, null);
+//			nonTerminal.verify2(ruleName, nonTerminal, ruleName, null);
+//			norm.setRuleName(ruleName);
+//			Peg ne = nonTerminal.clone(this, norm);
+//			if(ne != nonTerminal) {
+//				this.pegMap.put(ruleName, ne);
+//			}
+//		}
 		if(this.foundError) {
 			Main._Exit(1, "peg error found");
 		}
-		this.optimizedPegMap = optimize();
+//		this.optimizedPegMap = optimize();
 	}
-	
-	PegOptimizer optimizer = null;
-	
-	public UMap<Peg> optimize() {
-		UMap<Peg> pegCache = new UMap<Peg>();
-		UList<String> list = this.pegMap.keys();
-		this.optimizer = new PegOptimizer(this, pegCache);
-		for(int i = 0; i < list.size(); i++) {
-			String key = list.ArrayValues[i];
-			Peg e = this.pegMap.get(key, null);
-			Peg ne = pegCache.get(key);
-			if(ne == null) {
-				ne = e.clone(this, optimizer);
-				pegCache.put(key, ne);
-			}
-			this.pegList.add(ne);
-		}
-		return pegCache;
-	}
+
+//	public final void check() {
+//		this.objectLabelMap = new UMap<String>();
+//		this.foundError = false;
+//		UList<String> list = this.pegMap.keys();
+//		UMap<String> visited = new UMap<String>();
+//		for(int i = 0; i < list.size(); i++) {
+//			String ruleName = list.ArrayValues[i];
+//			Peg nonTerminal = this.pegMap.get(ruleName, null);
+//			nonTerminal.verify2(ruleName, nonTerminal, ruleName, visited);
+//			visited.clear();
+//			if(Main.VerbosePeg && Main.StatLevel == 0) {
+//				if(nonTerminal.is(Peg.HasNewObject)) {
+//					ruleName = "object " + ruleName; 
+//				}
+//				if(!nonTerminal.is(Peg.HasNewObject) && !nonTerminal.is(Peg.HasSetter)) {
+//					ruleName = "text " + ruleName; 
+//				}
+//				if(nonTerminal.is(Peg.CyclicRule)) {
+//					ruleName += "*"; 
+//				}
+//				System.out.println(nonTerminal.format(ruleName));
+//			}
+//		}
+//		/* to complete the verification of cyclic rules */
+//		PegNormaizer norm = new PegNormaizer();
+//		for(int i = 0; i < list.size(); i++) {
+//			String ruleName = list.ArrayValues[i];
+//			Peg nonTerminal = this.pegMap.get(ruleName, null);
+//			nonTerminal.verify2(ruleName, nonTerminal, ruleName, null);
+//			norm.setRuleName(ruleName);
+//			Peg ne = nonTerminal.clone(this, norm);
+//			if(ne != nonTerminal) {
+//				this.pegMap.put(ruleName, ne);
+//			}
+//		}
+//		if(this.foundError) {
+//			Main._Exit(1, "peg error found");
+//		}
+//		this.optimizedPegMap = optimize();
+//	}
+//	
+//	PegOptimizer optimizer = null;
+//	
+//	public UMap<Peg> optimize() {
+//		UMap<Peg> pegCache = new UMap<Peg>();
+//		UList<String> list = this.pegMap.keys();
+//		this.optimizer = new PegOptimizer(this, pegCache);
+//		for(int i = 0; i < list.size(); i++) {
+//			String key = list.ArrayValues[i];
+//			Peg e = this.pegMap.get(key, null);
+//			Peg ne = pegCache.get(key);
+//			if(ne == null) {
+//				ne = e.clone(this, optimizer);
+//				pegCache.put(key, ne);
+//			}
+//			this.pegList.add(ne);
+//		}
+//		return pegCache;
+//	}
 	
 	private int MultiReference = 0;
 	private int Reference = 0;
 
 	void updateStat(Stat stat) {
-		stat.setCount("PegReference", this.Reference);
+		stat.setCount("PegReference",   this.Reference);
 		stat.setCount("MultiReference", this.MultiReference);
 		stat.setRatio("Complexity", this.MultiReference, this.Reference);
-		if(this.optimizer != null) {
-			this.optimizer.updateStat(stat);
-		}
+//		if(this.optimizer != null) {
+//			this.optimizer.updateStat(stat);
+//		}
 //		for(int i = 0; i < this.pegList.size(); i++) {
 //			Peg e = this.pegList.ArrayValues[i];
 //			if(e instanceof PegMemo) {
@@ -146,68 +172,68 @@ public class Grammar {
 //			}
 //		}
 	}
-
-	class PegNormaizer extends PegTransformer {
-		private String ruleName;
-		void setRuleName(String ruleName) {
-			this.ruleName = ruleName;
-		}
-		@Override
-		public Peg transform(Grammar base, Peg e) {
-			if(e instanceof PegChoice) {
-				return this.flattenChoice((PegChoice)e);
-			}
-			if(e instanceof PegList) {
-				for(int i = 0; i < e.size(); i++) {
-					((PegList) e).list.ArrayValues[i] = e.get(i).clone(base, this);
-				}
-				return e;
-			}
-			if(e instanceof PegSetter) {
-				return this.flattenSetter((PegSetter)e);
-			}
-			if(e instanceof PegUnary) {
-				((PegUnary) e).inner = ((PegUnary) e).inner.clone(base, this);
-			}
-			return e;
-		}
-		private Peg flattenChoice(PegChoice e) {
-			boolean hasChoice = false;
-			for(int i = 0; i < e.size(); i++) {
-				if(e.get(i) instanceof PegChoice) {
-					hasChoice = true;
-					break;
-				}
-			}
-			if(hasChoice) {
-				UList<Peg> l = new UList<Peg>(new Peg[e.size()*2]);
-				flattenChoiceImpl(e, l);
-				e.list = l;
-			}
-			return e;
-		}
-		private void flattenChoiceImpl(PegChoice e, UList<Peg> l) {
-			for(int i = 0; i < e.size(); i++) {
-				Peg sub = e.get(i);
-				if(sub instanceof PegChoice) {
-					this.flattenChoiceImpl((PegChoice)sub, l);
-				}
-				else {
-					l.add(sub);
-				}
-			}
-		}
-		private Peg flattenSetter(PegSetter e) {
-			if(!e.inner.is(Peg.HasNewObject)) {
-				return e.inner;
-			}
-			return e;
-		}
-	}
-	
-	public void addObjectLabel(String objectLabel) {
-		this.objectLabelMap.put(objectLabel, objectLabel);
-	}
+//
+//	class PegNormaizer extends PegTransformer {
+//		private String ruleName;
+//		void setRuleName(String ruleName) {
+//			this.ruleName = ruleName;
+//		}
+//		@Override
+//		public Peg transform(Grammar base, Peg e) {
+//			if(e instanceof PegChoice) {
+//				return this.flattenChoice((PegChoice)e);
+//			}
+//			if(e instanceof PegList) {
+//				for(int i = 0; i < e.size(); i++) {
+//					((PegList) e).list.ArrayValues[i] = e.get(i).clone(base, this);
+//				}
+//				return e;
+//			}
+//			if(e instanceof PegSetter) {
+//				return this.flattenSetter((PegSetter)e);
+//			}
+//			if(e instanceof PegUnary) {
+//				((PegUnary) e).inner = ((PegUnary) e).inner.clone(base, this);
+//			}
+//			return e;
+//		}
+//		private Peg flattenChoice(PegChoice e) {
+//			boolean hasChoice = false;
+//			for(int i = 0; i < e.size(); i++) {
+//				if(e.get(i) instanceof PegChoice) {
+//					hasChoice = true;
+//					break;
+//				}
+//			}
+//			if(hasChoice) {
+//				UList<Peg> l = new UList<Peg>(new Peg[e.size()*2]);
+//				flattenChoiceImpl(e, l);
+//				e.list = l;
+//			}
+//			return e;
+//		}
+//		private void flattenChoiceImpl(PegChoice e, UList<Peg> l) {
+//			for(int i = 0; i < e.size(); i++) {
+//				Peg sub = e.get(i);
+//				if(sub instanceof PegChoice) {
+//					this.flattenChoiceImpl((PegChoice)sub, l);
+//				}
+//				else {
+//					l.add(sub);
+//				}
+//			}
+//		}
+//		private Peg flattenSetter(PegSetter e) {
+//			if(!e.inner.is(Peg.HasNewObject)) {
+//				return e.inner;
+//			}
+//			return e;
+//		}
+//	}
+//	
+//	public void addObjectLabel(String objectLabel) {
+//		this.objectLabelMap.put(objectLabel, objectLabel);
+//	}
 
 	public ParserContext newParserContext(ParserSource source) {
 		ParserContext p = null;
@@ -889,8 +915,7 @@ class PEG4dGrammar extends Grammar {
 		this.setRule("TopLevel", seq(
 			opt(n("_")), choice(n("Rule"), n("Import")), opt(n("_")), s(";"), opt(n("_"))
 		));
-		this.check();
-		//this.show("TopLevel");
+		this.verify();
 		return this;
 	}
 

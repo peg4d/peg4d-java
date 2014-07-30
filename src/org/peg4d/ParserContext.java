@@ -215,8 +215,8 @@ public abstract class ParserContext {
 		return this.foundFailureNode;
 	}
 
-	public final Peg getRule(String symbol) {
-		return this.peg.optimizedPegMap.get(symbol);
+	public final Peg getRule(String name) {
+		return this.peg.getRule(name);
 	}
 
 	public Pego matchNonTerminal(Pego left, PegNonTerminal e) {
