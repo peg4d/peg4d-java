@@ -768,11 +768,23 @@ abstract class PegList extends Peg {
 	public void add(Peg e) {
 		this.list.add(e);
 	}
-	public final void swap(int i, int j) {
-		Peg e = this.list.ArrayValues[i];
-		this.list.ArrayValues[i] = this.list.ArrayValues[j];
-		this.list.ArrayValues[j] = e;
+	public boolean isSame(UList<Peg> flatList) {
+		if(this.size() == flatList.size()) {
+			for(int i = 0; i < this.size(); i++) {
+				if(this.get(i) != flatList.ArrayValues[i]) {
+					return false;
+				}
+			}
+			return true;
+		}
+		return false;
 	}
+
+//	public final void swap(int i, int j) {
+//		Peg e = this.list.ArrayValues[i];
+//		this.list.ArrayValues[i] = this.list.ArrayValues[j];
+//		this.list.ArrayValues[j] = e;
+//	}
 	@Override
 	protected void makeList(String startRule, Grammar parser, UList<String> list, UMap<String> set) {
 		for(int i = 0; i < this.size(); i++) {
@@ -897,40 +909,37 @@ class PegChoice extends PegList {
 		fmt.formatChoice(sb, this);
 	}
 	
-	protected int predictable = -1;
 	protected UCharset predicted = null;
-	protected int pretextSize = 0; 
+	protected int predictableChoice = -1;
+	protected int prefixSize = 0; 
 	
 	@Override
 	public Object getPrediction() {
-		if(this.predictable == -1) {
+		if(this.predictableChoice == -1) {
 			UCharset u = new UCharset("");
-			this.predictable = 0;
+			this.predictableChoice = 0;
 			this.predicted = null;
-			this.pretextSize = 100000;
+			this.prefixSize = Integer.MAX_VALUE;
 			for(int i = 0; i < this.size(); i++) {
 				Object p = this.get(i).getPrediction();
 				if(p instanceof UCharset) {
 					u.append((UCharset)p);
-					this.predictable += 1;
-					this.pretextSize = 1;
+					this.predictableChoice += 1;
+					this.prefixSize = 1;
 				}
 				if(p instanceof String) {
 					String text = (String)p;
 					if(text.length() > 0) {
 						u.append(text.charAt(0));
-						this.predictable += 1;
-						if(text.length() < this.pretextSize) {
-							this.pretextSize = text.length();
+						this.predictableChoice += 1;
+						if(text.length() < this.prefixSize) {
+							this.prefixSize = text.length();
 						}
 					}
 				}
 			}
-			if(this.predictable == this.size()) {
+			if(this.predictableChoice == this.size()) {
 				this.predicted = u;
-			}
-			else {
-				this.pretextSize = 0;
 			}
 		}
 		return this.predicted;
@@ -946,14 +955,9 @@ class PegChoice extends PegList {
 		super.verify2(ruleName, nonTerminal, visitingName, visited);
 		nonTerminal.derived(this);
 		if(visited == null) {  // in the second phase
-			this.predictable = -1;
+			this.predictableChoice = -1;
 			this.predicted = null; // reset
-			if(this.getPrediction() == null) {
-				this.base.statUnpredictableChoice += 1;
-			}
-			else {
-				this.base.statPredictableChoice += 1;
-			}
+			this.getPrediction();
 		}
 	}
 	@Override

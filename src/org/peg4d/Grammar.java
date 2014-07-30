@@ -12,17 +12,17 @@ public class Grammar {
 	public boolean      foundError = false;
 	public int          optimizationLevel;
 	
-	int statOptimizedPeg = 0;
-	int statInlineCount = 0;
-	int statChoice = 0;
-
-	int statUnpredictableChoice = 0;
-	int statPredictableChoice = 0;
+//	int statOptimizedPeg = 0;
+//	int statInlineCount = 0;
+//	int statChoice = 0;
+//
+//	int statUnpredictableChoice = 0;
+//	int statPredictableChoice = 0;
 	
 	public Grammar() {
 		this.pegMap  = new UMap<Peg>();
 		this.pegList = new UList<Peg>(new Peg[128]);
-		this.pegMap.put("indent", new PegIndent(this, 0));  // default rule
+		//this.pegMap.put("indent", new PegIndent(this, 0));  // default rule
 		this.optimizationLevel = Main.OptimizationLevel;
 	}
 
@@ -104,8 +104,6 @@ public class Grammar {
 	public final void check() {
 		this.objectLabelMap = new UMap<String>();
 		this.foundError = false;
-		this.statUnpredictableChoice = 0;
-		this.statPredictableChoice = 0;
 		UList<String> list = this.pegMap.keys();
 		UMap<String> visited = new UMap<String>();
 		for(int i = 0; i < list.size(); i++) {
@@ -138,19 +136,18 @@ public class Grammar {
 				this.pegMap.put(ruleName, ne);
 			}
 		}
-		if(Main.VerbosePeg) {
-			System.out.println("Choice predictable: " + this.statPredictableChoice + " unpredictable: " + this.statUnpredictableChoice);
-		}
 		if(this.foundError) {
 			Main._Exit(1, "peg error found");
 		}
 		this.optimizedPegMap = optimize();
 	}
 	
+	PegOptimizer optimizer = null;
+	
 	public UMap<Peg> optimize() {
 		UMap<Peg> pegCache = new UMap<Peg>();
 		UList<String> list = this.pegMap.keys();
-		PegOptimizer optimizer = new PegOptimizer(this, pegCache);
+		this.optimizer = new PegOptimizer(this, pegCache);
 		for(int i = 0; i < list.size(); i++) {
 			String key = list.ArrayValues[i];
 			Peg e = this.pegMap.get(key, null);
@@ -162,6 +159,12 @@ public class Grammar {
 			this.pegList.add(ne);
 		}
 		return pegCache;
+	}
+	
+	void updateStat(Stat stat) {
+		if(this.optimizer != null) {
+			this.optimizer.updateStat(stat);
+		}
 	}
 
 	class PegNormaizer extends PegTransformer {

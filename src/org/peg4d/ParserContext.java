@@ -65,6 +65,19 @@ public abstract class ParserContext {
 		return "";
 	}
 
+	private static final int Base = 17;
+	public int hashValue(int len, int max) {
+		if(this.sourcePosition + len < this.endPosition) {
+			switch(len) {
+			case 1:
+				return this.source.charAt(this.sourcePosition);
+			case 2:
+				return Base * this.source.charAt(this.sourcePosition) + this.source.charAt(this.sourcePosition+1);
+			}
+		}
+		return 0;
+	}
+
 	protected final void consume(long plus) {
 		this.sourcePosition = this.sourcePosition + plus;
 	}

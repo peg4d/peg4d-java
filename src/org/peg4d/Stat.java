@@ -260,9 +260,6 @@ class Stat {
 		this.setCount1("ReadFileSize", this.statReadLength);
 		this.setRatio1("IO Ratio", this.statReadLength, this.statFileLength);
 
-		this.setCount("ErapsedTime", this.ErapsedTime);  // ms
-		this.setRatio("Latency", this.ConsumedLength, this.ErapsedTime);
-
 		this.setCount("ConsumedLength", this.ConsumedLength);
 		this.setCount1("UnconsumedLength", this.UnconsumedLength);
 		
@@ -288,7 +285,11 @@ class Stat {
 		ckeckRepeatCounter();
 
 		this.statObject(pego);
+		p.peg.updateStat(this);
+		this.setCount("ErapsedTime", this.ErapsedTime);  // ms
+		this.setRatio("Latency", this.ConsumedLength, this.ErapsedTime);
 
+		
 		this.writeCSV();
 	}
 	
