@@ -1,7 +1,6 @@
 package org.peg4d;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
@@ -23,9 +22,11 @@ public class StringSource extends ParserSource {
 		catch(IOException e) {
 		}
 	}
+	@Override
 	public final long length() {
 		return this.sourceText.length();
 	}
+	@Override
 	public final long getFileLength() {
 		try {
 			return new File(this.fileName).length();
@@ -34,19 +35,16 @@ public class StringSource extends ParserSource {
 		}
 		return this.sourceText.getBytes().length;
 	}
-	public final char charAt(long n) {
+	@Override
+	public final int charAt(long n) {
 		if(0 <= n && n < this.length()) {
 			return this.sourceText.charAt((int)n);
 		}
-		return '\0';
-	}
-	public final String substring(long startIndex, long endIndex) {
-		//System.out.println("sourceText: " + this.sourceText + ", " + startIndex + ", " + endIndex);
-		return this.sourceText.substring((int)startIndex, (int)endIndex);
+		return 0;
 	}
 	@Override
-	public final ParserSource trim(long startIndex, long endIndex) {
-		return this;
+	public final String substring(long startIndex, long endIndex) {
+		return this.sourceText.substring((int)startIndex, (int)endIndex);
 	}
 }
 

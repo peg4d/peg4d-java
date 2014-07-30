@@ -47,14 +47,14 @@ public abstract class ParserContext {
 		return this.sourcePosition < this.endPosition;
 	}
 
-	protected final char charAt(long pos) {
+	protected final int charAt(long pos) {
 		if(pos < this.endPosition) {
 			return this.source.charAt(pos);
 		}
 		return '\0';
 	}
 
-	protected final char getChar() {
+	protected final int getChar() {
 		return this.charAt(this.sourcePosition);
 	}
 	
@@ -65,14 +65,31 @@ public abstract class ParserContext {
 		return "";
 	}
 
-	private static final int Base = 17;
-	public int hashValue(int len, int max) {
+	private static final int Base = 111;
+	public int hashValue(int len) {
 		if(this.sourcePosition + len < this.endPosition) {
 			switch(len) {
 			case 1:
 				return this.source.charAt(this.sourcePosition);
 			case 2:
-				return Base * this.source.charAt(this.sourcePosition) + this.source.charAt(this.sourcePosition+1);
+				return Base * this.source.charAt(this.sourcePosition) 
+						+ this.source.charAt(this.sourcePosition+1);
+			case 3:
+				return Base * Base * this.source.charAt(this.sourcePosition) 
+						+ Base * this.source.charAt(this.sourcePosition + 1) 
+						+ this.source.charAt(this.sourcePosition + 2);
+			case 4:
+				return Base * Base * Base * this.source.charAt(this.sourcePosition)
+						+ Base * Base * this.source.charAt(this.sourcePosition + 1) 
+						+ Base * this.source.charAt(this.sourcePosition + 2) 
+						+ this.source.charAt(this.sourcePosition + 3);
+			default:
+				int len1 = len - 1;
+				int h = 0;
+				for(int i = 0; i < len1; i++) {
+					h = h + this.source.charAt(this.sourcePosition+i) * Base;
+				}
+				return h + this.source.charAt(this.sourcePosition + len1);
 			}
 		}
 		return 0;
@@ -215,7 +232,7 @@ public abstract class ParserContext {
 	}
 
 	public final Pego matchCharacter(Pego left, PegCharacter e) {
-		char ch = this.getChar();
+		int ch = this.getChar();
 		if(!e.charset.match(ch)) {
 			return this.foundFailure(e);
 		}

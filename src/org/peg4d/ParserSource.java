@@ -11,9 +11,9 @@ public abstract class ParserSource {
 
 	public abstract long length();
 	public abstract long getFileLength();
-	public abstract char charAt(long n);
+	public abstract int  charAt(long n);
 	public abstract String substring(long startIndex, long endIndex);
-	public abstract ParserSource trim(long startIndex, long endIndex);
+//	public abstract ParserSource trim(long startIndex, long endIndex);
 
 	private class LineMemo {
 		long pos;
@@ -57,7 +57,7 @@ public abstract class ParserSource {
 		long LineNumber = found.linenum;
 		long i = found.pos;
 		while(i < pos) {
-			char ch = this.charAt(i);
+			int ch = this.charAt(i);
 			if(ch == '\n') {
 				LineNumber = LineNumber + 1;
 			}
@@ -88,7 +88,7 @@ public abstract class ParserSource {
 		long startPosition = this.getLineStartPosition(fromPosition);
 		long i = startPosition;
 		for(; i < fromPosition; i++) {
-			char ch = this.charAt(i);
+			int ch = this.charAt(i);
 			if(ch != ' ' && ch != '\t') {
 				break;
 			}
@@ -105,7 +105,7 @@ public abstract class ParserSource {
 			startIndex = 0;
 		}
 		while(startIndex > 0) {
-			char ch = charAt(startIndex);
+			int ch = charAt(startIndex);
 			if(ch == '\n') {
 				startIndex = startIndex + 1;
 				break;
@@ -119,7 +119,7 @@ public abstract class ParserSource {
 		long startIndex = this.getLineStartPosition(pos);
 		long endIndex = startIndex;
 		while(endIndex < this.length()) {
-			char ch = charAt(endIndex);
+			int ch = charAt(endIndex);
 			if(ch == '\n') {
 				break;
 			}
@@ -133,7 +133,7 @@ public abstract class ParserSource {
 		String markerLine = "";
 		long i = startIndex;
 		while(i < pos) {
-			char ch = charAt(i);
+			int ch = charAt(i);
 			if(ch == '\n') {
 				break;
 			}

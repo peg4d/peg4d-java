@@ -533,8 +533,8 @@ public class Main {
 		return Text.charAt(Pos);
 	}
 
-	public final static String _CharToString(char ch) {
-			return ""+ch;
+	public final static String _CharToString(int ch) {
+			return String.format("%c", ch);
 	}
 
 	public static String _SourceBuilderToString(UStringBuilder sb) {

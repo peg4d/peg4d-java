@@ -55,7 +55,17 @@ public class UCharset {
 		}
 		return false;
 	}
-	
+
+	public final boolean match(int ch) {
+		if(ch < 128) {
+			return this.asciiBitMap[ch];
+		}
+		if(this.utfBitMap != null) {
+			return this.utfBitMap.hasKey(Main._CharToString(ch));
+		}
+		return false;
+	}
+
 
 	final void set(char ch) {
 		if(ch < 128) {

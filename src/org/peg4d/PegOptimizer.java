@@ -600,7 +600,7 @@ class PegOptimizer extends PegTransformer {
 		@Override
 		public Pego simpleMatch(Pego left, ParserContext context) {
 			long pos = context.getPosition();
-			char ch = context.charAt(pos);
+			int ch = context.charAt(pos);
 			if(!this.charset.match(ch)) {
 				return context.foundFailure(this);
 			}
@@ -617,7 +617,7 @@ class PegOptimizer extends PegTransformer {
 		@Override
 		public int fastMatch(int left, MonadicParser context) {
 			long pos = context.getPosition();
-			char ch = context.charAt(pos);
+			int ch = context.charAt(pos);
 			if(!this.charset.match(ch)) {
 				return context.foundFailure2(this);
 			}
@@ -643,7 +643,7 @@ class PegOptimizer extends PegTransformer {
 		public Pego simpleMatch(Pego left, ParserContext context) {
 			long pos = context.getPosition();
 			for(;context.hasChar();pos++) {
-				char ch = context.charAt(pos);
+				int ch = context.charAt(pos);
 				if(!this.charset.match(ch)) {
 					break;
 				}
@@ -655,7 +655,7 @@ class PegOptimizer extends PegTransformer {
 		public int fastMatch(int left, MonadicParser context) {
 			long pos = context.getPosition();
 			for(;context.hasChar();pos++) {
-				char ch = context.charAt(pos);
+				int ch = context.charAt(pos);
 				if(!this.charset.match(ch)) {
 					break;
 				}
@@ -674,6 +674,7 @@ class PegOptimizer extends PegTransformer {
 			this.map = new HashMap<String, Peg>(this.size() * 4 + 1);
 			for(int i = 0; i < this.size(); i++) {
 				Peg sub = this.get(i);
+				
 				String key = sub.getPrediction().toString().substring(0, this.prefixSize);
 				Peg defined = map.get(key);
 				if(defined != null) {
@@ -778,7 +779,7 @@ class PegOptimizer extends PegTransformer {
 
 		@Override
 		public Pego simpleMatch(Pego left, ParserContext context) {
-			char ch = context.getChar();
+			int ch = context.getChar();
 			if(ch < 128) {
 				if(caseOf[ch] != null) {
 					return caseOf[ch].simpleMatch(left, context);
@@ -793,7 +794,7 @@ class PegOptimizer extends PegTransformer {
 		}
 		@Override
 		public int fastMatch(int left, MonadicParser context) {
-			char ch = context.getChar();
+			int ch = context.getChar();
 			if(ch < 128) {
 				if(caseOf[ch] != null) {
 					return caseOf[ch].fastMatch(left, context);
@@ -822,7 +823,7 @@ class PegOptimizer extends PegTransformer {
 				
 		@Override
 		public Pego simpleMatch(Pego left, ParserContext context) {
-			char ch = context.getChar();
+			int ch = context.getChar();
 			if(ch < 128) {
 				if(caseOf[ch] == null) {
 					caseOf[ch] = selectPeg(ch);
@@ -839,7 +840,7 @@ class PegOptimizer extends PegTransformer {
 			return super.simpleMatch(left, context);
 		}
 
-		private Peg selectPeg(char ch) {
+		private Peg selectPeg(int ch) {
 			Peg e = null;
 			for(int i = 0; i < this.list.size(); i++) {
 				Peg sub = this.get(i);
@@ -856,7 +857,7 @@ class PegOptimizer extends PegTransformer {
 
 		@Override
 		public int fastMatch(int left, MonadicParser context) {
-			char ch = context.getChar();
+			int ch = context.getChar();
 			if(ch < 128) {
 				if(caseOf[ch] == null) {
 					caseOf[ch] = selectPeg(ch);

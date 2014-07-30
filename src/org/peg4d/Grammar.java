@@ -11,14 +11,7 @@ public class Grammar {
 	UMap<String>        objectLabelMap = null;
 	public boolean      foundError = false;
 	public int          optimizationLevel;
-	
-//	int statOptimizedPeg = 0;
-//	int statInlineCount = 0;
-//	int statChoice = 0;
-//
-//	int statUnpredictableChoice = 0;
-//	int statPredictableChoice = 0;
-	
+		
 	public Grammar() {
 		this.pegMap  = new UMap<Peg>();
 		this.pegList = new UList<Peg>(new Peg[128]);
@@ -161,7 +154,13 @@ public class Grammar {
 		return pegCache;
 	}
 	
+	private int MultiReference = 0;
+	private int Reference = 0;
+
 	void updateStat(Stat stat) {
+		stat.setCount("PegReference", this.Reference);
+		stat.setCount("MultiReference", this.MultiReference);
+		stat.setRatio("Complexity", this.MultiReference, this.Reference);
 		if(this.optimizer != null) {
 			this.optimizer.updateStat(stat);
 		}
@@ -280,6 +279,7 @@ public class Grammar {
 	// factory
 	
 	UMap<Peg> semMap = new UMap<Peg>();
+
 	private static String prefixNonTerminal = "L\b";
 	private static String prefixString = "t\b";
 	private static String prefixCharacter = "c\b";
@@ -298,8 +298,10 @@ public class Grammar {
 	private Peg getsem(String t) {
 		Peg e = semMap.get(t);
 		if(e != null) {
+			this.MultiReference += 1;
 			e.refc += 1;
 		}
+		this.Reference += 1;
 		return e;
 	}
 
@@ -503,8 +505,8 @@ class PEG4dGrammar extends Grammar {
 			return true;
 		}
 		if(pego.is("#error")) {
-			char c = pego.getSource().charAt(pego.getSourcePosition());
-			System.out.println(pego.formatSourceMessage("error", "syntax error: ascii=" + (int)c));
+			int c = pego.getSource().charAt(pego.getSourcePosition());
+			System.out.println(pego.formatSourceMessage("error", "syntax error: ascii=" + c));
 			return false;
 		}
 		System.out.println("Unknown peg node: " + pego);

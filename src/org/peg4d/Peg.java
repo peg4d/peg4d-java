@@ -58,7 +58,7 @@ public abstract class Peg {
 		return null;
 	}
 
-	public final boolean isPredictablyAcceptable(char ch) {
+	public final boolean isPredictablyAcceptable(int ch) {
 		Object predicted = this.getPrediction();
 		if(predicted != null) {
 			if(predicted instanceof String) {
@@ -482,7 +482,7 @@ class PegCharacter extends PegTerm {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		char ch = context.getChar();
+		int ch = context.getChar();
 		if(!this.charset.match(ch)) {
 			return context.foundFailure(this);
 		}
@@ -491,7 +491,7 @@ class PegCharacter extends PegTerm {
 	}
 	@Override
 	public int fastMatch(int left, MonadicParser context) {
-		char ch = context.getChar();
+		int ch = context.getChar();
 		if(!this.charset.match(ch)) {
 			return context.foundFailure2(this);
 		}

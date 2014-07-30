@@ -61,23 +61,23 @@ public class FileSource extends ParserSource {
 	}
 
 	@Override
-	public final char charAt(long n) {
+	public final int charAt(long n) {
 		int buffer_pos = (int)(n - this.buffer_offset);
 		if(!(buffer_pos >= 0 && buffer_pos < PageSize)) {
 			this.buffer_offset = buffer_alignment(n);
 			this.readMainBuffer(this.buffer_offset);
 			buffer_pos = (int)(n - this.buffer_offset);
 		}
-		return (char)this.buffer[buffer_pos];
+		return this.buffer[buffer_pos] & 0xff;
 	}
 	
-	public final char charAtDebug(long n) {
+	public final int charAtDebug(long n) {
 		//assert(n < this.fileLength);
-		char c = this.charAt(n);
+		int c = this.charAt(n);
 		if(this.debug != null) {
-			char c2 = this.debug.charAt(n);
+			int c2 = this.debug.charAt(n);
 			if(c != c2) {
-				Main._Exit(1, "different " + this.fileName + " pos=" + n + "c='"+(int)c+"', c2='"+(int)c2+"'");
+				Main._Exit(1, "different " + this.fileName + " pos=" + n + "c='"+c+"', c2='"+c2+"'");
 			}
 		}
 		return c;
@@ -187,15 +187,6 @@ public class FileSource extends ParserSource {
 		else {
 			this.readBuffer(pos, buf);
 		}
-	}
-
-	@Override
-	public final ParserSource trim(long startIndex, long endIndex) {
-		//long pos = this.getLineStartPosition(startIndex);
-		long linenum = this.getLineNumber(startIndex);
-		String s = this.substring(startIndex, endIndex);
-		//System.out.println("trim: " + linenum + " : " + s);
-		return new StringSource(this.fileName, linenum, s);
 	}
 
 }
