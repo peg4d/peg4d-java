@@ -58,7 +58,6 @@ class PegOptimizer extends PegTransformer {
 		Peg next = peg.getRule(ruleName);
 		if(this.optimizationLevel > 3) {
 			this.NonTerminalPrediction += 1;
-			label.predicted = next.getPrediction();  // super prediction
 		}
 		if(next.is(Peg.CyclicRule) || !isTextMatchOnly(next)) {
 			return label;  // 
@@ -618,7 +617,6 @@ class PegOptimizer extends PegTransformer {
 	class PegAlwaysFailure extends PegOptimized {
 		public PegAlwaysFailure(Peg orig) {
 			super(orig);
-			
 		}
 		@Override
 		public Pego simpleMatch(Pego left, ParserContext context) {
@@ -740,7 +738,7 @@ class PegOptimizer extends PegTransformer {
 			Peg e = null;
 			for(int i = 0; i < this.list.size(); i++) {
 				Peg sub = this.get(i);
-				if(sub.isPredictablyAcceptable(ch)) {
+				if(sub.accept(ch)) {
 					e = Peg.appendAsChoice(e, sub);
 				}
 			}

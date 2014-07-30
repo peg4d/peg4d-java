@@ -231,15 +231,7 @@ public class Grammar {
 	}
 
 	public final UList<String> makeList(String startPoint) {
-		UList<String> list = new UList<String>(new String[100]);
-		UMap<String> set = new UMap<String>();
-		Peg e = this.getRule(startPoint);
-		if(e != null) {
-			list.add(startPoint);
-			set.put(startPoint, startPoint);
-			e.makeList(startPoint, this, list, set);
-		}
-		return list;
+		return new ListMaker().make(this, startPoint);
 	}
 
 	public final void show(String startPoint) {
@@ -505,29 +497,48 @@ public class Grammar {
 		}
 		return new PegMemo(e);
 	}
-
-	public static void addChoice(UList<Peg> l, Peg e) {
+	
+	public void addChoice(UList<Peg> l, Peg e) {
 		if(e instanceof PegChoice) {
 			for(int i = 0; i < e.size(); i++) {
-				l.add(e.get(i));
+				addChoice(l, e.get(i));
+			}
+			return;
+		}
+		if(this.optimizationLevel > 0) {
+			if(l.size() > 0 && (e instanceof PegString1 || e instanceof PegCharacter)) {
+				Peg prev = l.ArrayValues[l.size()-1];
+				if(prev instanceof PegString1) {
+					PegCharacter c = new PegCharacter(e.base, 0, "");
+					c.charset.append((char)((PegString1) prev).symbol1);
+					l.ArrayValues[l.size()-1] = c;
+					prev = c;
+				}
+				if(prev instanceof PegCharacter) {
+					UCharset charset = ((PegCharacter) prev).charset;
+					if(e instanceof PegCharacter) {
+						charset.append(((PegCharacter) e).charset);
+					}
+					else {
+						charset.append((char)((PegString1) e).symbol1);
+					}
+					return;
+				}
 			}
 		}
-		else if(e != null) {
-			l.add(e);
-		}
+		l.add(e);
 	}
 
-	public static void addSequence(UList<Peg> l, Peg e) {
+	public void addSequence(UList<Peg> l, Peg e) {
 		if(e instanceof PegSequence) {
 			for(int i = 0; i < e.size(); i++) {
-				l.add(e.get(i));
+				this.addSequence(l, e.get(i));
 			}
 		}
-		else if(e != null) {
+		else {
 			l.add(e);
 		}
 	}
-
 }
 
 class PEG4dGrammar extends Grammar {
@@ -615,7 +626,7 @@ class PEG4dGrammar extends Grammar {
 			UList<Peg> l = new UList<Peg>(new Peg[pego.size()]);
 			for(int i = 0; i < pego.size(); i++) {
 				Peg e = toParsingExpression(loadingGrammar, ruleName, pego.get(i));
-				Grammar.addChoice(l, e);
+				loadingGrammar.addChoice(l, e);
 			}
 			return loadingGrammar.newChoice(l);
 		}
@@ -623,7 +634,7 @@ class PEG4dGrammar extends Grammar {
 			UList<Peg> l = new UList<Peg>(new Peg[pego.size()]);
 			for(int i = 0; i < pego.size(); i++) {
 				Peg e = toParsingExpression(loadingGrammar, ruleName, pego.get(i));
-				Grammar.addSequence(l, e);
+				loadingGrammar.addSequence(l, e);
 			}
 			return loadingGrammar.newSequence(l);
 		}
