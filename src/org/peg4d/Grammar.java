@@ -63,36 +63,7 @@ public class Grammar {
 	
 	public final void setRule(String ruleName, Peg e) {
 		this.pegMap.put(ruleName, e);
-//		Peg checked = this.checkPegRule(ruleName, e);
-//		if(checked != null) {
-//			this.pegMap.put(ruleName, checked);
-//		}
 	}
-
-//	private Peg checkPegRule(String name, Peg e) {
-//		if(e instanceof PegChoice) {
-//			UList<Peg> newlist = new UList<Peg>(new Peg[e.size()]);
-//			for(int i = 0; i < e.size(); i++) {
-//				newlist.add(this.checkPegRule(name, e.get(i)));
-//			}
-//			if(newlist.size() == 1) {
-//				return newlist.ArrayValues[0];
-//			}
-//			((PegChoice)e).list = newlist;
-//			return e;
-//		}
-//		if(e instanceof PegNonTerminal) {  // self reference
-//			if(name.equals(((PegNonTerminal) e).symbol)) {
-//				Peg defined = this.pegMap.get(name, null);
-//				if(defined == null) {
-//					e.warning("undefined self reference: " + name);
-//				}
-////				System.out.println("name " + name + ", " + ((PegLabel) e).symbol + " " + defined);
-//				return defined;
-//			}
-//		}
-//		return e;
-//	}
 		
 	public final void check() {
 		this.objectLabelMap = new UMap<String>();
@@ -164,6 +135,16 @@ public class Grammar {
 		if(this.optimizer != null) {
 			this.optimizer.updateStat(stat);
 		}
+//		for(int i = 0; i < this.pegList.size(); i++) {
+//			Peg e = this.pegList.ArrayValues[i];
+//			if(e instanceof PegMemo) {
+//				PegMemo me = (PegMemo)e;
+//				if(me.enableMemo && me.memoMiss > 32) {
+//					double f = (double)me.memoHit / me.memoMiss;
+//					System.out.println("#h/m=" + me.memoHit + "," + me.memoMiss + ", f=" + f + " c=" + e.refc + " " + e);
+//				}
+//			}
+//		}
 	}
 
 	class PegNormaizer extends PegTransformer {
@@ -305,15 +286,21 @@ public class Grammar {
 		return e;
 	}
 
-	private void putsem(String t, Peg e) {
+	private Peg putsem(String t, Peg e) {
+		if(Main.MemoFactor > 0) {
+			if(!(e instanceof PegTerm) && !(e instanceof PegSetter)) {
+				e = new PegMemo(e);
+			}
+		}
 		semMap.put(t, e);
+		return e;
 	}
 
 	public final Peg newNonTerminal(String text) {
 		Peg e = getsem(prefixNonTerminal + text);
 		if(e == null) {
 			e = new PegNonTerminal(this, 0, text);
-			putsem(prefixNonTerminal + text, e);
+			e = putsem(prefixNonTerminal + text, e);
 		}
 		return e;
 	}
@@ -321,17 +308,29 @@ public class Grammar {
 	public final Peg newString(String text) {
 		Peg e = getsem(prefixString + text);
 		if(e == null) {
-			e = new PegString(this, 0, text);
-			putsem(prefixString + text, e);
+			e = this.newStringImpl(text);
+			e = putsem(prefixString + text, e);
 		}
 		return e;
 	}
 
+	private Peg newStringImpl(String text) {
+		if(this.optimizationLevel > 0) {
+			if(text.length() == 1) {
+				return new PegString1(this, 0, text);				
+			}				
+			if(text.length() == 2) {
+				return new PegString2(this, 0, text);				
+			}				
+		}
+		return new PegString(this, 0, text);	
+	}
+	
 	public final Peg newAny() {
 		Peg e = getsem("");
 		if(e == null) {
 			e = new PegAny(this, 0);
-			putsem("", e);
+			e = putsem("", e);
 		}
 		return e;
 	}
@@ -342,7 +341,7 @@ public class Grammar {
 		Peg e = getsem(key);
 		if(e == null) {
 			e = new PegCharacter(this, 0, u);
-			putsem(key, e);
+			e = putsem(key, e);
 		}
 		return e;
 	}
@@ -352,7 +351,7 @@ public class Grammar {
 		Peg e = getsem(key);
 		if(e == null) {
 			e = new PegOptional(this, 0, p);
-			putsem(key, e);
+			e = putsem(key, e);
 		}
 		return e;
 	}
@@ -362,7 +361,7 @@ public class Grammar {
 		Peg e = getsem(key);
 		if(e == null) {
 			e = new PegRepeat(this, 0, p, 1);
-			putsem(key, e);
+			e = putsem(key, e);
 		}
 		return e;
 	}
@@ -372,7 +371,7 @@ public class Grammar {
 		Peg e = getsem(key);
 		if(e == null) {
 			e = new PegRepeat(this, 0, p, 0);
-			putsem(key, e);
+			e = putsem(key, e);
 		}
 		return e;
 	}
@@ -382,7 +381,7 @@ public class Grammar {
 		Peg e = getsem(key);
 		if(e == null) {
 			e = new PegAnd(this, 0, p);
-			putsem(key, e);
+			e = putsem(key, e);
 		}
 		return e;
 	}
@@ -391,11 +390,30 @@ public class Grammar {
 		String key = prefixNot + p.key();
 		Peg e = getsem(key);
 		if(e == null) {
-			e = new PegNot(this, 0, p);
-			putsem(key, e);
+			e = this.newNotImpl(p);
+			e = putsem(key, e);
 		}
 		return e;
 	}
+	
+	private Peg newNotImpl(Peg p) {
+		if(this.optimizationLevel > 0) {
+			if(p instanceof PegString) {
+				if(p instanceof PegString1) {
+					return new PegNotString1(this, 0, (PegString1)p);
+				}
+				if(p instanceof PegString2) {
+					return new PegNotString2(this, 0, (PegString2)p);
+				}
+				return new PegNotString(this, 0, (PegString)p);
+			}
+			if(p instanceof PegCharacter) {
+				return new PegNotCharacter(this, 0, (PegCharacter)p);
+			}
+		}
+		return new PegNot(this, 0, p);
+	}
+	
 	public Peg newChoice(UList<Peg> l) {
 		if(l.size() == 1) {
 			return l.ArrayValues[0];
@@ -407,7 +425,7 @@ public class Grammar {
 		Peg e = getsem(key);
 		if(e == null) {
 			e = new PegChoice(this, 0, l);
-			putsem(key, e);
+			e = putsem(key, e);
 		}
 		return e;
 	}
@@ -426,7 +444,7 @@ public class Grammar {
 		Peg e = getsem(key);
 		if(e == null) {
 			e = new PegSequence(this, 0, l);
-			putsem(key, e);
+			e = putsem(key, e);
 		}
 		return e;
 	}
@@ -436,7 +454,7 @@ public class Grammar {
 		Peg e = getsem(key);
 		if(e == null) {
 			e = new PegSetter(this, 0, p, index);
-			putsem(key, e);
+			e = putsem(key, e);
 		}
 		return e;
 	}
@@ -446,7 +464,7 @@ public class Grammar {
 		Peg e = getsem(key);
 		if(e == null) {
 			e = new PegTagging(this, 0, tag);
-			putsem(key, e);
+			e = putsem(key, e);
 		}
 		return e;
 	}
@@ -456,9 +474,16 @@ public class Grammar {
 		Peg e = getsem(key);
 		if(e == null) {
 			e = new PegMessage(this, 0, msg);
-			putsem(key, e);
+			e = putsem(key, e);
 		}
 		return e;
+	}
+	
+	public final Peg newMemo(Peg e) {
+		if(e instanceof PegMemo) {
+			return e;
+		}
+		return new PegMemo(e);
 	}
 
 	public static void addChoice(UList<Peg> l, Peg e) {

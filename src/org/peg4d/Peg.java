@@ -1,5 +1,7 @@
 package org.peg4d;
 
+import org.peg4d.MemoMap.ObjectMemo;
+
 
 public abstract class Peg {
 	public final static int CyclicRule       = 1;
@@ -91,6 +93,10 @@ public abstract class Peg {
 		this.flag |= (e.flag & Peg.Mask);
 	}
 	
+	public String key() {
+		return "#" + this.uniqueId;
+	}
+	
 	public int size() {
 		return 0;
 	}
@@ -172,7 +178,6 @@ public abstract class Peg {
 			return choice;
 		}
 	}
-
 	
 	public final PegChoice appendAsChoice(Peg e) {
 		if(this instanceof PegChoice) {
@@ -185,78 +190,8 @@ public abstract class Peg {
 			choice.extend(e);
 			return choice;
 		}
-	}
-
-	public String key() {
-		return "#" + this.uniqueId;
-	}
-	
+	}		
 }
-
-class PegProbe {
-	boolean isVisited(String name) {
-		return true;
-	}
-	void visited(String name) {
-		
-	}
-	public void visitNonTerminal(PegNonTerminal e) {
-		if(!this.isVisited(e.symbol)) {
-			visited(e.symbol);
-			e.base.getRule(e.symbol).visit(this);
-		}
-	}
-	public void visitString(PegString e) {
-	}
-	public void visitCharacter(PegCharacter e) {
-	}
-	public void visitAny(PegAny e) {
-	}
-	public void visitTagging(PegTagging e) {
-	}
-	public void visitMessage(PegMessage e) {
-	}
-	public void visitIndent(PegIndent e) {
-	}
-	public void visitIndex(PegIndex e) {
-	}
-	public final void visitUnary(PegUnary e) {
-		e.inner.visit(this);
-	}
-	public void visitNot(PegNot e) {
-		this.visitUnary(e);
-	}
-	public void visitAnd(PegAnd e) {
-		this.visitUnary(e);
-	}
-	public void visitOptional(PegOptional e) {
-		this.visitUnary(e);
-	}
-	public void visitRepeat(PegRepeat e) {
-		this.visitUnary(e);
-	}
-	public void visitSetter(PegSetter e) {
-		this.visitUnary(e);
-	}
-	public void visitExport(PegExport e) {
-		this.visitUnary(e);
-	}
-	public final void visitList(PegList e) {
-		for(int i = 0; i < e.size(); i++) {
-			e.get(i).visit(this);
-		}
-	}
-	public void visitSequence(PegSequence e) {
-		this.visitList(e);
-	}
-	public void visitChoice(PegChoice e) {
-		this.visitList(e);
-	}
-	public void visitNewObject(PegNewObject e) {
-		this.visitList(e);
-	}
-}
-
 
 class PegNoTransformer extends PegTransformer {
 	@Override
@@ -288,6 +223,8 @@ abstract class PegTerm extends Peg {
 class PegNonTerminal extends PegTerm {
 	String symbol;
 	Object predicted = null;
+	Peg nextRule = null;
+	
 	PegNonTerminal(Grammar base, int flag, String ruleName) {
 		super(base, flag | Peg.HasNonTerminal);
 		this.symbol = ruleName;
@@ -316,6 +253,7 @@ class PegNonTerminal extends PegTerm {
 			this.base.foundError = true;
 			return;
 		}
+		next.refc = this.refc;
 		if(ruleName.equals(this.symbol)) {
 			nonTerminal.set(CyclicRule);
 		}
@@ -356,7 +294,6 @@ class PegString extends PegTerm {
 		super(base, Peg.HasString | flag);
 		this.text = text;
 	}
-
 	@Override
 	protected Peg clone(Grammar base, PegTransformer tr) {
 		Peg ne = tr.transform(base, this);
@@ -400,6 +337,43 @@ class PegString extends PegTerm {
 		return context.foundFailure2(this);
 	}
 }
+
+class PegString1 extends PegString {
+	int symbol1;
+	public PegString1(Grammar base, int flag, String token) {
+		super(base, flag, token);
+		this.symbol1 = token.charAt(0);
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		long pos = context.getPosition();
+		if(context.charAt(pos) == this.symbol1) {
+			context.consume(1);
+			return left;
+		}
+		return context.foundFailure(this);
+	}
+}
+
+class PegString2 extends PegString {
+	int symbol1;
+	int symbol2;
+	public PegString2(Grammar base, int flag, String token) {
+		super(base, flag, token);
+		this.symbol1 = token.charAt(0);
+		this.symbol2 = token.charAt(1);
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		long pos = context.getPosition();
+		if(context.charAt(pos) == this.symbol1 && context.charAt(pos+1) == this.symbol2) {
+			context.consume(2);
+			return left;
+		}
+		return context.foundFailure(this);
+	}
+}
+
 
 class PegAny extends PegTerm {
 	public PegAny(Grammar base, int flag) {
@@ -740,6 +714,99 @@ class PegNot extends PegUnary {
 		return context.foundFailure2(this);
 	}
 }
+
+class PegNotString extends PegNot {
+	String symbol;
+	public PegNotString(Grammar peg, int flag, PegString e) {
+		super(peg, flag, e);
+		this.symbol = e.text;
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		long pos = context.getPosition();
+		if(context.match(this.symbol)) {
+			//context.setPosition(pos);
+			return context.foundFailure(this);
+		}
+//		if(this.nextAny) {
+//			return this.matchNextAny(left, context);
+//		}
+		return left;
+	}
+}
+
+class PegNotString1 extends PegNot {
+	int symbol;
+	public PegNotString1(Grammar peg, int flag, PegString1 e) {
+		super(peg, flag, e);
+		this.symbol = e.symbol1;
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		if(this.symbol == context.getChar()) {
+			return context.foundFailure(this);
+		}
+//		if(this.nextAny) {
+//			return this.matchNextAny(left, context);
+//		}
+		return left;
+	}
+}	
+
+class PegNotString2 extends PegNot {
+	int symbol1;
+	int symbol2;
+	public PegNotString2(Grammar peg, int flag, PegString2 e) {
+		super(peg, flag, e);
+		this.symbol1 = e.symbol1;
+		this.symbol2 = e.symbol2;
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		long pos = context.getPosition();
+		if(this.symbol1 == context.charAt(pos) && this.symbol1 == context.charAt(pos+1)) {
+			return context.foundFailure(this);
+		}
+//		if(this.nextAny) {
+//			return this.matchNextAny(left, context);
+//		}
+		return left;
+	}
+}
+
+
+class PegNotCharacter extends PegNot {
+	UCharset charset;
+	public PegNotCharacter(Grammar base, int flag, PegCharacter e) {
+		super(base, flag, e);
+		this.charset = e.charset;
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		long pos = context.getPosition();
+		if(context.match(this.charset)) {
+			context.setPosition(pos);
+			return context.foundFailure(this);
+		}
+//		if(this.nextAny) {
+//			return this.matchNextAny(left, context);
+//		}
+		return left;
+	}
+//	@Override
+//	public int fastMatch(int left, MonadicParser context) {
+//		long pos = context.getPosition();
+//		if(context.match(this.charset)) {
+//			context.setPosition(pos);
+//			return context.foundFailure2(this);
+//		}
+//		if(this.nextAny) {
+//			return this.fastMatchNextAny(left, context);
+//		}
+//		return left;
+//	}
+}
+
 
 abstract class PegList extends Peg {
 	protected UList<Peg> list;
@@ -1278,6 +1345,92 @@ class PegIndex extends PegTerm {
 	@Override
 	public int fastMatch(int left, MonadicParser context) {
 		return context.matchIndex(left, this);
+	}
+}
+
+abstract class PegOperation extends Peg {
+	Peg inner;
+	protected PegOperation(Peg inner) {
+		super(inner.base, inner.flag);
+		this.inner = inner;
+	}
+	@Override
+	protected Peg clone(Grammar base, PegTransformer tr) {
+		return this;
+	}
+	@Override
+	protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
+		this.inner.stringfy(sb, fmt);
+	}
+	@Override
+	protected void visit(PegProbe probe) {
+		this.inner.visit(probe);
+	}
+	@Override
+	protected void makeList(String startRule, Grammar parser, UList<String> list, UMap<String> set) {
+		this.inner.makeList(startRule, parser, list, set);
+	}
+	@Override
+	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
+		this.inner.verify2(ruleName, nonTerminal, visitingName, visited);
+	}
+	@Override
+	public abstract Pego simpleMatch(Pego left, ParserContext context);
+	@Override
+	public abstract int fastMatch(int left, MonadicParser context);
+}
+
+class PegMemo extends PegOperation {
+	Peg parent = null;
+	boolean enableMemo = true;
+	int memoHit = 0;
+	int memoMiss = 0;
+
+	protected PegMemo(Peg inner) {
+		super(inner);
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		if(!this.enableMemo) {
+			return this.inner.simpleMatch(left, context);
+		}
+		long pos = context.getPosition();
+		ObjectMemo m = context.memoMap.getMemo(this, pos);
+		if(m != null) {
+			this.memoHit += 1;
+			if(m.generated == null) {
+				return context.refoundFailure(this.inner, pos+m.consumed);
+			}
+			context.setPosition(pos + m.consumed);
+			return m.generated;
+		}
+		if(context.stat != null) {
+			context.stat.countRepeatCall(this, pos);
+		}
+		Pego result = this.inner.simpleMatch(left, context);
+		if(result.isFailure()) {
+			context.memoMap.setMemo(pos, this, null, (int)(result.getSourcePosition() - pos));
+		}
+		else {
+			context.memoMap.setMemo(pos, this, result, (int)(context.getPosition() - pos));
+		}
+		this.memoMiss += 1;
+		if(this.memoMiss == 32) {
+			if(this.memoHit < 4) {
+				this.enableMemo = false;
+			}
+		}
+		if(this.memoMiss % 64 == 0) {
+			if(this.memoMiss / this.memoHit > 4) {
+				this.enableMemo = false;
+			}
+		}
+		return result;
+	}
+	
+	@Override
+	public int fastMatch(int left, MonadicParser context) {
+		return this.inner.fastMatch(left, context);
 	}
 }
 

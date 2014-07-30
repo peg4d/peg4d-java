@@ -254,18 +254,6 @@ class PegOptimizer extends PegTransformer {
 	}
 	
 	private final Peg peepNot(Grammar base, Peg orig, Peg inner) {
-		if(inner instanceof PegString) {
-			log(orig, "not string:" + inner);
-			return new PegNotString(orig, ((PegString) inner).text);
-		}
-		if(inner instanceof PegString1) {
-			log(orig, "not string1: " + inner);
-			return new PegNotString1(orig, ((PegString1) inner).symbol);
-		}
-		if(inner instanceof PegCharacter) {
-			log(orig, "not character: " + inner);
-			return new PegNotCharacter(orig, ((PegCharacter) inner).charset);
-		}
 		return new PegNot(base, orig.flag, inner);
 	}
 
@@ -381,97 +369,6 @@ class PegOptimizer extends PegTransformer {
 		}
 	}
 
-	class PegNotString extends PegNotAtom {
-		String symbol;
-		public PegNotString(Peg orig, String token) {
-			super(orig);
-			this.symbol = token;
-		}
-		@Override
-		public Pego simpleMatch(Pego left, ParserContext context) {
-			long pos = context.getPosition();
-			if(context.match(this.symbol)) {
-				context.setPosition(pos);
-				return context.foundFailure(this);
-			}
-			if(this.nextAny) {
-				return this.matchNextAny(left, context);
-			}
-			return left;
-		}
-		@Override
-		public int fastMatch(int left, MonadicParser context) {
-			long pos = context.getPosition();
-			if(context.match(this.symbol)) {
-				context.setPosition(pos);
-				return context.foundFailure2(this);
-			}
-			if(this.nextAny) {
-				return this.fastMatchNextAny(left, context);
-			}
-			return left;
-		}
-	}
-
-	class PegNotString1 extends PegNotAtom {
-		char symbol;
-		public PegNotString1(Peg orig, char token) {
-			super(orig);
-			this.symbol = token;
-		}
-		@Override
-		public Pego simpleMatch(Pego left, ParserContext context) {
-			if(this.symbol == context.getChar()) {
-				return context.foundFailure(this);
-			}
-			if(this.nextAny) {
-				return this.matchNextAny(left, context);
-			}
-			return left;
-		}
-		@Override
-		public int fastMatch(int left, MonadicParser context) {
-			if(this.symbol == context.getChar()) {
-				return context.foundFailure2(this);
-			}
-			if(this.nextAny) {
-				return this.fastMatchNextAny(left, context);
-			}
-			return left;
-		}
-	}	
-	
-	class PegNotCharacter extends PegNotAtom {
-		UCharset charset;
-		public PegNotCharacter(Peg orig, UCharset charset) {
-			super(orig);
-			this.charset = charset;
-		}
-		@Override
-		public Pego simpleMatch(Pego left, ParserContext context) {
-			long pos = context.getPosition();
-			if(context.match(this.charset)) {
-				context.setPosition(pos);
-				return context.foundFailure(this);
-			}
-			if(this.nextAny) {
-				return this.matchNextAny(left, context);
-			}
-			return left;
-		}
-		@Override
-		public int fastMatch(int left, MonadicParser context) {
-			long pos = context.getPosition();
-			if(context.match(this.charset)) {
-				context.setPosition(pos);
-				return context.foundFailure2(this);
-			}
-			if(this.nextAny) {
-				return this.fastMatchNextAny(left, context);
-			}
-			return left;
-		}
-	}
 
 	class PegOptionalString extends PegOptimized {
 		String symbol;
@@ -667,7 +564,6 @@ class PegOptimizer extends PegTransformer {
 	
 	class PegMappedChoice extends PegChoice {
 		private HashMap<String, Peg> map;
-
 		PegMappedChoice(PegChoice choice) {
 			super(choice.base, choice.flag, choice.list);
 			this.getPrediction();
