@@ -528,7 +528,14 @@ class PegOptional extends PegUnary {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchOptional(left, this);
+		long pos = context.getPosition();
+		Pego right = this.inner.simpleMatch(left, context);
+		if(right.isFailure()) {
+			assert(pos == context.getPosition());
+//			context.setPosition(pos);
+			return left;
+		}
+		return right;
 	}
 	@Override
 	public int fastMatch(int left, MonadicParser context) {
@@ -580,7 +587,23 @@ class PegRepeat extends PegUnary {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchRepeat(left, this);
+		long ppos = -1;
+		long pos = context.getPosition();
+		int count = 0;
+		while(ppos < pos) {
+			Pego right = this.inner.simpleMatch(left, context);
+			if(right.isFailure()) {
+				break;
+			}
+			left = right;
+			ppos = pos;
+			pos = context.getPosition();
+			count = count + 1;
+		}
+		if(count < this.atleast) {
+			return context.foundFailure(this);
+		}
+		return left;
 	}
 	@Override
 	public int fastMatch(int left1, MonadicParser context) {
@@ -688,10 +711,6 @@ class PegNot extends PegUnary {
 		fmt.formatNot(sb, this);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchNot(left, this);
-	}
-	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		super.verify2(ruleName, nonTerminal, visitingName, visited);
 		nonTerminal.derived(this);
@@ -702,15 +721,23 @@ class PegNot extends PegUnary {
 		}
 	}
 	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		long pos = context.getPosition();
+		Pego right = this.inner.simpleMatch(left, context);
+		if(right.isFailure()) {
+			return left;
+		}
+		context.rollback(pos);
+		return context.foundFailure(this);
+	}
+	@Override
 	public int fastMatch(int left, MonadicParser context) {
-		int markerId = context.markObjectStack();
 		long pos = context.getPosition();
 		int right = this.inner.fastMatch(left, context);
-		context.rollback(pos);
-		context.rollbackObjectStack(markerId);
 		if(PEGUtils.isFailure(right)) {
 			return left;
 		}
+		context.rollback(pos);
 		return context.foundFailure2(this);
 	}
 }
@@ -764,7 +791,7 @@ class PegNotString2 extends PegNot {
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		long pos = context.getPosition();
-		if(this.symbol1 == context.charAt(pos) && this.symbol1 == context.charAt(pos+1)) {
+		if(this.symbol1 == context.charAt(pos) && this.symbol2 == context.charAt(pos+1)) {
 			return context.foundFailure(this);
 		}
 //		if(this.nextAny) {
@@ -1433,6 +1460,53 @@ class PegMemo extends PegOperation {
 		return this.inner.fastMatch(left, context);
 	}
 }
+
+class PegMonad extends PegOperation {
+	protected PegMonad(Peg inner) {
+		super(inner);
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		int mark = context.markObjectStack();
+		left = this.inner.simpleMatch(left, context);
+		context.rollbackObjectStack(mark);
+		return left;
+	}
+	
+	@Override
+	public int fastMatch(int left, MonadicParser context) {
+		int mark = context.markObjectStack();
+		left = this.inner.fastMatch(left, context);
+		context.rollbackObjectStack(mark);
+		return left;
+	}
+}
+
+class PegCommit extends PegOperation {
+	protected PegCommit(Peg inner) {
+		super(inner);
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		int mark = context.markObjectStack();
+		left = this.inner.simpleMatch(left, context);
+		if(left.isFailure()) {
+			context.rollbackObjectStack(mark);
+		}
+		return left;
+	}
+	@Override
+	public int fastMatch(int left, MonadicParser context) {
+		int mark = context.markObjectStack();
+		left = this.inner.fastMatch(left, context);
+		if(PEGUtils.isFailure(left)) {
+			context.rollbackObjectStack(mark);
+		}
+		return left;
+	}
+}
+
+
 
 abstract class PegOptimized extends Peg {
 	Peg orig;

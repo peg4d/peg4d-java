@@ -308,8 +308,7 @@ public class Grammar {
 	public final Peg newString(String text) {
 		Peg e = getsem(prefixString + text);
 		if(e == null) {
-			e = this.newStringImpl(text);
-			e = putsem(prefixString + text, e);
+			e = putsem(prefixString + text, this.newStringImpl(text));
 		}
 		return e;
 	}
@@ -350,28 +349,40 @@ public class Grammar {
 		String key = prefixOptional + p.key();
 		Peg e = getsem(key);
 		if(e == null) {
-			e = new PegOptional(this, 0, p);
-			e = putsem(key, e);
+			e = putsem(key, newOptionalImpl(p));
 		}
 		return e;
 	}
 
+	private Peg newOptionalImpl(Peg p) {
+		return new PegOptional(this, 0, newCommit(p));
+	}
+	
+	private Peg newCommit(Peg p) {
+		if(!p.is(Peg.HasNewObject) && !p.is(Peg.HasNonTerminal) && !p.is(Peg.HasSetter)) {
+			return p;
+		}
+		return new PegCommit(p);
+	}
+	
 	public final Peg newOneMore(Peg p) {
 		String key = prefixOneMore + p.key();
 		Peg e = getsem(key);
 		if(e == null) {
-			e = new PegRepeat(this, 0, p, 1);
-			e = putsem(key, e);
+			e = putsem(key, newRepeat(p, 1));
 		}
 		return e;
 	}
 
+	private Peg newRepeat(Peg p, int atleast) {
+		return new PegRepeat(this, 0, newCommit(p), atleast);
+	}
+	
 	public final Peg newZeroMore(Peg p) {
 		String key = prefixZeroMore + p.key();
 		Peg e = getsem(key);
 		if(e == null) {
-			e = new PegRepeat(this, 0, p, 0);
-			e = putsem(key, e);
+			e = putsem(key, newRepeat(p, 0));
 		}
 		return e;
 	}
@@ -380,18 +391,24 @@ public class Grammar {
 		String key = prefixAnd + p.key();
 		Peg e = getsem(key);
 		if(e == null) {
-			e = new PegAnd(this, 0, p);
-			e = putsem(key, e);
+			e = putsem(key, this.newAndImpl(p));
 		}
 		return e;
 	}
+	
+	private Peg newAndImpl(Peg p) {
+		if(p instanceof PegOperation) {
+			p = ((PegOperation)p).inner;
+		}
+		return new PegAnd(this, 0, new PegMonad(p));
+	}
+
 
 	public final Peg newNot(Peg p) {
 		String key = prefixNot + p.key();
 		Peg e = getsem(key);
 		if(e == null) {
-			e = this.newNotImpl(p);
-			e = putsem(key, e);
+			e = putsem(key, this.newNotImpl(p));
 		}
 		return e;
 	}
@@ -411,7 +428,10 @@ public class Grammar {
 				return new PegNotCharacter(this, 0, (PegCharacter)p);
 			}
 		}
-		return new PegNot(this, 0, p);
+		if(p instanceof PegOperation) {
+			p = ((PegOperation)p).inner;
+		}
+		return new PegNot(this, 0, new PegMonad(p));
 	}
 	
 	public Peg newChoice(UList<Peg> l) {
