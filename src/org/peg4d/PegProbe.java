@@ -35,7 +35,7 @@ class PegProbe {
 	public void visitAny(PegAny e) {
 	}
 	public void visitNotAny(PegNotAny e) {
-		e.not.visit(this);
+		e.orig.visit(this);
 	}
 	public void visitTagging(PegTagging e) {
 	}

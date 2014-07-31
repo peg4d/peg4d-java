@@ -398,10 +398,12 @@ class PegAny extends PegTerm {
 class PegNotAny extends PegTerm {
 	PegNot not;
 	Peg exclude;
-	public PegNotAny(Grammar base, int flag, PegNot e) {
+	Peg orig;
+	public PegNotAny(Grammar base, int flag, PegNot e, Peg orig) {
 		super(base, flag | Peg.NoMemo);
 		this.not = e;
 		this.exclude = e.inner;
+		this.orig = orig;
 	}
 	@Override
 	protected Peg clone(Grammar base, PegTransformer tr) {

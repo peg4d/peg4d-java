@@ -1,6 +1,7 @@
 package org.peg4d;
 
 
+
 public class Grammar {
 	public final static PEG4dGrammar PEG4d = new PEG4dGrammar();
 
@@ -317,6 +318,13 @@ public class Grammar {
 		semMap.put(t, e);
 		return e;
 	}
+	
+	public final Peg newMemoTodo(Peg e) {
+		if(e instanceof PegMemo) {
+			return e;
+		}
+		return new PegMemo(e);
+	}
 
 	public final Peg newNonTerminal(String text) {
 		Peg e = getsem(prefixNonTerminal + text);
@@ -504,12 +512,39 @@ public class Grammar {
 		}
 		Peg e = getsem(key);
 		if(e == null) {
-			e = new PegSequence(this, 0, l);
+			e = newSequenceImpl(l);
 			e = putsem(key, e);
 		}
 		return e;
 	}
 
+	private Peg newSequenceImpl(UList<Peg> l) {
+		Peg orig = new PegSequence(this, 0, l);
+		if(this.optimizationLevel > 1) {
+			int nsize = l.size()-1;
+			if(nsize > 0 && l.ArrayValues[nsize] instanceof PegAny) {
+				boolean allNot = true;
+				for(int i = 0; i < nsize; i++) {
+					if(!(l.ArrayValues[nsize] instanceof PegNot)) {
+						allNot = false;
+						break;
+					}
+				}
+				if(allNot) {
+					return newNotAnyImpl(orig, l, nsize);
+				}
+			}
+		}
+		return orig;
+	}
+
+	private Peg newNotAnyImpl(Peg orig, UList<Peg> l, int nsize) {
+		if(nsize == 1) {
+			return new PegNotAny(this, 0, (PegNot)l.ArrayValues[0], orig);
+		}
+		return orig;
+	}
+	
 	public final Peg newSetter(Peg p, int index) {
 		String key = prefixSetter + index + p.key();
 		Peg e = getsem(key);
@@ -539,14 +574,7 @@ public class Grammar {
 		}
 		return e;
 	}
-	
-	public final Peg newMemo(Peg e) {
-		if(e instanceof PegMemo) {
-			return e;
-		}
-		return new PegMemo(e);
-	}
-	
+		
 	public void addChoice(UList<Peg> l, Peg e) {
 		if(e instanceof PegChoice) {
 			for(int i = 0; i < e.size(); i++) {
