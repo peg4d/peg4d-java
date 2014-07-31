@@ -10,9 +10,8 @@ public abstract class ParserSource {
 	}
 
 	public abstract long length();
-	public abstract long getFileLength();
 	public abstract int  charAt(long n);
-	//public abstract boolean match(byte[] text);
+	public abstract boolean match(long pos, byte[] text);
 	public abstract String substring(long startIndex, long endIndex);
 //	public abstract ParserSource trim(long startIndex, long endIndex);
 

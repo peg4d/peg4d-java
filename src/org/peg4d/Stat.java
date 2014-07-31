@@ -243,7 +243,7 @@ class Stat {
 		System.gc(); // meaningless ?
 		this.ConsumedLength = p.getPosition();
 		this.UnconsumedLength = p.endPosition - p.getPosition();
-		this.statFileLength = p.source.getFileLength();
+		this.statFileLength = p.source.length();
 
 		long total = Runtime.getRuntime().totalMemory();
 		long free =  Runtime.getRuntime().freeMemory();

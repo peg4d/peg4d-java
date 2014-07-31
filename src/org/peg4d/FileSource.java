@@ -52,10 +52,7 @@ public class FileSource extends ParserSource {
 	public final long length() {
 		return this.fileLength;
 	}
-	@Override
-	public final long getFileLength() {
-		return this.fileLength;
-	}
+
 	private long buffer_alignment(long pos) {
 		return (pos / PageSize) * PageSize;
 	}
@@ -73,6 +70,16 @@ public class FileSource extends ParserSource {
 //			System.out.println("pos=" + n + ", ch="+ch);
 //		}
 		return ch;
+	}
+
+	@Override
+	public final boolean match(long pos, byte[] text) {
+		for(int i = 0; i < text.length; i++) {
+			if(text[i] != this.charAt(pos + i)) {
+				return false;
+			}
+		}
+		return true;
 	}
 	
 	public final int charAtDebug(long n) {

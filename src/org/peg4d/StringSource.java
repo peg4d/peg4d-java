@@ -1,50 +1,55 @@
 package org.peg4d;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.io.UnsupportedEncodingException;
 
 public class StringSource extends ParserSource {
-	public String  sourceText;
+	private byte[] textBuffer;
 	public StringSource(String fileName, long linenum, String sourceText) {
 		super(fileName, linenum);
-		this.sourceText = sourceText;
+		this.textBuffer = UCharset.toUtf8(sourceText);
 	}
+
 	public StringSource(String fileName) {
 		super(fileName, 1);
 		try {
 			RandomAccessFile f = new RandomAccessFile(fileName, "r");
-			byte[] b = new byte[(int)f.length()];
-			f.read(b);
-			this.sourceText = new String(b);
+			this.textBuffer = new byte[(int)f.length()];
+			f.read(this.textBuffer);
 			f.close();
 		}
 		catch(IOException e) {
 		}
 	}
+	
 	@Override
 	public final long length() {
-		return this.sourceText.length();
+		return this.textBuffer.length;
 	}
-	@Override
-	public final long getFileLength() {
-		try {
-			return new File(this.fileName).length();
-		}
-		catch(Exception e) {
-		}
-		return this.sourceText.getBytes().length;
-	}
+
 	@Override
 	public final int charAt(long n) {
-		if(0 <= n && n < this.length()) {
-			return this.sourceText.charAt((int)n);
-		}
-		return 0;
+		return this.textBuffer[(int)n] & 0xff;
 	}
+
+	@Override
+	public final boolean match(long pos, byte[] text) {
+		for(int i = 0; i < text.length; i++) {
+			if(text[i] != this.textBuffer[(int)pos + i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	@Override
 	public final String substring(long startIndex, long endIndex) {
-		return this.sourceText.substring((int)startIndex, (int)endIndex);
+		try {
+			return new String(this.textBuffer, (int)(startIndex), (int)(endIndex - startIndex), "UTF8");
+		} catch (UnsupportedEncodingException e) {
+		}
+		return null;
 	}
 }
 
