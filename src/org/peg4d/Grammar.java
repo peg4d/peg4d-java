@@ -20,7 +20,6 @@ public class Grammar {
 	public Grammar() {
 		this.pegMap  = new UMap<Peg>();
 		this.pegList = new UList<Peg>(new Peg[128]);
-		//this.pegMap.put("indent", new PegIndent(this, 0));  // default rule
 		this.optimizationLevel = Main.OptimizationLevel;
 	}
 
@@ -43,7 +42,11 @@ public class Grammar {
 				break;
 			}
 		}
-		this.verify();
+		ObjectRemover objectRemover = null;
+		if(Main.RecognitionOnlyMode) {
+			objectRemover = new ObjectRemover();
+		}
+		this.verify(objectRemover);
 		return this.foundError;
 	}
 	
@@ -80,7 +83,7 @@ public class Grammar {
 		return pegList;
 	}
 
-	public final void verify() {
+	public final void verify(ObjectRemover objectRemover) {
 		//this.objectLabelMap = new UMap<String>();
 		this.foundError = false;
 		UList<String> nameList = this.pegMap.keys();
@@ -88,15 +91,21 @@ public class Grammar {
 		for(int i = 0; i < nameList.size(); i++) {
 			String ruleName = nameList.ArrayValues[i];
 			Peg nonTerminal = this.pegMap.get(ruleName, null);
+			if(objectRemover != null) {
+				//System.out.println("B: " + ruleName + "= " + nonTerminal);
+				nonTerminal = objectRemover.removeObjectOperation(nonTerminal);
+				//System.out.println("A: " + ruleName + "= " + nonTerminal);
+				this.pegMap.put(ruleName, nonTerminal);
+			}
 			nc.verify(ruleName, nonTerminal);
 		}
+
 		new Inliner(this).performInlining();
 		new Optimizer(this).optimize();
 		if(this.foundError) {
 			Main._Exit(1, "peg error found");
 		}
 		this.memoRemover = new MemoRemover(this);
-//		this.optimizedPegMap = optimize();
 	}
 
 	private int MultiReference = 0;
@@ -127,20 +136,7 @@ public class Grammar {
 	}
 
 	public ParserContext newParserContext(ParserSource source) {
-		ParserContext p = null;
-		String t = Main.ParserType;
-		if(t.equalsIgnoreCase("--parser:packrat") || t.equals("--packrat")) {
-			p = new PackratParser(this, source);
-		}
-		if(t.equalsIgnoreCase("--parser:simple")) {
-			p = new RecursiveDecentParser(this, source);
-		}
-		if(t.equalsIgnoreCase("--monadic")) {
-			p = new MonadicParser(this, source);
-		}
-		if(p == null) {
-			p = new TracingPackratParser(this, source);  // best parser
-		}
+		ParserContext p = new TracingPackratParser(this, source);
 		if(Main.RecognitionOnlyMode) {
 			p.setRecognitionOnly(true);
 		}
@@ -882,7 +878,7 @@ class PEG4dGrammar extends Grammar {
 		this.setRule("TopLevel", seq(
 			opt(n("_")), choice(n("Rule"), n("Import")), opt(n("_")), s(";"), opt(n("_"))
 		));
-		this.verify();
+		this.verify(null);
 		return this;
 	}
 

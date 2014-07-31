@@ -127,8 +127,8 @@ class PackratMemo extends MemoMap {
 	protected PackratMemo(Map<Long, ObjectMemo> memoMap) {
 		this.memoMap = memoMap;
 	}
-	public PackratMemo(long size) {
-		this(new HashMap<Long, ObjectMemo>((int)size/5 + 1));
+	public PackratMemo(int initSize) {
+		this(new HashMap<Long, ObjectMemo>(initSize));
 	}
 	@Override
 	protected final void setMemo(long keypos, Peg keypeg, Pego generated, int consumed) {

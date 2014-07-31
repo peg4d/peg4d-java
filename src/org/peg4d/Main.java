@@ -16,8 +16,8 @@ public class Main {
 	public final static int     MajorVersion = 1;
 	public final static int     MinerVersion = 0;
 	public final static int     PatchLevel   = 0;
-	public final static String  Version = "1.0";
-	public final static String  Copyright = "Copyright (c) 2013-2014, PEG4d project authors";
+	public final static String  Version = "" + MajorVersion + "." + MinerVersion + "." + PatchLevel;
+	public final static String  Copyright = "Copyright (c) 2014, Konoha4e project authors";
 	public final static String  License = "BSD-Style Open Source";
 
 	// -p konoha.peg
@@ -44,30 +44,27 @@ public class Main {
 	// -o
 	private static String OutputFileName = null;
 
-	// --parse-only -p
-	public static boolean ParseOnlyMode = false;
-
 	// --verbose
 	public static boolean VerboseMode    = false;
 
 	// --verbose:peg
 	public static boolean VerbosePeg = false;
 
-	// --verbose:optimized
-	public static boolean VerboseOptimized = false;
-
 	// --test
 	public static boolean TestMode = false;
 	
 	// --verbose:stat
-	public static int StatLevel = 0;
+	public static int     StatLevel = 0;
 
-	// --parser
-	public static String ParserType = "--parser";
+	// --static => false
+	public static boolean TracingMemo = true;
+	public static boolean AllExpressionMemo  = true;
+	public static boolean PackratStyleMemo   = false;
+	public static boolean ObjectFocusedMemo  = false;
 	
 	// -O
 	public static int OptimizationLevel = 2;
-	public static int MemoFactor = -1;
+	public static int MemoFactor = 256;
 
 	public final static void main(String[] args) {
 		parseCommandArguments(args);
@@ -112,7 +109,7 @@ public class Main {
 				Main.MemoFactor  = UCharset.parseInt(argument.substring(2), 256);
 			}
 			else if (argument.startsWith("-O")) {
-				OptimizationLevel = UCharset.parseInt(argument.substring(2), 256);
+				OptimizationLevel = UCharset.parseInt(argument.substring(2), 2);
 			}
 			else if (argument.equals("-i")) {
 				ShellMode = true;
@@ -126,12 +123,6 @@ public class Main {
 			else if(argument.startsWith("--stat")) {
 				StatLevel = UCharset.parseInt(argument.substring(6), 1);
 				OutputType = "none";
-			}
-			else if(argument.equals("--packrat")) {
-				ParserType = argument;
-			}
-			else if(argument.equals("--monadic")) {  //--monadic
-				ParserType = argument;
 			}
 			else if ((argument.equals("-t") || argument.equals("--target")) && (index < args.length)) {
 				OutputType = args[index];
@@ -147,22 +138,23 @@ public class Main {
 				}
 				index = index + 1;
 			}
-			else if(argument.startsWith("--verbose")) {
-				if(argument.equals("--verbose:stat")) {
-					StatLevel = 1;
+			else if(argument.startsWith("--memo")) {
+				if(argument.equals("--memo:packrat")) {
+					AllExpressionMemo = false;
+					PackratStyleMemo = true;
+					ObjectFocusedMemo = false;
 				}
-				else if(argument.equals("--verbose:stat2")) {
-					StatLevel = 2;
+				if(argument.equals("--memo:data")) {
+					AllExpressionMemo = false;
+					PackratStyleMemo = false;
+					ObjectFocusedMemo = true;
 				}
-				else if(argument.equals("--verbose:peg")) {
-					VerbosePeg = true;
-				}
-				else {
-					VerboseMode = true;
+				if(argument.equals("--memo:static")) {
+					TracingMemo = false;
 				}
 			}
-			else if(argument.startsWith("--parser:")) {
-				ParserType = argument;
+			else if(argument.startsWith("--verbose")) {
+				VerboseMode = true;
 			}
 			else {
 				ShowUsage("unknown option: " + argument);

@@ -268,6 +268,10 @@ class Formatter extends PegProbe {
 				sb.append(" )");
 			}
 			else {
+				if(e == null) {
+					System.out.println("@@@@ " + i + " "); 
+					continue;
+				}
 				e.visit(this);
 			}
 		}
@@ -357,7 +361,8 @@ class NonTerminalChecker extends PegProbe {
 	public void visitNonTerminal(PegNonTerminal e) {
 		Peg next = e.base.getRule(e.symbol);
 		if(next == null) {
-			System.out.println("undefined label: " + e.symbol);
+			Main._PrintLine(e.source.formatErrorMessage("error", e.sourcePosition, "undefined label: " + e.symbol));
+			e.base.foundError = true;
 			return;
 		}
 		e.nextRule = next;
@@ -730,6 +735,108 @@ class MemoRemover extends PegProbe {
 			e.set(i, se);
 			se.visit(this);
 		}
+	}
+	
+}
+
+class ObjectRemover extends PegProbe {
+	
+	ObjectRemover() {
+	}
+
+	private Peg returnPeg = null;
+	
+	Peg removeObjectOperation(Peg e) {
+		Peg stack = this.returnPeg;
+		this.returnPeg = e;
+		e.visit(this);
+		Peg r = this.returnPeg;
+		this.returnPeg = stack;
+		return r;
+	}
+	
+	@Override
+	public void visitNonTerminal(PegNonTerminal e) {
+	}
+	
+	@Override
+	public void visitNotAny(PegNotAny e) {
+		Peg ne = this.removeObjectOperation(e.not);
+		if(ne == null) {
+			this.returnPeg = e.base.newAny();
+			return ;
+		}
+		e.not = (PegNot)ne;
+		this.returnPeg = e;
+	}
+	@Override
+	public void visitTagging(PegTagging e) {
+		this.returnPeg = null;
+	}
+	@Override
+	public void visitMessage(PegMessage e) {
+		this.returnPeg = null;
+	}
+	@Override
+	public void visitIndent(PegIndent e) {
+		this.returnPeg = null;
+	}
+	@Override
+	public void visitIndex(PegIndex e) {
+		this.returnPeg = null;
+	}
+
+	@Override
+	public void visitUnary(PegUnary e) {
+		Peg ne = this.removeObjectOperation(e.inner);
+		if(ne == null) {
+			this.returnPeg = null;			
+			return ;
+		}
+		e.inner = ne;
+		this.returnPeg = e;
+	}
+
+	@Override
+	public void visitOperation(PegOperation e) {
+		Peg ne = this.removeObjectOperation(e.inner);
+		if(ne == null) {
+			this.returnPeg = null;			
+			return ;
+		}
+		e.inner = ne;
+		this.returnPeg = e;
+	}
+
+	@Override
+	public void visitSetter(PegSetter e) {
+		Peg ne = this.removeObjectOperation(e.inner);
+		if(ne == null) {
+			this.returnPeg = null;
+			return ;
+		}
+		this.returnPeg = ne;
+	}
+
+	@Override
+	public void visitList(PegList e) {
+		for(int i = 0; i < e.size(); i++) {
+			Peg se = e.get(i);
+			e.set(i, removeObjectOperation(se));
+		}
+		this.returnPeg = e.trim();
+	}
+	@Override
+	public void visitNewObject(PegNewObject e) {
+		UList<Peg> l = new UList<Peg>(new Peg[e.size()]);
+		for(int i = 0; i < e.size(); i++) {
+			Peg ne = removeObjectOperation(e.get(i));
+			if(ne != null) {
+				l.add(ne);
+			}
+		}
+		//System.out.println("@@@ size=" + l.size() + " e=" + e);
+		this.returnPeg = e.base.newSequence(l);
 	}
 	
 }

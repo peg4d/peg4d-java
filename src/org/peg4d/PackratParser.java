@@ -8,18 +8,18 @@ public class PackratParser extends RecursiveDecentParser {
 		super(peg, source);
 	}
 	
-	@Override
-	public void initMemo() {
-		if(Main.MemoFactor == -1) {  /* default */
-			this.memoMap = new PackratMemo(this.source.length());
-		}
-		else if(Main.MemoFactor == 0) {
-			this.memoMap = new NoMemo();
-		}
-		else {
-			this.memoMap = new OpenHashMemo(Main.MemoFactor);
-		}
-	}
+//	@Override
+//	public void initMemo() {
+//		if(Main.MemoFactor == -1) {  /* default */
+//			this.memoMap = new PackratMemo(this.source.length());
+//		}
+//		else if(Main.MemoFactor == 0) {
+//			this.memoMap = new NoMemo();
+//		}
+//		else {
+//			this.memoMap = new OpenHashMemo(Main.MemoFactor);
+//		}
+//	}
 	
 //	// Bugs existed -O0, but they disappeared !!
 //	public Pego matchNonTerminal0(Pego left, PegNonTerminal label) {

@@ -9,8 +9,12 @@ public class TracingPackratParser extends RecursiveDecentParser {
 	
 	@Override
 	public void initMemo() {
-		if(Main.MemoFactor == -1) {  /* default */
-			this.memoMap = new OpenHashMemo(256);
+		if(Main.MemoFactor < 0) {
+			int initSize = 512 * 1024;
+			if(source.length() < 512 * 1024) {
+				initSize = (int)source.length();
+			}
+			this.memoMap = new PackratMemo(initSize);
 		}
 		else if(Main.MemoFactor == 0) {
 			this.memoMap = new NoMemo(); //new PackratMemo(this.source.length());

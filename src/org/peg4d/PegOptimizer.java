@@ -30,9 +30,6 @@ class PegOptimizer extends PegTransformer {
 	@Override
 	public Peg transform(Grammar base, Peg e) {
 		if(this.optimizationLevel > 0) {
-			if(e instanceof PegNonTerminal) {
-				return this.performInlining(base, ((PegNonTerminal) e));
-			}
 			if(e instanceof PegChoice) {
 				return this.predictChoice(base, ((PegChoice) e));
 			}
@@ -53,25 +50,6 @@ class PegOptimizer extends PegTransformer {
 		return e;
 	}
 	
-	private final Peg performInlining(Grammar base, PegNonTerminal label) {
-		String ruleName = label.symbol;
-		Peg next = peg.getRule(ruleName);
-		if(this.optimizationLevel > 3) {
-			this.NonTerminalPrediction += 1;
-		}
-		if(next.is(Peg.CyclicRule) || !isTextMatchOnly(next)) {
-			return label;  // 
-		}
-		Peg optimizedExpression = pegCache.get(ruleName);
-		if(optimizedExpression == null) {
-			optimizedExpression = next.clone(base, this);
-			pegCache.put(ruleName, optimizedExpression);
-		}				
-		this.Inlining += 1;
-		log(label, "inlining: " + ruleName);
-		return optimizedExpression;
-	}
-
 	private final boolean isTextMatchOnly(Peg e) {
 		if(e.hasObjectOperation()) {
 			return false;
