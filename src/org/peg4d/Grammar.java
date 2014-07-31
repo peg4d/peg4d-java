@@ -310,11 +310,9 @@ public class Grammar {
 	}
 
 	private Peg putsem(String t, Peg e) {
-		if(Main.MemoFactor > 0) {
-			if(!(e instanceof PegTerm) && !(e instanceof PegSetter) && !(e instanceof PegNotString) && !(e instanceof PegNotCharacter)) {
-				this.EnabledMemo += 1;
-				e = new PegMemo(e);
-			}
+		if(Main.MemoFactor > 0 && !e.is(Peg.NoMemo)) {
+			this.EnabledMemo += 1;
+			e = new PegMemo(e);
 		}
 		semMap.put(t, e);
 		return e;
@@ -560,8 +558,9 @@ public class Grammar {
 			if(l.size() > 0 && (e instanceof PegString1 || e instanceof PegCharacter)) {
 				Peg prev = l.ArrayValues[l.size()-1];
 				if(prev instanceof PegString1) {
-					PegCharacter c = new PegCharacter(e.base, 0, "");
-					c.charset.append((char)((PegString1) prev).symbol1);
+					UCharset charset = new UCharset("");
+					charset.append((char)((PegString1) prev).symbol1);
+					PegCharacter c = new PegCharacter(e.base, 0, charset);
 					l.ArrayValues[l.size()-1] = c;
 					prev = c;
 				}
@@ -759,7 +758,7 @@ class PEG4dGrammar extends Grammar {
 		return new PegString(this, 0, token);
 	}
 	private final Peg c(String charSet) {
-		return new PegCharacter(this, 0, charSet);
+		return new PegCharacter(this, 0, new UCharset(charSet));
 	}
 	public Peg n(String ruleName) {
 		return new PegNonTerminal(this, 0, ruleName);

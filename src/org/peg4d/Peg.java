@@ -21,14 +21,15 @@ public abstract class Peg {
 	public final static int HasMessage        = 1 << 13;
 	public final static int HasContext        = 1 << 14;
 	public final static int HasReserved       = 1 << 15;
-	public final static int hasReserved       = 1 << 16;
+	public final static int hasReserved2       = 1 << 16;
 	public final static int Mask = HasNonTerminal | HasString | HasCharacter | HasAny
 	                             | HasRepetation | HasOptional | HasChoice | HasAnd | HasNot
 	                             | HasNewObject | HasSetter | HasTagging | HasMessage 
-	                             | HasReserved | hasReserved | HasContext;
+	                             | HasReserved | hasReserved2 | HasContext;
 	public final static int LeftObjectOperation    = 1 << 17;
 	public final static int PossibleDifferentRight = 1 << 18;
 	
+	public final static int NoMemo            = 1 << 20;
 	public final static int Debug             = 1 << 24;
 	
 	Grammar    base;
@@ -219,7 +220,7 @@ class PegNonTerminal extends PegTerm {
 	int length = -1;  // to be set by Verifier
 	
 	PegNonTerminal(Grammar base, int flag, String ruleName) {
-		super(base, flag | Peg.HasNonTerminal);
+		super(base, flag | Peg.HasNonTerminal | Peg.NoMemo);
 		this.symbol = ruleName;
 	}
 	@Override
@@ -275,7 +276,7 @@ class PegNonTerminal extends PegTerm {
 class PegString extends PegTerm {
 	String text;
 	public PegString(Grammar base, int flag, String text) {
-		super(base, Peg.HasString | flag);
+		super(base, Peg.HasString | Peg.NoMemo | flag);
 		this.text = text;
 	}
 	@Override
@@ -357,7 +358,7 @@ class PegString2 extends PegString {
 
 class PegAny extends PegTerm {
 	public PegAny(Grammar base, int flag) {
-		super(base, Peg.HasAny | flag);
+		super(base, Peg.HasAny | Peg.NoMemo | flag);
 	}
 	@Override
 	protected Peg clone(Grammar base, PegTransformer tr) {
@@ -398,7 +399,7 @@ class PegNotAny extends PegTerm {
 	PegNot not;
 	Peg exclude;
 	public PegNotAny(Grammar base, int flag, PegNot e) {
-		super(base, flag);
+		super(base, flag | Peg.NoMemo);
 		this.not = e;
 		this.exclude = e.inner;
 	}
@@ -437,12 +438,12 @@ class PegNotAny extends PegTerm {
 
 class PegCharacter extends PegTerm {
 	UCharset charset;
-	public PegCharacter(Grammar base, int flag, String token) {
-		super(base, Peg.HasCharacter | flag);
-		this.charset = new UCharset(token);
-	}
+//	public PegCharacter(Grammar base, int flag, String token) {
+//		super(base, Peg.HasCharacter | Peg.NoMemo | flag);
+//		this.charset = new UCharset(token);
+//	}
 	public PegCharacter(Grammar base, int flag, UCharset charset) {
-		super(base, Peg.HasCharacter | flag);
+		super(base, Peg.HasCharacter | Peg.NoMemo | flag);
 		this.charset = charset;
 	}
 	@Override
@@ -460,7 +461,6 @@ class PegCharacter extends PegTerm {
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		super.verify2(ruleName, nonTerminal, visitingName, visited);
-		this.set(Peg.HasCharacter);
 		nonTerminal.derived(this);
 	}
 	@Override
@@ -511,7 +511,7 @@ abstract class PegUnary extends Peg {
 
 class PegOptional extends PegUnary {
 	public PegOptional(Grammar base, int flag, Peg e) {
-		super(base, flag | Peg.HasOptional, e);
+		super(base, flag | Peg.HasOptional | Peg.NoMemo, e);
 	}
 	@Override
 	protected Peg clone(Grammar base, PegTransformer tr) {
@@ -682,7 +682,6 @@ class PegZeroMoreCharacter extends PegRepeat {
 	}
 }
 
-
 class PegAnd extends PegUnary {
 	PegAnd(Grammar base, int flag, Peg e) {
 		super(base, flag | Peg.HasAnd, e);
@@ -783,7 +782,7 @@ class PegNot extends PegUnary {
 class PegNotString extends PegNot {
 	String symbol;
 	public PegNotString(Grammar peg, int flag, PegString e) {
-		super(peg, flag, e);
+		super(peg, flag | Peg.NoMemo, e);
 		this.symbol = e.text;
 	}
 	@Override
@@ -843,7 +842,7 @@ class PegNotString2 extends PegNotString {
 class PegNotCharacter extends PegNot {
 	UCharset charset;
 	public PegNotCharacter(Grammar base, int flag, PegCharacter e) {
-		super(base, flag, e);
+		super(base, flag | Peg.NoMemo, e);
 		this.charset = e.charset;
 	}
 	@Override
@@ -1097,7 +1096,7 @@ class PegChoice extends PegList {
 class PegSetter extends PegUnary {
 	public int index;
 	public PegSetter(Grammar base, int flag, Peg e, int index) {
-		super(base, flag | Peg.HasSetter, e);
+		super(base, flag | Peg.HasSetter | Peg.NoMemo, e);
 		this.index = index;
 	}
 	@Override
@@ -1135,7 +1134,7 @@ class PegSetter extends PegUnary {
 class PegTagging extends PegTerm {
 	String symbol;
 	public PegTagging(Grammar base, int flag, String tagName) {
-		super(base, Peg.HasTagging | flag);
+		super(base, Peg.HasTagging | Peg.NoMemo | flag);
 		this.symbol = tagName;
 	}
 	@Override
@@ -1168,12 +1167,10 @@ class PegTagging extends PegTerm {
 	}
 }
 
-
-
 class PegMessage extends PegTerm {
 	String symbol;
 	public PegMessage(Grammar base, int flag, String message) {
-		super(base, flag | Peg.HasMessage);
+		super(base, flag | Peg.NoMemo | Peg.HasMessage);
 		this.symbol = message;
 	}
 	@Override
@@ -1276,7 +1273,7 @@ class PegNewObject extends PegList {
 
 class PegExport extends PegUnary {
 	public PegExport(Grammar base, int flag, Peg e) {
-		super(base, flag, e);
+		super(base, flag | Peg.NoMemo, e);
 	}
 	@Override
 	protected Peg clone(Grammar base, PegTransformer tr) {

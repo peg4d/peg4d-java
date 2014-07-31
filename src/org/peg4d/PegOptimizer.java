@@ -132,27 +132,6 @@ class PegOptimizer extends PegTransformer {
 	}
 	
 	private final void appendChoiceList(Grammar base, UList<Peg> flatList, Peg e) {
-		if(flatList.size() > 0 && (e instanceof PegString1 || e instanceof PegCharacter)) {
-			Peg prev = flatList.ArrayValues[flatList.size()-1];
-			if(prev instanceof PegString1) {
-				PegCharacter c = new PegCharacter(base, 0, "");
-				c.charset.append(((PegString1) prev).symbol);
-				flatList.ArrayValues[flatList.size()-1] = c;
-				prev = c;
-			}
-			if(prev instanceof PegCharacter) {
-				UCharset charset = ((PegCharacter) prev).charset;
-				if(e instanceof PegCharacter) {
-					charset.append(((PegCharacter) e).charset);
-					log(prev, "merged character: " + prev);
-				}
-				else {
-					charset.append(((PegString1) e).symbol);
-					log(prev, "merged character: " + prev);
-				}
-				return;
-			}
-		}
 		flatList.add(e);
 	}
 
