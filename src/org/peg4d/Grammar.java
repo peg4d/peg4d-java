@@ -1,17 +1,21 @@
 package org.peg4d;
 
-
-
 public class Grammar {
 	public final static PEG4dGrammar PEG4d = new PEG4dGrammar();
 
 	String              name;
 	UList<Peg>          pegList;
 	UMap<Peg>           pegMap;
-//	UMap<Peg>           optimizedPegMap;
 	UMap<String>        objectLabelMap = null;
 	public boolean      foundError = false;
 	public int          optimizationLevel;
+
+	int LexicalOptimization       = 0;
+	int InliningCount             = 0;
+	int InterTerminalOptimization = 0;
+	int PredictionOptimization    = 0;
+
+	MemoRemover memoRemover = null;
 		
 	public Grammar() {
 		this.pegMap  = new UMap<Peg>();
@@ -66,6 +70,16 @@ public class Grammar {
 		this.pegMap.put(ruleName, e);
 	}
 
+	public final UList<Peg> getRuleList() {
+		UList<String> nameList = this.pegMap.keys();
+		UList<Peg> pegList = new UList<Peg>(new Peg[nameList.size()]);
+		for(int i = 0; i < nameList.size(); i++) {
+			String ruleName = nameList.ArrayValues[i];
+			pegList.add(this.getRule(ruleName));
+		}
+		return pegList;
+	}
+
 	public final void verify() {
 		//this.objectLabelMap = new UMap<String>();
 		this.foundError = false;
@@ -76,82 +90,15 @@ public class Grammar {
 			Peg nonTerminal = this.pegMap.get(ruleName, null);
 			nc.verify(ruleName, nonTerminal);
 		}
-//		for(int i = 0; i < nameList.size(); i++) {
-//			String ruleName = nameList.ArrayValues[i];
-//			Peg nonTerminal = this.pegMap.get(ruleName, null);
-//			nonTerminal.verify2(ruleName, nonTerminal, ruleName, null);
-//			norm.setRuleName(ruleName);
-//			Peg ne = nonTerminal.clone(this, norm);
-//			if(ne != nonTerminal) {
-//				this.pegMap.put(ruleName, ne);
-//			}
-//		}
+		new Inliner(this).performInlining();
+		new Optimizer(this).optimize();
 		if(this.foundError) {
 			Main._Exit(1, "peg error found");
 		}
+		this.memoRemover = new MemoRemover(this);
 //		this.optimizedPegMap = optimize();
 	}
 
-//	public final void check() {
-//		this.objectLabelMap = new UMap<String>();
-//		this.foundError = false;
-//		UList<String> list = this.pegMap.keys();
-//		UMap<String> visited = new UMap<String>();
-//		for(int i = 0; i < list.size(); i++) {
-//			String ruleName = list.ArrayValues[i];
-//			Peg nonTerminal = this.pegMap.get(ruleName, null);
-//			nonTerminal.verify2(ruleName, nonTerminal, ruleName, visited);
-//			visited.clear();
-//			if(Main.VerbosePeg && Main.StatLevel == 0) {
-//				if(nonTerminal.is(Peg.HasNewObject)) {
-//					ruleName = "object " + ruleName; 
-//				}
-//				if(!nonTerminal.is(Peg.HasNewObject) && !nonTerminal.is(Peg.HasSetter)) {
-//					ruleName = "text " + ruleName; 
-//				}
-//				if(nonTerminal.is(Peg.CyclicRule)) {
-//					ruleName += "*"; 
-//				}
-//				System.out.println(nonTerminal.format(ruleName));
-//			}
-//		}
-//		/* to complete the verification of cyclic rules */
-//		PegNormaizer norm = new PegNormaizer();
-//		for(int i = 0; i < list.size(); i++) {
-//			String ruleName = list.ArrayValues[i];
-//			Peg nonTerminal = this.pegMap.get(ruleName, null);
-//			nonTerminal.verify2(ruleName, nonTerminal, ruleName, null);
-//			norm.setRuleName(ruleName);
-//			Peg ne = nonTerminal.clone(this, norm);
-//			if(ne != nonTerminal) {
-//				this.pegMap.put(ruleName, ne);
-//			}
-//		}
-//		if(this.foundError) {
-//			Main._Exit(1, "peg error found");
-//		}
-//		this.optimizedPegMap = optimize();
-//	}
-//	
-//	PegOptimizer optimizer = null;
-//	
-//	public UMap<Peg> optimize() {
-//		UMap<Peg> pegCache = new UMap<Peg>();
-//		UList<String> list = this.pegMap.keys();
-//		this.optimizer = new PegOptimizer(this, pegCache);
-//		for(int i = 0; i < list.size(); i++) {
-//			String key = list.ArrayValues[i];
-//			Peg e = this.pegMap.get(key, null);
-//			Peg ne = pegCache.get(key);
-//			if(ne == null) {
-//				ne = e.clone(this, optimizer);
-//				pegCache.put(key, ne);
-//			}
-//			this.pegList.add(ne);
-//		}
-//		return pegCache;
-//	}
-	
 	private int MultiReference = 0;
 	private int Reference = 0;
 
@@ -159,11 +106,14 @@ public class Grammar {
 		stat.setCount("PegReference",   this.Reference);
 		stat.setCount("MultiReference", this.MultiReference);
 		stat.setRatio("Complexity", this.MultiReference, this.Reference);
-		stat.setCount("Memo", this.EnabledMemo);
+		stat.setCount("ActivatedMemo", this.EnabledMemo);
 		stat.setCount("DisabledMemo", this.DisabledMemo);
-//		if(this.optimizer != null) {
-//			this.optimizer.updateStat(stat);
-//		}
+		stat.setCount("RemovedMemo", this.memoRemover.RemovedCount);
+		stat.setCount("LexicalOptimization", this.LexicalOptimization);
+		stat.setCount("InterTerminalOptimization", this.InterTerminalOptimization);
+		stat.setCount("PredictionOptimization", this.PredictionOptimization);
+		
+		
 //		for(int i = 0; i < this.pegList.size(); i++) {
 //			Peg e = this.pegList.ArrayValues[i];
 //			if(e instanceof PegMemo) {
@@ -175,68 +125,6 @@ public class Grammar {
 //			}
 //		}
 	}
-//
-//	class PegNormaizer extends PegTransformer {
-//		private String ruleName;
-//		void setRuleName(String ruleName) {
-//			this.ruleName = ruleName;
-//		}
-//		@Override
-//		public Peg transform(Grammar base, Peg e) {
-//			if(e instanceof PegChoice) {
-//				return this.flattenChoice((PegChoice)e);
-//			}
-//			if(e instanceof PegList) {
-//				for(int i = 0; i < e.size(); i++) {
-//					((PegList) e).list.ArrayValues[i] = e.get(i).clone(base, this);
-//				}
-//				return e;
-//			}
-//			if(e instanceof PegSetter) {
-//				return this.flattenSetter((PegSetter)e);
-//			}
-//			if(e instanceof PegUnary) {
-//				((PegUnary) e).inner = ((PegUnary) e).inner.clone(base, this);
-//			}
-//			return e;
-//		}
-//		private Peg flattenChoice(PegChoice e) {
-//			boolean hasChoice = false;
-//			for(int i = 0; i < e.size(); i++) {
-//				if(e.get(i) instanceof PegChoice) {
-//					hasChoice = true;
-//					break;
-//				}
-//			}
-//			if(hasChoice) {
-//				UList<Peg> l = new UList<Peg>(new Peg[e.size()*2]);
-//				flattenChoiceImpl(e, l);
-//				e.list = l;
-//			}
-//			return e;
-//		}
-//		private void flattenChoiceImpl(PegChoice e, UList<Peg> l) {
-//			for(int i = 0; i < e.size(); i++) {
-//				Peg sub = e.get(i);
-//				if(sub instanceof PegChoice) {
-//					this.flattenChoiceImpl((PegChoice)sub, l);
-//				}
-//				else {
-//					l.add(sub);
-//				}
-//			}
-//		}
-//		private Peg flattenSetter(PegSetter e) {
-//			if(!e.inner.is(Peg.HasNewObject)) {
-//				return e.inner;
-//			}
-//			return e;
-//		}
-//	}
-//	
-//	public void addObjectLabel(String objectLabel) {
-//		this.objectLabelMap.put(objectLabel, objectLabel);
-//	}
 
 	public ParserContext newParserContext(ParserSource source) {
 		ParserContext p = null;
@@ -251,7 +139,7 @@ public class Grammar {
 			p = new MonadicParser(this, source);
 		}
 		if(p == null) {
-			p = new PEG4dParser(this, source);  // best parser
+			p = new TracePackratParser(this, source);  // best parser
 		}
 		if(Main.RecognitionOnlyMode) {
 			p.setRecognitionOnly(true);
@@ -346,9 +234,11 @@ public class Grammar {
 	private Peg newStringImpl(String text) {
 		if(this.optimizationLevel > 0) {
 			if(text.length() == 1) {
+				this.LexicalOptimization += 1;
 				return new PegString1(this, 0, text);				
 			}				
 			if(text.length() == 2) {
+				this.LexicalOptimization += 1;
 				return new PegString2(this, 0, text);				
 			}				
 		}
@@ -385,6 +275,18 @@ public class Grammar {
 	}
 
 	private Peg newOptionalImpl(Peg p) {
+		if(p instanceof PegString1) {
+			this.LexicalOptimization += 1;
+			return new PegOptionalString1(this, 0, (PegString1)p);
+		}
+		if(p instanceof PegString) {
+			this.LexicalOptimization += 1;
+			return new PegOptionalString(this, 0, (PegString)p);
+		}
+		if(p instanceof PegCharacter) {
+			this.LexicalOptimization += 1;
+			return new PegOptionalCharacter(this, 0, (PegCharacter)p);
+		}
 		return new PegOptional(this, 0, newCommit(p));
 	}
 	
@@ -414,6 +316,7 @@ public class Grammar {
 	private Peg newOneMoreImpl(Peg p) {
 		if(this.optimizationLevel > 0) {
 			if(p instanceof PegCharacter) {
+				this.LexicalOptimization += 1;
 				return new PegOneMoreCharacter(this, 0, (PegCharacter)p);
 			}
 		}
@@ -431,6 +334,7 @@ public class Grammar {
 
 	private Peg newZeroMoreImpl(Peg p) {
 		if(p instanceof PegCharacter) {
+			this.LexicalOptimization += 1;
 			return new PegZeroMoreCharacter(this, 0, (PegCharacter)p);
 		}
 		return new PegRepeat(this, 0, newCommit(p), 0);
@@ -452,7 +356,6 @@ public class Grammar {
 		return new PegAnd(this, 0, newMonad(p));
 	}
 
-
 	public final Peg newNot(Peg p) {
 		String key = prefixNot + p.key();
 		Peg e = getsem(key);
@@ -465,6 +368,7 @@ public class Grammar {
 	private Peg newNotImpl(Peg p) {
 		if(this.optimizationLevel > 0) {
 			if(p instanceof PegString) {
+				this.LexicalOptimization += 1;
 				if(p instanceof PegString1) {
 					return new PegNotString1(this, 0, (PegString1)p);
 				}
@@ -474,6 +378,7 @@ public class Grammar {
 				return new PegNotString(this, 0, (PegString)p);
 			}
 			if(p instanceof PegCharacter) {
+				this.LexicalOptimization += 1;
 				return new PegNotCharacter(this, 0, (PegCharacter)p);
 			}
 		}
@@ -488,17 +393,30 @@ public class Grammar {
 			return l.ArrayValues[0];
 		}
 		String key = prefixChoice;
+		boolean isAllText = true;
 		for(int i = 0; i < l.size(); i++) {
-			key += l.ArrayValues[i].key();
+			Peg se = l.ArrayValues[i];
+			key += se.key();
+			if(!(se instanceof PegString) && !(se instanceof PegString)) {
+				isAllText = false;
+			}
 		}
 		Peg e = getsem(key);
 		if(e == null) {
-			e = new PegChoice(this, 0, l);
-			e = putsem(key, e);
+			e = putsem(key, newChoiceImpl(l, isAllText));
 		}
 		return e;
 	}
 
+	private Peg newChoiceImpl(UList<Peg> l, boolean isAllText) {
+		if(this.optimizationLevel > 0) {
+			if(isAllText) {
+				return new PegWordChoice(this, 0, l);
+			}
+		}
+		return new PegChoice(this, 0, l);
+	}
+	
 	public Peg newSequence(UList<Peg> l) {
 		if(l.size() == 1) {
 			return l.ArrayValues[0];
@@ -620,9 +538,6 @@ public class Grammar {
 }
 
 class PEG4dGrammar extends Grammar {
-	
-	
-	
 	static boolean parse(Grammar loadingGrammar, ParserContext context, Pego pego) {
 		//System.out.println("DEBUG? parsed: " + node);		
 		if(pego.is("#rule")) {
@@ -778,7 +693,7 @@ class PEG4dGrammar extends Grammar {
 	
 	@Override
 	public ParserContext newParserContext(ParserSource source) {
-		return new PEG4dParser(this, source);  // best parser
+		return new TracePackratParser(this, source);  // best parser
 	}
 
 	// Definiton of Bun's Peg	

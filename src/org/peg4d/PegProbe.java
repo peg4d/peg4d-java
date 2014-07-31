@@ -2,14 +2,13 @@ package org.peg4d;
 
 class PegProbe {
 	private UMap<String> visitedMap = new UMap<String>();
-	
-	
 	boolean isVisited(String name) {
 		if(this.visitedMap != null) {
 			return this.visitedMap.hasKey(name);
 		}
 		return true;
 	}
+	
 	void visited(String name) {
 		if(this.visitedMap != null) {		
 			this.visitedMap.put(name, name);
@@ -45,7 +44,7 @@ class PegProbe {
 	}
 	public void visitIndex(PegIndex e) {
 	}
-	public final void visitUnary(PegUnary e) {
+	public void visitUnary(PegUnary e) {
 		e.inner.visit(this);
 	}
 	public void visitNot(PegNot e) {
@@ -66,7 +65,7 @@ class PegProbe {
 	public void visitExport(PegExport e) {
 		this.visitUnary(e);
 	}
-	public final void visitList(PegList e) {
+	public void visitList(PegList e) {
 		for(int i = 0; i < e.size(); i++) {
 			e.get(i).visit(this);
 		}
@@ -483,5 +482,245 @@ class NonTerminalChecker extends PegProbe {
 		}
 		e.length = this.length - stackedLength;
 	}
+}
+
+class Inliner extends PegProbe {
+	Grammar peg;
+	
+	Inliner(Grammar peg) {
+		this.peg = peg;
+	}
+
+	void performInlining() {
+		UList<Peg> pegList = this.peg.getRuleList();
+		for(int i = 0; i < pegList.size(); i++) {
+			pegList.ArrayValues[i].visit(this);
+		}
+	}
+
+	final boolean isInlinable(Peg e) {
+		if(e instanceof PegNonTerminal && peg.optimizationLevel > 1) {
+			return ! ((PegNonTerminal) e).nextRule.is(Peg.CyclicRule);
+		}
+		return false;
+	}
+	
+	final Peg doInline(PegNonTerminal te) {
+		//System.out.println("inlining: " + te.symbol +  " Memo? " + (te.nextRule instanceof PegMemo) + " e=" + te.nextRule);
+		this.peg.InliningCount += 1;
+		return te.nextRule;
+	}
+	
+	@Override
+	public void visitUnary(PegUnary e) {
+		if(isInlinable(e.inner)) {
+			e.inner = doInline((PegNonTerminal)e.inner);
+		}
+		else {
+			e.inner.visit(this);
+		}
+		e.derived(e.inner);
+	}
+
+	@Override
+	public void visitList(PegList e) {
+		for(int i = 0; i < e.size(); i++) {
+			Peg se = e.get(i);
+			if(isInlinable(se)) {
+				e.set(i, doInline((PegNonTerminal)se));
+			}
+			else {
+				se.visit(this);
+			}
+			e.derived(se);
+		}
+	}
+}
+
+class Optimizer extends PegProbe {
+	Grammar peg;
+	
+	Optimizer(Grammar peg) {
+		this.peg = peg;
+	}
+
+	void optimize() {
+		UList<Peg> pegList = this.peg.getRuleList();
+		for(int i = 0; i < pegList.size(); i++) {
+			pegList.ArrayValues[i].visit(this);
+		}
+	}
+	
+	@Override
+	public void visitNonTerminal(PegNonTerminal e) {
+		if(!this.isVisited(e.symbol)) {
+			visited(e.symbol);
+			e.base.getRule(e.symbol).visit(this);
+		}
+	}
+//	public void visitNotAny(PegNotAny e) {
+//		e.orig.visit(this);
+//	}
+
+	private void removeMonad(PegUnary e) {
+		if(e.inner instanceof PegMonad) {
+			PegMonad pm = (PegMonad)e.inner;
+			if(!pm.inner.hasObjectOperation()) {
+				this.peg.InterTerminalOptimization += 1;
+				e.inner = pm.inner;
+			}
+		}
+	}
+
+	private void removeCommit(PegUnary e) {
+		if(e.inner instanceof PegCommit) {
+			PegCommit pm = (PegCommit)e.inner;
+			if(!pm.inner.hasObjectOperation()) {
+				this.peg.InterTerminalOptimization += 1;
+				e.inner = pm.inner;
+			}
+		}
+	}
+
+	@Override
+	public void visitNot(PegNot e) {
+		removeMonad(e);
+		this.visitUnary(e);
+	}
+	
+	@Override
+	public void visitAnd(PegAnd e) {
+		removeMonad(e);
+		this.visitUnary(e);
+	}
+	
+	@Override
+	public void visitOptional(PegOptional e) {
+		removeCommit(e);
+		this.visitUnary(e);
+	}
+	@Override
+	public void visitRepeat(PegRepeat e) {
+		removeCommit(e);
+		this.visitUnary(e);
+	}
+	
+	@Override
+	public void visitSetter(PegSetter e) {
+		this.visitUnary(e);
+	}
+	
+	@Override
+	public void visitExport(PegExport e) {
+		this.visitUnary(e);
+	}
+	@Override
+	public void visitList(PegList e) {
+		for(int i = 0; i < e.size(); i++) {
+			e.get(i).visit(this);
+		}
+	}
+	@Override
+	public void visitSequence(PegSequence e) {
+		this.visitList(e);
+	}
+	@Override
+	public void visitChoice(PegChoice e) {
+		this.visitList(e);
+	}
+	
+	private boolean needsObjectContext(Peg e) {
+		if(e.is(Peg.HasNewObject) || e.is(Peg.HasSetter) || e.is(Peg.HasTagging) || e.is(Peg.HasMessage) || e.is(Peg.HasContext)) {
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public void visitNewObject(PegNewObject e) {
+		if(this.peg.optimizationLevel > 1) {
+			int prefetchIndex = 0;
+			boolean hasNeedContext = false;
+			for(int i = 0; i < e.size(); i++) {
+				Peg sub = e.get(i);
+				if(needsObjectContext(sub)) {
+					hasNeedContext = true;
+				}
+				if(!hasNeedContext) {
+					prefetchIndex = i + 1;
+				}
+			}
+			this.peg.InterTerminalOptimization += 1;
+			e.predictionIndex = prefetchIndex;
+		}
+	}
+}
+
+class MemoRemover extends PegProbe {
+	UList<Peg> pegList;
+	int cutMiss = -1;
+	int RemovedCount = 0;
+	
+	MemoRemover(Grammar peg) {
+		UList<String> nameList = peg.pegMap.keys();
+		this.pegList = new UList<Peg>(new Peg[nameList.size()]);
+		for(int i = 0; i < nameList.size(); i++) {
+			String ruleName = nameList.ArrayValues[i];
+			this.pegList.add(peg.getRule(ruleName));
+		}
+	}
+
+	void removeDisabled() {
+		this.cutMiss = -1;
+		for(int i = 0; i < pegList.size(); i++) {
+			pegList.ArrayValues[i].visit(this);
+		}
+	}
+
+	void remove(int cutMiss) {
+		this.cutMiss = cutMiss;
+		for(int i = 0; i < pegList.size(); i++) {
+			pegList.ArrayValues[i].visit(this);
+		}
+	}
+
+	final boolean isRemoved(PegMemo pm) {
+		if(pm.memoMiss < this.cutMiss) {
+			return true;
+		}
+		return !(pm.enableMemo);
+	}
+	
+	Peg removeMemo(Peg e) {
+		if(e instanceof PegMemo) {
+			PegMemo pm = (PegMemo)e;
+			if(this.isRemoved(pm)) {
+				this.RemovedCount += 1;
+				return pm.inner;
+			}
+		}
+		return e;
+	}
+	
+	@Override
+	public void visitNonTerminal(PegNonTerminal e) {
+		e.nextRule = this.removeMemo(e.nextRule);
+	}
+
+	@Override
+	public void visitUnary(PegUnary e) {
+		e.inner = this.removeMemo(e.inner);
+		e.inner.visit(this);
+	}
+
+	@Override
+	public void visitList(PegList e) {
+		for(int i = 0; i < e.size(); i++) {
+			Peg se = this.removeMemo(e.get(i));
+			e.set(i, se);
+			se.visit(this);
+		}
+	}
+	
 }
 

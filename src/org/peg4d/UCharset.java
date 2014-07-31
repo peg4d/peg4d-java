@@ -123,6 +123,10 @@ public class UCharset {
 		this.text += ch;
 	}
 
+	public final void append(int ch) {
+		this.append((char)ch);
+	}
+
 
 	public static final String _QuoteString(char OpenChar, String Text, char CloseChar) {
 		char SlashChar = '\\';
@@ -225,6 +229,7 @@ public class UCharset {
 		}
 		return defval;
 	}
+
 
 
 }

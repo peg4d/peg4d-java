@@ -99,7 +99,7 @@ public abstract class ParserContext {
 		this.sourcePosition = this.sourcePosition + plus;
 	}
 
-	protected final boolean match(char ch) {
+	protected final boolean match(int ch) {
 		if(ch == this.getChar()) {
 			this.consume(1);
 			return true;
@@ -451,17 +451,17 @@ public abstract class ParserContext {
 	public Pego matchNewObject(Pego left, PegNewObject e) {
 		Pego leftNode = left;
 		long startIndex = this.getPosition();
-		if(e.predictionIndex > 0) {
-			for(int i = 0; i < e.predictionIndex; i++) {
-				Pego node = e.get(i).simpleMatch(left, this);
-				if(node.isFailure()) {
-					this.rollback(startIndex);
-					return node;
-				}
-				assert(left == node);
+//		if(e.predictionIndex > 0) {
+		for(int i = 0; i < e.predictionIndex; i++) {
+			Pego node = e.get(i).simpleMatch(left, this);
+			if(node.isFailure()) {
+				this.rollback(startIndex);
+				return node;
 			}
+			assert(left == node);
 		}
-		int markerId = this.markObjectStack();
+//		}
+		int mark = this.markObjectStack();
 		Pego newnode = this.newPegObject(e.nodeName, e, startIndex);
 		if(e.leftJoin) {
 			this.pushSetter(newnode, -1, leftNode);
@@ -469,7 +469,7 @@ public abstract class ParserContext {
 		for(int i = e.predictionIndex; i < e.size(); i++) {
 			Pego node = e.get(i).simpleMatch(newnode, this);
 			if(node.isFailure()) {
-				this.rollbackObjectStack(markerId);
+				this.rollbackObjectStack(mark);
 				this.rollback(startIndex);
 				return node;
 			}
@@ -477,7 +477,7 @@ public abstract class ParserContext {
 			//				e.warning("dropping @" + newnode.name + " " + node);
 			//			}
 		}
-		this.popNewObject(newnode, startIndex, markerId);
+		this.popNewObject(newnode, startIndex, mark);
 		if(this.stat != null) {
 			this.stat.countObjectCreation();
 		}

@@ -557,6 +557,61 @@ class PegOptional extends PegUnary {
 	}
 }
 
+class PegOptionalString extends PegOptional {
+	String symbol;
+	public PegOptionalString(Grammar base, int flag, PegString e) {
+		super(base, flag | Peg.NoMemo, e);
+		this.symbol = e.text;
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		context.match(this.symbol);
+		return left;
+	}
+	@Override
+	public int fastMatch(int left, MonadicParser context) {
+		context.match(this.symbol);
+		return left;
+	}
+}
+
+class PegOptionalString1 extends PegOptional {
+	int symbol1;
+	public PegOptionalString1(Grammar base, int flag, PegString1 e) {
+		super(base, flag | Peg.NoMemo, e);
+		this.symbol1 = e.symbol1;
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		context.match(this.symbol1);
+		return left;
+	}
+	@Override
+	public int fastMatch(int left, MonadicParser context) {
+		context.match(this.symbol1);
+		return left;
+	}
+}
+
+class PegOptionalCharacter extends PegOptional {
+	UCharset charset;
+	public PegOptionalCharacter(Grammar base, int flag, PegCharacter e) {
+		super(base, flag | Peg.NoMemo, e);
+		this.charset = e.charset;
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		context.match(this.charset);
+		return left;
+	}
+	@Override
+	public int fastMatch(int left, MonadicParser context) {
+		context.match(this.charset);
+		return left;
+	}
+}
+
+
 class PegRepeat extends PegUnary {
 	public int atleast = 0; 
 	protected PegRepeat(Grammar base, int flag, Peg e, int atLeast) {
@@ -892,6 +947,9 @@ abstract class PegList extends Peg {
 	public final Peg get(int index) {
 		return this.list.ArrayValues[index];
 	}
+	public final void set(int index, Peg e) {
+		this.list.ArrayValues[index] = e;
+	}
 	@Override
 	public final Peg get(int index, Peg def) {
 		if(index < this.size()) {
@@ -1062,12 +1120,7 @@ class PegChoice extends PegList {
 		}
 		return this.predicted;
 	}
-	
-	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchChoice(left, this);
-	}
-	
+		
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		super.verify2(ruleName, nonTerminal, visitingName, visited);
@@ -1078,6 +1131,23 @@ class PegChoice extends PegList {
 			this.getPrediction();
 		}
 	}
+	
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+//		Pego node = left;
+//		long pos = context.getPosition();
+		for(int i = 0; i < this.size(); i++) {
+			//int markerId = this.markObjectStack();
+			Pego right = this.get(i).simpleMatch(left, context);
+			if(!right.isFailure()) {
+				return right;
+			}
+			//this.rollbackObjectStack(markerId);
+			//this.setPosition(pos);
+		}
+		return context.foundFailure(this);
+	}
+	
 	@Override
 	public int fastMatch(int left, MonadicParser context) {
 		int node = left;
@@ -1093,6 +1163,50 @@ class PegChoice extends PegList {
 		}
 		return node;
 	}
+}
+
+class PegWordChoice extends PegChoice {
+	UCharset charset = null;
+	UList<String> wordList = null;
+	PegWordChoice(Grammar base, int flag, UList<Peg> list) {
+		super(base, flag | Peg.HasChoice, list);
+		this.wordList = new UList<String>(new String[list.size()]);
+		for(int i = 0; i < list.size(); i++) {
+			Peg se = list.ArrayValues[i];
+			if(se instanceof PegString1) {
+				if(charset == null) {
+					charset = new UCharset("");
+				}
+				charset.append(((PegString1)se).symbol1);
+			}
+			if(se instanceof PegCharacter) {
+				if(charset == null) {
+					charset = new UCharset("");
+				}
+				charset.append(((PegCharacter)se).charset);
+			}
+			if(se instanceof PegString) {
+				wordList.add(((PegString)se).text);
+			}
+		}
+	}
+	
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		if(this.charset != null) {
+			if(context.match(this.charset)) {
+				return left;
+			}
+		}
+		for(int i = 0; i < this.wordList.size(); i++) {
+			String w = this.wordList.ArrayValues[i];
+			if(context.match(w)) {
+				return left;
+			}
+		}
+		return context.foundFailure(this);
+	}
+	
 }
 
 class PegSetter extends PegUnary {
@@ -1429,17 +1543,26 @@ class PegMemo extends PegOperation {
 		this.memoMiss += 1;
 		if(this.memoMiss == 32) {
 			if(this.memoHit < 4) {
-				this.enableMemo = false;
-				this.base.DisabledMemo += 1;
+				return disabledMemo(result);
 			}
 		}
 		if(this.memoMiss % 64 == 0) {
 			if(this.memoMiss / this.memoHit > 4) {
-				this.enableMemo = false;
-				this.base.DisabledMemo += 1;
+				return disabledMemo(result);
 			}
 		}
 		return result;
+	}
+	
+	private Pego disabledMemo(Pego left) {
+		this.enableMemo = false;
+		this.base.DisabledMemo += 1;
+		int factor = this.base.EnabledMemo / 20;
+		if(this.base.DisabledMemo % factor == 0) {
+			//System.out.println("disabled: ");
+			this.base.memoRemover.removeDisabled();
+		}
+		return left;
 	}
 	
 	@Override

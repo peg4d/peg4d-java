@@ -1,9 +1,9 @@
 package org.peg4d;
 
 
-public class PEG4dParser extends RecursiveDecentParser {
+public class TracePackratParser extends RecursiveDecentParser {
 
-	public PEG4dParser(Grammar peg, ParserSource source) {
+	public TracePackratParser(Grammar peg, ParserSource source) {
 		super(peg, source);
 	}
 	
