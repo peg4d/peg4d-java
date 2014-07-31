@@ -504,7 +504,7 @@ class Inliner extends PegProbe {
 		}
 	}
 	final boolean isInlinable(Peg e) {
-		if(e instanceof PegNonTerminal && peg.optimizationLevel > 1) {
+		if(e instanceof PegNonTerminal && peg.optimizationLevel > 3) {
 			return ! ((PegNonTerminal) e).nextRule.is(Peg.CyclicRule);
 		}
 		return false;
@@ -634,6 +634,10 @@ class Optimizer extends PegProbe {
 	@Override
 	public void visitChoice(PegChoice e) {
 		this.visitList(e);
+		e.getPrediction(false);
+		if(!(e instanceof PegWordChoice) && e.base.optimizationLevel > 2) {
+			e.tryPrediction2(2);
+		}
 	}
 	
 	private boolean needsObjectContext(Peg e) {
@@ -662,6 +666,66 @@ class Optimizer extends PegProbe {
 		}
 	}
 }
+
+//class Prediction extends PegProbe {
+//	Prediction() {
+//	}
+//	void optimize(Grammar peg) {
+//		UList<Peg> pegList = peg.getRuleList();
+//		for(int i = 0; i < pegList.size(); i++) {
+//			Peg e = pegList.ArrayValues[i];
+//			e.visit(this);
+//		}
+//	}
+//
+//	final Peg optimizeChoice(Peg e) {
+//		if(e instanceof PegChoice && !(e instanceof PegWordChoice)) {
+//			return this.optimizeChoiceImpl((PegChoice)e);
+//		}
+//		return e;
+//	}
+//
+//	final Peg optimizeChoiceImpl(PegChoice e) {
+//		e.getPrediction(false);
+//		if(e.unpredictedChoice == 0) {
+//			PegMappedCharacterChoice choice = new PegMappedCharacterChoice(e);
+//			return choice;
+//		}
+//		if(e.unpredictedChoice < 3) {
+//			PegSelectiveChoice choice = new PegSelectiveChoice(e);
+//			return choice;
+//		}
+//		return e;
+//	}
+//	
+//	@Override
+//	public void visitNonTerminal(PegNonTerminal e) {
+//		e.nextRule = this.optimizeChoice(e.nextRule);
+//	}
+//
+//	@Override
+//	public void visitUnary(PegUnary e) {
+//		e.inner.visit(this);
+//		e.inner = this.optimizeChoice(e.inner);
+//	}
+//
+//	@Override
+//	public void visitList(PegList e) {
+//		for(int i = 0; i < e.size(); i++) {
+//			Peg se = e.get(i);
+//			se.visit(this);
+//			se = this.optimizeChoice(se);
+//			e.set(i, se);
+//		}
+//	}
+//
+//	@Override
+//	public void visitOperation(PegOperation e) {
+//		e.inner.visit(this);
+//		e.inner = this.optimizeChoice(e.inner);
+//	}
+//
+//}
 
 class MemoRemover extends PegProbe {
 	UList<Peg> pegList;

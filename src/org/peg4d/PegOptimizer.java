@@ -29,9 +29,6 @@ class PegOptimizer extends PegTransformer {
 	@Override
 	public Peg transform(Grammar base, Peg e) {
 		if(this.optimizationLevel > 0) {
-			if(e instanceof PegChoice) {
-				return this.predictChoice(base, ((PegChoice) e));
-			}
 			if(e instanceof PegNewObject) {
 				return this.predictNewObject(base, ((PegNewObject) e));
 			}
@@ -61,52 +58,28 @@ class PegOptimizer extends PegTransformer {
 		return true;
 	}
 		
-	private final Peg predictChoice(Grammar base, PegChoice orig) {
-		UList<Peg> flatList = new UList<Peg>(new Peg[orig.size()]);
-		for(int i = 0; i < orig.size(); i++) {
-			Peg sub = orig.get(i).clone(base, this);
-			if(sub instanceof PegChoice) {
-				log(orig, "flaten choice: " + sub);
-				for(int j = 0; j < sub.size(); j++) {
-					this.appendChoiceList(base, flatList, sub.get(j));
-				}
-			}
-			else {
-				this.appendChoiceList(base, flatList, sub);
-			}
-		}
-		if(flatList.size() == 1) {
-			log(orig, "removed choice: " + flatList.ArrayValues[0]);
-			return flatList.ArrayValues[0];
-		}
-		PegChoice newChoice = orig.isSame(flatList) ? orig : new PegChoice(base, orig.flag, flatList);
-		newChoice.getPrediction();
-		if(newChoice.predictableChoice > 0) {
-			if(this.optimizationLevel >= 3 && newChoice.predictableChoice == newChoice.size()) {
-//				if(newChoice.prefixSize > 1 && newChoice.predictableChoice > 1) {
-//					PegMappedChoice choice = new PegMappedChoice(newChoice);
-//					log2(orig, "mapped choice: " + choice.map);
-//					this.MappedChoice += 1;
-//					return choice;
+//	private final Peg predictChoice(Grammar base, PegChoice orig) {
+//		UList<Peg> flatList = new UList<Peg>(new Peg[orig.size()]);
+//		for(int i = 0; i < orig.size(); i++) {
+//			Peg sub = orig.get(i).clone(base, this);
+//			if(sub instanceof PegChoice) {
+//				log(orig, "flaten choice: " + sub);
+//				for(int j = 0; j < sub.size(); j++) {
+//					this.appendChoiceList(base, flatList, sub.get(j));
 //				}
-//				if(newChoice.prefixSize == 1) {
-					PegMappedCharacterChoice choice = new PegMappedCharacterChoice(newChoice);
-					log2(orig, "mapped choice: " + choice.keyList);
-					this.MappedChoice += 1;
-					return choice;
-//				}
-			}
-			else {
-				//System.out.println("@@ " + newChoice +"\n\t p=" + newChoice.predictable + "<" + newChoice.size() + " size=" + newChoice.pretextSize);
-				if(this.optimizationLevel >= 4 && newChoice.predictableChoice > (newChoice.size() / 2)) {
-					PegSelectiveChoice choice = new PegSelectiveChoice(newChoice);
-					log2(orig, "selective choice: " + choice.predictableChoice + ", " + choice.size());
-					this.SelectiveChoice += 1;
-				}
-			}
-		}
-		return newChoice;
-	}
+//			}
+//			else {
+//				this.appendChoiceList(base, flatList, sub);
+//			}
+//		}
+//		if(flatList.size() == 1) {
+//			log(orig, "removed choice: " + flatList.ArrayValues[0]);
+//			return flatList.ArrayValues[0];
+//		}
+//		PegChoice newChoice = orig.isSame(flatList) ? orig : new PegChoice(base, orig.flag, flatList);
+////		newChoice.getPrediction();
+//		return newChoice;
+//	}
 	
 	private final void appendChoiceList(Grammar base, UList<Peg> flatList, Peg e) {
 		flatList.add(e);

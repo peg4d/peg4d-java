@@ -1,15 +1,8 @@
 package org.peg4d;
 
+import java.io.UnsupportedEncodingException;
 
 public class UCharset {
-	public final static UCharset WhiteSpace = new UCharset(" \t");
-	public final static UCharset WhiteSpaceNewLine = new UCharset(" \t\n");
-	public final static UCharset SemiColon = new UCharset(" \t\n;");
-	public final static UCharset Letter = new UCharset("A-Za-z_");
-	public final static UCharset NameSymbol = new UCharset("A-Za-z0-9_");
-	public final static UCharset NotWhiteSpaceNewLine = new UCharset("!-:<-~");
-	public final static UCharset NodeLabel = new UCharset("A-Za-z0-9_./");
-
 	String    text;
 	boolean[] asciiBitMap;
 	UMap<String> utfBitMap = null;
@@ -43,9 +36,6 @@ public class UCharset {
 		return text;  // fixme
 	}
 
-	
-	
-	
 	public final boolean match(char ch) {
 		if(ch < 128) {
 			return this.asciiBitMap[ch];
@@ -127,6 +117,9 @@ public class UCharset {
 		this.append((char)ch);
 	}
 
+	public final static int getFirstChar(String text) {
+		return text.charAt(0);
+	}
 
 	public static final String _QuoteString(char OpenChar, String Text, char CloseChar) {
 		char SlashChar = '\\';
@@ -208,16 +201,6 @@ public class UCharset {
 		return UCharset._QuoteString("\"", Text, "\"");
 	}
 
-//	public final static double _ParseFloat(String Text) {
-//		try {
-//			return Double.parseDouble(Text);
-//		}
-//		catch(NumberFormatException e) {
-//			//ZLogger.VerboseException(e);
-//		}
-//		return 0.0;
-//	}
-
 	public final static int parseInt(String text, int defval) {
 		if(text.length() > 0) {
 			try {
@@ -230,6 +213,13 @@ public class UCharset {
 		return defval;
 	}
 
+	public final static byte[] toUtf8(String text) {
+		try {
+			return text.getBytes("UTF-8");
+		} catch (UnsupportedEncodingException e) {
+		}
+		return text.getBytes();
+	}
 
 
 }

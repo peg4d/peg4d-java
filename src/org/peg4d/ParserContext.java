@@ -107,6 +107,19 @@ public abstract class ParserContext {
 		return false;
 	}
 
+	protected final boolean match(byte[] text) {
+		if(this.endPosition - this.sourcePosition >= text.length) {
+			for(int i = 0; i < text.length; i++) {
+				if(text[i] != this.source.charAt(this.sourcePosition + i)) {
+					return false;
+				}
+			}
+			this.consume(text.length);
+			return true;
+		}
+		return false;
+	}
+	
 	protected final boolean match(String text) {
 		if(this.endPosition - this.sourcePosition >= text.length()) {
 			for(int i = 0; i < text.length(); i++) {

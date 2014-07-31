@@ -68,7 +68,11 @@ public class FileSource extends ParserSource {
 			this.readMainBuffer(this.buffer_offset);
 			buffer_pos = (int)(n - this.buffer_offset);
 		}
-		return this.buffer[buffer_pos] & 0xff;
+		int ch = this.buffer[buffer_pos] & 0xff;
+//		if(ch > 127) {
+//			System.out.println("pos=" + n + ", ch="+ch);
+//		}
+		return ch;
 	}
 	
 	public final int charAtDebug(long n) {

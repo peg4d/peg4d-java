@@ -103,18 +103,27 @@ public class Grammar {
 		new Inliner(this).performInlining();
 		new Optimizer(this).optimize();
 		if(this.foundError) {
-			Main._Exit(1, "peg error found");
+			Main._Exit(1, "PegError found");
 		}
 		this.memoRemover = new MemoRemover(this);
 	}
 
 	private int MultiReference = 0;
 	private int Reference = 0;
+	int StrongPredicatedChoice = 0;
+	int PredicatedChoice = 0;
+	int UnpredicatedChoice = 0;
+
 
 	void updateStat(Stat stat) {
 		stat.setCount("PegReference",   this.Reference);
 		stat.setCount("MultiReference", this.MultiReference);
 		stat.setRatio("Complexity", this.MultiReference, this.Reference);
+		stat.setCount("StrongPredicatedChoice",   this.StrongPredicatedChoice);
+		stat.setCount("PredicatedChoice",   this.PredicatedChoice);
+		stat.setCount("UnpredicatedChoice", this.UnpredicatedChoice);
+		stat.setRatio("Predictablity", this.PredicatedChoice, this.PredicatedChoice + this.UnpredicatedChoice);
+
 		stat.setCount("ActivatedMemo", this.EnabledMemo);
 		stat.setCount("DisabledMemo", this.DisabledMemo);
 		stat.setCount("RemovedMemo", this.memoRemover.RemovedCount);
@@ -168,6 +177,7 @@ public class Grammar {
 
 	int EnabledMemo  = 0;
 	int DisabledMemo = 0;
+
 
 	private static String prefixNonTerminal = "L\b";
 	private static String prefixString = "t\b";
@@ -413,6 +423,16 @@ public class Grammar {
 		return new PegChoice(this, 0, l);
 	}
 	
+	public Peg mergeChoice(Peg e, Peg e2) {
+		if(e == null) return e2;
+		if(e2 == null) return e;
+		UList<Peg> l = new UList<Peg>(new Peg[e.size()+e2.size()]);
+		addChoice(l, e);
+		addChoice(l, e2);
+		return new PegChoice(this, 0, l);
+	}
+
+	
 	public Peg newSequence(UList<Peg> l) {
 		if(l.size() == 1) {
 			return l.ArrayValues[0];
@@ -531,6 +551,7 @@ public class Grammar {
 			l.add(e);
 		}
 	}
+
 }
 
 class PEG4dGrammar extends Grammar {
