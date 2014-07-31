@@ -452,7 +452,7 @@ public abstract class ParserContext {
 		Pego leftNode = left;
 		long startIndex = this.getPosition();
 //		if(e.predictionIndex > 0) {
-		for(int i = 0; i < e.predictionIndex; i++) {
+		for(int i = 0; i < e.prefetchIndex; i++) {
 			Pego node = e.get(i).simpleMatch(left, this);
 			if(node.isFailure()) {
 				this.rollback(startIndex);
@@ -466,7 +466,7 @@ public abstract class ParserContext {
 		if(e.leftJoin) {
 			this.pushSetter(newnode, -1, leftNode);
 		}
-		for(int i = e.predictionIndex; i < e.size(); i++) {
+		for(int i = e.prefetchIndex; i < e.size(); i++) {
 			Pego node = e.get(i).simpleMatch(newnode, this);
 			if(node.isFailure()) {
 				this.rollbackObjectStack(mark);

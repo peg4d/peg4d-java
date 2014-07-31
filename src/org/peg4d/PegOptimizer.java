@@ -151,7 +151,7 @@ class PegOptimizer extends PegTransformer {
 		}
 		if(this.optimizationLevel >= 3 && predictionIndex > 0) {
 			log(orig, "prediction index: " + predictionIndex);
-			ne.predictionIndex = predictionIndex;
+			ne.prefetchIndex = predictionIndex;
 		}
 		return ne;
 	}

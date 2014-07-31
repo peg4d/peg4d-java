@@ -143,7 +143,7 @@ public abstract class Peg {
 	}
 	
 	public final boolean hasObjectOperation() {
-		return this.is(Peg.HasNewObject) || this.is(Peg.HasSetter);
+		return this.is(Peg.HasNewObject) || this.is(Peg.HasSetter) || this.is(Peg.HasTagging) || this.is(Peg.HasMessage);
 	}
 	
 	public final static void addAsChoice(UMap<Peg> map, String key, Peg e) {
@@ -1320,7 +1320,7 @@ class PegMessage extends PegTerm {
 class PegNewObject extends PegList {
 	boolean leftJoin = false;
 	String nodeName = "noname";
-	int predictionIndex = 0;
+	int prefetchIndex = 0;
 	public PegNewObject(Grammar base, int flag, int initSize, boolean leftJoin) {
 		super(base, flag | Peg.HasNewObject, initSize);
 		this.leftJoin = leftJoin;
@@ -1379,7 +1379,43 @@ class PegNewObject extends PegList {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchNewObject(left, this);
+		Pego leftNode = left;
+		long startIndex = context.getPosition();
+		for(int i = 0; i < this.prefetchIndex; i++) {
+			Pego right = this.get(i).simpleMatch(left, context);
+			if(right.isFailure()) {
+				context.rollback(startIndex);
+				return right;
+			}
+			if(left != right) {
+				System.out.println("DEBUG: @" + i + " < " + this.prefetchIndex + " in " + this);
+				System.out.println("LEFT: " + left);
+				System.out.println("RIGHT: " + right);
+				System.out.println("FLAGS: " + this.get(i).hasObjectOperation());
+			}
+			assert(left == right);
+		}
+		int mark = context.markObjectStack();
+		Pego newnode = context.newPegObject(this.nodeName, this, startIndex);
+		if(this.leftJoin) {
+			context.pushSetter(newnode, -1, leftNode);
+		}
+		for(int i = this.prefetchIndex; i < this.size(); i++) {
+			Pego node = this.get(i).simpleMatch(newnode, context);
+			if(node.isFailure()) {
+				context.rollbackObjectStack(mark);
+				context.rollback(startIndex);
+				return node;
+			}
+			//			if(node != newnode) {
+			//				e.warning("dropping @" + newnode.name + " " + node);
+			//			}
+		}
+		context.popNewObject(newnode, startIndex, mark);
+		if(context.stat != null) {
+			context.stat.countObjectCreation();
+		}
+		return newnode;
 	}
 	@Override
 	public int fastMatch(int left, MonadicParser context) {
@@ -1494,7 +1530,7 @@ abstract class PegOperation extends Peg {
 	}
 	@Override
 	protected void visit(PegProbe probe) {
-		this.inner.visit(probe);
+		probe.visitOperation(this);
 	}
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
@@ -1615,8 +1651,6 @@ class PegCommit extends PegOperation {
 		return left;
 	}
 }
-
-
 
 abstract class PegOptimized extends Peg {
 	Peg orig;

@@ -341,8 +341,8 @@ public class MonadicParser extends ParserContext {
 		if(this.stat != null) {
 			this.stat.countRepeatCall(e, startIndex);
 		}
-		if(e.predictionIndex > 0) {
-			for(int i = 0; i < e.predictionIndex; i++) {
+		if(e.prefetchIndex > 0) {
+			for(int i = 0; i < e.prefetchIndex; i++) {
 				int right = e.get(i).fastMatch(left, this);
 				if(PEGUtils.isFailure(right)) {
 					this.rollback(startIndex);
@@ -357,7 +357,7 @@ public class MonadicParser extends ParserContext {
 		if(e.leftJoin) {
 			this.log.lazySetter(newnode, 0, left);
 		}
-		for(int i = e.predictionIndex; i < e.size(); i++) {
+		for(int i = e.prefetchIndex; i < e.size(); i++) {
 			//System.out.println("newO B i= " +i + ", pos=" + this.getPosition() + ", "+ newnode + " e=" + e.get(i));
 			int right = e.get(i).fastMatch(newnode, this);
 			if(PEGUtils.isFailure(right)) {

@@ -139,7 +139,7 @@ public class Grammar {
 			p = new MonadicParser(this, source);
 		}
 		if(p == null) {
-			p = new TracePackratParser(this, source);  // best parser
+			p = new TracingPackratParser(this, source);  // best parser
 		}
 		if(Main.RecognitionOnlyMode) {
 			p.setRecognitionOnly(true);
@@ -693,7 +693,7 @@ class PEG4dGrammar extends Grammar {
 	
 	@Override
 	public ParserContext newParserContext(ParserSource source) {
-		return new TracePackratParser(this, source);  // best parser
+		return new TracingPackratParser(this, source);  // best parser
 	}
 
 	// Definiton of Bun's Peg	

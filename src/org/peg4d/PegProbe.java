@@ -79,6 +79,9 @@ class PegProbe {
 	public void visitNewObject(PegNewObject e) {
 		this.visitList(e);
 	}
+	public void visitOperation(PegOperation e) {
+		e.inner.visit(this);
+	}
 }
 
 class Formatter extends PegProbe {
@@ -535,6 +538,13 @@ class Inliner extends PegProbe {
 			e.derived(se);
 		}
 	}
+
+	@Override
+	public void visitOperation(PegOperation e) {
+		e.inner.visit(this);
+		e.derived(e.inner);
+	}
+
 }
 
 class Optimizer extends PegProbe {
@@ -638,20 +648,20 @@ class Optimizer extends PegProbe {
 
 	@Override
 	public void visitNewObject(PegNewObject e) {
-		if(this.peg.optimizationLevel > 1) {
-			int prefetchIndex = 0;
-			boolean hasNeedContext = false;
-			for(int i = 0; i < e.size(); i++) {
-				Peg sub = e.get(i);
-				if(needsObjectContext(sub)) {
-					hasNeedContext = true;
-				}
-				if(!hasNeedContext) {
-					prefetchIndex = i + 1;
-				}
+		int prefetchIndex = 0;
+		for(int i = 0; i < e.size(); i++) {
+			Peg sub = e.get(i);
+			if(needsObjectContext(sub)) {
+				break;
 			}
-			this.peg.InterTerminalOptimization += 1;
-			e.predictionIndex = prefetchIndex;
+			prefetchIndex = i + 1;
+		}
+		if(prefetchIndex > 0) {
+			if(this.peg.optimizationLevel > 1) {
+				this.peg.InterTerminalOptimization += 1;
+//				System.out.println("prefetchIndex: " + prefetchIndex + " e = " + e);
+				e.prefetchIndex = prefetchIndex;
+			}
 		}
 	}
 }
