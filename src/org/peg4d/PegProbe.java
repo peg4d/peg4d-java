@@ -494,31 +494,26 @@ class NonTerminalChecker extends PegProbe {
 
 class Inliner extends PegProbe {
 	Grammar peg;
-	
 	Inliner(Grammar peg) {
 		this.peg = peg;
 	}
-
 	void performInlining() {
 		UList<Peg> pegList = this.peg.getRuleList();
 		for(int i = 0; i < pegList.size(); i++) {
 			pegList.ArrayValues[i].visit(this);
 		}
 	}
-
 	final boolean isInlinable(Peg e) {
 		if(e instanceof PegNonTerminal && peg.optimizationLevel > 1) {
 			return ! ((PegNonTerminal) e).nextRule.is(Peg.CyclicRule);
 		}
 		return false;
 	}
-	
 	final Peg doInline(PegNonTerminal te) {
 		//System.out.println("inlining: " + te.symbol +  " Memo? " + (te.nextRule instanceof PegMemo) + " e=" + te.nextRule);
 		this.peg.InliningCount += 1;
 		return te.nextRule;
 	}
-	
 	@Override
 	public void visitUnary(PegUnary e) {
 		if(isInlinable(e.inner)) {
@@ -529,7 +524,6 @@ class Inliner extends PegProbe {
 		}
 		e.derived(e.inner);
 	}
-
 	@Override
 	public void visitList(PegList e) {
 		for(int i = 0; i < e.size(); i++) {
@@ -543,13 +537,11 @@ class Inliner extends PegProbe {
 			e.derived(se);
 		}
 	}
-
 	@Override
 	public void visitOperation(PegOperation e) {
 		e.inner.visit(this);
 		e.derived(e.inner);
 	}
-
 }
 
 class Optimizer extends PegProbe {
