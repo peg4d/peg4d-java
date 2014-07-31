@@ -49,7 +49,6 @@ public abstract class Peg {
 	}
 		
 	protected abstract Peg clone(Grammar base, PegTransformer tr);
-	protected abstract void stringfy(UStringBuilder sb, PegFormatter fmt);
 	protected abstract void visit(PegProbe probe);
 	
 	protected abstract void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited);
@@ -108,24 +107,21 @@ public abstract class Peg {
 		return def;
 	}
 
+	private final static Formatter DefaultFormatter = new Formatter();
 	@Override public String toString() {
 		UStringBuilder sb = new UStringBuilder();
-		this.stringfy(sb, new PegFormatter());
-//		if(this.ruleName != null) {
-//			sb.append(" defined in ");
-//			sb.append(this.ruleName);
-//		}
+		DefaultFormatter.format(this, sb);
 		return sb.toString();
 	}
 
-	public final String format(String name, PegFormatter fmt) {
+	public final String format(String name, Formatter fmt) {
 		UStringBuilder sb = new UStringBuilder();
-		fmt.formatRule(sb, name, this);
+		fmt.formatRule(name, this, sb);
 		return sb.toString();
 	}
 
 	public final String format(String name) {
-		return this.format(name, new PegFormatter());
+		return this.format(name, new Formatter());
 	}
 
 	protected final void report(String type, String msg) {
@@ -235,10 +231,6 @@ class PegNonTerminal extends PegTerm {
 		return ne;
 	}
 	@Override
-	protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatNonTerminal(sb, this);
-	}
-	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitNonTerminal(this);
 	}
@@ -271,8 +263,7 @@ class PegNonTerminal extends PegTerm {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		Peg next = context.getRule(this.symbol);
-		return next.simpleMatch(left, context);
+		return this.nextRule.simpleMatch(left, context);
 	}
 	@Override
 	public int fastMatch(int left, MonadicParser context) {
@@ -298,10 +289,6 @@ class PegString extends PegTerm {
 	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitString(this);
-	}
-	@Override
-	protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatString(sb, this);
 	}
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
@@ -385,10 +372,6 @@ class PegAny extends PegTerm {
 		probe.visitAny(this);
 	}
 	@Override
-	protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatAny(sb, this);
-	}
-	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		super.verify2(ruleName, nonTerminal, visitingName, visited);
 		nonTerminal.derived(this);
@@ -411,6 +394,47 @@ class PegAny extends PegTerm {
 	}
 }
 
+class PegNotAny extends PegTerm {
+	PegNot not;
+	Peg exclude;
+	public PegNotAny(Grammar base, int flag, PegNot e) {
+		super(base, flag);
+		this.not = e;
+		this.exclude = e.inner;
+	}
+	@Override
+	protected Peg clone(Grammar base, PegTransformer tr) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	@Override
+	protected void visit(PegProbe probe) {
+		probe.visitNotAny(this);
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		long pos = context.getPosition();
+		Pego right = this.exclude.simpleMatch(left, context);
+		if(right.isFailure()) {
+			assert(pos == context.getPosition());
+			if(context.hasChar()) {
+				context.consume(1);
+				return left;
+			}
+		}
+		else {
+			context.rollback(pos);
+		}
+		return context.foundFailure(this);
+	}
+	@Override
+	public int fastMatch(int left, MonadicParser context) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+}
+
+
 class PegCharacter extends PegTerm {
 	UCharset charset;
 	public PegCharacter(Grammar base, int flag, String token) {
@@ -432,10 +456,6 @@ class PegCharacter extends PegTerm {
 	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitCharacter(this);
-	}
-	@Override
-	protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatCharacter(sb, this);
 	}
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
@@ -506,11 +526,6 @@ class PegOptional extends PegUnary {
 		probe.visitOptional(this);
 	}
 	@Override
-	protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatOptional(sb, this);
-	}
-
-	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		super.verify2(ruleName, nonTerminal, visitingName, visited);
 		nonTerminal.derived(this);
@@ -557,10 +572,6 @@ class PegRepeat extends PegUnary {
 	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitRepeat(this);
-	}
-	@Override
-	protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatRepeat(sb, this);
 	}
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
@@ -626,6 +637,52 @@ class PegRepeat extends PegUnary {
 	}
 }
 
+class PegOneMoreCharacter extends PegRepeat {
+	UCharset charset;
+	public PegOneMoreCharacter(Grammar base, int flag, PegCharacter e) {
+		super(base, flag, e, 1);
+		charset = e.charset;
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		long pos = context.getPosition();
+		int ch = context.charAt(pos);
+		if(!this.charset.match(ch)) {
+			return context.foundFailure(this);
+		}
+		pos++;
+		for(;context.hasChar();pos++) {
+			ch = context.charAt(pos);
+			if(!this.charset.match(ch)) {
+				break;
+			}
+		}
+		context.setPosition(pos);
+		return left;
+	}
+}
+
+class PegZeroMoreCharacter extends PegRepeat {
+	UCharset charset;
+	public PegZeroMoreCharacter(Grammar base, int flag, PegCharacter e) {
+		super(base, flag, e, 0);
+		this.charset = e.charset;
+	}
+	@Override
+	public Pego simpleMatch(Pego left, ParserContext context) {
+		long pos = context.getPosition();
+		for(;context.hasChar();pos++) {
+			int ch = context.charAt(pos);
+			if(!this.charset.match(ch)) {
+				break;
+			}
+		}
+		context.setPosition(pos);
+		return left;
+	}
+}
+
+
 class PegAnd extends PegUnary {
 	PegAnd(Grammar base, int flag, Peg e) {
 		super(base, flag | Peg.HasAnd, e);
@@ -641,10 +698,6 @@ class PegAnd extends PegUnary {
 	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitAnd(this);
-	}
-	@Override
-	protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatAnd(sb, this);
 	}
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
@@ -694,10 +747,6 @@ class PegNot extends PegUnary {
 	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitNot(this);
-	}
-	@Override
-	protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatNot(sb, this);
 	}
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
@@ -751,7 +800,7 @@ class PegNotString extends PegNot {
 	}
 }
 
-class PegNotString1 extends PegNot {
+class PegNotString1 extends PegNotString {
 	int symbol;
 	public PegNotString1(Grammar peg, int flag, PegString1 e) {
 		super(peg, flag, e);
@@ -769,7 +818,7 @@ class PegNotString1 extends PegNot {
 	}
 }	
 
-class PegNotString2 extends PegNot {
+class PegNotString2 extends PegNotString {
 	int symbol1;
 	int symbol2;
 	public PegNotString2(Grammar peg, int flag, PegString2 e) {
@@ -904,12 +953,6 @@ class PegSequence extends PegList {
 	protected void visit(PegProbe probe) {
 		probe.visitSequence(this);
 	}
-
-	@Override
-	protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatSequence(sb, this);
-	}
-
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		super.verify2(ruleName, nonTerminal, visitingName, visited);
@@ -982,11 +1025,7 @@ class PegChoice extends PegList {
 			this.list.add(e);
 		}
 	}
-	
-	@Override protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatChoice(sb, this);
-	}
-	
+
 	protected UCharset predicted = null;
 	protected int predictableChoice = -1;
 	protected int prefixSize = 0; 
@@ -1073,9 +1112,6 @@ class PegSetter extends PegUnary {
 	protected void visit(PegProbe probe) {
 		probe.visitSetter(this);
 	}
-	@Override protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatSetter(sb, this);
-	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		return context.matchSetter(left, this);
@@ -1115,10 +1151,6 @@ class PegTagging extends PegTerm {
 		probe.visitTagging(this);
 	}
 	@Override
-	protected final void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatTagging(sb, this);
-	}
-	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		super.verify2(ruleName, nonTerminal, visitingName, visited);
 		//rules.addObjectLabel(this.symbol);
@@ -1155,11 +1187,6 @@ class PegMessage extends PegTerm {
 	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitMessage(this);
-	}
-
-	@Override
-	protected final void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatMessage(sb, this);
 	}
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
@@ -1228,10 +1255,6 @@ class PegNewObject extends PegList {
 		}
 	}
 
-	@Override protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatNewObject(sb, this);
-	}
-
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		super.verify2(ruleName, nonTerminal, visitingName, visited);
@@ -1267,10 +1290,6 @@ class PegExport extends PegUnary {
 	protected void visit(PegProbe probe) {
 		probe.visitExport(this);
 	}
-
-	@Override protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatExport(sb, this);
-	}
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		super.verify2(ruleName, nonTerminal, visitingName, visited);
@@ -1302,11 +1321,6 @@ class PegIndent extends PegTerm {
 	protected void visit(PegProbe probe) {
 		probe.visitIndent(this);
 	}
-
-	@Override protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatIndent(sb, this);
-	}
-
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		super.verify2(ruleName, nonTerminal, visitingName, visited);
@@ -1340,10 +1354,6 @@ class PegIndex extends PegTerm {
 	protected void visit(PegProbe probe) {
 		probe.visitIndex(this);
 	}
-
-	@Override protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		fmt.formatIndex(sb, this);
-	}
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {
 		super.verify2(ruleName, nonTerminal, visitingName, visited);
@@ -1368,10 +1378,6 @@ abstract class PegOperation extends Peg {
 	@Override
 	protected Peg clone(Grammar base, PegTransformer tr) {
 		return this;
-	}
-	@Override
-	protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		this.inner.stringfy(sb, fmt);
 	}
 	@Override
 	protected void visit(PegProbe probe) {
@@ -1425,11 +1431,13 @@ class PegMemo extends PegOperation {
 		if(this.memoMiss == 32) {
 			if(this.memoHit < 4) {
 				this.enableMemo = false;
+				this.base.DisabledMemo += 1;
 			}
 		}
 		if(this.memoMiss % 64 == 0) {
 			if(this.memoMiss / this.memoHit > 4) {
 				this.enableMemo = false;
+				this.base.DisabledMemo += 1;
 			}
 		}
 		return result;
@@ -1497,10 +1505,6 @@ abstract class PegOptimized extends Peg {
 	@Override
 	protected Peg clone(Grammar base, PegTransformer tr) {
 		return this;
-	}
-	@Override
-	protected void stringfy(UStringBuilder sb, PegFormatter fmt) {
-		this.orig.stringfy(sb, fmt);
 	}
 	@Override
 	protected void verify2(String ruleName, Peg nonTerminal, String visitingName, UMap<String> visited) {

@@ -73,7 +73,7 @@ public class Main {
 		parseCommandArguments(args);
 		Grammar peg = GrammarFile == null ? Grammar.PEG4d : Grammar.load(GrammarFile);
 		if(PegFormat != null) {
-			PegFormatter fmt = loadFormatter(PegFormat);
+			Formatter fmt = loadFormatter(PegFormat);
 			peg.show(StartingPoint, fmt);
 			return;
 		}
@@ -194,21 +194,21 @@ public class Main {
 
 	private final static UMap<Class<?>> driverMap = new UMap<Class<?>>();
 	static {
-		driverMap.put("peg4d", PegFormatter.class);
-		driverMap.put("pegjs", PegJSFormatter.class);
+		driverMap.put("peg4d", Formatter.class);
+		//driverMap.put("pegjs", PegJSFormatter.class);
 	}
 
-	private static PegFormatter loadDriverImpl(String driverName) {
+	private static Formatter loadDriverImpl(String driverName) {
 		try {
-			return (PegFormatter) driverMap.get(driverName).newInstance();
+			return (Formatter) driverMap.get(driverName).newInstance();
 		}
 		catch(Exception e) {
 		}
 		return null;
 	}
 	
-	private static PegFormatter loadFormatter(String driverName) {
-		PegFormatter d = loadDriverImpl(driverName);
+	private static Formatter loadFormatter(String driverName) {
+		Formatter d = loadDriverImpl(driverName);
 		if(d == null) {
 			System.out.println("Supported formatter list:");
 			UList<String> driverList = driverMap.keys();

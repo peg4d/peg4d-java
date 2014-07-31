@@ -209,34 +209,34 @@ class PegOptimizer extends PegTransformer {
 			}
 			return e;
 		}
-		if(e instanceof PegRepeat) {
-			PegRepeat re = (PegRepeat)e;
-			Peg inner = re.inner;
-			if(inner instanceof PegCharacter) {
-				UCharset charset = ((PegCharacter) inner).charset;
-				Peg ne = null;
-				if(re.atleast == 1) {
-					log(e, "one more character: " + e);
-					ne = new PegOneMoreCharacter(e, charset);
-				}
-				else {
-					log(e, "zero more character: " + e);
-					ne = new PegZeroMoreCharacter(e, charset);
-				}
-				return ne;
-			}
-			if(isTextMatchOnly(inner)) {
-				inner = inner.clone(base, this);
-				if(re.atleast == 1) {
-					log(e, "one more text: " + e);
-					return new PegOneMoreText(e, inner);
-				}
-				else {
-					log(e, "zero more text: " + e);
-					return new PegZeroMoreText(e, inner);
-				}
-			}
-		}
+//		if(e instanceof PegRepeat) {
+//			PegRepeat re = (PegRepeat)e;
+//			Peg inner = re.inner;
+//			if(inner instanceof PegCharacter) {
+//				UCharset charset = ((PegCharacter) inner).charset;
+//				Peg ne = null;
+//				if(re.atleast == 1) {
+//					log(e, "one more character: " + e);
+//					ne = new PegOneMoreCharacter(e, charset);
+//				}
+//				else {
+//					log(e, "zero more character: " + e);
+//					ne = new PegZeroMoreCharacter(e, charset);
+//				}
+//				return ne;
+//			}
+//			if(isTextMatchOnly(inner)) {
+//				inner = inner.clone(base, this);
+//				if(re.atleast == 1) {
+//					log(e, "one more text: " + e);
+//					return new PegOneMoreText(e, inner);
+//				}
+//				else {
+//					log(e, "zero more text: " + e);
+//					return new PegZeroMoreText(e, inner);
+//				}
+//			}
+//		}
 		if(e instanceof PegSequence) {
 			PegSequence seq = (PegSequence)e;
 			if(seq.size() == 2 && seq.get(1) instanceof PegAny) {
@@ -368,7 +368,6 @@ class PegOptimizer extends PegTransformer {
 		}
 	}
 
-
 	class PegOptionalString extends PegOptimized {
 		String symbol;
 		public PegOptionalString(Peg orig, String token) {
@@ -401,162 +400,6 @@ class PegOptimizer extends PegTransformer {
 		@Override
 		public int fastMatch(int left, MonadicParser context) {
 			context.match(this.charset);
-			return left;
-		}
-	}
-	
-	class PegOneMoreText extends PegOptimized {
-		Peg repeated;
-		public PegOneMoreText(Peg orig, Peg repeated) {
-			super(orig);
-			this.repeated = repeated;
-		}
-		@Override
-		public Pego simpleMatch(Pego left, ParserContext context) {
-			long pos = context.getPosition();
-			Pego node = this.repeated.simpleMatch(left, context);
-			if(node.isFailure()) {
-				context.setPosition(pos);
-				return node;
-			}
-			left = node;
-			while(context.hasChar()) {
-				pos = context.getPosition();
-				node = this.repeated.simpleMatch(left, context);
-				if(node.isFailure() || pos == context.getPosition()) {
-					context.setPosition(pos);
-					break;
-				}
-				left = node;
-			}
-			return left;
-		}
-		@Override
-		public int fastMatch(int left, MonadicParser context) {
-			long pos = context.getPosition();
-			int node = this.repeated.fastMatch(left, context);
-			if(PEGUtils.isFailure(node)) {
-				context.setPosition(pos);
-				return node;
-			}
-			left = node;
-			while(context.hasChar()) {
-				pos = context.getPosition();
-				node = this.repeated.fastMatch(left, context);
-				if(PEGUtils.isFailure(node) || pos == context.getPosition()) {
-					context.setPosition(pos);
-					break;
-				}
-				left = node;
-			}
-			return left;
-		}
-	}
-
-	class PegZeroMoreText extends PegOptimized {
-		Peg repeated;
-		public PegZeroMoreText(Peg orig, Peg repeated) {
-			super(orig);
-			this.repeated = repeated;
-		}
-		@Override
-		public Pego simpleMatch(Pego left, ParserContext context) {
-			while(context.hasChar()) {
-				long pos = context.getPosition();
-				Pego node = this.repeated.simpleMatch(left, context);
-				if(node.isFailure() || pos == context.getPosition()) {
-					context.setPosition(pos);
-					break;
-				}
-				left = node;
-			}
-			return left;
-		}
-		@Override
-		public int fastMatch(int left, MonadicParser context) {
-			while(context.hasChar()) {
-				long pos = context.getPosition();
-				int node = this.repeated.fastMatch(left, context);
-				if(PEGUtils.isFailure(node) || pos == context.getPosition()) {
-					context.setPosition(pos);
-					break;
-				}
-				left = node;
-			}
-			return left;
-		}
-	}
-
-	class PegOneMoreCharacter extends PegOptimized {
-		UCharset charset;
-		public PegOneMoreCharacter(Peg orig, UCharset charset) {
-			super(orig);
-			this.charset = charset;
-		}
-		@Override
-		public Pego simpleMatch(Pego left, ParserContext context) {
-			long pos = context.getPosition();
-			int ch = context.charAt(pos);
-			if(!this.charset.match(ch)) {
-				return context.foundFailure(this);
-			}
-			pos++;
-			for(;context.hasChar();pos++) {
-				ch = context.charAt(pos);
-				if(!this.charset.match(ch)) {
-					break;
-				}
-			}
-			context.setPosition(pos);
-			return left;
-		}
-		@Override
-		public int fastMatch(int left, MonadicParser context) {
-			long pos = context.getPosition();
-			int ch = context.charAt(pos);
-			if(!this.charset.match(ch)) {
-				return context.foundFailure2(this);
-			}
-			pos++;
-			for(;context.hasChar();pos++) {
-				ch = context.charAt(pos);
-				if(!this.charset.match(ch)) {
-					break;
-				}
-			}
-			context.setPosition(pos);
-			return left;
-		}
-	}
-
-	class PegZeroMoreCharacter extends PegOptimized {
-		UCharset charset;
-		public PegZeroMoreCharacter(Peg orig, UCharset charset) {
-			super(orig);
-			this.charset = charset;
-		}
-		@Override
-		public Pego simpleMatch(Pego left, ParserContext context) {
-			long pos = context.getPosition();
-			for(;context.hasChar();pos++) {
-				int ch = context.charAt(pos);
-				if(!this.charset.match(ch)) {
-					break;
-				}
-			}
-			context.setPosition(pos);
-			return left;
-		}
-		@Override
-		public int fastMatch(int left, MonadicParser context) {
-			long pos = context.getPosition();
-			for(;context.hasChar();pos++) {
-				int ch = context.charAt(pos);
-				if(!this.charset.match(ch)) {
-					break;
-				}
-			}
-			context.setPosition(pos);
 			return left;
 		}
 	}

@@ -158,6 +158,8 @@ public class Grammar {
 		stat.setCount("PegReference",   this.Reference);
 		stat.setCount("MultiReference", this.MultiReference);
 		stat.setRatio("Complexity", this.MultiReference, this.Reference);
+		stat.setCount("Memo", this.EnabledMemo);
+		stat.setCount("DisabledMemo", this.DisabledMemo);
 //		if(this.optimizer != null) {
 //			this.optimizer.updateStat(stat);
 //		}
@@ -261,16 +263,16 @@ public class Grammar {
 	}
 
 	public final void show(String startPoint) {
-		this.show(startPoint, new PegFormatter());
+		this.show(startPoint, new Formatter());
 	}
 
-	public final void show(String startPoint, PegFormatter fmt) {
+	public final void show(String startPoint, Formatter fmt) {
 		UStringBuilder sb = new UStringBuilder();
 		UList<String> list = makeList(startPoint);
 		for(int i = 0; i < list.size(); i++) {
 			String name = list.ArrayValues[i];
 			Peg e = this.getRule(name);
-			fmt.formatRule(sb, name, e);
+			fmt.formatRule(name, e, sb);
 		}
 		System.out.println(sb.toString());
 	}
@@ -278,6 +280,9 @@ public class Grammar {
 	// factory
 	
 	UMap<Peg> semMap = new UMap<Peg>();
+
+	int EnabledMemo  = 0;
+	int DisabledMemo = 0;
 
 	private static String prefixNonTerminal = "L\b";
 	private static String prefixString = "t\b";
@@ -306,7 +311,8 @@ public class Grammar {
 
 	private Peg putsem(String t, Peg e) {
 		if(Main.MemoFactor > 0) {
-			if(!(e instanceof PegTerm) && !(e instanceof PegSetter)) {
+			if(!(e instanceof PegTerm) && !(e instanceof PegSetter) && !(e instanceof PegNotString) && !(e instanceof PegNotCharacter)) {
+				this.EnabledMemo += 1;
 				e = new PegMemo(e);
 			}
 		}
@@ -382,27 +388,46 @@ public class Grammar {
 		}
 		return new PegCommit(p);
 	}
+
+	private Peg newMonad(Peg p) {
+		if(!p.is(Peg.HasNewObject) && !p.is(Peg.HasNonTerminal) && !p.is(Peg.HasSetter)) {
+			return p;
+		}
+		return new PegMonad(p);
+	}
 	
 	public final Peg newOneMore(Peg p) {
 		String key = prefixOneMore + p.key();
 		Peg e = getsem(key);
 		if(e == null) {
-			e = putsem(key, newRepeat(p, 1));
+			e = putsem(key, newOneMoreImpl(p));
 		}
 		return e;
 	}
 
-	private Peg newRepeat(Peg p, int atleast) {
-		return new PegRepeat(this, 0, newCommit(p), atleast);
+	private Peg newOneMoreImpl(Peg p) {
+		if(this.optimizationLevel > 0) {
+			if(p instanceof PegCharacter) {
+				return new PegOneMoreCharacter(this, 0, (PegCharacter)p);
+			}
+		}
+		return new PegRepeat(this, 0, newCommit(p), 1);
 	}
 	
 	public final Peg newZeroMore(Peg p) {
 		String key = prefixZeroMore + p.key();
 		Peg e = getsem(key);
 		if(e == null) {
-			e = putsem(key, newRepeat(p, 0));
+			e = putsem(key, newZeroMoreImpl(p));
 		}
 		return e;
+	}
+
+	private Peg newZeroMoreImpl(Peg p) {
+		if(p instanceof PegCharacter) {
+			return new PegZeroMoreCharacter(this, 0, (PegCharacter)p);
+		}
+		return new PegRepeat(this, 0, newCommit(p), 0);
 	}
 
 	public final Peg newAnd(Peg p) {
@@ -418,7 +443,7 @@ public class Grammar {
 		if(p instanceof PegOperation) {
 			p = ((PegOperation)p).inner;
 		}
-		return new PegAnd(this, 0, new PegMonad(p));
+		return new PegAnd(this, 0, newMonad(p));
 	}
 
 
@@ -449,7 +474,7 @@ public class Grammar {
 		if(p instanceof PegOperation) {
 			p = ((PegOperation)p).inner;
 		}
-		return new PegNot(this, 0, new PegMonad(p));
+		return new PegNot(this, 0, newMonad(p));
 	}
 	
 	public Peg newChoice(UList<Peg> l) {
