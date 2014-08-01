@@ -1,5 +1,11 @@
 package org.peg4d;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -39,9 +45,9 @@ class Stat {
 			this.WorstBacktrackSize = len;
 			this.WorstPosition = pos;
 		}
-		if(pos < BacktrackHistgram.length) {
-			setHistgram((int)pos, (int)len);
-		}
+//		if(pos < BacktrackHistgram.length) {
+//			setHistgram((int)pos, (int)len);
+//		}
 	}
 
 	int backtrackCount[] = new int[32];
@@ -50,35 +56,35 @@ class Stat {
 		backtrackCount[n] += 1;
 	}
 	
-	int BacktrackHistgram[] = new int[4096];
-	
-	private void setHistgram(int pos, int len) {
-		int end = pos + len < BacktrackHistgram.length ? pos + len : BacktrackHistgram.length;
-		for(int i = pos; i < end; i++) {
-			this.BacktrackHistgram[i] += 1;
-		}
-	}
-
-	private void showHistgram() {
-		int max = 1;
-		for(int i = 0; i < this.BacktrackHistgram.length; i++) {
-			if(max < this.BacktrackHistgram[i]) {
-				max = this.BacktrackHistgram[i];
-			}
-		}
-		for(int i = 0; i < this.BacktrackHistgram.length/10; i++) {
-			System.out.println(""+i + "\t: " + this.BacktrackHistgram[i] + "\t" + star(this.BacktrackHistgram[i], max));
-		}
-	}
-
-	private String star(int n, int m) {
-		n = 30 * n / m;
-		String s = "";
-		for(int i = 0; i < n; i++) {
-			s += "*";
-		}
-		return s;
-	}
+//	int BacktrackHistgram[] = new int[4096];
+//	
+//	private void setHistgram(int pos, int len) {
+//		int end = pos + len < BacktrackHistgram.length ? pos + len : BacktrackHistgram.length;
+//		for(int i = pos; i < end; i++) {
+//			this.BacktrackHistgram[i] += 1;
+//		}
+//	}
+//
+//	private void showHistgram() {
+//		int max = 1;
+//		for(int i = 0; i < this.BacktrackHistgram.length; i++) {
+//			if(max < this.BacktrackHistgram[i]) {
+//				max = this.BacktrackHistgram[i];
+//			}
+//		}
+//		for(int i = 0; i < this.BacktrackHistgram.length/10; i++) {
+//			System.out.println(""+i + "\t: " + this.BacktrackHistgram[i] + "\t" + star(this.BacktrackHistgram[i], max));
+//		}
+//	}
+//
+//	private String star(int n, int m) {
+//		n = 30 * n / m;
+//		String s = "";
+//		for(int i = 0; i < n; i++) {
+//			s += "*";
+//		}
+//		return s;
+//	}
 	
 	int  NewObjectCount = 0;
 	int  ObjectCount    = 0;
@@ -225,15 +231,15 @@ class Stat {
 		}
 	}
 
-	
+	long InitTotalHeap = 0;
 	long ErapsedTime = 0;
 	double Latency  = 0;
 
 	public void start() {
 		System.gc(); // meaningless ?
-		long total = Runtime.getRuntime().totalMemory();
+		InitTotalHeap = Runtime.getRuntime().totalMemory();
 		long free =  Runtime.getRuntime().freeMemory();
-		this.UsedHeapSize =  total - free;
+		this.UsedHeapSize =  InitTotalHeap - free;
 		this.ErapsedTime = System.currentTimeMillis();
 	}
 	
@@ -250,16 +256,33 @@ class Stat {
 		this.HeapSize = total - free;
 		this.UsedHeapSize =  this.HeapSize - this.UsedHeapSize;
 
+		
 		this.set(new vText("Parser", p.getName()));
-		this.setCount("OptimizationLevel", Main.OptimizationLevel);
+		this.setCount("Optimization", Main.OptimizationLevel);
 		this.setCount("MemoFactor", Main.MemoFactor);
 
-		this.set(new vText("FileName", p.source.fileName));
+		String fileName = p.source.fileName;
+		if(fileName.lastIndexOf('/') > 0) {
+			fileName = fileName.substring(fileName.lastIndexOf('/')+1);
+		}
+		String id = fileName;
+		if(fileName.lastIndexOf('.') > 0) {
+			id = fileName.substring(0, fileName.lastIndexOf('.'));
+		}
+		id += "#" + p.peg.DefinedPegSize;
+
+		this.set(new vText("FileName", fileName));
 		this.setCount1("FileSize", this.statFileLength);
 		this.setCount1("DiskIO", this.statIOCount);
 		this.setCount1("ReadFileSize", this.statReadLength);
 		this.setRatio1("IO Ratio", this.statReadLength, this.statFileLength);
 
+		this.setCount("Memory", this.InitTotalHeap);
+		id = id + ((Main.RecognitionOnlyMode) ? 'C' : 'O');
+		id = id + Main.OptimizationLevel + "." + Main.MemoFactor + "."  + (this.InitTotalHeap / (1024*1024)) +"M";
+		this.setCount("HeapSize", this.HeapSize);
+		this.setCount("UsedHeapSize", this.UsedHeapSize);
+		
 		this.setCount("ConsumedLength", this.ConsumedLength);
 		this.setCount1("UnconsumedLength", this.UnconsumedLength);
 		
@@ -273,10 +296,10 @@ class Stat {
 		this.setRatio("Backtrack2", this.backtrackCount[1], this.BacktrackCount);
 		this.setRatio("Backtrack4", this.backtrackCount[2], this.BacktrackCount);
 		this.setRatio("Backtrack8", this.backtrackCount[3], this.BacktrackCount);
-		this.setRatio1("Backtrack16", this.backtrackCount[4], this.BacktrackCount);
-		this.setRatio1("Backtrack32", this.backtrackCount[5], this.BacktrackCount);
-		this.setRatio1("Backtrack64", this.backtrackCount[6], this.BacktrackCount);
-		this.setRatio1("Backtrack128", this.backtrackCount[7], this.BacktrackCount);
+		this.setRatio("Backtrack16", this.backtrackCount[4], this.BacktrackCount);
+		this.setRatio("Backtrack32", this.backtrackCount[5], this.BacktrackCount);
+		this.setRatio("Backtrack64", this.backtrackCount[6], this.BacktrackCount);
+		this.setRatio("Backtrack128", this.backtrackCount[7], this.BacktrackCount);
 		this.setRatio1("Backtrack256", this.backtrackCount[8], this.BacktrackCount);
 		this.setRatio1("Backtrack512", this.backtrackCount[9], this.BacktrackCount);
 		this.setRatio1("Backtrack1024", this.backtrackCount[10], this.BacktrackCount);
@@ -286,9 +309,9 @@ class Stat {
 
 		this.statObject(pego);
 		p.peg.updateStat(this);
+		this.setText("StatId", id);
 		this.setCount("ErapsedTime", this.ErapsedTime);  // ms
 		this.setRatio("Latency", this.ConsumedLength, this.ErapsedTime);
-
 		
 		this.writeCSV();
 	}
@@ -296,9 +319,11 @@ class Stat {
 	private UMap<vData> csvMap = new UMap<vData>();
 	
 	private void set (vData data) {
-		UStringBuilder sb = new UStringBuilder();
-		data.stringfy(sb, false);
-		System.out.println(sb.toString());
+		if(Main.VerboseMode) {
+			UStringBuilder sb = new UStringBuilder();
+			data.stringfy(sb, false);
+			System.out.println(sb.toString());
+		}
 		this.csvMap.put(data.key, data);
 	}
 	
@@ -353,11 +378,15 @@ class Stat {
 				sb.append(String.format("%.4f", this.value));
 			}
 			else {
-				sb.append("" + this.value);
+				if(Double.isInfinite(this.value) || Double.isNaN(this.value)) {
+					sb.append("");
+				}
+				else {
+					sb.append(String.format("%.5f", this.value));
+				}
 			}
 		}
 	}
-
 
 	public final void setText(String key, String v) {
 		this.set(new vText(key, v));
@@ -400,12 +429,19 @@ class Stat {
 
 	public final void writeCSV() {
 		UStringBuilder sb = new UStringBuilder();
-		this.CSV(sb, "Parser");
-		
+		sb.append("v1,");
+		this.CSV(sb, "StatId");
+		this.CSV(sb, "MemoFactor");
+		this.CSV(sb, "Optimization");
+		this.CSV(sb, "Memory");
+		/** **/
 		this.CSV(sb, "FileName");
 		this.CSV(sb, "FileSize");
 		this.CSV(sb, "ErapsedTime");
 		this.CSV(sb, "Latency");
+		this.CSV(sb, "HeapSize");
+		/** **/
+		sb.append("*,");  // mark
 		this.CSV(sb, "ConsumedLength");
 		this.CSV(sb, "BacktrackLength");
 		this.CSV(sb, "Backtrack/Consumed");
@@ -420,20 +456,43 @@ class Stat {
 		this.CSV(sb, "Backtrack32");
 		this.CSV(sb, "Backtrack64");
 		this.CSV(sb, "Backtrack128");
+		
+		/** **/
+		sb.append("*,");  // mark
+		this.CSV(sb, "Peg");
+		this.CSV(sb, "PegSize");
+		this.CSV(sb, "Complexity");
+		this.CSV(sb, "Predictablity");
+		
+		/** **/
+
 		this.CSV(sb, "MemoHit");
 		this.CSV(sb, "MemoMiss");
 		this.CSV(sb, "Hit/Miss");
 		
+		/** **/
 		this.CSV(sb, "UsedObject");
 		this.CSV(sb, "DisposedObject");
 		this.CSV(sb, "Disposal/Used");
-		this.CSV(sb, "NewObject");
-		this.CSV(sb, "New/Creation");
+//		this.CSV(sb, "NewObject");
+//		this.CSV(sb, "New/Creation");
 		this.CSV(sb, "ObjectEdge");
 		this.CSV(sb, "ObjectNode");
 		this.CSV(sb, "ObjectDepth");
 
-		System.out.println(sb.toString());
+		/** **/
+		SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy/MM/dd");
+		sb.append("" + sdf1.format(new Date()));
+		String csv = sb.toString();
+		System.out.println("====");
+		System.out.println(csv);
+		System.out.println("====");
+		
+		
+		try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("results.csv", true)))) {
+		    out.println(csv);
+		}catch (IOException e) {
+		}
 	}
 	
 	

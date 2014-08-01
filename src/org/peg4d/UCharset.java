@@ -5,11 +5,12 @@ import java.io.UnsupportedEncodingException;
 public class UCharset {
 	String    text;
 	boolean[] asciiBitMap;
-	UMap<String> utfBitMap = null;
+	int size = 0;
+//	UMap<String> utfBitMap = null;
 
 	public UCharset(String charSet) {
 		this.text = charSet;
-		this.asciiBitMap = new boolean[128];
+		this.asciiBitMap = new boolean[256];
 		this.parse(charSet);
 	}
 
@@ -18,56 +19,38 @@ public class UCharset {
 		return this.text;
 	}
 
-	public final boolean hasChar(char ch) {
-		if(ch < 128) {
+	public final boolean hasChar(int ch) {
+		if(ch < asciiBitMap.length) {
 			return this.asciiBitMap[ch];
-		}
-		if(this.utfBitMap != null) {
-			return this.utfBitMap.hasKey(Main._CharToString(ch));
 		}
 		return false;
 	}
 
 	public final boolean hasUnicode() {
-		return this.utfBitMap != null;
+//		return this.utfBitMap != null;
+		return false;
 	}
 	
 	public final String key() {
 		return text;  // fixme
 	}
 
-	public final boolean match(char ch) {
-		if(ch < 128) {
-			return this.asciiBitMap[ch];
-		}
-		if(this.utfBitMap != null) {
-			return this.utfBitMap.hasKey(Main._CharToString(ch));
-		}
-		return false;
-	}
-
 	public final boolean match(int ch) {
-		if(ch < 128) {
-			return this.asciiBitMap[ch];
-		}
-		if(this.utfBitMap != null) {
-			return this.utfBitMap.hasKey(Main._CharToString(ch));
-		}
-		return false;
+		return this.asciiBitMap[ch];
 	}
 
-
-	final void set(char ch) {
-		if(ch < 128) {
-			//System.out.println("charSet='"+this.charSet+"' : ch = '" + ch + "'");
-			this.asciiBitMap[ch] = true;
-		}
-		else {
-			if(this.utfBitMap == null) {
-				this.utfBitMap = new UMap<String>();
+	final void set(int ch) {
+		if(ch < this.asciiBitMap.length) {
+			if(this.asciiBitMap[ch] == false) {
+				this.size += 1;
+				this.asciiBitMap[ch] = true;
 			}
-			String key = Main._CharToString(ch);
-			this.utfBitMap.put(key, key);
+		}
+	}
+	
+	private void setRange(int ch, int ch2) {
+		for(;ch <= ch2; ch++) {
+			this.set(ch);
 		}
 	}
 
@@ -77,7 +60,7 @@ public class UCharset {
 		while(ch != 0) {
 			char next = r.readChar();
 			if(next == '-') {
-				this.set2(ch, r.readChar());
+				this.setRange(ch, r.readChar());
 				ch = r.readChar();
 			}
 			else {
@@ -87,34 +70,18 @@ public class UCharset {
 		}
 	}
 
-	private void set2(int ch, int ch2) {
-		for(;ch <= ch2; ch++) {
-			this.set((char)ch);
-		}
-	}
-	
 	public final void append(UCharset charset) {
 		for(int i = 0; i < this.asciiBitMap.length; i++) {
 			if(charset.asciiBitMap[i]) {
 				this.asciiBitMap[i] = true;
 			}
 		}
-		if(charset.utfBitMap != null) {
-			UList<String> l = charset.utfBitMap.keys();
-			for(int i = 0; i < l.size(); i++) {
-				this.set(l.ArrayValues[i].charAt(0));
-			}
-		}
 		this.text += charset.text;
 	}
 
-	public final void append(char ch) {
-		this.set(ch);
-		this.text += ch;
-	}
-
 	public final void append(int ch) {
-		this.append((char)ch);
+		this.set(ch);
+		this.text += (char)ch;
 	}
 
 	public final static int getFirstChar(String text) {

@@ -31,6 +31,9 @@ public class Grammar {
 		PEG4dGrammar peg4d = Grammar.PEG4d;
 		ParserContext p = peg4d.newParserContext(Main.loadSource(fileName));
 		this.name = fileName;
+		if(fileName.indexOf('/') > 0) {
+			this.name = fileName.substring(fileName.lastIndexOf('/')+1);
+		}
 		p.setRecognitionOnly(false);
 		while(p.hasNode()) {
 			Pego pego = p.parseNode("TopLevel");
@@ -108,14 +111,16 @@ public class Grammar {
 		this.memoRemover = new MemoRemover(this);
 	}
 
+	int DefinedPegSize = 0;
 	private int MultiReference = 0;
 	private int Reference = 0;
 	int StrongPredicatedChoice = 0;
 	int PredicatedChoice = 0;
 	int UnpredicatedChoice = 0;
 
-
 	void updateStat(Stat stat) {
+		stat.setText("Peg", this.getName());
+		stat.setCount("PegSize", this.DefinedPegSize);
 		stat.setCount("PegReference",   this.Reference);
 		stat.setCount("MultiReference", this.MultiReference);
 		stat.setRatio("Complexity", this.MultiReference, this.Reference);
@@ -605,6 +610,7 @@ class PEG4dGrammar extends Grammar {
 		e.source = node.getSource();
 		e.sourcePosition = (int)node.getSourcePosition();
 		//System.out.println("seq: " + e.getClass() + ", size="+e.size());
+		loadingGrammar.DefinedPegSize += 1;
 		return e;
 	}	
 	
