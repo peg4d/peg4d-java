@@ -3,6 +3,7 @@ package org.peg4d;
 import java.io.UnsupportedEncodingException;
 
 public class UCharset {
+	public final static int MAX = 256;
 	String    text;
 	boolean[] asciiBitMap;
 	int size = 0;
@@ -10,7 +11,7 @@ public class UCharset {
 
 	public UCharset(String charSet) {
 		this.text = charSet;
-		this.asciiBitMap = new boolean[256];
+		this.asciiBitMap = new boolean[MAX];
 		this.parse(charSet);
 	}
 
@@ -20,7 +21,7 @@ public class UCharset {
 	}
 
 	public final boolean hasChar(int ch) {
-		if(ch < asciiBitMap.length) {
+		if(ch < MAX) {
 			return this.asciiBitMap[ch];
 		}
 		return false;
@@ -40,7 +41,7 @@ public class UCharset {
 	}
 
 	final void set(int ch) {
-		if(ch < this.asciiBitMap.length) {
+		if(ch < MAX) {
 			if(this.asciiBitMap[ch] == false) {
 				this.size += 1;
 				this.asciiBitMap[ch] = true;
@@ -71,9 +72,9 @@ public class UCharset {
 	}
 
 	public final void append(UCharset charset) {
-		for(int i = 0; i < this.asciiBitMap.length; i++) {
+		for(int i = 0; i < MAX; i++) {
 			if(charset.asciiBitMap[i]) {
-				this.asciiBitMap[i] = true;
+				this.set(i);
 			}
 		}
 		this.text += charset.text;
@@ -82,10 +83,6 @@ public class UCharset {
 	public final void append(int ch) {
 		this.set(ch);
 		this.text += (char)ch;
-	}
-
-	public final static int getFirstChar(String text) {
-		return text.charAt(0);
 	}
 
 	public static final String _QuoteString(char OpenChar, String Text, char CloseChar) {
@@ -186,6 +183,10 @@ public class UCharset {
 		} catch (UnsupportedEncodingException e) {
 		}
 		return text.getBytes();
+	}
+
+	public static int getFirstChar(byte[] text) {
+		return text[0] & 0xff;
 	}
 
 

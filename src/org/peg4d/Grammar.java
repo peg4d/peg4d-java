@@ -117,6 +117,8 @@ public class Grammar {
 	int StrongPredicatedChoice = 0;
 	int PredicatedChoice = 0;
 	int UnpredicatedChoice = 0;
+	int PredicatedChoiceL1 = 0;
+	int UnpredicatedChoiceL1 = 0;
 
 	void updateStat(Stat stat) {
 		stat.setText("Peg", this.getName());

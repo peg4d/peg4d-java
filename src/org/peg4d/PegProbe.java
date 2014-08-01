@@ -793,6 +793,20 @@ class MemoRemover extends PegProbe {
 		}
 	}
 	
+	@Override
+	public void visitChoice(PegChoice e) {
+		this.visitList(e);
+		if(e.caseOf != null) {
+			for(int i = 0; i < UCharset.MAX; i++) {
+				if(e.caseOf[i] != null) {
+					Peg se = this.removeMemo(e.caseOf[i]);
+					e.caseOf[i] = se;
+					se.visit(this);
+				}
+			}
+		}
+	}
+	
 }
 
 class ObjectRemover extends PegProbe {

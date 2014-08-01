@@ -221,7 +221,7 @@ class PegString extends PegTerm {
 		}
 		if(enforceCharset) {
 			UCharset u = new UCharset("");
-			u.append(UCharset.getFirstChar(this.text));
+			u.append(UCharset.getFirstChar(this.textByte));
 			return u;
 		}
 		return this.text;
@@ -246,7 +246,7 @@ class PegString1 extends PegString {
 	int symbol1;
 	public PegString1(Grammar base, int flag, String token) {
 		super(base, flag, token);
-		this.symbol1 = token.charAt(0);
+		this.symbol1 = this.textByte[0] & 0xff;
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -264,8 +264,8 @@ class PegString2 extends PegString {
 	int symbol2;
 	public PegString2(Grammar base, int flag, String token) {
 		super(base, flag, token);
-		this.symbol1 = token.charAt(0);
-		this.symbol2 = token.charAt(1);
+		this.symbol1 = this.textByte[0] & 0xff;
+		this.symbol2 = this.textByte[1] & 0xff;
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -859,7 +859,7 @@ abstract class PegList extends Peg {
 		UCharset optionalCharset = null;
 		while(start < this.size()) {
 			Peg e = this.get(start);
-			if(e instanceof PegTagging || e instanceof PegMessage || e instanceof PegNot) {
+			if(e instanceof PegTagging || e instanceof PegMessage) {
 				start += 1;
 				continue;
 			}
@@ -1118,63 +1118,38 @@ class PegChoice extends PegList {
 		return context.foundFailure(this);
 	}
 
-	private Pego simpleMatchImpl(Pego left, ParserContext context) {
-		for(int i = 0; i < this.size(); i++) {
-			Pego right = this.get(i).simpleMatch(left, context);
-			if(!right.isFailure()) {
-				return right;
-			}
-		}
-		return context.foundFailure(this);
-	}
+//	private Pego simpleMatchImpl(Pego left, ParserContext context) {
+//		for(int i = 0; i < this.size(); i++) {
+//			Pego right = this.get(i).simpleMatch(left, context);
+//			if(!right.isFailure()) {
+//				return right;
+//			}
+//		}
+//		return context.foundFailure(this);
+//	}
 
 	Peg[] caseOf = null;
 	Peg   alwaysFailure = null;
 	UCharset uset[] = null;
-	boolean foundUnicode = false;
 
 	void tryPrediction2(int maxUnpredicatedChoice) {
-		if(this.unpredictedChoice <= maxUnpredicatedChoice) {
-			this.caseOf = new Peg[128];
+		if(this.unpredictedChoice == 0) {
+			this.caseOf = new Peg[UCharset.MAX];
 			this.alwaysFailure = new PegAlwaysFailure(this);
 			this.base.PredictionOptimization += 1;
-			if(this.unpredictedChoice == 0) {
-				for(int i = 0; i < this.size(); i++) {
-					UCharset u = this.uset[i];
-					for(int ch = 0; ch < 128; ch ++) {
-						if(u.hasChar((char)ch)) {
-							this.caseOf[ch] = this.base.mergeChoice(this.caseOf[ch], this.get(i));
-						}
-						if(u.hasUnicode()) {
-							this.foundUnicode = true;
-						}
-					}
-				}
-				for(int i = 0; i < this.caseOf.length; i++) {
-					if(this.caseOf[i] == null) {
-						this.caseOf[i] = this.alwaysFailure;
-					}
-				}
+			for(int ch = 0; ch < UCharset.MAX; ch ++) {
+				this.caseOf[ch] = this.performSelection(ch);
 			}
 		}
 	}
 	
 	private Pego predictedMatch(Pego left, ParserContext context) {
 		int ch = context.getChar();
-		if(ch < 128) {
-			if(caseOf[ch] == null) {
-				caseOf[ch] = performSelection(ch);
-			}
-			return caseOf[ch].simpleMatch(left, context);
+		if(caseOf[ch] == null) {
+			caseOf[ch] = performSelection(ch);
 		}
-		else {
-			if(this.foundUnicode) {
-				return this.simpleMatchImpl(left, context);
-			}
-		}
-		return context.foundFailure(this);
+		return caseOf[ch].simpleMatch(left, context);
 	}
-		
 
 	boolean accept(int i, int ch) {
 		if(uset[i] == null) {
@@ -1185,15 +1160,32 @@ class PegChoice extends PegList {
 
 	private Peg performSelection(int ch) {
 		Peg e = null;
+		UList<Peg> l = null; // new UList<Peg>(new Peg[2]);
 		for(int i = 0; i < this.size(); i++) {
 			if(this.accept(i, ch)) {
-				e = this.base.mergeChoice(e, this.get(i));
+				if(e == null) {
+					e = this.get(i);
+				}
+				else {
+					if(l == null) {
+						l = new UList<Peg>(new Peg[2]);
+						l.add(e);
+					}
+					l.add(get(i));
+				}
 			}
 		}
 		if(e == null) {
 			e = this.alwaysFailure;
 		}
-		//System.out.println("selected: '" + (char)ch + "': " + e.size() + " / " + this.size());
+		if(l != null) {
+			e = new PegChoice(e.base, 0, l);
+			//System.out.println("selected: '" + (char)ch + "': " + l.size() + " / " + this.size());
+			e.base.UnpredicatedChoiceL1 += 1;
+		}
+		else {
+			e.base.PredicatedChoiceL1 +=1;
+		}
 		return e;
 	}
 
@@ -1257,59 +1249,6 @@ class PegWordChoice extends PegChoice {
 	
 }
 
-//class PegMappedChoice extends PegChoice {
-//	private HashMap<String, Peg> map;
-//	PegMappedChoice(PegChoice choice) {
-//		super(choice.base, choice.flag, choice.list);
-//		this.getPrediction();
-//		this.map = new HashMap<String, Peg>(this.size() * 4 + 1);
-//		for(int i = 0; i < this.size(); i++) {
-//			Peg sub = this.get(i);
-//			
-//			String key = sub.getPrediction().toString().substring(0, this.prefixSize);
-//			Peg defined = map.get(key);
-//			if(defined != null) {
-//				sub = defined.appendAsChoice(sub);
-//			}
-//			map.put(key, sub);
-//		}
-//	}
-//
-//	@Override
-//	public Pego simpleMatch(Pego left, ParserContext context) {
-////		char ch = context.getChar();
-////		if(this.predicted.match(ch)) {
-//			long pos = context.getPosition();
-//			String token = context.substring(pos, pos + this.prefixSize);
-//			Peg e = this.map.get(token);
-//			if(e != null) {
-//				Pego node2 = e.simpleMatch(left, context);
-////				if(node2.isFailure()) {
-////					context.setPosition(pos);
-////				}
-//				return node2;
-//			}
-////		}
-//		return context.foundFailure(this);
-//	}
-//	
-//	@Override
-//	public int fastMatch(int left, MonadicParser context) {
-//		long pos = context.getPosition();
-//		String token = context.substring(pos, pos + this.prefixSize);
-//		Peg e = this.map.get(token);
-//		if(e != null) {
-//			int node2 = e.fastMatch(left, context);
-//			if(PEGUtils.isFailure(node2)) {
-//				context.setPosition(pos);
-//			}
-//			return node2;
-//		}
-//		//System.out.println("failure: " + pos + " token='"+token+"' in " + this.map.keys());
-//		return context.foundFailure2(this);
-//	}
-//}
-
 class PegAlwaysFailure extends PegString {
 	public PegAlwaysFailure(Peg orig) {
 		super(orig.base, 0, "\0");
@@ -1322,115 +1261,6 @@ class PegAlwaysFailure extends PegString {
 	public int fastMatch(int left, MonadicParser context) {
 		return context.foundFailure2(this);
 	}
-}
-
-class PegMappedCharacterChoice extends PegChoice {
-	Peg[] caseOf;
-	boolean foundUnicode = false;
-	Peg   alwaysFailure;
-	UList<String> keyList;
-	
-	PegMappedCharacterChoice(PegChoice choice) {
-		super(choice.base, choice.flag, choice.list);
-		this.getPrediction(false/*enforceCharset*/);
-		this.keyList = new UList<String>(new String[16]);
-		this.caseOf = new Peg[128];
-	}
-
-	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
-		int ch = context.getChar();
-		if(ch < 128) {
-			if(caseOf[ch] != null) {
-				return caseOf[ch].simpleMatch(left, context);
-			}
-		}
-		else {
-			if(this.foundUnicode) {
-				return super.simpleMatch(left, context);
-			}
-		}
-		return context.foundFailure(this);
-	}
-	
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		int ch = context.getChar();
-		if(ch < 128) {
-			if(caseOf[ch] != null) {
-				return caseOf[ch].fastMatch(left, context);
-			}
-		}
-		else {
-			if(this.foundUnicode) {
-				return super.fastMatch(left, context);
-			}
-		}
-		return context.foundFailure2(this);
-	}
-}
-
-class PegSelectiveChoice extends PegChoice {
-	Peg[] caseOf;
-	Peg   alwaysFailure;
-	UCharset uset[];
-	PegSelectiveChoice(PegChoice c) {
-		super(c.base, c.flag, c.list);
-		this.caseOf = new Peg[128];
-		this.alwaysFailure = new PegAlwaysFailure(c);
-		uset = new UCharset[this.size()];
-		for(int i = 0; i < uset.length; i++) {
-			uset[i] = this.get(i).getCharsetPrediction();
-		}
-	}
-			
-	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
-		int ch = context.getChar();
-		if(ch < 128) {
-			if(caseOf[ch] == null) {
-				caseOf[ch] = performSelection(ch);
-			}
-			//System.out.println("selecting ch = " + (char)ch);
-			return caseOf[ch].simpleMatch(left, context);
-		}
-		return super.simpleMatch(left, context);
-	}
-
-	@Override
-	boolean accept(int i, int ch) {
-		if(uset[i] == null) {
-			return true;
-		}
-		return this.uset[i].match(ch);
-	}
-	
-	private Peg performSelection(int ch) {
-		Peg e = null;
-		for(int i = 0; i < this.size(); i++) {
-			if(this.accept(i, ch)) {
-				e = this.base.mergeChoice(e, this.get(i));
-			}
-		}
-		if(e == null) {
-			e = this.alwaysFailure;
-		}
-		System.out.println("selected: '" + (char)ch + "': " + e.size() + " / " + this.size());
-		return e;
-	}
-
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		int ch = context.getChar();
-		if(ch < 128) {
-			if(caseOf[ch] == null) {
-				caseOf[ch] = performSelection(ch);
-			}
-			return caseOf[ch].fastMatch(left, context);
-		}
-		return super.fastMatch(left, context);
-	}
-	
 }
 
 
