@@ -423,10 +423,10 @@ public class MonadicParser extends ParserContext {
 	}
 	
 	public int matchIndent(int left, PegIndent e) {
-		String indent = this.source.getIndentText(PEGUtils.getpos(left));
-		if(this.match(indent)) {
-			return left;
-		}
+//		String indent = this.source.getIndentText(PEGUtils.getpos(left));
+//		if(this.match(indent)) {
+//			return left;
+//		}
 		return this.foundFailure2(e);
 	}
 

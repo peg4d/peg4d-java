@@ -1,6 +1,5 @@
 package org.peg4d;
 
-import org.peg4d.MemoMap.ObjectMemo;
 
 public class PackratParser extends RecursiveDecentParser {
 
@@ -45,30 +44,30 @@ public class PackratParser extends RecursiveDecentParser {
 //		}
 //		return generated;
 //	}
-
-	@Override
-	public Pego matchNonTerminal(Pego left, PegNonTerminal label) {
-		Peg next = this.getRule(label.symbol);
-		long pos = this.getPosition();
-		ObjectMemo m = this.memoMap.getMemo(next, pos);
-		if(m != null) {
-			if(m.generated == null) {
-				return this.refoundFailure(label, pos+m.consumed);
-			}
-			setPosition(pos + m.consumed);
-			return m.generated;
-		}
-		if(this.stat != null) {
-			this.stat.countRepeatCall(next, pos);
-		}
-		Pego result = next.simpleMatch(left, this);
-		if(result.isFailure()) {
-			this.memoMap.setMemo(pos, next, null, (int)(result.getSourcePosition() - pos));
-		}
-		else {
-			this.memoMap.setMemo(pos, next, result, (int)(this.getPosition() - pos));
-		}
-		return result;
-	}
+//
+//	@Override
+//	public Pego matchNonTerminal(Pego left, PegNonTerminal label) {
+//		Peg next = this.getRule(label.symbol);
+//		long pos = this.getPosition();
+//		ObjectMemo m = this.memoMap.getMemo(next, pos);
+//		if(m != null) {
+//			if(m.generated == null) {
+//				return this.refoundFailure(label, pos+m.consumed);
+//			}
+//			setPosition(pos + m.consumed);
+//			return m.generated;
+//		}
+//		if(this.stat != null) {
+//			this.stat.countRepeatCall(next, pos);
+//		}
+//		Pego result = next.simpleMatch(left, this);
+//		if(result.isFailure()) {
+//			this.memoMap.setMemo(pos, next, null, (int)(result.getSourcePosition() - pos));
+//		}
+//		else {
+//			this.memoMap.setMemo(pos, next, result, (int)(this.getPosition() - pos));
+//		}
+//		return result;
+//	}
 
 }

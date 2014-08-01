@@ -228,14 +228,14 @@ class PegString extends PegTerm {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		if(context.match(this.text)) {
+		if(context.match(this.textByte)) {
 			return left;
 		}
 		return context.foundFailure(this);
 	}
 	@Override
 	public int fastMatch(int left, MonadicParser context) {
-		if(context.match(this.text)) {
+		if(context.match(this.textByte)) {
 			return left;
 		}
 		return context.foundFailure2(this);
@@ -473,19 +473,19 @@ class PegOptional extends PegUnary {
 }
 
 class PegOptionalString extends PegOptional {
-	String symbol;
+	byte[] textByte;
 	public PegOptionalString(Grammar base, int flag, PegString e) {
 		super(base, flag | Peg.NoMemo, e);
-		this.symbol = e.text;
+		this.textByte = e.textByte;
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		context.match(this.symbol);
+		context.match(this.textByte);
 		return left;
 	}
 	@Override
 	public int fastMatch(int left, MonadicParser context) {
-		context.match(this.symbol);
+		context.match(this.textByte);
 		return left;
 	}
 }
@@ -667,7 +667,12 @@ class PegAnd extends PegUnary {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchAnd(left, this);
+		long pos = context.getPosition();
+//		int markerId = this.markObjectStack();
+		Pego right = this.inner.simpleMatch(left, context);
+//		this.rollbackObjectStack(markerId);
+		context.rollback(pos);
+		return right;
 	}
 	@Override
 	public Object getPrediction(boolean enforceCharset) {
@@ -730,21 +735,18 @@ class PegNot extends PegUnary {
 }
 
 class PegNotString extends PegNot {
-	String symbol;
+	byte[] textBuffer;
 	public PegNotString(Grammar peg, int flag, PegString e) {
 		super(peg, flag | Peg.NoMemo, e);
-		this.symbol = e.text;
+		this.textBuffer = e.textByte;
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		long pos = context.getPosition();
-		if(context.match(this.symbol)) {
+		if(context.match(this.textBuffer)) {
 			//context.setPosition(pos);
 			return context.foundFailure(this);
 		}
-//		if(this.nextAny) {
-//			return this.matchNextAny(left, context);
-//		}
 		return left;
 	}
 }
@@ -760,9 +762,6 @@ class PegNotString1 extends PegNotString {
 		if(this.symbol == context.getChar()) {
 			return context.foundFailure(this);
 		}
-//		if(this.nextAny) {
-//			return this.matchNextAny(left, context);
-//		}
 		return left;
 	}
 }	
@@ -981,11 +980,22 @@ class PegSequence extends PegList {
 	protected void visit(PegProbe probe) {
 		probe.visitSequence(this);
 	}	
-	
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchSequence(left, this);
+		long pos = context.getPosition();
+		int mark = context.markObjectStack();
+		for(int i = 0; i < this.size(); i++) {
+			Pego right = this.get(i).simpleMatch(left, context);
+			if(right.isFailure()) {
+				context.rollbackObjectStack(mark);
+				context.rollback(pos);
+				return right;
+			}
+			left = right;
+		}
+		return left;
 	}
+	
 	@Override
 	public int fastMatch(int left, MonadicParser context) {
 		long pos = context.getPosition();
@@ -1206,10 +1216,10 @@ class PegChoice extends PegList {
 
 class PegWordChoice extends PegChoice {
 	UCharset charset = null;
-	UList<String> wordList = null;
+	UList<byte[]> wordList = null;
 	PegWordChoice(Grammar base, int flag, UList<Peg> list) {
 		super(base, flag | Peg.HasChoice, list);
-		this.wordList = new UList<String>(new String[list.size()]);
+		this.wordList = new UList<byte[]>(new byte[list.size()][]);
 		for(int i = 0; i < list.size(); i++) {
 			Peg se = list.ArrayValues[i];
 			if(se instanceof PegString1) {
@@ -1225,7 +1235,7 @@ class PegWordChoice extends PegChoice {
 				charset.append(((PegCharacter)se).charset);
 			}
 			if(se instanceof PegString) {
-				wordList.add(((PegString)se).text);
+				wordList.add(((PegString)se).textByte);
 			}
 		}
 	}
@@ -1238,8 +1248,7 @@ class PegWordChoice extends PegChoice {
 			}
 		}
 		for(int i = 0; i < this.wordList.size(); i++) {
-			String w = this.wordList.ArrayValues[i];
-			if(context.match(w)) {
+			if(context.match(this.wordList.ArrayValues[i])) {
 				return left;
 			}
 		}

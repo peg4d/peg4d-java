@@ -120,18 +120,18 @@ public abstract class ParserContext {
 		return false;
 	}
 	
-	protected final boolean match(String text) {
-		if(this.endPosition - this.sourcePosition >= text.length()) {
-			for(int i = 0; i < text.length(); i++) {
-				if(text.charAt(i) != this.source.charAt(this.sourcePosition + i)) {
-					return false;
-				}
-			}
-			this.consume(text.length());
-			return true;
-		}
-		return false;
-	}
+//	protected final boolean match(String text) {
+//		if(this.endPosition - this.sourcePosition >= text.length()) {
+//			for(int i = 0; i < text.length(); i++) {
+//				if(text.charAt(i) != this.source.charAt(this.sourcePosition + i)) {
+//					return false;
+//				}
+//			}
+//			this.consume(text.length());
+//			return true;
+//		}
+//		return false;
+//	}
 
 	protected final boolean match(UCharset charset) {
 		if(charset.match(this.getChar())) {
@@ -232,132 +232,132 @@ public abstract class ParserContext {
 		return this.peg.getRule(name);
 	}
 
-	public Pego matchNonTerminal(Pego left, PegNonTerminal e) {
-		Peg next = this.getRule(e.symbol);
-		return next.simpleMatch(left, this);
-	}
-
-	public final Pego matchString(Pego left, PegString e) {
-		if(this.match(e.text)) {
-			return left;
-		}
-		return this.foundFailure(e);
-	}
-
-	public final Pego matchCharacter(Pego left, PegCharacter e) {
-		int ch = this.getChar();
-		if(!e.charset.match(ch)) {
-			return this.foundFailure(e);
-		}
-		this.consume(1);
-		return left;
-	}
-
-	public final Pego matchAny(Pego left, PegAny e) {
-		if(this.hasChar()) {
-			this.consume(1);
-			return left;
-		}
-		return this.foundFailure(e);
-	}
-
-	public Pego matchOptional(Pego left, PegOptional e) {
-		long pos = this.getPosition();
-		int markerId = this.markObjectStack();
-		Pego parsedNode = e.inner.simpleMatch(left, this);
-		if(parsedNode.isFailure()) {
-			this.rollbackObjectStack(markerId);
-			this.rollback(pos);
-			return left;
-		}
-		return parsedNode;
-	}
-
-	public Pego matchRepeat(Pego left, PegRepeat e) {
-		Pego prevNode = left;
-		int count = 0;
-		int markerId = this.markObjectStack();
-		while(this.hasChar()) {
-			long pos = this.getPosition();
-			markerId = this.markObjectStack();
-			Pego node = e.inner.simpleMatch(prevNode, this);
-			if(node.isFailure()) {
-				assert(pos == this.getPosition());
-				if(count < e.atleast) {
-					this.rollbackObjectStack(markerId);
-					return node;
-				}
-				break;
-			}
-			prevNode = node;
-			//System.out.println("startPostion=" + startPosition + ", current=" + this.getPosition() + ", count = " + count);
-			if(!(pos < this.getPosition())) {
-				if(count < e.atleast) {
-					return this.foundFailure(e);
-				}
-				break;
-			}
-			count = count + 1;
-			if(!this.hasChar()) {
-				markerId = this.markObjectStack();
-			}
-		}
-		this.rollbackObjectStack(markerId);
-		return prevNode;
-	}
-
-	public Pego matchAnd(Pego left, PegAnd e) {
-		Pego node = left;
-		long pos = this.getPosition();
-		int markerId = this.markObjectStack();
-		node = e.inner.simpleMatch(node, this);
-		this.rollbackObjectStack(markerId);
-		this.rollback(pos);
-		return node;
-	}
-
-	public Pego matchNot(Pego left, PegNot e) {
-		Pego node = left;
-		long pos = this.getPosition();
-		int markerId = this.markObjectStack();
-		node = e.inner.simpleMatch(node, this);
-		this.rollbackObjectStack(markerId);
-		this.rollback(pos);
-		if(node.isFailure()) {
-			return left;
-		}
-		return this.foundFailure(e);
-	}
-
-	public Pego matchSequence(Pego left, PegSequence e) {
-		long pos = this.getPosition();
-		int markerId = this.markObjectStack();
-		for(int i = 0; i < e.size(); i++) {
-			Pego parsedNode = e.get(i).simpleMatch(left, this);
-			if(parsedNode.isFailure()) {
-				this.rollbackObjectStack(markerId);
-				this.rollback(pos);
-				return parsedNode;
-			}
-			left = parsedNode;
-		}
-		return left;
-	}
-
-	public Pego matchChoice(Pego left, PegChoice e) {
-		Pego node = left;
-		long pos = this.getPosition();
-		for(int i = 0; i < e.size(); i++) {
-			int markerId = this.markObjectStack();
-			node = e.get(i).simpleMatch(left, this);
-			if(!node.isFailure()) {
-				break;
-			}
-			this.rollbackObjectStack(markerId);
-			this.setPosition(pos);
-		}
-		return node;
-	}
+//	public Pego matchNonTerminal(Pego left, PegNonTerminal e) {
+//		Peg next = this.getRule(e.symbol);
+//		return next.simpleMatch(left, this);
+//	}
+//
+//	public final Pego matchString(Pego left, PegString e) {
+//		if(this.match(e.text)) {
+//			return left;
+//		}
+//		return this.foundFailure(e);
+//	}
+//
+//	public final Pego matchCharacter(Pego left, PegCharacter e) {
+//		int ch = this.getChar();
+//		if(!e.charset.match(ch)) {
+//			return this.foundFailure(e);
+//		}
+//		this.consume(1);
+//		return left;
+//	}
+//
+//	public final Pego matchAny(Pego left, PegAny e) {
+//		if(this.hasChar()) {
+//			this.consume(1);
+//			return left;
+//		}
+//		return this.foundFailure(e);
+//	}
+//
+//	public Pego matchOptional(Pego left, PegOptional e) {
+//		long pos = this.getPosition();
+//		int markerId = this.markObjectStack();
+//		Pego parsedNode = e.inner.simpleMatch(left, this);
+//		if(parsedNode.isFailure()) {
+//			this.rollbackObjectStack(markerId);
+//			this.rollback(pos);
+//			return left;
+//		}
+//		return parsedNode;
+//	}
+//
+//	public Pego matchRepeat(Pego left, PegRepeat e) {
+//		Pego prevNode = left;
+//		int count = 0;
+//		int markerId = this.markObjectStack();
+//		while(this.hasChar()) {
+//			long pos = this.getPosition();
+//			markerId = this.markObjectStack();
+//			Pego node = e.inner.simpleMatch(prevNode, this);
+//			if(node.isFailure()) {
+//				assert(pos == this.getPosition());
+//				if(count < e.atleast) {
+//					this.rollbackObjectStack(markerId);
+//					return node;
+//				}
+//				break;
+//			}
+//			prevNode = node;
+//			//System.out.println("startPostion=" + startPosition + ", current=" + this.getPosition() + ", count = " + count);
+//			if(!(pos < this.getPosition())) {
+//				if(count < e.atleast) {
+//					return this.foundFailure(e);
+//				}
+//				break;
+//			}
+//			count = count + 1;
+//			if(!this.hasChar()) {
+//				markerId = this.markObjectStack();
+//			}
+//		}
+//		this.rollbackObjectStack(markerId);
+//		return prevNode;
+//	}
+//
+//	public Pego matchAnd(Pego left, PegAnd e) {
+//		Pego node = left;
+//		long pos = this.getPosition();
+//		int markerId = this.markObjectStack();
+//		node = e.inner.simpleMatch(node, this);
+//		this.rollbackObjectStack(markerId);
+//		this.rollback(pos);
+//		return node;
+//	}
+//
+//	public Pego matchNot(Pego left, PegNot e) {
+//		Pego node = left;
+//		long pos = this.getPosition();
+//		int markerId = this.markObjectStack();
+//		node = e.inner.simpleMatch(node, this);
+//		this.rollbackObjectStack(markerId);
+//		this.rollback(pos);
+//		if(node.isFailure()) {
+//			return left;
+//		}
+//		return this.foundFailure(e);
+//	}
+//
+//	public Pego matchSequence(Pego left, PegSequence e) {
+//		long pos = this.getPosition();
+//		int markerId = this.markObjectStack();
+//		for(int i = 0; i < e.size(); i++) {
+//			Pego parsedNode = e.get(i).simpleMatch(left, this);
+//			if(parsedNode.isFailure()) {
+//				this.rollbackObjectStack(markerId);
+//				this.rollback(pos);
+//				return parsedNode;
+//			}
+//			left = parsedNode;
+//		}
+//		return left;
+//	}
+//
+//	public Pego matchChoice(Pego left, PegChoice e) {
+//		Pego node = left;
+//		long pos = this.getPosition();
+//		for(int i = 0; i < e.size(); i++) {
+//			int markerId = this.markObjectStack();
+//			node = e.get(i).simpleMatch(left, this);
+//			if(!node.isFailure()) {
+//				break;
+//			}
+//			this.rollbackObjectStack(markerId);
+//			this.setPosition(pos);
+//		}
+//		return node;
+//	}
 	
 	private class ObjectLog {
 		ObjectLog next;
@@ -552,21 +552,21 @@ public abstract class ParserContext {
 	}
 	
 	public Pego matchIndent(Pego left, PegIndent e) {
-		String indent = left.getSource().getIndentText(left.getSourcePosition());
-		//System.out.println("###" + indent + "###");
-		if(this.match(indent)) {
-			return left;
-		}
+//		String indent = left.getSource().getIndentText(left.getSourcePosition());
+//		//System.out.println("###" + indent + "###");
+//		if(this.match(indent)) {
+//			return left;
+//		}
 		return this.foundFailure(e);
 	}
 
 	public Pego matchIndex(Pego left, PegIndex e) {
-		String text = left.textAt(e.index, null);
-		if(text != null) {
-			if(this.match(text)) {
-				return left;
-			}
-		}
+//		String text = left.textAt(e.index, null);
+//		if(text != null) {
+//			if(this.match(text)) {
+//				return left;
+//			}
+//		}
 		return this.foundFailure(e);
 	}
 
