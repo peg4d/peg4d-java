@@ -484,14 +484,12 @@ class Stat {
 		SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy/MM/dd");
 		sb.append("" + sdf1.format(new Date()));
 		String csv = sb.toString();
-		System.out.println("====");
 		System.out.println(csv);
-		System.out.println("====");
 		
-		
-		try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("results.csv", true)))) {
+		try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(Main.CSVFileName, true)))) {
 		    out.println(csv);
 		}catch (IOException e) {
+			Main._Exit(1, "Can't write csv log: " + Main.CSVFileName);
 		}
 	}
 	

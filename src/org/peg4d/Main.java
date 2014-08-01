@@ -65,6 +65,7 @@ public class Main {
 	// -O
 	public static int OptimizationLevel = 2;
 	public static int MemoFactor = 256;
+	public static String CSVFileName = "results.csv";
 
 	public final static void main(String[] args) {
 		parseCommandArguments(args);
@@ -123,6 +124,13 @@ public class Main {
 			else if(argument.startsWith("--stat")) {
 				StatLevel = UCharset.parseInt(argument.substring(6), 1);
 				OutputType = "none";
+			}
+			else if(argument.startsWith("--csv") && (index < args.length)) {
+				CSVFileName = args[index];
+				if(!CSVFileName.endsWith(".csv")) {
+					Main._Exit(1, "invalid csv file: " + CSVFileName);
+				}
+				index = index + 1;
 			}
 			else if ((argument.equals("-t") || argument.equals("--target")) && (index < args.length)) {
 				OutputType = args[index];
