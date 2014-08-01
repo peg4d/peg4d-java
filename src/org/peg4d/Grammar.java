@@ -130,6 +130,7 @@ public class Grammar {
 		stat.setCount("PredicatedChoice",   this.PredicatedChoice);
 		stat.setCount("UnpredicatedChoice", this.UnpredicatedChoice);
 		stat.setRatio("Predictablity", this.PredicatedChoice, this.PredicatedChoice + this.UnpredicatedChoice);
+		stat.setRatio("L1Predictability", this.PredicatedChoiceL1, this.PredicatedChoiceL1 + this.UnpredicatedChoiceL1);
 
 		stat.setCount("ActivatedMemo", this.EnabledMemo);
 		stat.setCount("DisabledMemo", this.DisabledMemo);

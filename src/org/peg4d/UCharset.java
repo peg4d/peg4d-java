@@ -7,12 +7,13 @@ public class UCharset {
 	String    text;
 	boolean[] asciiBitMap;
 	int size = 0;
-//	UMap<String> utfBitMap = null;
 
 	public UCharset(String charSet) {
 		this.text = charSet;
 		this.asciiBitMap = new boolean[MAX];
-		this.parse(charSet);
+		if(charSet.length() > 0) {
+			this.parse(charSet);
+		}
 	}
 
 	@Override
@@ -26,11 +27,6 @@ public class UCharset {
 		}
 		return false;
 	}
-
-	public final boolean hasUnicode() {
-//		return this.utfBitMap != null;
-		return false;
-	}
 	
 	public final String key() {
 		return text;  // fixme
@@ -41,11 +37,10 @@ public class UCharset {
 	}
 
 	final void set(int ch) {
-		if(ch < MAX) {
-			if(this.asciiBitMap[ch] == false) {
-				this.size += 1;
-				this.asciiBitMap[ch] = true;
-			}
+		assert(ch < 127);
+		if(this.asciiBitMap[ch] == false) {
+			this.size += 1;
+			this.asciiBitMap[ch] = true;
 		}
 	}
 	
@@ -179,8 +174,9 @@ public class UCharset {
 
 	public final static byte[] toUtf8(String text) {
 		try {
-			return text.getBytes("UTF-8");
+			return text.getBytes("UTF8");
 		} catch (UnsupportedEncodingException e) {
+			Main._Exit(1, "unsupported character: " + e);
 		}
 		return text.getBytes();
 	}
@@ -188,8 +184,13 @@ public class UCharset {
 	public static int getFirstChar(byte[] text) {
 		return text[0] & 0xff;
 	}
-
-
+	public static int getFirstChar(String text) {
+		char ch = text.charAt(0);
+		if(ch < 128) {
+			return ch;
+		}
+		return getFirstChar(toUtf8(text));
+	}
 }
 
 class CharacterReader {

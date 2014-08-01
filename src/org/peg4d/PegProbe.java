@@ -636,7 +636,7 @@ class Optimizer extends PegProbe {
 		this.visitList(e);
 		e.getPrediction(false);
 		if(!(e instanceof PegWordChoice) && e.base.optimizationLevel > 2) {
-			e.tryPrediction2(2);
+			e.tryPrediction(2);
 		}
 	}
 	
