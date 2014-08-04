@@ -1499,21 +1499,29 @@ class PegMemo extends PegOperation {
 		ObjectMemo m = context.memoMap.getMemo(this, pos);
 		if(m != null) {
 			this.memoHit += 1;
+			assert(m.keypeg == this);
 			if(m.generated == null) {
 				return context.refoundFailure(this.inner, pos+m.consumed);
 			}
-			context.setPosition(pos + m.consumed);
-			return m.generated;
+			if(m.consumed > 0) {
+				//System.out.println("HIT : " + this.semanticId + ":" + pos + "," + m.consumed+ " :" + m.generated);
+				context.setPosition(pos + m.consumed);
+				return m.generated;
+			}
 		}
 		if(context.stat != null) {
 			context.stat.countRepeatCall(this, pos);
 		}
 		Pego result = this.inner.simpleMatch(left, context);
 		if(result.isFailure()) {
-			context.memoMap.setMemo(pos, this, null, (int)(result.getSourcePosition() - pos));
+			context.memoMap.setMemo(pos, this, null, /*(int)(result.getSourcePosition() - pos*/0);
 		}
 		else {
-			context.memoMap.setMemo(pos, this, result, (int)(context.getPosition() - pos));
+			int length = (int)(context.getPosition() - pos);
+			if(length > 0) {
+				context.memoMap.setMemo(pos, this, result, length);
+				//System.out.println("MEMO: " + this.semanticId + ":" + pos + "," + length+ " :&" + result.id);
+			}
 		}
 		this.memoMiss += 1;
 		if(Main.TracingMemo) {

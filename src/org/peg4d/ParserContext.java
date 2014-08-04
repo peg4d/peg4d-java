@@ -260,13 +260,14 @@ public abstract class ParserContext {
 		return this.logStack.id;
 	}
 
-	protected void rollbackObjectStack(int markerId) {
+	protected void rollbackObjectStack(int mark) {
 		ObjectLog cur = this.logStack;
-		if(cur.id > markerId) {
+		if(cur.id > mark) {
+			//System.out.println("rollbackObjectStack: " + mark);
 			ObjectLog unused = this.logStack;
 			while(cur != null) {
 				//System.out.println("pop cur.id="+cur.id + ", marker="+markerId);
-				if(cur.id == markerId + 1) {
+				if(cur.id == mark + 1) {
 					this.logStack = cur.next;
 					cur.next = this.unusedLog;
 					this.unusedLog = unused;
@@ -288,7 +289,7 @@ public abstract class ParserContext {
 			l.id = this.logStack.id + 1;
 			l.next = this.logStack;
 			this.logStack = l;
-			//System.out.println("push " + l.id + ", index= " + index);
+			//System.out.println("SET " + parentNode.hashCode() + " " + childNode.hashCode());
 		}
 	}
 
@@ -324,6 +325,8 @@ public abstract class ParserContext {
 					for(int i = entryList.size() - 1; i >= 0; i--) {
 						ObjectLog l = entryList.ArrayValues[i];
 						newnode.set(l.index, l.childNode);
+						//System.out.println("@set" + newnode.tag + " " + l.index + " " + l.childNode.tag);
+						//System.out.println("set " + newnode.hashCode() + " " + l.childNode.hashCode() + "@set" + newnode.tag + " " + l.index + " " + l.childNode.tag);
 						l.childNode = null;
 					}
 					newnode.checkNullEntry();

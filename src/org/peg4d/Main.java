@@ -152,13 +152,16 @@ public class Main {
 					PackratStyleMemo = true;
 					ObjectFocusedMemo = false;
 				}
-				if(argument.equals("--memo:data")) {
+				else if(argument.equals("--memo:data")) {
 					AllExpressionMemo = false;
 					PackratStyleMemo = false;
 					ObjectFocusedMemo = true;
 				}
-				if(argument.equals("--memo:static")) {
+				else if(argument.equals("--memo:static")) {
 					TracingMemo = false;
+				}
+				else {
+					ShowUsage("unknown option: " + argument);
 				}
 			}
 			else if(argument.startsWith("--verbose")) {

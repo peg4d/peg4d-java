@@ -2,7 +2,7 @@ package org.peg4d;
 
 public class PEGUtils {
 	public final static long memoKey(long pos, Peg e) {
-		return (pos << 16) | e.uniqueId;
+		return (pos << 16) | e.semanticId;
 	}
 	public final static long objectId(long pos, Peg e) {
 		return (pos << 16) | e.uniqueId;

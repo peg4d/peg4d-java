@@ -722,7 +722,7 @@ class PEG4dGrammar extends Grammar {
 	
 	@Override
 	public ParserContext newParserContext(ParserSource source) {
-		return new TracingPackratParser(this, source);  // best parser
+		return new TracingPackratParser(this, source, 0);  // best parser
 	}
 
 	// Definiton of Bun's Peg	

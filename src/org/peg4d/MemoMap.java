@@ -250,6 +250,7 @@ class OpenHashMemo extends MemoMap {
 			}
 		}
 		m.key = key;
+		m.keypeg = keypeg;
 		m.generated = generated;
 		m.consumed = consumed;
 		this.statSetCount += 1;
