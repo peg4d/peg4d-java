@@ -232,7 +232,7 @@ public class Main {
 		ParserContext p = peg.newParserContext(Main.loadSource(fileName));
 		if(Main.StatLevel == 0) {
 			long t = System.currentTimeMillis();
-			while(System.currentTimeMillis()-t > 5000000) {
+			while(System.currentTimeMillis()-t < 5000) {
 				System.out.print(".");System.out.flush();
 				p.parseNode(startPoint);
 				p.sourcePosition = 0;

@@ -51,23 +51,18 @@ public abstract class Peg {
 	protected abstract void visit(PegProbe probe);
 	public abstract Pego simpleMatch(Pego left, ParserContext context);
 	public abstract int fastMatch(int left, MonadicParser context);
-	public Object getPrediction1(boolean enforceCharset) {
-		return null;
-	}
 	public Object getPrediction(boolean enforceCharset) {
 		return null;
 	}
-	
+	public Object getPrediction1(boolean enforceCharset) {
+		return null;
+	}
 	public final UCharset getCharsetPrediction() {
 		return (UCharset)this.getPrediction(true);
 	}
-	
-	public final boolean accept(int ch) {
-		UCharset p = this.getCharsetPrediction();
-		if(p == null) {
-			return true;
-		}
-		return p.match(ch);
+	abstract void tryC1Fetch(CCount cc);
+	boolean acceptC1(int ch) {
+		return true;
 	}
 
 	public final boolean is(int uflag) {
@@ -136,6 +131,51 @@ public abstract class Peg {
 	}
 }
 
+class CCount {
+	private short c[];
+	CCount() {
+		this.c = new short[UCharset.MAX];
+	}
+	void count(int ch) {
+		c[ch] += 1;
+	}
+	void count(CCount w) {
+		for(int i = 0; i < UCharset.MAX; i++) {
+			if(w.c[i] > 0) {
+				c[i] += 1;
+			}
+		}
+	}
+	void countNot(CCount w) {
+		for(int i = 0; i < UCharset.MAX; i++) {
+			if(w.c[i] == 0) {
+				c[i] += 1;
+			}
+		}
+	}
+	void setAll() {
+		for(int i = 0; i < UCharset.MAX; i++) {
+			c[i] += 1;
+		}
+	}
+	void clear() {
+		for(int i = 0; i < UCharset.MAX; i++) {
+			c[i] = 0;
+		}
+	}
+	double p() {
+		int c1 = 0;
+		int num=0;
+		for(int i = 0; i < UCharset.MAX; i++) {
+			if(c[i]>0) {
+				num++;
+				c1=c1+c[0];
+			}
+		}
+		return (double)c1 / num;
+	}
+}
+
 class PegNoTransformer extends PegTransformer {
 	@Override
 	public Peg transform(Grammar base, Peg e) {
@@ -184,14 +224,31 @@ class PegNonTerminal extends PegTerm {
 	}
 	@Override
 	public Object getPrediction(boolean enforceCharset) {
-		// This is bugs
 		if(this.nextRule != null) {
 			return this.nextRule.getPrediction(enforceCharset);
 		}
 		return null;
 	}
+	@Override void tryC1Fetch(CCount cc) {
+		if(this.nextRule != null) {
+			this.nextRule.tryC1Fetch(cc);
+		}
+		else {
+			cc.setAll();
+		}
+	}
+	@Override boolean acceptC1(int ch) {
+		if(this.nextRule != null) {
+			return this.nextRule.acceptC1(ch);
+		}
+		return true;
+	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
+		if(this.nextRule == null) {
+			Peg next = this.base.getRule(this.symbol);
+			return next.simpleMatch(left, context);
+		}
 		return this.nextRule.simpleMatch(left, context);
 	}
 	@Override
@@ -232,6 +289,19 @@ class PegString extends PegTerm {
 			return u;
 		}
 		return this.text;
+	}
+	@Override void tryC1Fetch(CCount cc) {
+		if(this.text.length() == 0) {
+			cc.setAll();
+			return;
+		}
+		cc.count(UCharset.getFirstChar(this.textByte));
+	}
+	@Override boolean acceptC1(int ch) {
+		if(this.text.length() == 0) {
+			return true;
+		}
+		return UCharset.getFirstChar(this.textByte) == ch;
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -297,6 +367,12 @@ class PegAny extends PegTerm {
 		}
 		return ne;
 	}
+	@Override void tryC1Fetch(CCount cc) {
+		cc.setAll();
+	}
+	@Override boolean acceptC1(int ch) {
+		return true;
+	}
 	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitAny(this);
@@ -337,6 +413,14 @@ class PegNotAny extends PegTerm {
 	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitNotAny(this);
+	}
+
+	@Override void tryC1Fetch(CCount cc) {
+		this.not.tryC1Fetch(cc);
+		this.orig.tryC1Fetch(cc);
+	}
+	@Override boolean acceptC1(int ch) {
+		return this.not.acceptC1(ch) && this.orig.acceptC1(ch);
 	}
 
 	@Override
@@ -384,6 +468,17 @@ class PegCharacter extends PegTerm {
 	public Object getPrediction(boolean enforceCharset) {
 		return this.charset;
 	}
+	@Override void tryC1Fetch(CCount cc) {
+		for(int i = 0; i < UCharset.MAX; i++) {
+			if(this.charset.hasChar(i)) {
+				cc.count(i);
+			}
+		}
+	}
+	@Override boolean acceptC1(int ch) {
+		return this.charset.match(ch);
+	}
+
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		int ch = context.getChar();
@@ -441,6 +536,12 @@ class PegOptional extends PegUnary {
 	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitOptional(this);
+	}
+	@Override void tryC1Fetch(CCount cc) {
+		this.inner.tryC1Fetch(cc);
+	}
+	@Override boolean acceptC1(int ch) {
+		return true;
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -547,6 +648,16 @@ class PegRepeat extends PegUnary {
 		}
 		return null;
 	}
+	@Override void tryC1Fetch(CCount cc) {
+		this.inner.tryC1Fetch(cc);
+	}
+	@Override boolean acceptC1(int ch) {
+		if(this.atleast > 0) {
+			return this.inner.acceptC1(ch);
+		}
+		return true;
+	}
+
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		long ppos = -1;
@@ -671,6 +782,13 @@ class PegAnd extends PegUnary {
 	public Object getPrediction(boolean enforceCharset) {
 		return this.inner.getPrediction(enforceCharset);
 	}
+	@Override void tryC1Fetch(CCount cc) {
+		this.inner.tryC1Fetch(cc);
+	}
+	@Override
+	boolean acceptC1(int ch) {
+		return this.inner.acceptC1(ch);
+	}
 	@Override
 	public int fastMatch(int left, MonadicParser context) {
 		int markerId = context.markObjectStack();
@@ -704,6 +822,15 @@ class PegNot extends PegUnary {
 	@Override
 	public Object getPrediction(boolean enforceCharset) {
 		return null;
+	}
+	@Override void tryC1Fetch(CCount cc) {
+		CCount nc = new CCount();
+		this.inner.tryC1Fetch(nc);
+		cc.countNot(nc);
+	}
+	@Override
+	boolean acceptC1(int ch) {
+		return !this.inner.acceptC1(ch);
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -885,6 +1012,55 @@ abstract class PegList extends Peg {
 		return optionalCharset;
 	}
 	
+	private boolean isUnconsumedOptional(Peg e) {
+		if(e instanceof PegOptional) {
+			return true;
+		}
+		if(e instanceof PegRepeat && ((PegRepeat) e).atleast == 0) {
+			return true;
+		}
+		if(e instanceof PegNot && e instanceof PegAnd) {
+			return true;
+		}
+		if(e instanceof PegIndent) {
+			return true;
+		}
+		return false;
+	}
+	
+	@Override void tryC1Fetch(CCount cc) {
+		for(int start = 0; start < this.size(); start++) {
+			Peg e = this.get(start);
+			if(e instanceof PegTagging || e instanceof PegMessage) {
+				continue;
+			}
+			if(this.isUnconsumedOptional(e)) {
+				e.tryC1Fetch(cc);
+				continue;
+			}
+			e.tryC1Fetch(cc);
+			break;
+		}
+	}
+	
+	@Override
+	boolean acceptC1(int ch) {
+		for(int start = 0; start < this.size(); start++) {
+			Peg e = this.get(start);
+			if(e instanceof PegTagging || e instanceof PegMessage) {
+				continue;
+			}
+			if(this.isUnconsumedOptional(e)) {
+				if(!e.acceptC1(ch)) {
+					return false;
+				}
+				continue;
+			}
+			return e.acceptC1(ch);
+		}
+		return true;
+	}
+
 	public final Peg trim() {
 		int size = this.size();
 		boolean hasNull = true;
@@ -1059,6 +1235,25 @@ class PegChoice extends PegList {
 		}
 		return null; //this.predicted;
 	}
+	
+	CCount C1 = null;
+	
+	@Override void tryC1Fetch(CCount cc) {
+		if(this.C1 == null) {
+			this.C1 = new CCount();
+			CCount w = new CCount();
+			this.unpredictedChoice = 0;
+			for(int i = 0; i < this.size(); i++) {
+				this.get(i).tryC1Fetch(w);
+				this.C1.count(w);
+				w.clear();
+			}
+			if(this.unpredictedChoice > 0) {
+				this.predicted = null;
+			}
+		}
+		cc.count(this.C1);
+	}
 			
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -1100,6 +1295,18 @@ class PegChoice extends PegList {
 		if(this.caseOf != null) {
 			return ;
 		}
+		CCount cc = new CCount();
+		this.tryC1Fetch(cc);
+		System.out.println("DEBUG: selective " + cc.p() + " choice = " + this);
+		this.caseOf = new Peg[UCharset.MAX];
+		this.alwaysFailure = new PegAlwaysFailure(this);
+		this.base.PredictionOptimization += 1;
+	}
+
+	void tryPredictionOld(int maxUnpredicatedChoice) {
+		if(this.caseOf != null) {
+			return ;
+		}
 		if(this.unpredictedChoice == 0) {
 			System.out.println("DEBUG: selective choice = " + this);
 			this.caseOf = new Peg[UCharset.MAX];
@@ -1131,6 +1338,37 @@ class PegChoice extends PegList {
 		UList<Peg> l = null; // new UList<Peg>(new Peg[2]);
 		for(int i = 0; i < this.size(); i++) {
 			if(this.accept(i, ch)) {
+				if(e == null) {
+					e = this.get(i);
+				}
+				else {
+					if(l == null) {
+						l = new UList<Peg>(new Peg[2]);
+						l.add(e);
+					}
+					l.add(get(i));
+				}
+			}
+		}
+		if(l != null) {
+			e = new PegChoice(e.base, 0, l);
+			//System.out.println("selected: '" + (char)ch + "': " + l.size() + " / " + this.size());
+			e.base.UnpredicatedChoiceL1 += 1;
+		}
+		else {
+			if(e == null) {
+				e = this.alwaysFailure;
+			}
+			e.base.PredicatedChoiceL1 +=1;
+		}
+		return e;
+	}
+
+	private Peg selectC1(int ch) {
+		Peg e = null;
+		UList<Peg> l = null; // new UList<Peg>(new Peg[2]);
+		for(int i = 0; i < this.size(); i++) {
+			if(this.get(i).acceptC1(ch)) {
 				if(e == null) {
 					e = this.get(i);
 				}
@@ -1253,6 +1491,13 @@ class PegSetter extends PegUnary {
 	public Object getPrediction(boolean enforceCharset) {
 		return this.inner.getPrediction(enforceCharset);
 	}
+	@Override void tryC1Fetch(CCount cc) {
+		this.inner.tryC1Fetch(cc);
+	}
+	@Override
+	boolean acceptC1(int ch) {
+		return this.inner.acceptC1(ch);
+	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		return context.matchSetter(left, this);
@@ -1280,6 +1525,12 @@ class PegTagging extends PegTerm {
 	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitTagging(this);
+	}
+	@Override void tryC1Fetch(CCount cc) {
+	}
+	@Override
+	boolean acceptC1(int ch) {
+		return true;
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -1310,6 +1561,8 @@ class PegMessage extends PegTerm {
 	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitMessage(this);
+	}
+	@Override void tryC1Fetch(CCount cc) {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -1438,6 +1691,14 @@ class PegExport extends PegUnary {
 	public Object getPrediction(boolean enforceCharset) {
 		return this.inner.getPrediction(enforceCharset);
 	}
+	@Override void tryC1Fetch(CCount cc) {
+		this.inner.tryC1Fetch(cc);
+	}
+	@Override
+	boolean acceptC1(int ch) {
+		return this.inner.acceptC1(ch);
+	}
+
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		return context.matchExport(left, this);
@@ -1463,6 +1724,14 @@ class PegIndent extends PegTerm {
 	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitIndent(this);
+	}
+	@Override void tryC1Fetch(CCount cc) {
+		cc.count('\t');
+		cc.count(' ');
+	}
+	@Override
+	boolean acceptC1(int ch) {
+		return (ch == '\t' || ch == ' ');
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -1492,6 +1761,10 @@ class PegIndex extends PegTerm {
 	protected void visit(PegProbe probe) {
 		probe.visitIndex(this);
 	}
+	@Override void tryC1Fetch(CCount cc) {
+//		this.inner.prefecthC1(charCount); TODO
+	}
+	
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		return context.matchIndex(left, this);
@@ -1519,6 +1792,13 @@ abstract class PegOperation extends Peg {
 	@Override
 	public Object getPrediction(boolean enforceCharset) {
 		return this.inner.getPrediction(enforceCharset);
+	}
+	@Override void tryC1Fetch(CCount cc) {
+		this.inner.tryC1Fetch(cc);
+	}
+	@Override
+	boolean acceptC1(int ch) {
+		return this.inner.acceptC1(ch);
 	}
 	@Override
 	public abstract Pego simpleMatch(Pego left, ParserContext context);

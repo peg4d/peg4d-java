@@ -8,19 +8,16 @@ class PegProbe {
 		}
 		return true;
 	}
-	
 	void visited(String name) {
 		if(this.visitedMap != null) {		
 			this.visitedMap.put(name, name);
 		}
 	}
-	
 	void initVisitor() {
 		if(this.visitedMap != null) {
 			this.visitedMap.clear();
 		}
 	}
-
 	public void visitNonTerminal(PegNonTerminal e) {
 		if(!this.isVisited(e.symbol)) {
 			visited(e.symbol);
@@ -365,7 +362,9 @@ class NonTerminalChecker extends PegProbe {
 			e.base.foundError = true;
 			return;
 		}
-		e.nextRule = next;
+		if(e.base.optimizationLevel>1) {
+			e.nextRule = next;
+		}
 		if(this.startPoint.equals(e.symbol)) {
 //			if(this.length == 0) {
 //				System.out.println("left recursion: " + e.symbol);

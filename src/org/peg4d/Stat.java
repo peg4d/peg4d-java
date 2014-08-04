@@ -237,7 +237,9 @@ class Stat {
 
 	public void start() {
 		System.gc(); // meaningless ?
-		InitTotalHeap = Runtime.getRuntime().totalMemory();
+		this.BacktrackCount = 0;
+		this.BacktrackSize = 0;
+		this.InitTotalHeap = Runtime.getRuntime().totalMemory();
 		long free =  Runtime.getRuntime().freeMemory();
 		this.UsedHeapSize =  InitTotalHeap - free;
 		this.ErapsedTime = System.currentTimeMillis();
