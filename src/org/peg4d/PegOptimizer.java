@@ -80,10 +80,10 @@ class PegOptimizer extends PegTransformer {
 ////		newChoice.getPrediction();
 //		return newChoice;
 //	}
-	
-	private final void appendChoiceList(Grammar base, UList<Peg> flatList, Peg e) {
-		flatList.add(e);
-	}
+//	
+//	private final void appendChoiceList(Grammar base, UList<Peg> flatList, Peg e) {
+//		flatList.add(e);
+//	}
 
 	private final Peg predictNewObject(Grammar base, PegNewObject orig) {
 		PegNewObject ne = new PegNewObject(base, 0, orig.size(), orig.leftJoin);

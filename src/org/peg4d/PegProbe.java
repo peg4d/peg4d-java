@@ -363,7 +363,7 @@ class NonTerminalChecker extends PegProbe {
 			return;
 		}
 		if(e.base.optimizationLevel>1) {
-			e.nextRule = next;
+			e.nextRule1 = next;
 		}
 		if(this.startPoint.equals(e.symbol)) {
 //			if(this.length == 0) {
@@ -383,11 +383,11 @@ class NonTerminalChecker extends PegProbe {
 			visited(e.symbol);
 			Peg stackedRule = this.startRule;
 			int stackedLength = this.length;
-			this.verifyImpl(e.nextRule);
+			this.verifyImpl(e.getNext());
 			e.length = this.length;
 			this.length = stackedLength;
 			this.startRule = stackedRule;
-			this.startRule.derived(e.nextRule);
+			this.startRule.derived(e.getNext());
 		}
 		this.length += e.length;
 	}
@@ -503,15 +503,15 @@ class Inliner extends PegProbe {
 		}
 	}
 	final boolean isInlinable(Peg e) {
-		if(e instanceof PegNonTerminal && peg.optimizationLevel > 3) {
-			return ! ((PegNonTerminal) e).nextRule.is(Peg.CyclicRule);
+		if(e instanceof PegNonTerminal && peg.optimizationLevel > 1) {
+			return ! ((PegNonTerminal) e).nextRule1.is(Peg.CyclicRule);
 		}
 		return false;
 	}
 	final Peg doInline(PegNonTerminal te) {
 		//System.out.println("inlining: " + te.symbol +  " Memo? " + (te.nextRule instanceof PegMemo) + " e=" + te.nextRule);
 		this.peg.InliningCount += 1;
-		return te.nextRule;
+		return te.nextRule1;
 	}
 	@Override
 	public void visitUnary(PegUnary e) {
@@ -633,9 +633,8 @@ class Optimizer extends PegProbe {
 	@Override
 	public void visitChoice(PegChoice e) {
 		this.visitList(e);
-		e.getPrediction(false);
-		if(!(e instanceof PegWordChoice) && e.base.optimizationLevel > 2) {
-			e.tryPrediction(2);
+		if(e instanceof PegSelectiveChoice) {
+			((PegSelectiveChoice) e).tryPrediction();
 		}
 	}
 	
@@ -774,7 +773,9 @@ class MemoRemover extends PegProbe {
 	
 	@Override
 	public void visitNonTerminal(PegNonTerminal e) {
-		e.nextRule = this.removeMemo(e.nextRule);
+		if(e.nextRule1 != null) {
+			e.nextRule1 = this.removeMemo(e.nextRule1);
+		}
 	}
 
 	@Override
@@ -795,15 +796,15 @@ class MemoRemover extends PegProbe {
 	@Override
 	public void visitChoice(PegChoice e) {
 		this.visitList(e);
-		if(e.caseOf != null) {
-			for(int i = 0; i < UCharset.MAX; i++) {
-				if(e.caseOf[i] != null) {
-					Peg se = this.removeMemo(e.caseOf[i]);
-					e.caseOf[i] = se;
-					se.visit(this);
-				}
-			}
-		}
+//		if(e instanceof PegSelectiveChoice) {
+//			for(int i = 0; i < UCharset.MAX; i++) {
+//				if(e.caseOf[i] != null) {
+//					Peg se = this.removeMemo(e.caseOf[i]);
+//					e.caseOf[i] = se;
+//					se.visit(this);
+//				}
+//			}
+//		}
 	}
 	
 }

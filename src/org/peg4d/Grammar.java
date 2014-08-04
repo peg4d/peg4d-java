@@ -428,6 +428,9 @@ public class Grammar {
 				return new PegWordChoice(this, 0, l);
 			}
 		}
+		if(this.optimizationLevel > 2) {
+			return new PegSelectiveChoice(this, 0, l);
+		}		
 		return new PegChoice(this, 0, l);
 	}
 	
