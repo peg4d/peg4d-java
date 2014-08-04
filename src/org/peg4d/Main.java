@@ -54,7 +54,7 @@ public class Main {
 	public static boolean TestMode = false;
 	
 	// --verbose:stat
-	public static int     StatLevel = 0;
+	public static int     StatLevel = -1;
 
 	// --static => false
 	public static boolean TracingMemo = true;

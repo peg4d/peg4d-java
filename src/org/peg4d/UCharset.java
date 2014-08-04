@@ -14,6 +14,7 @@ public class UCharset {
 		if(charSet.length() > 0) {
 			this.parse(charSet);
 		}
+		//System.out.println("U: " + text);
 	}
 
 	@Override
@@ -78,6 +79,7 @@ public class UCharset {
 	public final void append(int ch) {
 		this.set(ch);
 		this.text += (char)ch;
+		//System.out.println("aU: " + text);
 	}
 
 	public static final String _QuoteString(char OpenChar, String Text, char CloseChar) {

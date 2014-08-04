@@ -1488,6 +1488,7 @@ class PegMemo extends PegOperation {
 
 	protected PegMemo(Peg inner) {
 		super(inner);
+		this.semanticId = inner.semanticId;
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {

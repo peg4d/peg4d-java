@@ -1,6 +1,5 @@
 package org.peg4d;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -155,6 +154,43 @@ class PackratMemo extends MemoMap {
 	}
 }
 
+class DebugMemo extends MemoMap {
+	MemoMap m1;
+	MemoMap m2;
+	protected DebugMemo(MemoMap m1, MemoMap m2) {
+		this.m1 = m1;
+		this.m2 = m2;
+	}
+	@Override
+	protected final void setMemo(long keypos, Peg keypeg, Pego generated, int consumed) {
+		this.m1.setMemo(keypos, keypeg, generated, consumed);
+		this.m2.setMemo(keypos, keypeg, generated, consumed);
+	}
+	@Override
+	protected final ObjectMemo getMemo(Peg keypeg, long keypos) {
+		ObjectMemo o1 = this.m1.getMemo(keypeg, keypos);
+		ObjectMemo o2 = this.m2.getMemo(keypeg, keypos);
+		if(o1 == null && o2 == null) {
+			return null;
+		}
+		if(o1 != null && o2 == null) {
+			System.out.println("diff: 1 null " + "pos2=" + keypos + ", p2=" + keypeg.uniqueId);
+		}
+		if(o1 == null && o2 != null) {
+			System.out.println("diff: 2 null " + "pos1=" + keypos + ", p1=" + keypeg.uniqueId);
+		}
+		if(o1 != null && o2 != null) {
+			if(o1.generated != o2.generated) {
+				System.out.println("diff: generaetd " + "pos1=" + keypos + ", p1=" + keypeg.uniqueId);
+			}
+			if(o1.consumed != o2.consumed) {
+				System.out.println("diff: consumed " + "pos1=" + keypos + ", p1=" + keypeg.uniqueId);
+			}
+		}
+		return o2;
+	}
+}
+
 class DirectMemo extends MemoMap {
 	protected Map<Long, ObjectMemo> memoMap;
 	
@@ -204,7 +240,7 @@ class OpenHashMemo extends MemoMap {
 	
 	@Override
 	protected final void setMemo(long keypos, Peg keypeg, Pego generated, int consumed) {
-		long key = PEGUtils.objectId(keypos, keypeg);
+		long key = PEGUtils.memoKey(keypos, keypeg);
 		int hash =  (Math.abs((int)key) % memoArray.length);
 		ObjectMemo m = this.memoArray[hash];
 		if(m.key != 0) {
@@ -217,14 +253,16 @@ class OpenHashMemo extends MemoMap {
 		m.generated = generated;
 		m.consumed = consumed;
 		this.statSetCount += 1;
+		//System.out.println("SET " + key + "/"+ hash + " kp: " + keypeg.uniqueId);
 	}
 
 	@Override
 	protected final ObjectMemo getMemo(Peg keypeg, long keypos) {
-		long key = PEGUtils.objectId(keypos, keypeg);
+		long key = PEGUtils.memoKey(keypos, keypeg);
 		int hash =  (Math.abs((int)key) % memoArray.length);
 		ObjectMemo m = this.memoArray[hash];
 		if(m.key == key) {
+			//System.out.println("GET " + key + "/"+ hash + " kp: " + keypeg.uniqueId);
 			this.MemoHit += 1;
 			return m;
 		}
@@ -237,79 +275,6 @@ class OpenHashMemo extends MemoMap {
 		super.stat(stat);
 		stat.setCount("MemoSize", this.memoArray.length);
 		stat.setRatio("MemoCollision80", this.statExpireCount, this.statSetCount);
-	}
-
-}
-
-class FastFifoMemo extends MemoMap {
-	
-	private ObjectMemo[] memoArray;
-	private long arrayOffset = 0;
-	
-	FastFifoMemo(int slotSize) {
-		this.memoArray = new ObjectMemo[slotSize * 2];
-	}
-	
-	private ObjectMemo getA(long keypos) {
-		int index = (int)(keypos - arrayOffset);
-		if(index >= 0 && index < memoArray.length) {
-			return memoArray[index];
-		}
-		return null;
-	}
-	private void putA(long keypos, ObjectMemo m) {
-		int index = (int)(keypos - arrayOffset);
-		if(index >= 0) {
-			if(!(index < memoArray.length)) {
-				int half = memoArray.length / 2;
-				this.unusedMemos(half);
-				System.arraycopy(memoArray, half, memoArray, 0, half);
-				Arrays.fill(memoArray, half, memoArray.length, null);
-				this.arrayOffset += half;
-				index -= half;
-			}
-			if(index < memoArray.length) {
-				m.next = this.memoArray[index];
-				this.memoArray[index] = m;
-			}
-		}
-	}
-	
-	private void unusedMemos(int half) {
-		ObjectMemo unusedHead = null;
-		for(int i = 0; i < half; i++) {
-			if(this.memoArray[i] != null) {
-				ObjectMemo unusedTail = this.findTail(this.memoArray[i]);
-				unusedTail.next = unusedHead;
-				unusedHead = this.memoArray[i];
-			}
-		}
-		if(unusedHead != null) {
-			this.unusedMemo(unusedHead);
-		}
-	}
-	
-	@Override
-	protected final void setMemo(long keypos, Peg keypeg, Pego generated, int consumed) {
-		ObjectMemo m = newMemo();
-		m.keypeg = keypeg;
-		m.generated = generated;
-		m.consumed = consumed;
-		this.putA(keypos, m);
-	}
-
-	@Override
-	protected final ObjectMemo getMemo(Peg keypeg, long keypos) {
-		ObjectMemo m = this.getA(keypos);
-		while(m != null) {
-			if(m.keypeg == keypeg) {
-				this.MemoHit += 1;
-				return m;
-			}
-			m = m.next;
-		}
-		this.MemoMiss += 1;
-		return m;
 	}
 
 }
