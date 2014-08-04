@@ -230,6 +230,15 @@ public class Main {
 		Main.printVerbose("Grammar", peg.getName());
 		Main.printVerbose("StartingPoint", StartingPoint);
 		ParserContext p = peg.newParserContext(Main.loadSource(fileName));
+		if(Main.StatLevel == 0) {
+			long t = System.currentTimeMillis();
+			while(System.currentTimeMillis()-t > 5000000) {
+				System.out.print(".");System.out.flush();
+				p.parseNode(startPoint);
+				p.sourcePosition = 0;
+			}
+			System.out.println();
+		}
 		//while(p.hasNode()) {
 		p.beginPeformStat();
 		Pego pego = p.parseNode(startPoint);

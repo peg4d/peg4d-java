@@ -1,5 +1,5 @@
 TopLevel
-	= Expr
+	= Expr .*
 	;
 Expr
 	= Sum

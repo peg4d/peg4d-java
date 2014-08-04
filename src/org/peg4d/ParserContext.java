@@ -444,7 +444,7 @@ public abstract class ParserContext {
 	}
 
 	public void beginPeformStat() {
-		if(Main.StatLevel > 0) {
+		if(Main.StatLevel >= 0) {
 			this.stat = new Stat(this.peg, this.source);
 			if(Main.StatLevel == 2) {
 				this.stat.initRepeatCounter();

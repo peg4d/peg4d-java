@@ -11,7 +11,7 @@ DTD
 	= '<!' (!'>' .)* '>'
 	;
 Element
-	= <{ '<' Name^ (_+ Attribute^)* _* ( '/>' / '>' Content '</' NAME '>' ) #xml }> _*
+	= <{ '<' Name^ (_+ Attribute^)* _* ( '/>' / '>' _* Content '</' NAME '>' ) #xml }> _*
 	;
 Name
 	= <{ NAME #name }>

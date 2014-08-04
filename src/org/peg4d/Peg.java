@@ -1580,7 +1580,7 @@ class PegMemo extends PegOperation {
 		this.enableMemo = false;
 		this.base.DisabledMemo += 1;
 		int factor = this.base.EnabledMemo / 20;
-		if(this.base.DisabledMemo % factor == 0) {
+		if(factor != 0 && this.base.DisabledMemo % factor == 0) {
 			//System.out.println("disabled: ");
 			this.base.memoRemover.removeDisabled();
 		}
