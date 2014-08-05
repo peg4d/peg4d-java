@@ -594,21 +594,21 @@ class PEG4dGrammar extends Grammar {
 		if(Main.VerbosePeg) {
 			System.out.println("importing " + fileName);
 		}
-		Grammar p = new Grammar();
-		p.loadGrammarFile(fileName);
-		UList<String> list = p.makeList(label);
-		String prefix = "";
-		int loc = label.indexOf(":");
-		if(loc > 0) {
-			prefix = label.substring(0, loc+1);
-			label = label.substring(loc+1);
-			loadingGrammar.pegMap.put(label, new PegNonTerminal(loadingGrammar, 0,  prefix+label));
-		}
-		for(int i = 0; i < list.size(); i++) {
-			String l = list.ArrayValues[i];
-			Peg e = p.getRule(l);
-			loadingGrammar.pegMap.put(prefix + l, e.clone(loadingGrammar, new PegNoTransformer()));
-		}
+//		Grammar p = new Grammar();
+//		p.loadGrammarFile(fileName);
+//		UList<String> list = p.makeList(label);
+//		String prefix = "";
+//		int loc = label.indexOf(":");
+//		if(loc > 0) {
+//			prefix = label.substring(0, loc+1);
+//			label = label.substring(loc+1);
+//			loadingGrammar.pegMap.put(label, new PegNonTerminal(loadingGrammar, 0,  prefix+label));
+//		}
+//		for(int i = 0; i < list.size(); i++) {
+//			String l = list.ArrayValues[i];
+//			Peg e = p.getRule(l);
+//			loadingGrammar.pegMap.put(prefix + l, e.clone(loadingGrammar, new PegNoTransformer()));
+//		}
 	}
 
 	private static Peg toParsingExpression(Grammar loadingGrammar, String ruleName, Pego node) {
@@ -715,7 +715,7 @@ class PEG4dGrammar extends Grammar {
 
 	PEG4dGrammar() {
 		super();
-		this.optimizationLevel = 2;
+		this.optimizationLevel = 0;
 		this.loadPEG4dGrammar();
 		this.name = "PEG4d";
 	}
@@ -795,14 +795,15 @@ class PEG4dGrammar extends Grammar {
 //		  = '/*' (!'*/' .)* '*/'
 //		  / '//' (![\r\n] .)* [\r\n]
 //		  ;
-		Peg Comment = choice(
+		Peg _Comment = choice(
 			seq(s("/*"), zero(not(s("*/")), Any), s("*/")),
 			seq(s("//"), zero(not(NewLine), Any), NewLine)	
 		);
+		this.setRule("Comment", _Comment);
 //		_ = 
 //		  ([ \t\r\n]+ / Comment )* 
 //		  ;
-		this.setRule("_", zero(choice(one(c(" \\t\\n\\r")), Comment)));
+		this.setRule("_", zero(choice(one(c(" \\t\\n\\r")), n("Comment"))));
 		
 //		RuleName
 //		  = << [A-Za-z_] [A-Za-z0-9_]* #PegNonTerminal >>

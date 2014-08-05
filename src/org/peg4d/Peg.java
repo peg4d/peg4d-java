@@ -37,7 +37,7 @@ public abstract class Peg {
 	int        refc       = 0;
 	
 	ParserSource source = null;
-	int       sourcePosition = 0;
+	int          sourcePosition = 0;
 	
 	protected Peg(Grammar base, int flag) {
 		this.base = base;
@@ -47,10 +47,10 @@ public abstract class Peg {
 		this.semanticId = this.uniqueId;
 	}
 		
-	protected abstract Peg clone(Grammar base, PegTransformer tr);
+	//protected abstract Peg clone(Grammar base, PegTransformer tr);
 	protected abstract void visit(PegProbe probe);
 	public abstract Pego simpleMatch(Pego left, ParserContext context);
-	public abstract int fastMatch(int left, MonadicParser context);
+	//public abstract int fastMatch(int left, MonadicParser context);
 
 	boolean acceptC1(int ch) {
 		return true;
@@ -122,61 +122,6 @@ public abstract class Peg {
 	}
 }
 
-class CCount {
-	private short c[];
-	CCount() {
-		this.c = new short[UCharset.MAX];
-	}
-	void count(int ch) {
-		c[ch] += 1;
-	}
-	void count(CCount w) {
-		for(int i = 0; i < UCharset.MAX; i++) {
-			if(w.c[i] > 0) {
-				this.c[i] += 1;
-			}
-		}
-	}
-	void countNot(CCount w) {
-		for(int i = 0; i < UCharset.MAX; i++) {
-			if(w.c[i] == 0) {
-				c[i] += 1;
-			}
-		}
-	}
-	void setAll() {
-		for(int i = 0; i < UCharset.MAX; i++) {
-			c[i] += 1;
-		}
-	}
-	void clear() {
-		for(int i = 0; i < UCharset.MAX; i++) {
-			c[i] = 0;
-		}
-	}
-	double p() {
-		int c1 = 0;
-		int num=0;
-		for(int i = 0; i < UCharset.MAX; i++) {
-			if(c[i]>0) {
-				num++;
-				c1 += c[i];
-			}
-		}
-		return (double)c1 / num;
-	}
-	public int choice(int ch) {
-		return c[ch];
-	}
-}
-
-class PegNoTransformer extends PegTransformer {
-	@Override
-	public Peg transform(Grammar base, Peg e) {
-		return e;
-	}
-}
-
 abstract class PegTerm extends Peg {
 	public PegTerm (Grammar base, int flag) {
 		super(base, flag);
@@ -194,19 +139,11 @@ abstract class PegTerm extends Peg {
 class PegNonTerminal extends PegTerm {
 	String symbol;
 	Peg    nextRule1 = null;
-	int length = -1;  // to be set by Verifier
+	int    length = -1;  // to be set by Verifier
 	
 	PegNonTerminal(Grammar base, int flag, String ruleName) {
 		super(base, flag | Peg.HasNonTerminal | Peg.NoMemo);
 		this.symbol = ruleName;
-	}
-	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			ne = new PegNonTerminal(base, this.flag, this.symbol);
-		}
-		return ne;
 	}
 	@Override
 	protected void visit(PegProbe probe) {
@@ -228,11 +165,6 @@ class PegNonTerminal extends PegTerm {
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		return this.getNext().simpleMatch(left, context);
 	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		Peg next = context.getRule(this.symbol);
-		return next.fastMatch(left, context);
-	}
 }
 
 class PegString extends PegTerm {
@@ -242,14 +174,6 @@ class PegString extends PegTerm {
 		super(base, Peg.HasString | Peg.NoMemo | flag);
 		this.text = text;
 		textByte = UCharset.toUtf8(text);
-	}
-	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			ne = new PegString(base, this.flag, this.text);
-		}
-		return ne;
 	}
 	@Override
 	protected void visit(PegProbe probe) {
@@ -267,13 +191,6 @@ class PegString extends PegTerm {
 			return left;
 		}
 		return context.foundFailure(this);
-	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		if(context.match(this.textByte)) {
-			return left;
-		}
-		return context.foundFailure2(this);
 	}
 }
 
@@ -317,14 +234,6 @@ class PegAny extends PegTerm {
 	public PegAny(Grammar base, int flag) {
 		super(base, Peg.HasAny | Peg.NoMemo | flag);
 	}
-	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			ne = new PegAny(base, this.flag);
-		}
-		return ne;
-	}
 	@Override boolean acceptC1(int ch) {
 		return true;
 	}
@@ -340,14 +249,6 @@ class PegAny extends PegTerm {
 		}
 		return context.foundFailure(this);
 	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		if(context.hasChar()) {
-			context.consume(1);
-			return left;
-		}
-		return context.foundFailure2(this);
-	}
 }
 
 class PegNotAny extends PegTerm {
@@ -359,11 +260,6 @@ class PegNotAny extends PegTerm {
 		this.not = e;
 		this.exclude = e.inner;
 		this.orig = orig;
-	}
-	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 	@Override
 	protected void visit(PegProbe probe) {
@@ -388,11 +284,6 @@ class PegNotAny extends PegTerm {
 		}
 		return context.foundFailure(this);
 	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
 }
 
 class PegCharacter extends PegTerm {
@@ -400,14 +291,6 @@ class PegCharacter extends PegTerm {
 	public PegCharacter(Grammar base, int flag, UCharset charset) {
 		super(base, Peg.HasCharacter | Peg.NoMemo | flag);
 		this.charset = charset;
-	}
-	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			ne = new PegCharacter(base, this.flag, this.charset);
-		}
-		return ne;
 	}
 	@Override
 	protected void visit(PegProbe probe) {
@@ -421,15 +304,6 @@ class PegCharacter extends PegTerm {
 		int ch = context.getChar();
 		if(!this.charset.match(ch)) {
 			return context.foundFailure(this);
-		}
-		context.consume(1);
-		return left;
-	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		int ch = context.getChar();
-		if(!this.charset.match(ch)) {
-			return context.foundFailure2(this);
 		}
 		context.consume(1);
 		return left;
@@ -458,14 +332,6 @@ class PegOptional extends PegUnary {
 		super(base, flag | Peg.HasOptional | Peg.NoMemo, e);
 	}
 	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			ne = new PegOptional(base, this.flag, this.inner.clone(base, tr));
-		}
-		return ne;
-	}
-	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitOptional(this);
 	}
@@ -483,18 +349,6 @@ class PegOptional extends PegUnary {
 		}
 		return right;
 	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		long pos = context.getPosition();
-		int markerId = context.markObjectStack();
-		int right = this.inner.fastMatch(left, context);
-		if(PEGUtils.isFailure(right)) {
-			context.rollbackObjectStack(markerId);
-			context.rollback(pos);
-			return left;
-		}
-		return right;
-	}
 }
 
 class PegOptionalString extends PegOptional {
@@ -505,11 +359,6 @@ class PegOptionalString extends PegOptional {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		context.match(this.textByte);
-		return left;
-	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
 		context.match(this.textByte);
 		return left;
 	}
@@ -526,11 +375,6 @@ class PegOptionalString1 extends PegOptional {
 		context.match(this.symbol1);
 		return left;
 	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		context.match(this.symbol1);
-		return left;
-	}
 }
 
 class PegOptionalCharacter extends PegOptional {
@@ -544,11 +388,6 @@ class PegOptionalCharacter extends PegOptional {
 		context.match(this.charset);
 		return left;
 	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		context.match(this.charset);
-		return left;
-	}
 }
 
 
@@ -557,14 +396,6 @@ class PegRepeat extends PegUnary {
 	protected PegRepeat(Grammar base, int flag, Peg e, int atLeast) {
 		super(base, flag | Peg.HasRepetation, e);
 		this.atleast = atLeast;
-	}
-	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			ne = new PegRepeat(base, this.flag, this.inner.clone(base, tr), this.atleast);
-		}
-		return ne;
 	}
 	@Override
 	protected void visit(PegProbe probe) {
@@ -576,7 +407,6 @@ class PegRepeat extends PegUnary {
 		}
 		return true;
 	}
-
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		long ppos = -1;
@@ -595,36 +425,6 @@ class PegRepeat extends PegUnary {
 		if(count < this.atleast) {
 			return context.foundFailure(this);
 		}
-		return left;
-	}
-	@Override
-	public int fastMatch(int left1, MonadicParser context) {
-		int left = left1;
-		int count = 0;
-		int markerId = context.markObjectStack();
-		while(context.hasChar()) {
-			long pos = context.getPosition();
-			markerId = context.markObjectStack();
-			int right = this.inner.fastMatch(left, context);
-			if(PEGUtils.isFailure(right)) {
-				assert(pos == context.getPosition());
-				if(count < this.atleast) {
-					context.rollbackObjectStack(markerId);
-					return right;
-				}
-				break;
-			}
-			left = right;
-			//System.out.println("startPostion=" + startPosition + ", current=" + context.getPosition() + ", count = " + count);
-			if(!(pos < context.getPosition())) {
-				if(count < this.atleast) {
-					return context.foundFailure2(this);
-				}
-				break;
-			}
-			count = count + 1;
-		}
-		context.rollbackObjectStack(markerId); //FIXME
 		return left;
 	}
 }
@@ -679,14 +479,6 @@ class PegAnd extends PegUnary {
 		super(base, flag | Peg.HasAnd, e);
 	}
 	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			ne = new PegAnd(base, this.flag, this.inner.clone(base, tr));
-		}
-		return ne;
-	}
-	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitAnd(this);
 	}
@@ -701,31 +493,11 @@ class PegAnd extends PegUnary {
 	boolean acceptC1(int ch) {
 		return this.inner.acceptC1(ch);
 	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		int markerId = context.markObjectStack();
-		long pos = context.getPosition();
-		int right = this.inner.fastMatch(left, context);
-		context.rollback(pos);
-		context.rollbackObjectStack(markerId);
-		if(PEGUtils.isFailure(right)) {
-			return right;
-		}
-		return left;
-	}
 }
 
 class PegNot extends PegUnary {
 	PegNot(Grammar base, int flag, Peg e) {
 		super(base, Peg.HasNot | flag, e);
-	}
-	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			ne = new PegNot(base, this.flag, this.inner.clone(base, tr));
-		}
-		return ne;
 	}
 	@Override
 	protected void visit(PegProbe probe) {
@@ -744,16 +516,6 @@ class PegNot extends PegUnary {
 		}
 		context.rollback(pos);
 		return context.foundFailure(this);
-	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		long pos = context.getPosition();
-		int right = this.inner.fastMatch(left, context);
-		if(PEGUtils.isFailure(right)) {
-			return left;
-		}
-		context.rollback(pos);
-		return context.foundFailure2(this);
 	}
 }
 
@@ -950,20 +712,6 @@ class PegSequence extends PegList {
 		super(base, flag, initSize);
 	}
 	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			PegList l = new PegSequence(base, this.flag, this.size());
-			for(int i = 0; i < this.size(); i++) {
-				Peg e = this.get(i).clone(base, tr);
-				l.list.add(e);
-				this.derived(e);
-			}
-			return l;
-		}
-		return ne;
-	}
-	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitSequence(this);
 	}	
@@ -982,26 +730,6 @@ class PegSequence extends PegList {
 		}
 		return left;
 	}
-	
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		long pos = context.getPosition();
-		int markerId = context.markObjectStack();
-		for(int i = 0; i < this.size(); i++) {
-			int right = this.get(i).fastMatch(left, context);
-			if(PEGUtils.isFailure(right)) {
-				context.rollbackObjectStack(markerId);
-				context.rollback(pos);
-				return right;
-			}
-//			if(left != right) {
-//				System.out.println("SEQ SWITCH i= " +i + ", " + context.S(left) +"=>" +context.S(right) + " by " + this.get(i));
-//			}
-			left = right;
-		}
-		return left;
-	}
-
 }
 
 class PegChoice extends PegList {
@@ -1036,16 +764,6 @@ class PegChoice extends PegList {
 		}
 		return context.foundFailure(this);
 	}
-	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
 }
 
 
@@ -1053,8 +771,6 @@ class PegSelectiveChoice extends PegChoice {
 	PegSelectiveChoice(Grammar base, int flag, UList<Peg> list) {
 		super(base, flag, list);
 	}
-
-	
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		int ch = context.getChar();
@@ -1105,22 +821,6 @@ class PegSelectiveChoice extends PegChoice {
 			e.base.PredicatedChoiceL1 +=1;
 		}
 		return e;
-	}
-
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		int node = left;
-		long pos = context.getPosition();
-		for(int i = 0; i < this.size(); i++) {
-			int markerId = context.markObjectStack();
-			node = this.get(i).fastMatch(left, context);
-			if(!PEGUtils.isFailure(node)) {
-				break;
-			}
-			context.rollbackObjectStack(markerId);
-			context.setPosition(pos);
-		}
-		return node;
 	}
 }
 
@@ -1175,10 +875,6 @@ class PegAlwaysFailure extends PegString {
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		return context.foundFailure(this);
 	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		return context.foundFailure2(this);
-	}
 }
 
 class PegSetter extends PegUnary {
@@ -1186,14 +882,6 @@ class PegSetter extends PegUnary {
 	public PegSetter(Grammar base, int flag, Peg e, int index) {
 		super(base, flag | Peg.HasSetter | Peg.NoMemo, e);
 		this.index = index;
-	}
-	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			ne = new PegSetter(base, this.flag, this.inner.clone(base, tr), this.index);
-		}
-		return ne;
 	}
 	@Override
 	protected void visit(PegProbe probe) {
@@ -1207,10 +895,6 @@ class PegSetter extends PegUnary {
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		return context.matchSetter(left, this);
 	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		return context.matchSetter(left, this);
-	}
 }
 
 class PegTagging extends PegTerm {
@@ -1220,25 +904,12 @@ class PegTagging extends PegTerm {
 		this.symbol = tagName;
 	}
 	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			ne = new PegTagging(base, this.flag, this.symbol);
-		}
-		return ne;
-	}
-	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitTagging(this);
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		left.setTag(this.symbol);
-		return left;
-	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		context.log.lazyTagging(left, this);
 		return left;
 	}
 }
@@ -1250,25 +921,12 @@ class PegMessage extends PegTerm {
 		this.symbol = message;
 	}
 	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			ne = new PegMessage(base, this.flag, this.symbol);
-		}
-		return ne;
-	}
-	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitMessage(this);
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		return context.matchMessage(left, this);
-	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		context.log.lazyMessaging(left, this);
-		return left;
 	}
 }
 
@@ -1292,25 +950,10 @@ class PegNewObject extends PegList {
 			this.add(e);
 		}
 	}
-
-	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			PegList l = new PegNewObject(base, this.flag, this.size(), this.leftJoin);
-			for(int i = 0; i < this.size(); i++) {
-				l.list.add(this.get(i).clone(base, tr));
-			}
-			return l;
-		}
-		return ne;
-	}
-
 	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitNewObject(this);
 	}
-
 	@Override
 	public void add(Peg e) {
 		if(e instanceof PegSequence) {
@@ -1362,23 +1005,11 @@ class PegNewObject extends PegList {
 		}
 		return newnode;
 	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		return context.matchNewObject(left, this);
-	}
 }
 
 class PegExport extends PegUnary {
 	public PegExport(Grammar base, int flag, Peg e) {
 		super(base, flag | Peg.NoMemo, e);
-	}
-	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			return new PegExport(base, this.flag, this.inner.clone(base, tr));
-		}
-		return ne;
 	}
 	@Override
 	protected void visit(PegProbe probe) {
@@ -1392,23 +1023,11 @@ class PegExport extends PegUnary {
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		return context.matchExport(left, this);
 	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		return context.matchExport(left, this);
-	}
 }
 
 class PegIndent extends PegTerm {
 	PegIndent(Grammar base, int flag) {
 		super(base, flag | Peg.HasContext);
-	}
-	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			ne = new PegIndent(base, this.flag);
-		}
-		return ne;
 	}
 	@Override
 	protected void visit(PegProbe probe) {
@@ -1422,10 +1041,6 @@ class PegIndent extends PegTerm {
 	public Pego simpleMatch(Pego left, ParserContext context) {
 		return context.matchIndent(left, this);
 	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		return context.matchIndent(left, this);
-	}
 }
 
 class PegIndex extends PegTerm {
@@ -1435,23 +1050,11 @@ class PegIndex extends PegTerm {
 		this.index = index;
 	}
 	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		Peg ne = tr.transform(base, this);
-		if(ne == null) {
-			ne = new PegIndex(base, this.flag, this.index);
-		}
-		return ne;
-	}
-	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitIndex(this);
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchIndex(left, this);
-	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
 		return context.matchIndex(left, this);
 	}
 }
@@ -1463,10 +1066,6 @@ abstract class PegOperation extends Peg {
 		this.inner = inner;
 	}
 	@Override
-	protected Peg clone(Grammar base, PegTransformer tr) {
-		return this;
-	}
-	@Override
 	protected void visit(PegProbe probe) {
 		probe.visitOperation(this);
 	}
@@ -1474,10 +1073,6 @@ abstract class PegOperation extends Peg {
 	boolean acceptC1(int ch) {
 		return this.inner.acceptC1(ch);
 	}
-	@Override
-	public abstract Pego simpleMatch(Pego left, ParserContext context);
-	@Override
-	public abstract int fastMatch(int left, MonadicParser context);
 }
 
 class PegMemo extends PegOperation {
@@ -1490,8 +1085,63 @@ class PegMemo extends PegOperation {
 		super(inner);
 		this.semanticId = inner.semanticId;
 	}
+
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
+		if(!this.enableMemo) {
+			return this.inner.simpleMatch(left, context);
+		}
+		long pos = context.getPosition();
+		ObjectMemo m = context.memoMap.getMemo(this, pos);
+		if(m != null) {
+			this.memoHit += 1;
+			context.setPosition(pos + m.consumed);
+			if(m.generated == null) {
+				return left;
+			}
+			return m.generated;
+		}
+		Pego right = this.inner.simpleMatch(left, context);
+		int length = (int)(context.getPosition() - pos);
+		if(right == left) {
+			context.memoMap.setMemo(pos, this, null, length);
+		}
+		else {
+			context.memoMap.setMemo(pos, this, right, length);
+		}
+		this.memoMiss += 1;
+		this.tryTracing();
+		return right;
+	}
+	
+	private void tryTracing() {
+		if(Main.TracingMemo) {
+			if(this.memoMiss == 32) {
+				if(this.memoHit < 4) {
+					disabledMemo();
+					return;
+				}
+			}
+			if(this.memoMiss % 64 == 0) {
+				if(this.memoMiss / this.memoHit > 4) {
+					disabledMemo();
+					return;
+				}
+			}
+		}		
+	}
+	
+	private void disabledMemo() {
+		this.enableMemo = false;
+		this.base.DisabledMemo += 1;
+		int factor = this.base.EnabledMemo / 20;
+		if(factor != 0 && this.base.DisabledMemo % factor == 0) {
+			this.base.memoRemover.removeDisabled();
+		}
+	}
+
+	
+	public Pego simpleMatch1(Pego left, ParserContext context) {
 		if(!this.enableMemo) {
 			return this.inner.simpleMatch(left, context);
 		}
@@ -1503,14 +1153,11 @@ class PegMemo extends PegOperation {
 			if(m.generated == null) {
 				return context.refoundFailure(this.inner, pos+m.consumed);
 			}
-			if(m.consumed > 0) {
-				//System.out.println("HIT : " + this.semanticId + ":" + pos + "," + m.consumed+ " :" + m.generated);
-				context.setPosition(pos + m.consumed);
-				return m.generated;
-			}
-		}
-		if(context.stat != null) {
-			context.stat.countRepeatCall(this, pos);
+//			if(m.consumed > 0) {
+//				//System.out.println("HIT : " + this.semanticId + ":" + pos + "," + m.consumed+ " :" + m.generated);
+//				context.setPosition(pos + m.consumed);
+//				return m.generated;
+//			}
 		}
 		Pego result = this.inner.simpleMatch(left, context);
 		if(result.isFailure()) {
@@ -1518,10 +1165,10 @@ class PegMemo extends PegOperation {
 		}
 		else {
 			int length = (int)(context.getPosition() - pos);
-			if(length > 0) {
+//			if(length > 0) {
 				context.memoMap.setMemo(pos, this, result, length);
 				//System.out.println("MEMO: " + this.semanticId + ":" + pos + "," + length+ " :&" + result.id);
-			}
+//			}
 		}
 		this.memoMiss += 1;
 		if(Main.TracingMemo) {
@@ -1538,7 +1185,7 @@ class PegMemo extends PegOperation {
 		}
 		return result;
 	}
-	
+
 	private Pego disabledMemo(Pego left) {
 		this.enableMemo = false;
 		this.base.DisabledMemo += 1;
@@ -1548,11 +1195,6 @@ class PegMemo extends PegOperation {
 			this.base.memoRemover.removeDisabled();
 		}
 		return left;
-	}
-	
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		return this.inner.fastMatch(left, context);
 	}
 }
 
@@ -1567,14 +1209,6 @@ class PegMonad extends PegOperation {
 		context.rollbackObjectStack(mark);
 		return left;
 	}
-	
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		int mark = context.markObjectStack();
-		left = this.inner.fastMatch(left, context);
-		context.rollbackObjectStack(mark);
-		return left;
-	}
 }
 
 class PegCommit extends PegOperation {
@@ -1586,15 +1220,6 @@ class PegCommit extends PegOperation {
 		int mark = context.markObjectStack();
 		left = this.inner.simpleMatch(left, context);
 		if(left.isFailure()) {
-			context.rollbackObjectStack(mark);
-		}
-		return left;
-	}
-	@Override
-	public int fastMatch(int left, MonadicParser context) {
-		int mark = context.markObjectStack();
-		left = this.inner.fastMatch(left, context);
-		if(PEGUtils.isFailure(left)) {
 			context.rollbackObjectStack(mark);
 		}
 		return left;

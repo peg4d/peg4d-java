@@ -465,6 +465,5 @@ public abstract class ParserContext {
 	public String getName() {
 		return this.getClass().getSimpleName();
 	}
-
 }
 
