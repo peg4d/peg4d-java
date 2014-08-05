@@ -1,8 +1,7 @@
 package org.peg4d;
 
 public class Pego {
-	public static int IdCount = 0;
-	public int id = 0;
+//	public static int IdCount = 0;
 	public ParserSource    source = null;
 	public long            startIndex = 0;
 	public int             length = 0;
@@ -13,7 +12,7 @@ public class Pego {
 
 	public Pego(String tag) {
 		this.tag = tag;
-		this.id = IdCount++;
+//		this.id = IdCount++;
 	}
 
 	public Pego(String tag, ParserSource source, long startIndex) {
@@ -21,7 +20,7 @@ public class Pego {
 		this.source     = source;
 		this.startIndex = startIndex;
 		this.length     = 0;
-		this.id = IdCount++;
+//		this.id = IdCount++;
 	}
 
 	public final boolean isFailure() {

@@ -28,8 +28,11 @@ Content
 	= (Element^ / CDataSec^ / COMMENT / CharData^)*
 	;
 CDataSec
-	= '<![CDATA[' <{ (!']]>' '<![CDATA[' .)* CDATA? #cdata }> ']]>' _*
+	= '<![CDATA[' <{ (!']]>' .)* #cdata }> ']]>' _*
 	;
+CDataSec2
+        = '<![CDATA[' <{ (!']]>' '<![CDATA[' .)* CDATA? #cdata }> ']]>' _*
+        ;
 CDATA
 	= '<![CDATA[' (!']]>' '<![CDATA[' .)* CDATA? ']]>'
 	;
