@@ -1,14 +1,14 @@
 package org.peg4d;
 
 
-public class TracingPackratParser extends RecursiveDecentParser {
+public class TracingPackratParser extends ParserContext {
 	int memo = 0;
 	public TracingPackratParser(Grammar peg, ParserSource source) {
-		super(peg, source);
+		super(peg, source, 0, source.length());
 		this.memo = Main.MemoFactor;
 	}
 	public TracingPackratParser(Grammar peg, ParserSource source, int memo) {
-		super(peg, source);
+		super(peg, source, 0, source.length());
 		this.memo = memo;
 	}
 	
@@ -19,9 +19,9 @@ public class TracingPackratParser extends RecursiveDecentParser {
 			if(source.length() < 512 * 1024) {
 				initSize = (int)source.length();
 			}
-			//this.memoMap = new PackratMemo(initSize);
-			//this.memoMap = new DebugMemo(new PackratMemo(initSize), new OpenHashMemo(100));
-			this.memoMap = new DebugMemo(new OpenHashMemo(256), new OpenHashMemo(256));
+			this.memoMap = new PackratMemo(initSize);
+//			this.memoMap = new DebugMemo(new PackratMemo(initSize), new OpenHashMemo(100));
+//			this.memoMap = new DebugMemo(new OpenHashMemo(256), new OpenHashMemo(256));
 			Main.printVerbose("memo", "packrat-style");
 		}
 		else if(memo == 0) {

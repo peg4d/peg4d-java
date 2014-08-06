@@ -8,7 +8,8 @@ public class Grammar {
 	UMap<Peg>           pegMap;
 	UMap<String>        objectLabelMap = null;
 	public boolean      foundError = false;
-	public int          optimizationLevel;
+	int memoFactor      ;
+	int optimizationLevel;
 
 	int LexicalOptimization       = 0;
 	int InliningCount             = 0;
@@ -21,6 +22,10 @@ public class Grammar {
 		this.pegMap  = new UMap<Peg>();
 		this.pegList = new UList<Peg>(new Peg[128]);
 		this.optimizationLevel = Main.OptimizationLevel;
+		this.memoFactor = Main.MemoFactor;
+		if(this.memoFactor < 0) {
+			this.memoFactor = - this.memoFactor;
+		}
 	}
 
 	public String getName() {
@@ -187,7 +192,7 @@ public class Grammar {
 	int DisabledMemo = 0;
 
 
-	private static String prefixNonTerminal = "L\b";
+	private static String prefixNonTerminal = "a\b";
 	private static String prefixString = "t\b";
 	private static String prefixCharacter = "c\b";
 	private static String prefixNot = "!\b";
@@ -213,7 +218,7 @@ public class Grammar {
 	}
 
 	private Peg putsem(String t, Peg e) {
-		if(Main.MemoFactor > 0 && !e.is(Peg.NoMemo)) {
+		if(this.memoFactor > 0 && !e.is(Peg.NoMemo)) {
 			this.EnabledMemo += 1;
 			e = new PegMemo(e);
 		}
@@ -482,7 +487,24 @@ public class Grammar {
 		}
 		return orig;
 	}
+	
 
+	public Peg newConstructor(String tagName, Peg p) {
+		Peg e = new PegNewObject(this, 0, false, tagName, p);
+		if(this.memoFactor != 0) {
+			e = new PegMemo(e);
+		}
+		return e;
+	}
+
+	public Peg newJoinConstructor(String tagName, Peg p) {
+		Peg e = new PegNewObject(this, 0, true, tagName, p);
+		if(this.memoFactor != 0) {
+			e = new PegMemo(e);
+		}
+		return e;
+	}
+	
 	private Peg newNotAnyImpl(Peg orig, UList<Peg> l, int nsize) {
 		if(nsize == 1) {
 			return new PegNotAny(this, 0, (PegNot)l.ArrayValues[0], orig);
@@ -684,15 +706,15 @@ class PEG4dGrammar extends Grammar {
 		}
 		if(pego.is("##PegNewObjectJoin")) {
 			Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));
-			return new PegNewObject(loadingGrammar, 0, true, seq);
+			return loadingGrammar.newJoinConstructor(ruleName, seq);
 		}
 		if(pego.is("#PegNewObject")) {
 			Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));
-			return new PegNewObject(loadingGrammar, 0, false, seq);
+			return loadingGrammar.newConstructor(ruleName, seq);
 		}
 		if(pego.is("#PegExport")) {
 			Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));
-			PegNewObject o = new PegNewObject(loadingGrammar, 0, false, seq);
+			Peg o = loadingGrammar.newConstructor(ruleName, seq);
 			return new PegExport(loadingGrammar, 0, o);
 		}
 		if(pego.is("#PegSetter")) {

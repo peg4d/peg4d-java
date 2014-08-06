@@ -103,7 +103,6 @@ class Formatter extends PegProbe {
 
 	public void formatFooter() {
 	}
-
 	
 	public void formatRule(String ruleName, Peg e, UStringBuilder sb) {
 		this.sb = sb;
@@ -339,7 +338,7 @@ class ListMaker extends PegProbe {
 class NonTerminalChecker extends PegProbe {
 	String startPoint;
 	Peg startRule;
-	int length;
+	int consumedMinimumLength;
 	boolean hasNext = false;
 
 	void verify(String startPoint, Peg startRule) {
@@ -350,7 +349,7 @@ class NonTerminalChecker extends PegProbe {
 
 	void verifyImpl(Peg startRule) {
 		this.startRule = startRule;
-		this.length = 0;
+		this.consumedMinimumLength = 0;
 		this.startRule.visit(this);
 	}
 
@@ -362,96 +361,93 @@ class NonTerminalChecker extends PegProbe {
 			e.base.foundError = true;
 			return;
 		}
-		if(e.base.optimizationLevel>1) {
-			e.nextRule1 = next;
-		}
+		e.nextRule1 = next;
 		if(this.startPoint.equals(e.symbol)) {
 //			if(this.length == 0) {
 //				System.out.println("left recursion: " + e.symbol);
 //			}
 			if(e.length == -1) {
-				e.length = this.length;
+				e.length = this.consumedMinimumLength;
 			}
 			else {
-				if(this.length < e.length) {
-					e.length = this.length;
+				if(this.consumedMinimumLength < e.length) {
+					e.length = this.consumedMinimumLength;
 				}
 			}
-			this.startRule.set(Peg.CyclicRule);
+			if(!this.startRule.is(Peg.CyclicRule)) {
+				Main.printVerbose("cyclic rule", e.symbol);
+				this.startRule.set(Peg.CyclicRule);
+			}
 		}
 		if(!this.isVisited(e.symbol)) {
 			visited(e.symbol);
 			Peg stackedRule = this.startRule;
-			int stackedLength = this.length;
+			int stackedLength = this.consumedMinimumLength;
 			this.verifyImpl(e.getNext());
-			e.length = this.length;
-			this.length = stackedLength;
+			e.length = this.consumedMinimumLength;
+			this.consumedMinimumLength = stackedLength;
 			this.startRule = stackedRule;
 			this.startRule.derived(e.getNext());
 		}
-		this.length += e.length;
+		this.consumedMinimumLength += e.length;
 	}
 	
 	@Override
 	public void visitString(PegString e) {
-		this.length += e.text.length();
+		this.consumedMinimumLength += e.text.length();
 	}
 	
 	@Override
 	public void visitCharacter(PegCharacter e) {
-		this.length += 1;
+		this.consumedMinimumLength += 1;
 	}
 	@Override
 	public void visitAny(PegAny e) {
-		this.length += 1;
+		this.consumedMinimumLength += 1;
 	}
 	@Override
 	public void visitTagging(PegTagging e) {
-		this.length += 0;
 	}
 	@Override
 	public void visitMessage(PegMessage e) {
-		this.length += 0;
 	}
 	@Override
 	public void visitIndent(PegIndent e) {
-		this.length += 0;
 	}
 	@Override
 	public void visitIndex(PegIndex e) {
-		this.length += 0;
 	}
 	@Override
 	public void visitNot(PegNot e) {
-		int stackedLength = this.length;
+		int stackedLength = this.consumedMinimumLength;
 		this.visitUnary(e);
-		this.length = stackedLength;
+		this.consumedMinimumLength = stackedLength;
 	}
 	@Override
 	public void visitAnd(PegAnd e) {
-		int stackedLength = this.length;
+		int stackedLength = this.consumedMinimumLength;
 		this.visitUnary(e);
-		this.length = stackedLength;
+		this.consumedMinimumLength = stackedLength;
 	}
 	@Override
 	public void visitOptional(PegOptional e) {
-		int stackedLength = this.length;
+		int stackedLength = this.consumedMinimumLength;
 		this.visitUnary(e);
-		this.length = stackedLength;
+		this.consumedMinimumLength = stackedLength;
 	}
 	@Override
 	public void visitRepeat(PegRepeat e) {
-		int stackedLength = this.length;
+		int stackedLength = this.consumedMinimumLength;
 		this.visitUnary(e);
 		if(e.atleast == 0) {
-			this.length = stackedLength;
+			this.consumedMinimumLength = stackedLength;
 		}
 	}
 	@Override
 	public void visitSetter(PegSetter e) {
-		int stackedLength = this.length;
+		int stackedLength = this.consumedMinimumLength;
 		this.visitUnary(e);
-		this.length = stackedLength;
+		this.consumedMinimumLength = stackedLength;
 	}
 	@Override
 	public void visitExport(PegExport e) {
@@ -459,35 +455,35 @@ class NonTerminalChecker extends PegProbe {
 	}
 	@Override
 	public void visitSequence(PegSequence e) {
-		int stackedLength = this.length;
+		int stackedLength = this.consumedMinimumLength;
 		for(int i = 0; i < e.size(); i++) {
 			Peg sub = e.get(i);
 			sub.visit(this);
 		}
-		e.length = this.length - stackedLength;
+		e.length = this.consumedMinimumLength - stackedLength;
 	}
 	@Override
 	public void visitChoice(PegChoice e) {
-		int stackedLength = this.length;
+		int stackedLength = this.consumedMinimumLength;
 		int min = Integer.MAX_VALUE;
 		for(int i = 0; i < e.size(); i++) {
-			this.length = stackedLength;
+			this.consumedMinimumLength = stackedLength;
 			e.get(i).visit(this);
-			if(this.length < min) {
-				min = this.length;
+			if(this.consumedMinimumLength < min) {
+				min = this.consumedMinimumLength;
 			}
 		}
 		e.length = min;
-		this.length = stackedLength + min;
+		this.consumedMinimumLength = stackedLength + min;
 	}
 	
 	@Override
 	public void visitNewObject(PegNewObject e) {
-		int stackedLength = this.length;
+		int stackedLength = this.consumedMinimumLength;
 		for(int i = 0; i < e.size(); i++) {
 			e.get(i).visit(this);
 		}
-		e.length = this.length - stackedLength;
+		e.length = this.consumedMinimumLength - stackedLength;
 	}
 }
 
@@ -508,15 +504,18 @@ class Inliner extends PegProbe {
 		}
 		return false;
 	}
-	final Peg doInline(PegNonTerminal te) {
-		//System.out.println("inlining: " + te.symbol +  " Memo? " + (te.nextRule instanceof PegMemo) + " e=" + te.nextRule);
+	final Peg doInline(Peg parent, PegNonTerminal r) {
+		System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " Memo? " + (r.nextRule1 instanceof PegMemo) + " e=" + r.nextRule1);
 		this.peg.InliningCount += 1;
-		return te.nextRule1;
+		if(parent instanceof PegNot) {
+			//System.out.println("inlining: " + r.symbol +  " Memo? " + (r.nextRule1 instanceof PegMemo) + " e=" + r.nextRule1);
+		}
+		return r.nextRule1;
 	}
 	@Override
 	public void visitUnary(PegUnary e) {
 		if(isInlinable(e.inner)) {
-			e.inner = doInline((PegNonTerminal)e.inner);
+			e.inner = doInline(e, (PegNonTerminal)e.inner);
 		}
 		else {
 			e.inner.visit(this);
@@ -528,7 +527,7 @@ class Inliner extends PegProbe {
 		for(int i = 0; i < e.size(); i++) {
 			Peg se = e.get(i);
 			if(isInlinable(se)) {
-				e.set(i, doInline((PegNonTerminal)se));
+				e.set(i, doInline(e, (PegNonTerminal)se));
 			}
 			else {
 				se.visit(this);

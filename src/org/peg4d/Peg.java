@@ -932,13 +932,13 @@ class PegMessage extends PegTerm {
 
 class PegNewObject extends PegList {
 	boolean leftJoin = false;
-	String nodeName = "noname";
+	String tagName = "#new";
 	int prefetchIndex = 0;
 	public PegNewObject(Grammar base, int flag, int initSize, boolean leftJoin) {
 		super(base, flag | Peg.HasNewObject, initSize);
 		this.leftJoin = leftJoin;
 	}
-	public PegNewObject(Grammar base, int flag, boolean leftJoin, Peg e) {
+	public PegNewObject(Grammar base, int flag, boolean leftJoin, String tagName, Peg e) {
 		super(base, flag | Peg.HasNewObject, e.size());
 		this.leftJoin = leftJoin;
 		if(e instanceof PegSequence) {
@@ -949,6 +949,7 @@ class PegNewObject extends PegList {
 		else {
 			this.add(e);
 		}
+		//this.tagName = tagName;
 	}
 	@Override
 	protected void visit(PegProbe probe) {
@@ -984,7 +985,7 @@ class PegNewObject extends PegList {
 			assert(left == right);
 		}
 		int mark = context.markObjectStack();
-		Pego newnode = context.newPegObject(this.nodeName, this, startIndex);
+		Pego newnode = context.newPegObject(this.tagName, this, startIndex);
 		if(this.leftJoin) {
 			context.logSetter(newnode, -1, leftNode);
 		}

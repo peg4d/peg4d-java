@@ -292,7 +292,7 @@ public abstract class ParserContext {
 		}
 //		}
 		int mark = this.markObjectStack();
-		Pego newnode = this.newPegObject(e.nodeName, e, startIndex);
+		Pego newnode = this.newPegObject(e.tagName, e, startIndex);
 		if(e.leftJoin) {
 			this.logSetter(newnode, -1, leftNode);
 		}
