@@ -989,8 +989,9 @@ class PEG4dGrammar extends Grammar {
 //	Import
 //    = << 'import' _ RuleName@ from String@ #import>>
 //		  ;
-		this.setRule("Import", O(s("import"), L("#import"), n("_"), set(n("RuleName")), n("_"), s("from"), n("_"), set(_String)));
-//	TopLevel   
+		this.setRule("Import", O(s("import"), L("#import"), n("_"), set(_String), n("_"), s("from"), n("_"), set(n("RuleName"))));
+		
+		//	TopLevel   
 //	  =  Rule _? ';'
 //	  ;
 //		this.setRule("TopLevel", seq(n("Rule"), opt(n("_")), s(";"), opt(n("_"))));
