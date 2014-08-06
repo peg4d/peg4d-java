@@ -21,7 +21,7 @@ class PegProbe {
 	public void visitNonTerminal(PegNonTerminal e) {
 		if(!this.isVisited(e.symbol)) {
 			visited(e.symbol);
-			e.base.getRule(e.symbol).visit(this);
+			e.base.getExpression(e.symbol).visit(this);
 		}
 	}
 	public void visitString(PegString e) {
@@ -320,7 +320,7 @@ class ListMaker extends PegProbe {
 	void visitImpl(String name) {
 		this.visited(name);
 		this.nameList.add(name);
-		Peg next = peg.getRule(name);
+		Peg next = peg.getExpression(name);
 		next.visit(this);
 	}
 	
@@ -355,7 +355,7 @@ class NonTerminalChecker extends PegProbe {
 
 	@Override
 	public void visitNonTerminal(PegNonTerminal e) {
-		Peg next = e.base.getRule(e.symbol);
+		Peg next = e.base.getExpression(e.symbol);
 		if(next == null) {
 			Main._PrintLine(e.source.formatErrorMessage("error", e.sourcePosition, "undefined label: " + e.symbol));
 			e.base.foundError = true;
@@ -493,7 +493,7 @@ class Inliner extends PegProbe {
 		this.peg = peg;
 	}
 	void performInlining() {
-		UList<Peg> pegList = this.peg.getRuleList();
+		UList<Peg> pegList = this.peg.getExpressionList();
 		for(int i = 0; i < pegList.size(); i++) {
 			pegList.ArrayValues[i].visit(this);
 		}
@@ -505,10 +505,10 @@ class Inliner extends PegProbe {
 		return false;
 	}
 	final Peg doInline(Peg parent, PegNonTerminal r) {
-		System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " Memo? " + (r.nextRule1 instanceof PegMemo) + " e=" + r.nextRule1);
+		//System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " Memo? " + (r.nextRule1 instanceof PegMemo) + " e=" + r.nextRule1);
 		this.peg.InliningCount += 1;
-		if(parent instanceof PegNot) {
-			//System.out.println("inlining: " + r.symbol +  " Memo? " + (r.nextRule1 instanceof PegMemo) + " e=" + r.nextRule1);
+		if(parent instanceof PegRepeat) {
+			System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " Memo? " + (r.nextRule1 instanceof PegMemo) + " e=" + r.nextRule1);
 		}
 		return r.nextRule1;
 	}
@@ -550,7 +550,7 @@ class Optimizer extends PegProbe {
 	}
 
 	void optimize() {
-		UList<Peg> pegList = this.peg.getRuleList();
+		UList<Peg> pegList = this.peg.getExpressionList();
 		for(int i = 0; i < pegList.size(); i++) {
 			pegList.ArrayValues[i].visit(this);
 		}
@@ -560,7 +560,7 @@ class Optimizer extends PegProbe {
 	public void visitNonTerminal(PegNonTerminal e) {
 		if(!this.isVisited(e.symbol)) {
 			visited(e.symbol);
-			e.base.getRule(e.symbol).visit(this);
+			e.base.getExpression(e.symbol).visit(this);
 		}
 	}
 //	public void visitNotAny(PegNotAny e) {
@@ -730,11 +730,11 @@ class MemoRemover extends PegProbe {
 	int RemovedCount = 0;
 	
 	MemoRemover(Grammar peg) {
-		UList<String> nameList = peg.pegMap.keys();
+		UList<String> nameList = peg.ruleMap.keys();
 		this.pegList = new UList<Peg>(new Peg[nameList.size()]);
 		for(int i = 0; i < nameList.size(); i++) {
 			String ruleName = nameList.ArrayValues[i];
-			this.pegList.add(peg.getRule(ruleName));
+			this.pegList.add(peg.getExpression(ruleName));
 		}
 	}
 

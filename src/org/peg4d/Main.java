@@ -69,7 +69,7 @@ public class Main {
 
 	public final static void main(String[] args) {
 		parseCommandArguments(args);
-		Grammar peg = GrammarFile == null ? Grammar.PEG4d : Grammar.load(GrammarFile);
+		Grammar peg = GrammarFile == null ? Grammar.PEG4d : Grammar.load(new GrammarComposer(), GrammarFile);
 		if(PegFormat != null) {
 			Formatter fmt = loadFormatter(PegFormat);
 			peg.show(StartingPoint, fmt);
@@ -362,7 +362,7 @@ public class Main {
 			peg.show(ruleName);
 			return ruleName;
 		}
-		UList<String> list = peg.pegMap.keys();
+		UList<String> list = peg.ruleMap.keys();
 		System.out.print("Choose:");
 		for(int i = 0; i < list.size(); i++) {
 			System.out.print(" " + list.ArrayValues[i]);

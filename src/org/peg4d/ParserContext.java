@@ -123,7 +123,7 @@ public abstract class ParserContext {
 
 	public Pego parseNode(String startPoint) {
 		this.initMemo();
-		Peg start = this.getRule(startPoint);
+		Peg start = this.peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
@@ -171,7 +171,7 @@ public abstract class ParserContext {
 	private final Pego foundFailureNode = Pego.newSource(null, this.source, 0);
 
 	public final Pego newErrorObject() {
-		Pego node = newPegObject("#error", this.peg.getPeg(failurePosition), PEGUtils.getpos(this.failurePosition));
+		Pego node = newPegObject("#error", this.peg.getDefinedExpression(failurePosition), PEGUtils.getpos(this.failurePosition));
 		return node;
 	}
 	
@@ -187,9 +187,9 @@ public abstract class ParserContext {
 		return this.foundFailureNode;
 	}
 
-	public final Peg getRule(String name) {
-		return this.peg.getRule(name);
-	}
+//	public final Peg getRule(String name) {
+//		return this.peg.getRule(name);
+//	}
 	
 	private class LinkLog {
 		LinkLog next;
@@ -273,6 +273,7 @@ public abstract class ParserContext {
 					newnode.set(cur.index, cur.childNode);
 					this.disposeLog(cur);
 				}
+				newnode.checkNullEntry();
 			}
 			newnode.setLength((int)(this.getPosition() - startIndex));
 		}

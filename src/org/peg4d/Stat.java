@@ -12,7 +12,7 @@ import java.util.Map;
 class Stat {
 
 	Stat(Grammar peg, ParserSource source) {
-		this.PegSize = peg.pegList.size();
+		this.PegSize = peg.definedExpressionList.size();
 		source.stat = this;
 	}
 	

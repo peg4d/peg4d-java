@@ -42,8 +42,8 @@ public abstract class Peg {
 	protected Peg(Grammar base, int flag) {
 		this.base = base;
 		this.flag = flag;
-		base.pegList.add(this);
-		this.uniqueId = (short)base.pegList.size();
+		base.definedExpressionList.add(this);
+		this.uniqueId = (short)base.definedExpressionList.size();
 		this.semanticId = this.uniqueId;
 	}
 		
@@ -157,13 +157,13 @@ class PegNonTerminal extends PegTerm {
 	}
 	final Peg getNext() {
 		if(this.nextRule1 == null) {
-			return this.base.getRule(this.symbol);
+			return this.base.getExpression(this.symbol);
 		}
 		return this.nextRule1;
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return this.getNext().simpleMatch(left, context);
+		return this.nextRule1.simpleMatch(left, context);
 	}
 }
 
