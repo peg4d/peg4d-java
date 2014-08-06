@@ -986,7 +986,7 @@ class PegNewObject extends PegList {
 		int mark = context.markObjectStack();
 		Pego newnode = context.newPegObject(this.nodeName, this, startIndex);
 		if(this.leftJoin) {
-			context.pushSetter(newnode, -1, leftNode);
+			context.logSetter(newnode, -1, leftNode);
 		}
 		for(int i = this.prefetchIndex; i < this.size(); i++) {
 			Pego node = this.get(i).simpleMatch(newnode, context);
@@ -1158,6 +1158,7 @@ class PegMemo extends PegOperation {
 //				context.setPosition(pos + m.consumed);
 //				return m.generated;
 //			}
+			return m.generated;
 		}
 		Pego result = this.inner.simpleMatch(left, context);
 		if(result.isFailure()) {
@@ -1171,30 +1172,8 @@ class PegMemo extends PegOperation {
 //			}
 		}
 		this.memoMiss += 1;
-		if(Main.TracingMemo) {
-			if(this.memoMiss == 32) {
-				if(this.memoHit < 4) {
-					return disabledMemo(result);
-				}
-			}
-			if(this.memoMiss % 64 == 0) {
-				if(this.memoMiss / this.memoHit > 4) {
-					return disabledMemo(result);
-				}
-			}
-		}
+		this.tryTracing();
 		return result;
-	}
-
-	private Pego disabledMemo(Pego left) {
-		this.enableMemo = false;
-		this.base.DisabledMemo += 1;
-		int factor = this.base.EnabledMemo / 20;
-		if(factor != 0 && this.base.DisabledMemo % factor == 0) {
-			//System.out.println("disabled: ");
-			this.base.memoRemover.removeDisabled();
-		}
-		return left;
 	}
 }
 

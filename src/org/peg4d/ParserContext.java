@@ -65,36 +65,6 @@ public abstract class ParserContext {
 		return "";
 	}
 
-	private static final int Base = 111;
-	public int hashValue(int len) {
-		if(this.sourcePosition + len < this.endPosition) {
-			switch(len) {
-			case 1:
-				return this.source.charAt(this.sourcePosition);
-			case 2:
-				return Base * this.source.charAt(this.sourcePosition) 
-						+ this.source.charAt(this.sourcePosition+1);
-			case 3:
-				return Base * Base * this.source.charAt(this.sourcePosition) 
-						+ Base * this.source.charAt(this.sourcePosition + 1) 
-						+ this.source.charAt(this.sourcePosition + 2);
-			case 4:
-				return Base * Base * Base * this.source.charAt(this.sourcePosition)
-						+ Base * Base * this.source.charAt(this.sourcePosition + 1) 
-						+ Base * this.source.charAt(this.sourcePosition + 2) 
-						+ this.source.charAt(this.sourcePosition + 3);
-			default:
-				int len1 = len - 1;
-				int h = 0;
-				for(int i = 0; i < len1; i++) {
-					h = h + this.source.charAt(this.sourcePosition+i) * Base;
-				}
-				return h + this.source.charAt(this.sourcePosition + len1);
-			}
-		}
-		return 0;
-	}
-
 	protected final void consume(long plus) {
 		this.sourcePosition = this.sourcePosition + plus;
 	}
@@ -120,19 +90,6 @@ public abstract class ParserContext {
 		return false;
 	}
 	
-//	protected final boolean match(String text) {
-//		if(this.endPosition - this.sourcePosition >= text.length()) {
-//			for(int i = 0; i < text.length(); i++) {
-//				if(text.charAt(i) != this.source.charAt(this.sourcePosition + i)) {
-//					return false;
-//				}
-//			}
-//			this.consume(text.length());
-//			return true;
-//		}
-//		return false;
-//	}
-
 	protected final boolean match(UCharset charset) {
 		if(charset.match(this.getChar())) {
 			this.consume(1);
@@ -140,7 +97,9 @@ public abstract class ParserContext {
 		}
 		return false;
 	}
-		
+
+	
+	
 	public final String formatErrorMessage(String msg1, String msg2) {
 		return this.source.formatErrorMessage(msg1, this.sourcePosition, msg2);
 	}
@@ -232,106 +191,88 @@ public abstract class ParserContext {
 		return this.peg.getRule(name);
 	}
 	
-	private class ObjectLog {
-		ObjectLog next;
-		int  id;
-		Pego parentNode;
+	private class LinkLog {
+		LinkLog next;
 		int  index;
 		Pego childNode;
 	}
 
-	ObjectLog logStack = new ObjectLog();  // needs first logs
-	ObjectLog unusedLog = null;
-	int usedLog = 0;
-	int maxLog  = 0;
+	LinkLog logStack = null;  // needs first logs
+	LinkLog unusedLog = null;
+	int stackSize = 0;
+//	int usedLog = 0;
 	
-	private ObjectLog newLog() {
+	private LinkLog newLog() {
 		if(this.unusedLog == null) {
-			maxLog = maxLog + 1;
-			return new ObjectLog();
+			return new LinkLog();
 		}
-		ObjectLog l = this.unusedLog;
+		LinkLog l = this.unusedLog;
 		this.unusedLog = l.next;
 		l.next = null;
 		return l;
 	}
+
+	private void disposeLog(LinkLog log) {
+		log.childNode = null;
+		log.next = this.unusedLog;
+		this.unusedLog = log;
+	}
 	
 	protected int markObjectStack() {
-		return this.logStack.id;
+		return stackSize;
 	}
 
 	protected void rollbackObjectStack(int mark) {
-		ObjectLog cur = this.logStack;
-		if(cur.id > mark) {
-			//System.out.println("rollbackObjectStack: " + mark);
-			ObjectLog unused = this.logStack;
-			while(cur != null) {
-				//System.out.println("pop cur.id="+cur.id + ", marker="+markerId);
-				if(cur.id == mark + 1) {
-					this.logStack = cur.next;
-					cur.next = this.unusedLog;
-					this.unusedLog = unused;
-					break;
-				}
-				cur.parentNode = null;
-				cur.childNode = null;
-				cur = cur.next;
-			}
+		while(mark < this.stackSize) {
+			LinkLog l = this.logStack;
+			this.logStack = this.logStack.next;
+			this.stackSize--;
+			disposeLog(l);
 		}
+		assert(mark == this.stackSize);
 	}
 	
-	protected final void pushSetter(Pego parentNode, int index, Pego childNode) {
+	protected final void logSetter(Pego parentNode, int index, Pego childNode) {
 		if(!this.isRecognitionOnly()) {
-			ObjectLog l = this.newLog();
-			l.parentNode = parentNode;
+			LinkLog l = this.newLog();
+//			l.parentNode = parentNode;
 			l.childNode  = childNode;
+			childNode.parent = parentNode;
 			l.index = index;
-			l.id = this.logStack.id + 1;
 			l.next = this.logStack;
 			this.logStack = l;
-			//System.out.println("SET " + parentNode.hashCode() + " " + childNode.hashCode());
+			this.stackSize += 1;
 		}
 	}
 
-	protected final void popNewObject(Pego newnode, long startIndex, int marker) {
+	protected final void popNewObject(Pego newnode, long startIndex, int mark) {
 		if(!this.isRecognitionOnly()) {
-			ObjectLog cur = this.logStack;
-			if(cur.id > marker) {
-				UList<ObjectLog> entryList = new UList<ObjectLog>(new ObjectLog[8]);
-				ObjectLog unused = this.logStack;
-				while(cur != null) {
-					//System.out.println("object cur.id="+cur.id + ", marker="+marker);
-					if(cur.parentNode == newnode) {
-						entryList.add(cur);
-					}
-					if(cur.id == marker + 1) {
-						this.logStack = cur.next; 
-						cur.next = this.unusedLog;
-						this.unusedLog = unused;
-						break;
-					}
-					cur = cur.next;
+			LinkLog first = null;
+			int objectSize = 0;
+			while(mark < this.stackSize) {
+				LinkLog cur = this.logStack;
+				this.logStack = this.logStack.next;
+				this.stackSize--;
+				if(cur.childNode.parent == newnode) {
+					cur.next = first;
+					first = cur;
+					objectSize += 1;
 				}
-				if(entryList.size() > 0) {
-					newnode = Pego.newAst(newnode, entryList.size());
-					int index = 0;
-					for(int i = entryList.size() - 1; i >= 0; i--) {
-						ObjectLog l = entryList.ArrayValues[i];
-						if(l.index == -1) {
-							l.index = index;
-						}
-						index += 1;
-					}
-					for(int i = entryList.size() - 1; i >= 0; i--) {
-						ObjectLog l = entryList.ArrayValues[i];
-						newnode.set(l.index, l.childNode);
-						//System.out.println("@set" + newnode.tag + " " + l.index + " " + l.childNode.tag);
-						//System.out.println("set " + newnode.hashCode() + " " + l.childNode.hashCode() + "@set" + newnode.tag + " " + l.index + " " + l.childNode.tag);
-						l.childNode = null;
-					}
-					newnode.checkNullEntry();
+				else {
+					disposeLog(cur);
 				}
-				entryList = null;
+			}
+			if(objectSize > 0) {
+				newnode = Pego.newAst(newnode, objectSize);
+				for(int i = 0; i < objectSize; i++) {
+					LinkLog cur = first;
+					first = first.next;
+					if(cur.index == -1) {
+						cur.index = i;
+					}
+					newnode.set(cur.index, cur.childNode);
+					this.disposeLog(cur);
+				}
 			}
 			newnode.setLength((int)(this.getPosition() - startIndex));
 		}
@@ -353,7 +294,7 @@ public abstract class ParserContext {
 		int mark = this.markObjectStack();
 		Pego newnode = this.newPegObject(e.nodeName, e, startIndex);
 		if(e.leftJoin) {
-			this.pushSetter(newnode, -1, leftNode);
+			this.logSetter(newnode, -1, leftNode);
 		}
 		for(int i = e.prefetchIndex; i < e.size(); i++) {
 			Pego node = e.get(i).simpleMatch(newnode, this);
@@ -411,7 +352,7 @@ public abstract class ParserContext {
 			left.setSourcePosition(pos);
 		}
 		else {
-			this.pushSetter(left, e.index, node);
+			this.logSetter(left, e.index, node);
 		}
 		return left;
 	}
