@@ -73,36 +73,35 @@ public class Generator {
 		}
 	}
 	
-
-	public void writePego(Pego pego) {
+	public final void writePego(Pego pego) {
 		this.writePego(pego, "");
-		this.write("\n");
+		this.write(LF);
 		this.close();
 	}
 
-	public final void writePego(Pego pego, String indent) {
+	private void writePego(Pego pego, String indent) {
 		if(pego.size() == 0) {
-			this.write("\n");
+			this.write(LF);
 			this.write(indent);
 			this.write("{" + pego.tag+ " "); 
 			this.write(UCharset._QuoteString('\'', pego.getText(), '\''));
 			this.write("}");
 		}
 		else {
-			this.write("\n");
+			this.write(LF);
 			this.write(indent);
 			this.write("{" + pego.tag);
-			String nindent = "   " + indent;
+			String nindent = TAB + indent;
 			for(int i = 0; i < pego.size(); i++) {
 				this.writePego(pego.get(i), nindent);
 			}
-			this.write("\n");
+			this.write(LF);
 			this.write(indent);
 			this.write("}");
 		}
 	}
 	
-	public final void printCSV(Pego pego, double ratio) {
+	public final void writeCommaSeparateValue(Pego pego, double ratio) {
 		UList<String> names = new UList<String>(new String[8]);
 		UMap<Counter> schema =  new UMap<Counter>();
 		for(int i = 0; i < pego.size(); i++) {
@@ -224,7 +223,7 @@ public class Generator {
 	}
 	
 	
-	public final void printJSON(Pego pego) {
+	public final void writeJSON(Pego pego) {
 		writeJSON("", "", pego);
 		close();
 	}
