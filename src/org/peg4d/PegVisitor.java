@@ -1,6 +1,6 @@
 package org.peg4d;
 
-class PegProbe {
+class PegVisitor {
 	private UMap<String> visitedMap = new UMap<String>();
 	boolean isVisited(String name) {
 		if(this.visitedMap != null) {
@@ -81,7 +81,7 @@ class PegProbe {
 	}
 }
 
-class Formatter extends PegProbe {
+class Formatter extends PegVisitor {
 	UStringBuilder sb;
 	
 	public Formatter() {
@@ -305,7 +305,7 @@ class Formatter extends PegProbe {
 
 }
 
-class ListMaker extends PegProbe {
+class ListMaker extends PegVisitor {
 	private UList<String> nameList;
 	private Grammar peg;
 	
@@ -326,7 +326,7 @@ class ListMaker extends PegProbe {
 	
 	@Override
 	public void visitNonTerminal(PegNonTerminal e) {
-		if(!this.isVisited(e.symbol)) {
+		if(	!e.isForeignNonTerminal() && !this.isVisited(e.symbol)) {
 			visited(e.symbol);
 			this.visitImpl(e.symbol);
 		}
@@ -335,7 +335,7 @@ class ListMaker extends PegProbe {
 
 
 
-class NonTerminalChecker extends PegProbe {
+class NonTerminalChecker extends PegVisitor {
 	String startPoint;
 	Peg startRule;
 	int consumedMinimumLength;
@@ -361,7 +361,7 @@ class NonTerminalChecker extends PegProbe {
 			e.base.foundError = true;
 			return;
 		}
-		e.nextRule1 = next;
+		e.jumpExpression = next;
 		if(this.startPoint.equals(e.symbol)) {
 //			if(this.length == 0) {
 //				System.out.println("left recursion: " + e.symbol);
@@ -487,7 +487,7 @@ class NonTerminalChecker extends PegProbe {
 	}
 }
 
-class Inliner extends PegProbe {
+class Inliner extends PegVisitor {
 	Grammar peg;
 	Inliner(Grammar peg) {
 		this.peg = peg;
@@ -500,7 +500,7 @@ class Inliner extends PegProbe {
 	}
 	final boolean isInlinable(Peg e) {
 		if(e instanceof PegNonTerminal && peg.optimizationLevel > 1) {
-			return ! ((PegNonTerminal) e).nextRule1.is(Peg.CyclicRule);
+			return ! ((PegNonTerminal) e).jumpExpression.is(Peg.CyclicRule);
 		}
 		return false;
 	}
@@ -508,9 +508,9 @@ class Inliner extends PegProbe {
 		//System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " Memo? " + (r.nextRule1 instanceof PegMemo) + " e=" + r.nextRule1);
 		this.peg.InliningCount += 1;
 		if(parent instanceof PegRepeat) {
-			System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " Memo? " + (r.nextRule1 instanceof PegMemo) + " e=" + r.nextRule1);
+			System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " Memo? " + (r.jumpExpression instanceof PegMemo) + " e=" + r.jumpExpression);
 		}
-		return r.nextRule1;
+		return r.jumpExpression;
 	}
 	@Override
 	public void visitUnary(PegUnary e) {
@@ -542,7 +542,7 @@ class Inliner extends PegProbe {
 	}
 }
 
-class Optimizer extends PegProbe {
+class Optimizer extends PegVisitor {
 	Grammar peg;
 	
 	Optimizer(Grammar peg) {
@@ -664,67 +664,7 @@ class Optimizer extends PegProbe {
 	}
 }
 
-//class Prediction extends PegProbe {
-//	Prediction() {
-//	}
-//	void optimize(Grammar peg) {
-//		UList<Peg> pegList = peg.getRuleList();
-//		for(int i = 0; i < pegList.size(); i++) {
-//			Peg e = pegList.ArrayValues[i];
-//			e.visit(this);
-//		}
-//	}
-//
-//	final Peg optimizeChoice(Peg e) {
-//		if(e instanceof PegChoice && !(e instanceof PegWordChoice)) {
-//			return this.optimizeChoiceImpl((PegChoice)e);
-//		}
-//		return e;
-//	}
-//
-//	final Peg optimizeChoiceImpl(PegChoice e) {
-//		e.getPrediction(false);
-//		if(e.unpredictedChoice == 0) {
-//			PegMappedCharacterChoice choice = new PegMappedCharacterChoice(e);
-//			return choice;
-//		}
-//		if(e.unpredictedChoice < 3) {
-//			PegSelectiveChoice choice = new PegSelectiveChoice(e);
-//			return choice;
-//		}
-//		return e;
-//	}
-//	
-//	@Override
-//	public void visitNonTerminal(PegNonTerminal e) {
-//		e.nextRule = this.optimizeChoice(e.nextRule);
-//	}
-//
-//	@Override
-//	public void visitUnary(PegUnary e) {
-//		e.inner.visit(this);
-//		e.inner = this.optimizeChoice(e.inner);
-//	}
-//
-//	@Override
-//	public void visitList(PegList e) {
-//		for(int i = 0; i < e.size(); i++) {
-//			Peg se = e.get(i);
-//			se.visit(this);
-//			se = this.optimizeChoice(se);
-//			e.set(i, se);
-//		}
-//	}
-//
-//	@Override
-//	public void visitOperation(PegOperation e) {
-//		e.inner.visit(this);
-//		e.inner = this.optimizeChoice(e.inner);
-//	}
-//
-//}
-
-class MemoRemover extends PegProbe {
+class MemoRemover extends PegVisitor {
 	UList<Peg> pegList;
 	int cutMiss = -1;
 	int RemovedCount = 0;
@@ -772,8 +712,8 @@ class MemoRemover extends PegProbe {
 	
 	@Override
 	public void visitNonTerminal(PegNonTerminal e) {
-		if(e.nextRule1 != null) {
-			e.nextRule1 = this.removeMemo(e.nextRule1);
+		if(e.jumpExpression != null) {
+			e.jumpExpression = this.removeMemo(e.jumpExpression);
 		}
 	}
 
@@ -808,7 +748,7 @@ class MemoRemover extends PegProbe {
 	
 }
 
-class ObjectRemover extends PegProbe {
+class ObjectRemover extends PegVisitor {
 	
 	ObjectRemover() {
 	}

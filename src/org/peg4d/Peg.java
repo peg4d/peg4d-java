@@ -48,7 +48,10 @@ public abstract class Peg {
 	}
 		
 	//protected abstract Peg clone(Grammar base, PegTransformer tr);
-	protected abstract void visit(PegProbe probe);
+	protected abstract void visit(PegVisitor probe);
+	public Peg getExpression() {
+		return this;
+	}
 	public abstract Pego simpleMatch(Pego left, ParserContext context);
 	//public abstract int fastMatch(int left, MonadicParser context);
 
@@ -81,6 +84,10 @@ public abstract class Peg {
 	
 	public Peg get(int index, Peg def) {
 		return def;
+	}
+
+	String nameAt(int index) {
+		return null;
 	}
 
 	private final static Formatter DefaultFormatter = new Formatter();
@@ -120,6 +127,7 @@ public abstract class Peg {
 	public final boolean hasObjectOperation() {
 		return this.is(Peg.HasNewObject) || this.is(Peg.HasSetter) || this.is(Peg.HasTagging) || this.is(Peg.HasMessage);
 	}
+
 }
 
 abstract class PegTerm extends Peg {
@@ -138,7 +146,7 @@ abstract class PegTerm extends Peg {
 
 class PegNonTerminal extends PegTerm {
 	String symbol;
-	Peg    nextRule1 = null;
+	Peg    jumpExpression = null;
 	int    length = -1;  // to be set by Verifier
 	
 	PegNonTerminal(Grammar base, int flag, String ruleName) {
@@ -146,24 +154,27 @@ class PegNonTerminal extends PegTerm {
 		this.symbol = ruleName;
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitNonTerminal(this);
 	}
 	@Override boolean acceptC1(int ch) {
-		if(this.nextRule1 != null) {
-			return this.nextRule1.acceptC1(ch);
+		if(this.jumpExpression != null) {
+			return this.jumpExpression.acceptC1(ch);
 		}
 		return true;
 	}
 	final Peg getNext() {
-		if(this.nextRule1 == null) {
+		if(this.jumpExpression == null) {
 			return this.base.getExpression(this.symbol);
 		}
-		return this.nextRule1;
+		return this.jumpExpression;
+	}
+	public boolean isForeignNonTerminal() {
+		return this.jumpExpression.base != this.base;
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return this.nextRule1.simpleMatch(left, context);
+		return this.jumpExpression.simpleMatch(left, context);
 	}
 }
 
@@ -176,7 +187,7 @@ class PegString extends PegTerm {
 		textByte = UCharset.toUtf8(text);
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitString(this);
 	}
 	@Override boolean acceptC1(int ch) {
@@ -238,7 +249,7 @@ class PegAny extends PegTerm {
 		return true;
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitAny(this);
 	}
 	@Override
@@ -262,7 +273,7 @@ class PegNotAny extends PegTerm {
 		this.orig = orig;
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitNotAny(this);
 	}
 	@Override boolean acceptC1(int ch) {
@@ -293,7 +304,7 @@ class PegCharacter extends PegTerm {
 		this.charset = charset;
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitCharacter(this);
 	}
 	@Override boolean acceptC1(int ch) {
@@ -332,7 +343,7 @@ class PegOptional extends PegUnary {
 		super(base, flag | Peg.HasOptional | Peg.NoMemo, e);
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitOptional(this);
 	}
 	@Override boolean acceptC1(int ch) {
@@ -398,7 +409,7 @@ class PegRepeat extends PegUnary {
 		this.atleast = atLeast;
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitRepeat(this);
 	}
 	@Override boolean acceptC1(int ch) {
@@ -479,7 +490,7 @@ class PegAnd extends PegUnary {
 		super(base, flag | Peg.HasAnd, e);
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitAnd(this);
 	}
 	@Override
@@ -500,7 +511,7 @@ class PegNot extends PegUnary {
 		super(base, Peg.HasNot | flag, e);
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitNot(this);
 	}
 	@Override
@@ -591,14 +602,31 @@ class PegNotCharacter extends PegNot {
 }
 
 abstract class PegList extends Peg {
-	protected UList<Peg> list;
+	UList<Peg> list;
+	String[] nonTerminaNames = null;
 	int length = 0;
 	PegList(Grammar base, int flag, UList<Peg> list) {
 		super(base, flag);
 		this.list = list;
+		this.indexName();
 	}
-	PegList(Grammar base, int flag, int initSize) {
-		this(base, flag, new UList<Peg>(new Peg[initSize]));
+	void indexName() {
+		for(int i = 0; i < this.size(); i++) {
+			Peg e = this.get(i);
+			if(e instanceof PegNonTerminal) {
+				if(this.nonTerminaNames == null) {
+					this.nonTerminaNames = new String[this.size()];
+				}
+				this.nonTerminaNames[i] = ((PegNonTerminal) e).symbol;
+			}
+		}
+	}
+	@Override
+	String nameAt(int index) {
+		if(this.nonTerminaNames != null) {
+			return this.nonTerminaNames[index];
+		}
+		return null;
 	}
 	@Override
 	public final int size() {
@@ -618,9 +646,9 @@ abstract class PegList extends Peg {
 		}
 		return def;
 	}
-	public void add(Peg e) {
-		this.list.add(e);
-	}
+//	public void add(Peg e) {
+//		this.list.add(e);
+//	}
 
 	private boolean isOptional(Peg e) {
 		if(e instanceof PegOptional) {
@@ -708,11 +736,8 @@ class PegSequence extends PegList {
 	PegSequence(Grammar base, int flag, UList<Peg> l) {
 		super(base, flag, l);
 	}
-	PegSequence(Grammar base, int flag, int initSize) {
-		super(base, flag, initSize);
-	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitSequence(this);
 	}	
 	@Override
@@ -733,14 +758,14 @@ class PegSequence extends PegList {
 }
 
 class PegChoice extends PegList {
-	PegChoice(Grammar base, int flag, int initsize) {
-		super(base, flag | Peg.HasChoice, initsize);
-	}	
+//	PegChoice(Grammar base, int flag, int initsize) {
+//		super(base, flag | Peg.HasChoice, initsize);
+//	}	
 	PegChoice(Grammar base, int flag, UList<Peg> list) {
 		super(base, flag | Peg.HasChoice, list);
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitChoice(this);
 	}
 	
@@ -884,7 +909,7 @@ class PegSetter extends PegUnary {
 		this.index = index;
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitSetter(this);
 	}
 	@Override
@@ -904,7 +929,7 @@ class PegTagging extends PegTerm {
 		this.symbol = tagName;
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitTagging(this);
 	}
 	@Override
@@ -921,7 +946,7 @@ class PegMessage extends PegTerm {
 		this.symbol = message;
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitMessage(this);
 	}
 	@Override
@@ -934,37 +959,27 @@ class PegNewObject extends PegList {
 	boolean leftJoin = false;
 	String tagName = "#new";
 	int prefetchIndex = 0;
-	public PegNewObject(Grammar base, int flag, int initSize, boolean leftJoin) {
-		super(base, flag | Peg.HasNewObject, initSize);
+	public PegNewObject(Grammar base, int flag, boolean leftJoin, String tagName, UList<Peg> list) {
+		super(base, flag | Peg.HasNewObject, list);
 		this.leftJoin = leftJoin;
+		this.tagName = tagName;
 	}
-	public PegNewObject(Grammar base, int flag, boolean leftJoin, String tagName, Peg e) {
-		super(base, flag | Peg.HasNewObject, e.size());
-		this.leftJoin = leftJoin;
-		if(e instanceof PegSequence) {
-			for(int i = 0; i < e.size(); i++) {
-				this.add(e.get(i));
-			}
-		}
-		else {
-			this.add(e);
-		}
-		//this.tagName = tagName;
-	}
+//	public PegNewObject(Grammar base, int flag, boolean leftJoin, String tagName, Peg e) {
+//		super(base, flag | Peg.HasNewObject, new UList<Peg>(new Peg[e.size()]));
+//		this.leftJoin = leftJoin;
+//		if(e instanceof PegSequence) {
+//			for(int i = 0; i < e.size(); i++) {
+//				this.add(e.nameAt(i), e.get(i));
+//			}
+//		}
+//		else {
+//			this.add(null, e);
+//		}
+//		//this.tagName = tagName;
+//	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitNewObject(this);
-	}
-	@Override
-	public void add(Peg e) {
-		if(e instanceof PegSequence) {
-			for(int i =0; i < e.size(); i++) {
-				this.list.add(e.get(i));
-			}
-		}
-		else {
-			this.list.add(e);
-		}
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
@@ -1013,7 +1028,7 @@ class PegExport extends PegUnary {
 		super(base, flag | Peg.NoMemo, e);
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitExport(this);
 	}
 	@Override
@@ -1031,7 +1046,7 @@ class PegIndent extends PegTerm {
 		super(base, flag | Peg.HasContext);
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitIndent(this);
 	}
 	@Override
@@ -1051,7 +1066,7 @@ class PegIndex extends PegTerm {
 		this.index = index;
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitIndex(this);
 	}
 	@Override
@@ -1067,12 +1082,16 @@ abstract class PegOperation extends Peg {
 		this.inner = inner;
 	}
 	@Override
-	protected void visit(PegProbe probe) {
+	protected void visit(PegVisitor probe) {
 		probe.visitOperation(this);
 	}
 	@Override
 	boolean acceptC1(int ch) {
 		return this.inner.acceptC1(ch);
+	}
+	@Override
+	public Peg getExpression() {
+		return this.inner;
 	}
 }
 
@@ -1104,11 +1123,13 @@ class PegMemo extends PegOperation {
 		}
 		Pego right = this.inner.simpleMatch(left, context);
 		int length = (int)(context.getPosition() - pos);
-		if(right == left) {
-			context.memoMap.setMemo(pos, this, null, length);
-		}
-		else {
-			context.memoMap.setMemo(pos, this, right, length);
+		if(length > 0) {
+			if(right == left) {
+				context.memoMap.setMemo(pos, this, null, length);
+			}
+			else {
+				context.memoMap.setMemo(pos, this, right, length);
+			}
 		}
 		this.memoMiss += 1;
 		this.tryTracing();
@@ -1118,13 +1139,13 @@ class PegMemo extends PegOperation {
 	private void tryTracing() {
 		if(Main.TracingMemo) {
 			if(this.memoMiss == 32) {
-				if(this.memoHit < 4) {
+				if(this.memoHit < 2) {
 					disabledMemo();
 					return;
 				}
 			}
 			if(this.memoMiss % 64 == 0) {
-				if(this.memoMiss / this.memoHit > 4) {
+				if(this.memoMiss / this.memoHit > 10) {
 					disabledMemo();
 					return;
 				}
@@ -1133,15 +1154,21 @@ class PegMemo extends PegOperation {
 	}
 	
 	private void disabledMemo() {
+		//this.show();
 		this.enableMemo = false;
 		this.base.DisabledMemo += 1;
-		int factor = this.base.EnabledMemo / 20;
+		int factor = this.base.EnabledMemo / 10;
 		if(factor != 0 && this.base.DisabledMemo % factor == 0) {
 			this.base.memoRemover.removeDisabled();
 		}
 	}
 
-	
+	void show() {
+		if(Main.VerboseMode) {
+			double f = (double)this.memoHit / this.memoMiss;
+			System.out.println(this.inner.getClass().getSimpleName() + " #h/m=" + this.memoHit + "," + this.memoMiss + ", f=" + f + " " + this.inner);
+		}
+	}
 	public Pego simpleMatch1(Pego left, ParserContext context) {
 		if(!this.enableMemo) {
 			return this.inner.simpleMatch(left, context);

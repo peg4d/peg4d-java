@@ -113,6 +113,7 @@ public class Main {
 				OptimizationLevel = UCharset.parseInt(argument.substring(2), 2);
 			}
 			else if (argument.equals("-i")) {
+				Main.OptimizationLevel = 0;
 				ShellMode = true;
 			}
 			else if (argument.equals("-c")) {
@@ -176,6 +177,7 @@ public class Main {
 			index++;
 		}
 		else {
+			Main.OptimizationLevel = 0;
 			ShellMode = true;
 		}
 	}
@@ -255,7 +257,7 @@ public class Main {
 			p.showPosition("unconsumed", pos);
 		}
 		if(OutputType.equalsIgnoreCase("pego")) {
-			System.out.println(pego);
+			new Generator(OutputFileName).writePego(pego);
 		}
 		else if(OutputType.equalsIgnoreCase("json")) {
 			new Generator(OutputFileName).printJSON(pego);

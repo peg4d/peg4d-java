@@ -3,14 +3,14 @@ package org.peg4d;
 public class GrammarComposer {
 	UMap<Grammar> pegMap = new UMap<Grammar>();
 	
-	Grammar getGrammar(String path) {
-		Grammar peg = pegMap.get(path);
+	Grammar getGrammar(String filePath) {
+		Grammar peg = pegMap.get(filePath);
 		if(peg != null) {
 			return peg;
 		}
-		peg = loadLibraryGrammar(path);
+		peg = loadLibraryGrammar(filePath);
 		if(peg != null) {
-			setGrammar(path, peg);
+			setGrammar(filePath, peg);
 		}
 		return peg;
 	}
@@ -19,11 +19,14 @@ public class GrammarComposer {
 		this.pegMap.put(path, peg);
 	}
 	
-	private Grammar loadLibraryGrammar(String path) {
-		if(!path.endsWith(".peg")) {
-			path = "lib/" + path + ".peg";
+	private Grammar loadLibraryGrammar(String filePath) {
+		if(!filePath.endsWith(".peg")) {
+			filePath = "lib/" + filePath + ".peg";
 		}
-		return Grammar.load(this, path);
+		if(Main.VerbosePeg) {
+			System.out.println("importing " + filePath);
+		}
+		return Grammar.load(this, filePath);
 	}
 
 	

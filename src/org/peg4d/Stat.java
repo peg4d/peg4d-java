@@ -34,20 +34,21 @@ class Stat {
 	long BacktrackCount = 0;
 	long BacktrackSize = 0;
 	
+	long MostProccedPostion = 0;
 	long WorstBacktrackSize = 0;
 	long WorstPosition = 0;
 
-	public final void statBacktrack(long pos, long len) {
+	public final void statBacktrack1(long pos, long pos2) {
+		long len = pos2 - pos;
 		this.BacktrackCount = this.BacktrackCount + 1;
 		this.BacktrackSize  = this.BacktrackSize + len;
 		this.countBacktrackLength(len);
-		if(len > this.WorstBacktrackSize) {
-			this.WorstBacktrackSize = len;
-			this.WorstPosition = pos;
+		if(this.MostProccedPostion < pos2) {
+			this.MostProccedPostion = pos2;
 		}
-//		if(pos < BacktrackHistgram.length) {
-//			setHistgram((int)pos, (int)len);
-//		}
+		if((this.MostProccedPostion - pos) > this.WorstBacktrackSize) {
+			this.WorstBacktrackSize = (this.MostProccedPostion - pos);
+		}
 	}
 
 	int backtrackCount[] = new int[32];

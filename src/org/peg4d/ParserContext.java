@@ -26,11 +26,8 @@ public abstract class ParserContext {
 	}
 	
 	protected final void rollback(long pos) {
-		if(stat != null) {
-			long len = this.sourcePosition - pos;
-			if(len > 0) {
-				stat.statBacktrack(pos, len);
-			}
+		if(stat != null && this.sourcePosition > pos) {
+			stat.statBacktrack1(pos, this.sourcePosition);
 		}
 		this.sourcePosition = pos;
 	}

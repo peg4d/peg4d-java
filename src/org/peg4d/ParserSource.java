@@ -164,7 +164,7 @@ public abstract class ParserSource {
 		return msg;
 	}
 
-	public final String checkFileName(String fileName) {
+	public final String getFilePath(String fileName) {
 		int loc = this.fileName.lastIndexOf("/");
 		if(loc > 0) {
 			return this.fileName.substring(0, loc+1) + fileName; 

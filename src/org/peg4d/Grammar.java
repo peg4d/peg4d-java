@@ -1,14 +1,17 @@
 package org.peg4d;
 
+import java.io.File;
+
 public class Grammar {
 	public final static PEG4dGrammar PEG4d = new PEG4dGrammar();
 
 	GrammarComposer     db;
-	UMap<Grammar>       nsMap;
+	UMap<PegRule>       nsRuleMap;
 	String              name;
 	UMap<PegRule>       ruleMap;
 
 	UList<Peg>          definedExpressionList;
+	UList<PegRule>      exportedRuleList;
 	UMap<String>        objectLabelMap = null;
 	public boolean      foundError = false;
 	int memoFactor      ;
@@ -24,15 +27,15 @@ public class Grammar {
 	class PegRule {
 		String ruleName;
 		Peg expr;
-		public PegRule(String ruleName2, Peg e) {
-			this.ruleName = ruleName2;
+		public PegRule(String ruleName, Peg e) {
+			this.ruleName = ruleName;
 			this.expr = e;
 		}
 	}
 	
 	public Grammar(GrammarComposer db) {
 		this.db = db;
-		this.nsMap = null;
+		this.nsRuleMap = null;
 		this.ruleMap  = new UMap<PegRule>();
 		this.definedExpressionList = new UList<Peg>(new Peg[128]);
 		this.optimizationLevel = Main.OptimizationLevel;
@@ -88,38 +91,41 @@ public class Grammar {
 	public final void importGramamr(String ns, String filePath) {
 		Grammar peg = this.db.getGrammar(filePath);
 		if(peg != null) {
-			this.nsMap.put(ns, peg);
+			UList<PegRule> ruleList = peg.getExportRuleList();
+			//System.out.println("filePath: " + filePath + " peg=" + ruleList);
+			if(this.nsRuleMap == null && ruleList.size() > 0) {
+				this.nsRuleMap = new UMap<PegRule>();
+			}
+			for(int i = 0; i < ruleList.size(); i++) {
+				PegRule rule = ruleList.ArrayValues[i];
+				String key = ns + ':' + rule.ruleName;
+				if(this.nsRuleMap.hasKey(key)) {
+					Main.printVerbose("duplicated: ", key + " ");
+				}
+				Main.printVerbose("importing: ", key + " ");
+				this.nsRuleMap.put(key, rule);
+			}
 		}
 	}
 	
 	public final boolean hasRule(String ruleName) {
-		int loc = ruleName.indexOf(NameSpaceSeparator);
-		if(loc == -1) {
-			return this.ruleMap.get(ruleName, null) != null;
-		}
-		if(this.nsMap != null) {
-			String ns = ruleName.substring(0, loc);
-			Grammar peg = this.nsMap.get(ns);
-			if(peg != null) {
-				return peg.hasRule(ruleName.substring(loc+1));
+		if(this.nsRuleMap != null) {
+			int loc = ruleName.indexOf(NameSpaceSeparator);
+			if(loc != -1) {
+				return this.nsRuleMap.get(ruleName) != null;
 			}
 		}
-		return false;
+		return this.ruleMap.get(ruleName) != null;
 	}
 
 	public final PegRule getRule(String ruleName) {
-		int loc = ruleName.indexOf(NameSpaceSeparator);
-		if(loc == -1) {
-			return this.ruleMap.get(ruleName);
-		}
-		if(this.nsMap != null) {
-			String ns = ruleName.substring(0, loc);
-			Grammar peg = this.nsMap.get(ns);
-			if(peg != null) {
-				return peg.getRule(ruleName.substring(loc+1));
+		if(this.nsRuleMap != null) {
+			int loc = ruleName.indexOf(NameSpaceSeparator);
+			if(loc != -1) {
+				return this.nsRuleMap.get(ruleName);
 			}
 		}
-		return null;
+		return this.ruleMap.get(ruleName);
 	}
 
 	public final Peg getExpression(String ruleName) {
@@ -157,6 +163,7 @@ public class Grammar {
 	public final void verify(ObjectRemover objectRemover) {
 		//this.objectLabelMap = new UMap<String>();
 		this.foundError = false;
+		this.exportedRuleList = null;
 		UList<String> nameList = this.ruleMap.keys();
 		NonTerminalChecker nc = new NonTerminalChecker();
 		for(int i = 0; i < nameList.size(); i++) {
@@ -169,6 +176,7 @@ public class Grammar {
 			}
 			nc.verify(ruleName, rule.expr);
 		}
+		this.getExportRuleList();
 
 		new Inliner(this).performInlining();
 		new Optimizer(this).optimize();
@@ -176,6 +184,35 @@ public class Grammar {
 			Main._Exit(1, "PegError found");
 		}
 		this.memoRemover = new MemoRemover(this);
+	}
+	
+
+	final UList<PegRule> getExportRuleList() {
+		if(this.exportedRuleList == null) {
+			UList<PegRule> l = new UList<PegRule>(new PegRule[4]);
+			appendExportRuleList(l, "EXPORT");
+			appendExportRuleList(l, "Export");
+			appendExportRuleList(l, "export");
+			this.exportedRuleList = l;
+		}
+		return this.exportedRuleList;
+	}
+
+	private void appendExportRuleList(UList<PegRule> l, String name) {
+		Peg e = this.getExpression(name);
+		if(e != null) {
+			e = e.getExpression();
+			if(e instanceof PegChoice) {
+				for(int i = 0; i < e.size(); i++) {
+					Peg se = e.get(i);
+					if(se instanceof PegNonTerminal) {
+						PegRule rule = new PegRule(((PegNonTerminal) se).symbol, ((PegNonTerminal) se).getNext());
+						l.add(rule);
+						Main.printVerbose("export", rule.ruleName);
+					}
+				}
+			}
+		}
 	}
 
 	int DefinedPegSize = 0;
@@ -207,16 +244,15 @@ public class Grammar {
 		stat.setCount("PredictionOptimization", this.PredictionOptimization);
 		
 		
-//		for(int i = 0; i < this.pegList.size(); i++) {
-//			Peg e = this.pegList.ArrayValues[i];
-//			if(e instanceof PegMemo) {
-//				PegMemo me = (PegMemo)e;
-//				if(me.enableMemo && me.memoMiss > 32) {
-//					double f = (double)me.memoHit / me.memoMiss;
-//					System.out.println("#h/m=" + me.memoHit + "," + me.memoMiss + ", f=" + f + " c=" + e.refc + " " + e);
-//				}
-//			}
-//		}
+		for(int i = 0; i < this.definedExpressionList.size(); i++) {
+			Peg e = this.definedExpressionList.ArrayValues[i];
+			if(e instanceof PegMemo) {
+				PegMemo me = (PegMemo)e;
+				if(me.enableMemo && me.memoMiss > 32) {
+					me.show();
+				}
+			}
+		}
 	}
 
 	public ParserContext newParserContext(ParserSource source) {
@@ -549,10 +585,9 @@ public class Grammar {
 		}
 		return orig;
 	}
-	
 
 	public Peg newConstructor(String tagName, Peg p) {
-		Peg e = new PegNewObject(this, 0, false, tagName, p);
+		Peg e = new PegNewObject(this, 0, false, "#"+tagName, toSequenceList(p));
 		if(this.memoFactor != 0) {
 			e = new PegMemo(e);
 		}
@@ -560,11 +595,20 @@ public class Grammar {
 	}
 
 	public Peg newJoinConstructor(String tagName, Peg p) {
-		Peg e = new PegNewObject(this, 0, true, tagName, p);
+		Peg e = new PegNewObject(this, 0, true, "#"+tagName, toSequenceList(p));
 		if(this.memoFactor != 0) {
 			e = new PegMemo(e);
 		}
 		return e;
+	}
+	
+	public UList<Peg> toSequenceList(Peg e) {
+		if(e instanceof PegSequence) {
+			return ((PegSequence) e).list;
+		}
+		UList<Peg> l = new UList<Peg>(new Peg[1]);
+		l.add(e);
+		return l;
 	}
 	
 	private Peg newNotAnyImpl(Peg orig, UList<Peg> l, int nsize) {
@@ -652,17 +696,19 @@ public class Grammar {
 class PEG4dGrammar extends Grammar {
 	static boolean parse(Grammar loadingGrammar, ParserContext context, Pego pego) {
 		//System.out.println("DEBUG? parsed: " + node);		
-		if(pego.is("#rule")) {
+		if(pego.is("#PegRule")) {
 			String ruleName = pego.textAt(0, "");
 			Peg e = toParsingExpression(loadingGrammar, ruleName, pego.get(1));
 			loadingGrammar.setRule(ruleName, e);
 			//System.out.println("#rule** " + node + "\n@@@@ => " + e);
 			return true;
 		}
-		if(pego.is("#import")) {
-			String ruleName = pego.textAt(0, "");
-			String fileName = context.source.checkFileName(pego.textAt(1, ""));
-			importRuleFromFile(loadingGrammar, ruleName, fileName);
+		if(pego.is("#PegImport")) {
+			String filePath = searchPegFilePath(context, pego.textAt(0, ""));
+//			System.out.println("filePath: " + filePath);
+			String ns = pego.textAt(1, "");
+//			System.out.println("ns: " + ns);
+			loadingGrammar.importGramamr(ns, filePath);
 			return true;
 		}
 		if(pego.is("#error")) {
@@ -674,27 +720,17 @@ class PEG4dGrammar extends Grammar {
 		return false;
 	}
 	
-	private static void importRuleFromFile(Grammar loadingGrammar, String label, String fileName) {
-		if(Main.VerbosePeg) {
-			System.out.println("importing " + fileName);
+	private static String searchPegFilePath(ParserContext context, String filePath) {
+		String f = context.source.getFilePath(filePath);
+		if(new File(f).exists()) {
+			return f;
 		}
-//		Grammar p = new Grammar();
-//		p.loadGrammarFile(fileName);
-//		UList<String> list = p.makeList(label);
-//		String prefix = "";
-//		int loc = label.indexOf(":");
-//		if(loc > 0) {
-//			prefix = label.substring(0, loc+1);
-//			label = label.substring(loc+1);
-//			loadingGrammar.pegMap.put(label, new PegNonTerminal(loadingGrammar, 0,  prefix+label));
-//		}
-//		for(int i = 0; i < list.size(); i++) {
-//			String l = list.ArrayValues[i];
-//			Peg e = p.getRule(l);
-//			loadingGrammar.pegMap.put(prefix + l, e.clone(loadingGrammar, new PegNoTransformer()));
-//		}
+		if(new File(filePath).exists()) {
+			return filePath;
+		}
+		return "lib/"+filePath;
 	}
-
+	
 	private static Peg toParsingExpression(Grammar loadingGrammar, String ruleName, Pego node) {
 		Peg e = toParsingExpressionImpl(loadingGrammar, ruleName, node);
 		e.source = node.getSource();
@@ -836,18 +872,18 @@ class PEG4dGrammar extends Grammar {
 		return new PegRepeat(this, 0, seq(elist), 1);
 	}
 	private final Peg seq(Peg ... elist) {
-		PegSequence l = new PegSequence(this, 0, elist.length);
+		UList<Peg> l = new UList<Peg>(new Peg[8]);
 		for(Peg e : elist) {
-			l.list.add(e);
+			this.addSequence(l, e);
 		}
-		return l;
+		return new PegSequence(this, 0, l);
 	}
 	private final Peg choice(Peg ... elist) {
-		PegChoice l = new PegChoice(this, 0, elist.length);
+		UList<Peg> l = new UList<Peg>(new Peg[8]);
 		for(Peg e : elist) {
-			l.add(e);
+			this.addChoice(l, e);
 		}
-		return l;
+		return new PegChoice(this, 0, l);
 	}
 	private Peg not(Peg e) {
 		return new PegNot(this, 0, e);
@@ -856,18 +892,18 @@ class PEG4dGrammar extends Grammar {
 		return new PegTagging(this, 0, label);
 	}
 	private Peg O(Peg ... elist) {
-		PegNewObject l = new PegNewObject(this, 0, elist.length, false);
+		UList<Peg> l = new UList<Peg>(new Peg[8]);
 		for(Peg e : elist) {
-			l.list.add(e);
+			this.addSequence(l, e);
 		}
-		return l;
+		return new PegNewObject(this, 0, false, null, l);
 	}
 	private Peg LO(Peg ... elist) {
-		PegNewObject l = new PegNewObject(this, 0, elist.length, true);
+		UList<Peg> l = new UList<Peg>(new Peg[8]);
 		for(Peg e : elist) {
-			l.list.add(e);
+			this.addSequence(l, e);
 		}
-		return l;
+		return new PegNewObject(this, 0, true, null, l);
 	}
 	private Peg set(Peg e) {
 		return new PegSetter(this, 0, e, -1);
@@ -893,7 +929,9 @@ class PEG4dGrammar extends Grammar {
 //		RuleName
 //		  = << [A-Za-z_] [A-Za-z0-9_]* #PegNonTerminal >>
 //		  ;
-		this.setRule("RuleName", O(c("A-Za-z_"), zero(c("A-Za-z0-9_")), L("#PegNonTerminal")));
+		this.setRule("NonTerminal", O(c("A-Za-z_"), zero(c("A-Za-z0-9_:")), L("#PegNonTerminal")));
+		this.setRule("RuleName", O(c("A-Za-z_"), zero(c("A-Za-z0-9_")), L("#name")));
+		this.setRule("LibName",  O(c("A-Za-z_"), zero(c("A-Za-z0-9_.")), L("#name")));
 ////	String
 ////	  = "'" << (!"'" .)*  #PegString >> "'"
 ////	  / '"' <<  (!'"' .)* #PegString >> '"'
@@ -941,7 +979,7 @@ class PEG4dGrammar extends Grammar {
 			seq(s("("), opt(n("_")), n("Expr"), opt(n("_")), s(")"), opt(n("Setter"))),
 			seq(O(choice(s("<<"), s("<{"), s("8<")), choice(seq(choice(s("^"), s("@")), c(" \\t\\n\\r"), L("##PegNewObjectJoin")), seq(s(""), L("#PegNewObject"))), 
 					opt(n("_")), set(n("Expr")), opt(n("_")), choice(s(">>"), s("}>"), s(">8"))), opt(n("Setter"))),
-			seq(n("RuleName"), opt(n("Setter")))
+			seq(n("NonTerminal"), opt(n("Setter")))
 		);
 //	Term
 //	  = String 
@@ -985,11 +1023,11 @@ class PEG4dGrammar extends Grammar {
 //	Rule
 //	  = << RuleName@ _? '=' _? Expr@ #rule>>
 //	  ;
-		this.setRule("Rule", O(L("#rule"), set(n("RuleName")), opt(n("_")), s("="), opt(n("_")), set(n("Expr"))));
+		this.setRule("Rule", O(L("#PegRule"), set(n("RuleName")), opt(n("_")), s("="), opt(n("_")), set(n("Expr"))));
 //	Import
 //    = << 'import' _ RuleName@ from String@ #import>>
 //		  ;
-		this.setRule("Import", O(s("import"), L("#import"), n("_"), set(_String), n("_"), s("from"), n("_"), set(n("RuleName"))));
+		this.setRule("Import", O(s("import"), L("#PegImport"), n("_"), choice(set(_String), n("LibName")), n("_"), s("as"), n("_"), set(n("RuleName"))));
 		
 		//	TopLevel   
 //	  =  Rule _? ';'
