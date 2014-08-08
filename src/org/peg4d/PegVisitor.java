@@ -83,27 +83,21 @@ class PegVisitor {
 
 class Formatter extends PegVisitor {
 	UStringBuilder sb;
-	
 	public Formatter() {
 		sb = new UStringBuilder();
 	}
-
 	public String getDesc() {
 		return "PEG4d ";
 	}
-	
 	public void format(Peg e, UStringBuilder sb) {
 		this.sb = sb;
 		e.visit(this);
 		this.sb = null;
 	}
-
 	public void formatHeader() {
 	}
-
 	public void formatFooter() {
 	}
-	
 	public void formatRule(String ruleName, Peg e, UStringBuilder sb) {
 		this.sb = sb;
 		sb.appendNewLine();
@@ -123,33 +117,22 @@ class Formatter extends PegVisitor {
 		sb.append(getNewLine(), this.getSemiColon());
 		this.sb = null;
 	}
-	
 	public String getNewLine() {
 		return "\n\t";
 	}
-
 	public String getSetter() {
 		return "=";
 	}
-
 	public String getSemiColon() {
 		return ";";
 	}
-
 	public void formatRuleName(String ruleName, Peg e) {
-		if(e.is(Peg.HasNewObject)) {
-			sb.append(ruleName);
-		}
-		else {
-			sb.append(ruleName.toUpperCase());
-		}
+		sb.append(ruleName);
 	}
-
 	@Override
 	public void visitNonTerminal(PegNonTerminal e) {
 		this.formatRuleName(e.symbol, e);
 	}
-
 	@Override
 	public void visitString(PegString e) {
 		char quote = '\'';
@@ -158,27 +141,22 @@ class Formatter extends PegVisitor {
 		}
 		sb.append(UCharset._QuoteString(quote, e.text, quote));
 	}
-
 	@Override
 	public void visitCharacter(PegCharacter e) {
 		sb.append("[" + e.charset, "]");
 	}
-
 	@Override
 	public void visitAny(PegAny e) {
 		sb.append(".");
 	}
-
 	@Override
 	public void visitTagging(PegTagging e) {
 		sb.append(e.symbol);
 	}
-	
 	@Override
 	public void visitMessage(PegMessage e) {
 		sb.append("`", e.symbol, "`");
 	}
-
 	@Override
 	public void visitIndent(PegIndent e) {
 		sb.append("indent");
