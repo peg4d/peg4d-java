@@ -203,22 +203,11 @@ class CharacterReader {
 		this.pos = 0;
 	}
 
-	public boolean hasChar() {
+	public final boolean hasChar() {
 		return (pos < this.text.length());
 	}
-
-	private char read(int pos) {
-		if(pos < this.text.length()) {
-			return Main._GetChar(this.text, pos);
-		}
-		return 0;
-	}
-
-	char getRowChar() {
-		return this.read(this.pos);
-	}
 	
-	char readChar() {
+	public final char readChar() {
 		if(this.pos < this.text.length()) {
 			char ch = this.read(this.pos);
 			if(ch == '\\') {
@@ -237,6 +226,13 @@ class CharacterReader {
 		}
 		return '\0';
 	}
+	
+	private char read(int pos) {
+		if(pos < this.text.length()) {
+			return Main._GetChar(this.text, pos);
+		}
+		return 0;
+	}
 
 	private char readEsc(char ch1) {
 		switch (ch1) {
@@ -252,6 +248,14 @@ class CharacterReader {
 		return ch1;
 	}
 
+	private char readUtf(char ch1, char ch2, char ch3, char ch4) {
+		int c = this.hex(ch1);
+		c = (c * 16) + this.hex(ch2);
+		c = (c * 16) + this.hex(ch3);
+		c = (c * 16) + this.hex(ch4);
+		return (char)c;
+	}
+
 	private int hex(int c) {
 		if('0' <= c && c <= '9') {
 			return c - '0';
@@ -265,13 +269,6 @@ class CharacterReader {
 		return 0;
 	}
 
-	private char readUtf(char ch1, char ch2, char ch3, char ch4) {
-		int c = this.hex(ch1);
-		c = (c * 16) + this.hex(ch2);
-		c = (c * 16) + this.hex(ch3);
-		c = (c * 16) + this.hex(ch4);
-		return (char)c;
-	}
 }
 
 

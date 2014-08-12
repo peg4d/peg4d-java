@@ -36,7 +36,7 @@ public abstract class Peg {
 	short      semanticId = 0;
 	int        refc       = 0;
 	
-	ParserSource source = null;
+	PegInput source = null;
 	int          sourcePosition = 0;
 	
 	protected Peg(Grammar base, int flag) {
@@ -320,6 +320,32 @@ class PegCharacter extends PegTerm {
 		return left;
 	}
 }
+
+//class PegUtf8Range extends PegTerm {
+//	char fromChar;
+//	char toChar;
+//	public PegUtf8Range(Grammar base, int flag, char fromChar, char toChar) {
+//		super(base, Peg.HasCharacter | Peg.NoMemo | flag);
+//		this.fromChar = fromChar;
+//		this.toChar   = toChar;
+//	}
+//	@Override
+//	protected void visit(PegVisitor probe) {
+//		probe.visitUtf8Range(this);
+//	}
+//	@Override boolean acceptC1(int ch) {
+//		return this.charset.match(ch);
+//	}
+//	@Override
+//	public Pego simpleMatch(Pego left, ParserContext context) {
+//		int ch = context.getChar();
+//		if(!this.charset.match(ch)) {
+//			return context.foundFailure(this);
+//		}
+//		context.consume(1);
+//		return left;
+//	}
+//}
 
 abstract class PegUnary extends Peg {
 	Peg inner;
@@ -918,7 +944,21 @@ class PegSetter extends PegUnary {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchSetter(left, this);
+		long pos = left.getSourcePosition();
+//		if(this.inner instanceof PegNonTerminal) {
+//			System.out.println("label=" + this.inner);
+//		}
+		Pego node = this.inner.simpleMatch(left, context);
+		if(node.isFailure() || left == node) {
+			return node;
+		}
+		if(context.isRecognitionOnly()) {
+			left.setSourcePosition(pos);
+		}
+		else {
+			context.logSetter(left, this.index, node);
+		}
+		return left;
 	}
 }
 
@@ -951,32 +991,20 @@ class PegMessage extends PegTerm {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchMessage(left, this);
+		left.setMessage(this.symbol);
+		return left;
 	}
 }
 
 class PegNewObject extends PegList {
 	boolean leftJoin = false;
-	String tagName = "#new";
+	String tagName;
 	int prefetchIndex = 0;
 	public PegNewObject(Grammar base, int flag, boolean leftJoin, String tagName, UList<Peg> list) {
 		super(base, flag | Peg.HasNewObject, list);
 		this.leftJoin = leftJoin;
-		this.tagName = tagName;
+		this.tagName = tagName == null ? "#new" : tagName;
 	}
-//	public PegNewObject(Grammar base, int flag, boolean leftJoin, String tagName, Peg e) {
-//		super(base, flag | Peg.HasNewObject, new UList<Peg>(new Peg[e.size()]));
-//		this.leftJoin = leftJoin;
-//		if(e instanceof PegSequence) {
-//			for(int i = 0; i < e.size(); i++) {
-//				this.add(e.nameAt(i), e.get(i));
-//			}
-//		}
-//		else {
-//			this.add(null, e);
-//		}
-//		//this.tagName = tagName;
-//	}
 	@Override
 	protected void visit(PegVisitor probe) {
 		probe.visitNewObject(this);
@@ -1000,7 +1028,7 @@ class PegNewObject extends PegList {
 			assert(left == right);
 		}
 		int mark = context.markObjectStack();
-		Pego newnode = context.newPegObject(this.tagName, this, startIndex);
+		Pego newnode = context.newPegObject1(this.tagName, startIndex, this);
 		if(this.leftJoin) {
 			context.logSetter(newnode, -1, leftNode);
 		}
@@ -1020,6 +1048,16 @@ class PegNewObject extends PegList {
 			context.stat.countObjectCreation();
 		}
 		return newnode;
+	}
+	public void lazyMatch(Pego newnode, ParserContext context, long pos) {
+		int mark = context.markObjectStack();
+		for(int i = 0; i < this.size(); i++) {
+			Pego node = this.get(i).simpleMatch(newnode, context);
+			if(node.isFailure()) {
+				break;  // this not happens
+			}
+		}
+		context.popNewObject(newnode, pos, mark);
 	}
 }
 
@@ -1055,7 +1093,11 @@ class PegIndent extends PegTerm {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchIndent(left, this);
+		String indent = left.getSource().getIndentText(left.getSourcePosition());
+		if(context.match(indent.getBytes())) {  // very slow
+			return left;
+		}
+		return context.foundFailure(this);
 	}
 }
 
@@ -1071,7 +1113,11 @@ class PegIndex extends PegTerm {
 	}
 	@Override
 	public Pego simpleMatch(Pego left, ParserContext context) {
-		return context.matchIndex(left, this);
+//		String indent = left.getSource().getIndentText(left.getSourcePosition());
+//		if(context.match(indent.getBytes())) {  // very slow
+//			return left;
+//		}
+		return context.foundFailure(this);
 	}
 }
 
@@ -1123,14 +1169,14 @@ class PegMemo extends PegOperation {
 		}
 		Pego right = this.inner.simpleMatch(left, context);
 		int length = (int)(context.getPosition() - pos);
-		if(length > 0) {
+//		if(length > 0) {
 			if(right == left) {
 				context.memoMap.setMemo(pos, this, null, length);
 			}
 			else {
 				context.memoMap.setMemo(pos, this, right, length);
 			}
-		}
+//		}
 		this.memoMiss += 1;
 		this.tryTracing();
 		return right;

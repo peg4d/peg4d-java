@@ -7,7 +7,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class FileSource extends ParserSource {
+public class FileSource extends PegInput {
 	final static int PageSize = 4096;
 	
 	private RandomAccessFile file;
@@ -19,13 +19,14 @@ public class FileSource extends ParserSource {
 	private final int FifoSize = 8; 
 	private LinkedHashMap<Long, byte[]> fifoMap = null;
 	
-	public FileSource(String fileName) throws FileNotFoundException {
-		super(fileName, 1);
+	FileSource(Grammar peg, String fileName) throws FileNotFoundException {
+		super(peg, fileName, 1);
 		this.file = new RandomAccessFile(fileName, "r");
 		try {
 			this.fileLength = this.file.length();
 		} catch (IOException e) {
 			e.printStackTrace();
+			this.fileLength = 0;
 		}
 		this.buffer_offset = 0;
 		if(this.FifoSize > 0) {
@@ -46,7 +47,6 @@ public class FileSource extends ParserSource {
 			this.buffer = new byte[PageSize];
 		}
 		this.readMainBuffer(this.buffer_offset);
-		//this.debug = new StringSource(fileName);
 	}
 	@Override
 	public final long length() {

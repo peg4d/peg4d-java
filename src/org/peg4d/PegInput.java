@@ -1,10 +1,12 @@
 package org.peg4d;
 
-public abstract class ParserSource {
-	public String fileName;
-	public Stat stat = null;
+public abstract class PegInput {
+	Grammar peg;
+	String fileName;
+	Stat stat = null;
 	
-	public ParserSource(String fileName, long linenum) {
+	public PegInput(Grammar peg, String fileName, long linenum) {
+		this.peg = peg;
 		this.fileName = fileName;
 		this.pushLineMemo(0, linenum);
 	}
@@ -13,7 +15,6 @@ public abstract class ParserSource {
 	public abstract int  charAt(long n);
 	public abstract boolean match(long pos, byte[] text);
 	public abstract String substring(long startIndex, long endIndex);
-//	public abstract ParserSource trim(long startIndex, long endIndex);
 
 	private class LineMemo {
 		long pos;

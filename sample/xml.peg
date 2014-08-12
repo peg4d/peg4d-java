@@ -25,7 +25,7 @@ String
 	= '"' <{ (!'"' .)* #string }> '"'
 	;
 Content
-	= (Element^ / CDataSec^ / COMMENT / CharData^)*
+	= (Element^ / CDataSec^ / COMMENT / Text^)*
 	;
 CDataSec
 	= '<![CDATA[' <{ (!']]>' .)* #cdata }> ']]>' _*
@@ -39,7 +39,7 @@ CDATA
 COMMENT
 	= '<!--' (!'-->' .)* '-->' _*
 	;
-CharData
+Text
 	= <{ (!'<' .)+ #cdata }> / ''
 	;
 WS

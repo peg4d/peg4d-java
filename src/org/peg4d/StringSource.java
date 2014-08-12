@@ -1,27 +1,25 @@
 package org.peg4d;
 
-import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 
-public class StringSource extends ParserSource {
+class StringSource extends PegInput {
 	private byte[] textBuffer;
-	public StringSource(String fileName, long linenum, String sourceText) {
-		super(fileName, linenum);
+	StringSource(Grammar peg, String fileName, long linenum, String sourceText) {
+		super(peg, fileName, linenum);
 		this.textBuffer = UCharset.toUtf8(sourceText);
 	}
 
-	public StringSource(String fileName) {
-		super(fileName, 1);
-		try {
-			RandomAccessFile f = new RandomAccessFile(fileName, "r");
-			this.textBuffer = new byte[(int)f.length()];
-			f.read(this.textBuffer);
-			f.close();
-		}
-		catch(IOException e) {
-		}
-	}
+//	StringSource(Grammar peg, String fileName) {
+//		super(peg, fileName, 1);
+//		try {
+//			RandomAccessFile f = new RandomAccessFile(fileName, "r");
+//			this.textBuffer = new byte[(int)f.length()];
+//			f.read(this.textBuffer);
+//			f.close();
+//		}
+//		catch(IOException e) {
+//		}
+//	}
 	
 	@Override
 	public final long length() {

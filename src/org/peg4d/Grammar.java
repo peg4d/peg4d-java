@@ -51,7 +51,7 @@ public class Grammar {
 
 	public final boolean loadGrammarFile(String fileName) {
 		PEG4dGrammar peg4d = Grammar.PEG4d;
-		ParserContext p = peg4d.newParserContext(Main.loadSource(fileName));
+		ParserContext p = peg4d.newParserContext(Main.loadSource(peg4d, fileName));
 		this.name = fileName;
 		if(fileName.indexOf('/') > 0) {
 			this.name = fileName.substring(fileName.lastIndexOf('/')+1);
@@ -63,7 +63,7 @@ public class Grammar {
 				Main._Exit(1, "FAILED: " + pego);
 				break;
 			}
-			if(!PEG4dGrammar.parse(this, p, pego)) {
+			if(!PEG4dGrammar.performExpressionConstruction(this, p, pego)) {
 				break;
 			}
 		}
@@ -166,9 +166,16 @@ public class Grammar {
 		this.exportedRuleList = null;
 		UList<String> nameList = this.ruleMap.keys();
 		NonTerminalChecker nc = new NonTerminalChecker();
+		if(this.foundError) {
+			Main._Exit(1, "PegError found");
+		}
 		for(int i = 0; i < nameList.size(); i++) {
 			String ruleName = nameList.ArrayValues[i];
 			PegRule rule = this.getRule(ruleName);
+			if(Main.PackratStyleMemo && !(rule.expr instanceof PegMemo)) {
+				rule.expr = new PegMemo(rule.expr);
+				this.EnabledMemo += 1;
+			}
 			if(objectRemover != null) {
 				//System.out.println("B: " + ruleName + "= " + nonTerminal);
 				rule.expr = objectRemover.removeObjectOperation(rule.expr);
@@ -243,7 +250,6 @@ public class Grammar {
 		stat.setCount("InterTerminalOptimization", this.InterTerminalOptimization);
 		stat.setCount("PredictionOptimization", this.PredictionOptimization);
 		
-		
 		for(int i = 0; i < this.definedExpressionList.size(); i++) {
 			Peg e = this.definedExpressionList.ArrayValues[i];
 			if(e instanceof PegMemo) {
@@ -255,7 +261,7 @@ public class Grammar {
 		}
 	}
 
-	public ParserContext newParserContext(ParserSource source) {
+	public ParserContext newParserContext(PegInput source) {
 		ParserContext p = new TracingPackratParser(this, source);
 		if(Main.RecognitionOnlyMode) {
 			p.setRecognitionOnly(true);
@@ -316,7 +322,7 @@ public class Grammar {
 	}
 
 	private Peg putsem(String t, Peg e) {
-		if(this.memoFactor > 0 && !e.is(Peg.NoMemo)) {
+		if(this.memoFactor > 0 && Main.AllExpressionMemo && !e.is(Peg.NoMemo)) {
 			this.EnabledMemo += 1;
 			e = new PegMemo(e);
 		}
@@ -588,7 +594,7 @@ public class Grammar {
 
 	public Peg newConstructor(String tagName, Peg p) {
 		Peg e = new PegNewObject(this, 0, false, "#"+tagName, toSequenceList(p));
-		if(this.memoFactor != 0) {
+		if(this.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
 			e = new PegMemo(e);
 		}
 		return e;
@@ -596,7 +602,7 @@ public class Grammar {
 
 	public Peg newJoinConstructor(String tagName, Peg p) {
 		Peg e = new PegNewObject(this, 0, true, "#"+tagName, toSequenceList(p));
-		if(this.memoFactor != 0) {
+		if(this.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
 			e = new PegMemo(e);
 		}
 		return e;
@@ -694,20 +700,17 @@ public class Grammar {
 }
 
 class PEG4dGrammar extends Grammar {
-	static boolean parse(Grammar loadingGrammar, ParserContext context, Pego pego) {
-		//System.out.println("DEBUG? parsed: " + node);		
+	static boolean performExpressionConstruction(Grammar loadingGrammar, ParserContext context, Pego pego) {
+		//System.out.println("DEBUG? parsed: " + pego);		
 		if(pego.is("#PegRule")) {
 			String ruleName = pego.textAt(0, "");
 			Peg e = toParsingExpression(loadingGrammar, ruleName, pego.get(1));
 			loadingGrammar.setRule(ruleName, e);
-			//System.out.println("#rule** " + node + "\n@@@@ => " + e);
 			return true;
 		}
 		if(pego.is("#PegImport")) {
 			String filePath = searchPegFilePath(context, pego.textAt(0, ""));
-//			System.out.println("filePath: " + filePath);
 			String ns = pego.textAt(1, "");
-//			System.out.println("ns: " + ns);
 			loadingGrammar.importGramamr(ns, filePath);
 			return true;
 		}
@@ -842,7 +845,7 @@ class PEG4dGrammar extends Grammar {
 	}
 	
 	@Override
-	public ParserContext newParserContext(ParserSource source) {
+	public ParserContext newParserContext(PegInput source) {
 		return new TracingPackratParser(this, source, 0);  // best parser
 	}
 

@@ -11,7 +11,7 @@ import java.util.Map;
 
 class Stat {
 
-	Stat(Grammar peg, ParserSource source) {
+	Stat(Grammar peg, PegInput source) {
 		this.PegSize = peg.definedExpressionList.size();
 		source.stat = this;
 	}
@@ -284,6 +284,7 @@ class Stat {
 		id = id + ((Main.RecognitionOnlyMode) ? 'C' : 'O');
 		id = id + Main.OptimizationLevel + "." + Main.MemoFactor + "."  + (this.InitTotalHeap / (1024*1024)) +"M";
 		this.setCount("HeapSize", this.HeapSize);
+		this.setRatio1("Heap/File", this.HeapSize, this.statFileLength);		
 		this.setCount("UsedHeapSize", this.UsedHeapSize);
 		
 		this.setCount("ConsumedLength", this.ConsumedLength);
@@ -294,6 +295,7 @@ class Stat {
 		
 		this.setCount("Backtrack", this.BacktrackCount);
 		this.setCount("WorstBacktrack", this.WorstBacktrackSize);
+		
 		this.setRatio("BacktrackAverage", this.BacktrackSize, this.BacktrackCount);
 		this.setRatio("Backtrack1", this.backtrackCount[0], this.BacktrackCount);
 		this.setRatio("Backtrack2", this.backtrackCount[1], this.BacktrackCount);
@@ -313,8 +315,8 @@ class Stat {
 		this.statObject(pego);
 		p.peg.updateStat(this);
 		this.setText("StatId", id);
-		this.setCount("ErapsedTime", this.ErapsedTime);  // ms
-		this.setRatio("Latency", this.ConsumedLength, this.ErapsedTime);
+		this.setCount("Latency", this.ErapsedTime);  // ms
+		this.setRatio("Throughput", this.ConsumedLength, this.ErapsedTime);
 		
 		this.writeCSV();
 	}
@@ -432,7 +434,7 @@ class Stat {
 
 	public final void writeCSV() {
 		UStringBuilder sb = new UStringBuilder();
-		sb.append("v1,");
+		sb.append("v2,");
 		this.CSV(sb, "StatId");
 		this.CSV(sb, "MemoFactor");
 		this.CSV(sb, "Optimization");
@@ -440,28 +442,32 @@ class Stat {
 		/** **/
 		this.CSV(sb, "FileName");
 		this.CSV(sb, "FileSize");
-		this.CSV(sb, "ErapsedTime");
 		this.CSV(sb, "Latency");
+		this.CSV(sb, "Throughput");
 		this.CSV(sb, "HeapSize");
+		this.CSV(sb, "Heap/File");
+		this.CSV(sb, "PegSize");		
+		this.CSV(sb, "UsedObject");
+
 		/** **/
 		sb.append("*,");  // mark
-		this.CSV(sb, "ConsumedLength");
-		this.CSV(sb, "BacktrackLength");
 		this.CSV(sb, "Backtrack/Consumed");
-		this.CSV(sb, "Backtrack");
 		this.CSV(sb, "WorstBacktrack");
-		this.CSV(sb, "BacktrackAverage");
-		this.CSV(sb, "Backtrack1");
-		this.CSV(sb, "Backtrack2");
-		this.CSV(sb, "Backtrack4");
-		this.CSV(sb, "Backtrack8");
-		this.CSV(sb, "Backtrack16");
-		this.CSV(sb, "Backtrack32");
-		this.CSV(sb, "Backtrack64");
-		this.CSV(sb, "Backtrack128");
+		this.CSV(sb, "Backtrack");
+//		this.CSV(sb, "ConsumedLength");
+//		this.CSV(sb, "BacktrackLength");
+//		this.CSV(sb, "BacktrackAverage");
+//		this.CSV(sb, "Backtrack1");
+//		this.CSV(sb, "Backtrack2");
+//		this.CSV(sb, "Backtrack4");
+//		this.CSV(sb, "Backtrack8");
+//		this.CSV(sb, "Backtrack16");
+//		this.CSV(sb, "Backtrack32");
+//		this.CSV(sb, "Backtrack64");
+//		this.CSV(sb, "Backtrack128");
 		
 		/** **/
-		sb.append("*,");  // mark
+		sb.append("*PEG,");  // mark
 		this.CSV(sb, "Peg");
 		this.CSV(sb, "PegSize");
 		this.CSV(sb, "Complexity");

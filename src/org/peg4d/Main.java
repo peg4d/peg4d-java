@@ -76,7 +76,7 @@ public class Main {
 			return;
 		}
 		if(InputFileName != null) {
-			loadScript(peg, InputFileName);
+			loadInputFile(peg, InputFileName);
 		}
 		else {
 			ShellMode = true;
@@ -158,6 +158,12 @@ public class Main {
 					PackratStyleMemo = false;
 					ObjectFocusedMemo = true;
 				}
+				else if(argument.equals("--memo:none")) {
+					AllExpressionMemo = false;
+					PackratStyleMemo = false;
+					ObjectFocusedMemo = false;
+					TracingMemo = false;
+				}
 				else if(argument.equals("--memo:static")) {
 					TracingMemo = false;
 				}
@@ -229,12 +235,12 @@ public class Main {
 		return d;
 	}
 
-	private static void loadScript(Grammar peg, String fileName) {
+	private static void loadInputFile(Grammar peg, String fileName) {
 		String startPoint = StartingPoint;
 		Main.printVerbose("FileName", fileName);
 		Main.printVerbose("Grammar", peg.getName());
 		Main.printVerbose("StartingPoint", StartingPoint);
-		ParserContext p = peg.newParserContext(Main.loadSource(fileName));
+		ParserContext p = peg.newParserContext(Main.loadSource(peg, fileName));
 		if(Main.StatLevel == 0) {
 			long t = System.currentTimeMillis();
 			while(System.currentTimeMillis()-t < 5000) {
@@ -260,83 +266,12 @@ public class Main {
 			new Generator(OutputFileName).writePego(pego);
 		}
 		else if(OutputType.equalsIgnoreCase("json")) {
-			new Generator(OutputFileName).printJSON(pego);
+			new Generator(OutputFileName).writeJSON(pego);
 		}
 		else if(OutputType.equalsIgnoreCase("csv")) {
-			new Generator(OutputFileName).printCSV(pego, 0.9);
+			new Generator(OutputFileName).writeCommaSeparateValue(pego, 0.9);
 		}
 	}
-
-//	private static void parseLine(Namespace gamma, BunDriver driver, String startPoint, ParserSource source) {
-//		try {
-//			Grammar peg = gamma.getGrammar("main");
-//			ParserContext context = peg.newParserContext(source);
-//			driver.startTransaction(OutputFileName);
-//			while(context.hasNode()) {
-//				context.beginStatInfo();
-//				PegObject node = context.parseNode(startPoint);
-//				context.endStatInfo(node);
-////				if(ValidateJsonMode) {
-////					parseAndValidateJson(node, gamma, driver, startPoint);
-////				}
-//				gamma.setNode(node);
-//				if(!ParseOnlyMode && driver != null) {
-//					if(!(driver instanceof PegDumpper)) {
-//						node = gamma.tryMatch(node, true);
-//					}
-//					else {
-//						node.matched = Functor.ErrorFunctor;
-//					}
-//					if(VerboseMode) {
-//						System.out.println("Typed node: \n" + node + "\n:untyped: " + node.countUnmatched(0));
-//					}
-//					driver.startTopLevel();
-//					node.matched.build(node, driver);
-//					driver.endTopLevel();
-//				}
-//				if(node.is("#error")) {
-//					if(OutputFileName != null) {
-//						MainOption._Exit(1, "toplevel error was found");
-//					}
-//					break;
-//				}
-//			}
-//			driver.generateMain();
-//			driver.endTransaction();
-//		}
-//		catch (Exception e) {
-//			PrintStackTrace(e, source.getLineNumber(0));
-//		}
-//	}
-//	
-//	private static boolean inParseAndValidateJson = false;
-//	
-//	private final static PegObject parseAndValidateJson(PegObject node, Namespace gamma, BunDriver driver, String startPoint) {
-//		JsonPegGenerator generator = new JsonPegGenerator();
-//		String language = generator.generateJsonPegFile(node);
-//		gamma.loadPegFile("main", language);
-//		driver.initTable(gamma);
-//		if(InputJsonFile != null) {
-//			inParseAndValidateJson = true;
-//			ParserSource source = Main.loadSource(InputJsonFile);
-//			ParserContext context = Main.newParserContext(source);
-//			gamma.guessGrammar(context, "main");
-//			driver.startTransaction(OutputFileName);
-//			while(context.hasNode()) {
-//				node = context.parseNode(startPoint);
-//					if(context.hasChar()) {
-//						//System.out.println(ValidParserContext.InvalidLine);
-//						//System.out.println("** uncosumed: '" + context + "' **");
-//						break;
-//					}
-//					else {
-//						System.out.println("parsed:\n" + node.toString());
-//						System.out.println("\n\nVALID");
-//					}
-//			}
-//		}
-//		return node;
-//	}
 
 	public final static void performShell(Grammar peg) {
 		Main._PrintLine(ProgName + Version + " (" + CodeName + ") on " + Main._GetPlatform());
@@ -350,7 +285,7 @@ public class Main {
 				startPoint = switchStaringPoint(peg, line.substring(1), startPoint);
 				continue;
 			}
-			ParserSource source = new StringSource("(stdin)", linenum, line);
+			PegInput source = new StringSource(peg, "(stdin)", linenum, line);
 			ParserContext p = peg.newParserContext(source);
 			Pego pego = p.parseNode(startPoint);
 			System.out.println("Parsed: " + pego);
@@ -446,14 +381,13 @@ public class Main {
 
 	// file
 
-	public final static ParserSource loadSource(String fileName) {
-		//ZLogger.VerboseLog(ZLogger.VerboseFile, "loading " + FileName);
+	public final static PegInput loadSource(Grammar peg, String fileName) {
 		InputStream Stream = Main.class.getResourceAsStream("/" + fileName);
 		if (Stream == null) {
 			try {
 				File f = new File(fileName);
 				if(f.length() > 128 * 1024) {
-					return new FileSource(fileName);
+					return new FileSource(peg, fileName);
 				}
 				Stream = new FileInputStream(fileName);
 			} catch (FileNotFoundException e) {
@@ -470,10 +404,7 @@ public class Main {
 				builder.append("\n");
 				line = reader.readLine();
 			}
-			StringSource s = new StringSource(fileName, 1, builder.toString());
-//			StringSource s2 = new StringSource(fileName);
-//			System.out.println("@@@@ " + s.length() + ", " + s2.length());
-			return s;
+			return new StringSource(peg, fileName, 1, builder.toString());
 		}
 		catch(IOException e) {
 			e.printStackTrace();

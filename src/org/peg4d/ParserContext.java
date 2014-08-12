@@ -2,15 +2,15 @@ package org.peg4d;
 
 import java.util.concurrent.BlockingQueue;
 
-public abstract class ParserContext {
+public class ParserContext {
 	public    Grammar     peg = null;
 	
-	public final          ParserSource source;
+	public final          PegInput source;
 	protected long        sourcePosition = 0;
 	public    long        endPosition;
 	protected Stat stat   = null;
 	
-	public ParserContext(Grammar peg, ParserSource source, long startIndex, long endIndex) {
+	public ParserContext(Grammar peg, PegInput source, long startIndex, long endIndex) {
 		this.peg = peg;
 		this.source = source;
 		this.sourcePosition = startIndex;
@@ -94,8 +94,6 @@ public abstract class ParserContext {
 		}
 		return false;
 	}
-
-	
 	
 	public final String formatErrorMessage(String msg1, String msg2) {
 		return this.source.formatErrorMessage(msg1, this.sourcePosition, msg2);
@@ -129,14 +127,15 @@ public abstract class ParserContext {
 			pego = this.newErrorObject();
 			String msg = this.source.formatErrorMessage("syntax error", pego.getSourcePosition(), "");
 			pego.setMessage(msg);
-			System.out.println(msg);
 			this.sourcePosition = this.endPosition;
 		}
 		return pego;
 	}
 	
 	protected MemoMap memoMap = null;
-	public abstract void initMemo();
+	public void initMemo() {
+		this.memoMap = new NoMemo();
+	}
 	
 	protected Pego successResult = null;
 	
@@ -153,14 +152,13 @@ public abstract class ParserContext {
 		return this.successResult != null;
 	}
 	
-	public final Pego newPegObject(String name, Peg created, long pos) {
+	public final Pego newPegObject1(String tagName, long pos, PegNewObject created) {
 		if(this.isRecognitionOnly()) {
 			this.successResult.setSourcePosition(pos);
 			return this.successResult;
 		}
 		else {
-			Pego node = Pego.newSource("#new", this.source, pos);
-			return node;
+			return Pego.newSource(tagName, this.source, pos, created);
 		}
 	}
 	
@@ -168,8 +166,7 @@ public abstract class ParserContext {
 	private final Pego foundFailureNode = Pego.newSource(null, this.source, 0);
 
 	public final Pego newErrorObject() {
-		Pego node = newPegObject("#error", this.peg.getDefinedExpression(failurePosition), PEGUtils.getpos(this.failurePosition));
-		return node;
+		return Pego.newErrorSource(this.source, this.failurePosition);
 	}
 	
 	public final Pego foundFailure(Peg e) {
@@ -276,41 +273,41 @@ public abstract class ParserContext {
 		}
 	}
 	
-	public Pego matchNewObject(Pego left, PegNewObject e) {
-		Pego leftNode = left;
-		long startIndex = this.getPosition();
-//		if(e.predictionIndex > 0) {
-		for(int i = 0; i < e.prefetchIndex; i++) {
-			Pego node = e.get(i).simpleMatch(left, this);
-			if(node.isFailure()) {
-				this.rollback(startIndex);
-				return node;
-			}
-			assert(left == node);
-		}
+//	public Pego matchNewObject(Pego left, PegNewObject e) {
+//		Pego leftNode = left;
+//		long startIndex = this.getPosition();
+////		if(e.predictionIndex > 0) {
+//		for(int i = 0; i < e.prefetchIndex; i++) {
+//			Pego node = e.get(i).simpleMatch(left, this);
+//			if(node.isFailure()) {
+//				this.rollback(startIndex);
+//				return node;
+//			}
+//			assert(left == node);
 //		}
-		int mark = this.markObjectStack();
-		Pego newnode = this.newPegObject(e.tagName, e, startIndex);
-		if(e.leftJoin) {
-			this.logSetter(newnode, -1, leftNode);
-		}
-		for(int i = e.prefetchIndex; i < e.size(); i++) {
-			Pego node = e.get(i).simpleMatch(newnode, this);
-			if(node.isFailure()) {
-				this.rollbackObjectStack(mark);
-				this.rollback(startIndex);
-				return node;
-			}
-			//			if(node != newnode) {
-			//				e.warning("dropping @" + newnode.name + " " + node);
-			//			}
-		}
-		this.popNewObject(newnode, startIndex, mark);
-		if(this.stat != null) {
-			this.stat.countObjectCreation();
-		}
-		return newnode;
-	}
+////		}
+//		int mark = this.markObjectStack();
+//		Pego newnode = this.newPegObject(e.tagName, startIndex, e);
+//		if(e.leftJoin) {
+//			this.logSetter(newnode, -1, leftNode);
+//		}
+//		for(int i = e.prefetchIndex; i < e.size(); i++) {
+//			Pego node = e.get(i).simpleMatch(newnode, this);
+//			if(node.isFailure()) {
+//				this.rollbackObjectStack(mark);
+//				this.rollback(startIndex);
+//				return node;
+//			}
+//			//			if(node != newnode) {
+//			//				e.warning("dropping @" + newnode.name + " " + node);
+//			//			}
+//		}
+//		this.popNewObject(newnode, startIndex, mark);
+//		if(this.stat != null) {
+//			this.stat.countObjectCreation();
+//		}
+//		return newnode;
+//	}
 	
 //	long statExportCount = 0;
 //	long statExportSize  = 0;
@@ -340,50 +337,44 @@ public abstract class ParserContext {
 		}
 	}
 
-	public Pego matchSetter(Pego left, PegSetter e) {
-		long pos = left.getSourcePosition();
-		Pego node = e.inner.simpleMatch(left, this);
-		if(node.isFailure() || left == node) {
-			return node;
-		}
-		if(this.isRecognitionOnly()) {
-			left.setSourcePosition(pos);
-		}
-		else {
-			this.logSetter(left, e.index, node);
-		}
-		return left;
-	}
-
-	public Pego matchTag(Pego left, PegTagging e) {
-		left.setTag(e.symbol);
-		return left;
-	}
-
-	public Pego matchMessage(Pego left, PegMessage e) {
-		left.setMessage(e.symbol);
-		//left.startIndex = this.getPosition();
-		return left;
-	}
-	
-	public Pego matchIndent(Pego left, PegIndent e) {
-//		String indent = left.getSource().getIndentText(left.getSourcePosition());
-//		//System.out.println("###" + indent + "###");
-//		if(this.match(indent)) {
-//			return left;
+//	public Pego matchSetter(Pego left, PegSetter e) {
+//		long pos = left.getSourcePosition();
+//		Pego node = e.inner.simpleMatch(left, this);
+//		if(node.isFailure() || left == node) {
+//			return node;
 //		}
-		return this.foundFailure(e);
-	}
-
-	public Pego matchIndex(Pego left, PegIndex e) {
-//		String text = left.textAt(e.index, null);
-//		if(text != null) {
-//			if(this.match(text)) {
-//				return left;
-//			}
+//		if(this.isRecognitionOnly()) {
+//			left.setSourcePosition(pos);
 //		}
-		return this.foundFailure(e);
-	}
+//		else {
+//			this.logSetter(left, e.index, node);
+//		}
+//		return left;
+//	}
+
+//	public Pego matchTag(Pego left, PegTagging e) {
+//		left.setTag(e.symbol);
+//		return left;
+//	}
+//
+//	public Pego matchMessage(Pego left, PegMessage e) {
+//		left.setMessage(e.symbol);
+//		//left.startIndex = this.getPosition();
+//		return left;
+//	}
+//	
+//	public Pego matchIndent(Pego left, PegIndent e) {
+//	}
+//
+//	public Pego matchIndex(Pego left, PegIndex e) {
+////		String text = left.textAt(e.index, null);
+////		if(text != null) {
+////			if(this.match(text)) {
+////				return left;
+////			}
+////		}
+//		return this.foundFailure(e);
+//	}
 
 	public void beginPeformStat() {
 		if(Main.StatLevel >= 0) {

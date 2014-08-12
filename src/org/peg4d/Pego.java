@@ -1,28 +1,79 @@
 package org.peg4d;
 
+//class PegSemantics {
+//	Grammar peg;
+//	String tag;
+//	PegSemantics(Grammar peg, String tag) {
+//		this.peg = peg;
+//		this.tag = tag;
+//	}
+//	@Override
+//	public String toString() {
+//		return tag;
+//	}
+//}
+
 public class Pego {
-//	public static int IdCount = 0;
-	public ParserSource    source = null;
-	public long            startIndex = 0;
-	public int             length = 0;
-	public String          tag = null;
-	public String          message = null;
-	public Pego            parent = null;
-	public Pego            AST[] = null;
+	private PegInput    source = null;
+	private long            pospeg = 0;
+	private int             length = 0;
+	String          tag = null;
+	private String          message = null;
+	Pego            parent = null;
+	private Pego            AST[] = null;
 
-	public Pego(String tag) {
-		this.tag = tag;
-//		this.id = IdCount++;
-	}
-
-	public Pego(String tag, ParserSource source, long startIndex) {
+	Pego(String tag, PegInput source, long pos) {
 		this.tag        = tag;
 		this.source     = source;
-		this.startIndex = startIndex;
+		this.pospeg     = PEGUtils.objectId(pos, (short)0);
 		this.length     = 0;
-//		this.id = IdCount++;
 	}
 
+	Pego(String tag, PegInput source, long pos, Peg e) {
+		this.tag        = tag;
+		this.source     = source;
+		this.pospeg     = PEGUtils.objectId(pos, e);
+		assert(pos == PEGUtils.getpos(this.pospeg));
+		this.length     = 0;
+	}
+
+	public final Pego getParent() {
+		return this.parent;
+	}
+
+	public PegInput getSource() {
+		return this.source;
+	}
+
+	public long getSourcePosition() {
+		return PEGUtils.getpos(this.pospeg);
+	}
+
+	void setSourcePosition(long pos) {
+		this.pospeg = PEGUtils.objectId(pos, PEGUtils.getpegid(this.pospeg));
+		assert(pos == PEGUtils.getpos(this.pospeg));
+	}
+
+	void setEndPosition(long pos) {
+		this.length = (int)(pos - this.getSourcePosition());
+	}
+
+	public int getLength() {
+		return this.length;
+	}
+
+	void setLength(int length) {
+		this.length = length;
+	}
+	
+	void setTag(String tag) {
+		this.tag = tag;
+	}
+
+	void setMessage(String message) {
+		this.message = message;
+	}
+	
 	public final boolean isFailure() {
 		return (this.tag == null);
 	}
@@ -33,7 +84,7 @@ public class Pego {
 
 	public final boolean equals2(Pego o) {
 		if(this != o) {
-			if(this.startIndex == o.startIndex && this.length == o.length) {
+			if(this.pospeg == o.pospeg && this.length == o.length) {
 				if(this.tag == null) {
 					if(o.tag == null) {
 						return true;
@@ -46,32 +97,15 @@ public class Pego {
 				}
 			}
 //			if(Main.VerbosePeg) {
-				System.out.println("@@diff: " + this.startIndex + "+" + this.length + this.tag + "  " + o.startIndex + "+" + o.length + o.tag);
+				System.out.println("@@diff: " + this.getSourcePosition() + "+" + this.length + this.tag + "  " + o.getSourcePosition() + "+" + o.length + o.tag);
 //			}
 			return false;
 		}
 		return true;
 	}
 	
-	public void setEndPosition(long endIndex) {
-		this.length     = (int)(endIndex - this.startIndex);
-	}
-
-	
-	public final void setSource(Peg createdPeg, ParserSource source, long startIndex) {
-		this.source     = source;
-		this.startIndex = startIndex;
-		this.length     = 0;
-	}
-
-	public final void setSource(long startIndex, long endIndex) {
-		this.startIndex = startIndex;
-		this.length     = (int)(endIndex - startIndex);
-	}
-
-	
 	public final String formatSourceMessage(String type, String msg) {
-		return this.source.formatErrorMessage(type, this.startIndex, msg);
+		return this.source.formatErrorMessage(type, this.getSourcePosition(), msg);
 	}
 	
 	public final boolean isEmptyToken() {
@@ -83,14 +117,46 @@ public class Pego {
 			return this.message;
 		}
 		if(this.source != null) {
-			return this.source.substring(this.startIndex, this.startIndex + this.length);
+			return this.source.substring(this.getSourcePosition(), this.getSourcePosition() + this.getLength());
 		}
 		return "";
 	}
 
 	// AST[]
 	
+	public Peg getSourceExpression() {
+		short pegid = PEGUtils.getpegid(pospeg);
+		if(pegid > 0 && source.peg != null) {
+			return source.peg.getDefinedExpression(pegid);
+		}
+		return null;
+	}
+
+	private final static Pego[] LazyAST = new Pego[0];
+
+	private void checkLazyAST() {
+		if(this.AST == LazyAST) {
+			PegNewObject e = (PegNewObject)this.getSourceExpression();
+			this.AST = null;
+			long pos = this.getSourcePosition();
+			e.lazyMatch(this, new ParserContext(source.peg, source, pos, pos+this.getLength()), pos);
+		}
+	}
+
+	boolean compactAST() {
+		if(this.AST != null) {
+			Peg e = this.getSourceExpression();
+			if(e instanceof PegNewObject && !((PegNewObject) e).leftJoin) {
+				this.AST = LazyAST;
+				return true;				
+			}
+		}
+		return this.AST == LazyAST;
+	}
+
+	
 	public final int size() {
+		checkLazyAST();
 		if(this.AST == null) {
 			return 0;
 		}
@@ -98,6 +164,7 @@ public class Pego {
 	}
 
 	public final Pego get(int index) {
+		checkLazyAST();
 		return this.AST[index];
 	}
 
@@ -121,7 +188,7 @@ public class Pego {
 		}
 	}
 	
-	public final void resizeAst(int size) {
+	private void resizeAst(int size) {
 		if(this.AST == null && size > 0) {
 			this.AST = new Pego[size];
 		}
@@ -137,12 +204,28 @@ public class Pego {
 		}
 	}
 
-	public final void expandAstToSize(int newSize) {
+	final void expandAstToSize(int newSize) {
 		if(newSize > this.size()) {
 			this.resizeAst(newSize);
 		}
 	}
 
+	public final void checkNullEntry() {
+		for(int i = 0; i < this.size(); i++) {
+			if(this.get(i) == null) {
+				this.set(i, new Pego("#empty", this.source, PEGUtils.getpos(this.pospeg)));
+			}
+		}
+	}
+
+	public final String textAt(int index, String defaultValue) {
+		if(index < this.size()) {
+			return this.get(index).getText();
+		}
+		return defaultValue;
+	}
+
+	
 	public final void append(Pego childNode) {
 		int size = this.size();
 		this.expandAstToSize(size+1);
@@ -195,36 +278,6 @@ public class Pego {
 		}
 	}
 	
-	public final void checkNullEntry() {
-		for(int i = 0; i < this.size(); i++) {
-			if(this.get(i) == null) {
-				this.set(i, new Pego("#empty", this.source, this.startIndex));
-			}
-		}
-	}
-
-	public final String textAt(int index, String defaultValue) {
-		if(index < this.size()) {
-			return this.get(index).getText();
-		}
-		return defaultValue;
-	}
-	
-//	public BunType typeAt(SymbolTable gamma, int index, BunType defaultType) {
-//		if(index < this.size()) {
-//			PegObject node = this.AST[index];
-//			if(node.typed != null) {
-//				return node.typed;
-//			}
-//			if(node.matched == null && gamma != null) {
-//				node = gamma.tryMatch(node, true);
-//			}
-//			if(node.matched != null) {
-//				return node.matched.getReturnType(defaultType);
-//			}
-//		}
-//		return defaultType;
-//	}
 
 	@Override
 	public String toString() {
@@ -251,18 +304,6 @@ public class Pego {
 			sb.closeIndent("}");
 		}
 	}
-
-//	private String info() {
-//		if(this.matched == null) {
-//			if(this.source != null && MainOption.VerbosePeg) {
-//				return "         ## by peg : " + this.createdPeg;
-//			}
-//			return "";
-//		}
-//		else {
-//			return "      :: " + this.getType(null) + " by " + this.matched;
-//		}
-//	}
 
 	public final Pego findParentNode(String name) {
 		Pego node = this;
@@ -324,57 +365,17 @@ public class Pego {
 //		return c;
 //	}
 
-	public final Pego getParent() {
-		return this.parent;
-	}
 
-	public void setTag(String tag) {
-		this.tag = tag;
-		// TODO Auto-generated method stub
-		
-	}
 
-	public void setMessage(String message) {
-		this.message = message;
-	}
-
-	public long getSourcePosition() {
-		return this.startIndex;
-	}
-
-	void setSourcePosition(long pos) {
-		this.startIndex = pos;
-	}
-	public ParserSource getSource() {
-		return this.source;
-	}
-
-	public int getLength() {
-		return this.length;
-	}
-
-	public void setLength(int length) {
-		this.length = length;
-	}
-
-	public static Pego newSource(String tag, ParserSource source, long pos) {
-		Pego pego = new Pego(tag, source, pos);
-		return pego;
-	}
-
-	public static Pego newAst(Pego pego, int size) {
-		pego.expandAstToSize(size);
-		return pego;
-	}
-
-	public static Pego newPego(ParserSource source, long pos, int length, int size) {
-		Pego pego = new Pego("#new", source, pos);
-		pego.length = length;
-		if(size > 0) {
-			pego.expandAstToSize(size);
-		}
-		return pego;
-	}
+//
+//	public static Pego newPego(PegInput source, long pos, int length, int size) {
+//		Pego pego = new Pego("#new", source, pos);
+//		pego.length = length;
+//		if(size > 0) {
+//			pego.expandAstToSize(size);
+//		}
+//		return pego;
+//	}
 
 	public String getTag() {
 		return this.tag;
@@ -402,5 +403,25 @@ public class Pego {
 		return null;
 	}
 
+	public static Pego newSource(String tag, PegInput source, long pos, PegNewObject created) {
+		Pego pego = new Pego(tag, source, pos, created);
+		return pego;
+	}
+
+	public static Pego newSource(String tag, PegInput source, long pos) {
+		Pego pego = new Pego(tag, source, pos);
+		return pego;
+	}
+	
+	public static Pego newErrorSource(PegInput source, long pospeg) {
+		Pego pego = new Pego("#error", source, 0);
+		pego.pospeg = pospeg;
+		return pego;
+	}
+
+	public static Pego newAst(Pego pego, int size) {
+		pego.expandAstToSize(size);
+		return pego;
+	}
 }
 
