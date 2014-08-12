@@ -28,7 +28,12 @@ public class TracingPackratParser extends ParserContext {
 			this.memoMap = new NoMemo(); //new PackratMemo(this.source.length());
 		}
 		else {
-			this.memoMap = new OpenHashMemo(memo);
+			if(Main.UseFifo) {
+				this.memoMap = new FifoMemo(memo);
+			}
+			else {
+				this.memoMap = new OpenFifoMemo(memo);
+			}
 		}
 	}
 

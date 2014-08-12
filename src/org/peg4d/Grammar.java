@@ -593,7 +593,7 @@ public class Grammar {
 	}
 
 	public Peg newConstructor(String tagName, Peg p) {
-		Peg e = new PegNewObject(this, 0, false, "#"+tagName, toSequenceList(p));
+		Peg e = new PegConstructor(this, 0, false, "#"+tagName, toSequenceList(p));
 		if(this.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
 			e = new PegMemo(e);
 		}
@@ -601,7 +601,7 @@ public class Grammar {
 	}
 
 	public Peg newJoinConstructor(String tagName, Peg p) {
-		Peg e = new PegNewObject(this, 0, true, "#"+tagName, toSequenceList(p));
+		Peg e = new PegConstructor(this, 0, true, "#"+tagName, toSequenceList(p));
 		if(this.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
 			e = new PegMemo(e);
 		}
@@ -899,14 +899,14 @@ class PEG4dGrammar extends Grammar {
 		for(Peg e : elist) {
 			this.addSequence(l, e);
 		}
-		return new PegNewObject(this, 0, false, null, l);
+		return new PegConstructor(this, 0, false, null, l);
 	}
 	private Peg LO(Peg ... elist) {
 		UList<Peg> l = new UList<Peg>(new Peg[8]);
 		for(Peg e : elist) {
 			this.addSequence(l, e);
 		}
-		return new PegNewObject(this, 0, true, null, l);
+		return new PegConstructor(this, 0, true, null, l);
 	}
 	private Peg set(Peg e) {
 		return new PegSetter(this, 0, e, -1);

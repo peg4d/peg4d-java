@@ -136,7 +136,7 @@ public class Pego {
 
 	private void checkLazyAST() {
 		if(this.AST == LazyAST) {
-			PegNewObject e = (PegNewObject)this.getSourceExpression();
+			PegConstructor e = (PegConstructor)this.getSourceExpression();
 			this.AST = null;
 			long pos = this.getSourcePosition();
 			e.lazyMatch(this, new ParserContext(source.peg, source, pos, pos+this.getLength()), pos);
@@ -146,7 +146,7 @@ public class Pego {
 	boolean compactAST() {
 		if(this.AST != null) {
 			Peg e = this.getSourceExpression();
-			if(e instanceof PegNewObject && !((PegNewObject) e).leftJoin) {
+			if(e instanceof PegConstructor && !((PegConstructor) e).leftJoin) {
 				this.AST = LazyAST;
 				return true;				
 			}
@@ -403,7 +403,7 @@ public class Pego {
 		return null;
 	}
 
-	public static Pego newSource(String tag, PegInput source, long pos, PegNewObject created) {
+	public static Pego newSource(String tag, PegInput source, long pos, PegConstructor created) {
 		Pego pego = new Pego(tag, source, pos, created);
 		return pego;
 	}

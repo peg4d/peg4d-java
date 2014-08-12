@@ -996,11 +996,11 @@ class PegMessage extends PegTerm {
 	}
 }
 
-class PegNewObject extends PegList {
+class PegConstructor extends PegList {
 	boolean leftJoin = false;
 	String tagName;
 	int prefetchIndex = 0;
-	public PegNewObject(Grammar base, int flag, boolean leftJoin, String tagName, UList<Peg> list) {
+	public PegConstructor(Grammar base, int flag, boolean leftJoin, String tagName, UList<Peg> list) {
 		super(base, flag | Peg.HasNewObject, list);
 		this.leftJoin = leftJoin;
 		this.tagName = tagName == null ? "#new" : tagName;
@@ -1019,12 +1019,12 @@ class PegNewObject extends PegList {
 				context.rollback(startIndex);
 				return right;
 			}
-			if(left != right) {
-				System.out.println("DEBUG: @" + i + " < " + this.prefetchIndex + " in " + this);
-				System.out.println("LEFT: " + left);
-				System.out.println("RIGHT: " + right);
-				System.out.println("FLAGS: " + this.get(i).hasObjectOperation());
-			}
+//			if(left != right) {
+//				System.out.println("DEBUG: @" + i + " < " + this.prefetchIndex + " in " + this);
+//				System.out.println("LEFT: " + left);
+//				System.out.println("RIGHT: " + right);
+//				System.out.println("FLAGS: " + this.get(i).hasObjectOperation());
+//			}
 			assert(left == right);
 		}
 		int mark = context.markObjectStack();

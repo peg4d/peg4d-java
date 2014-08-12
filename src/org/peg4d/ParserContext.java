@@ -152,7 +152,7 @@ public class ParserContext {
 		return this.successResult != null;
 	}
 	
-	public final Pego newPegObject1(String tagName, long pos, PegNewObject created) {
+	public final Pego newPegObject1(String tagName, long pos, PegConstructor created) {
 		if(this.isRecognitionOnly()) {
 			this.successResult.setSourcePosition(pos);
 			return this.successResult;

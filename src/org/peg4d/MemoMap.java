@@ -191,31 +191,44 @@ class DebugMemo extends MemoMap {
 	}
 }
 
-class DirectMemo extends MemoMap {
+class FifoMemo extends MemoMap {
 	protected Map<Long, ObjectMemo> memoMap;
+	protected long farpos = 0;
 	
-	protected DirectMemo(Map<Long, ObjectMemo> memoMap) {
-		this.memoMap = memoMap;
-	}
-
-	@Override
-	protected final long getpos(long keypos) {
-		return keypos >> 24;
+	protected FifoMemo(int slot) {
+		this.memoMap = new LinkedHashMap<Long, ObjectMemo>(slot) {  //FIFO
+			private static final long serialVersionUID = 6725894996600788028L;
+			@Override
+			protected boolean removeEldestEntry(Map.Entry<Long, ObjectMemo> eldest)  {
+				long pos = PEGUtils.getpos(eldest.getKey());
+				//System.out.println("diff="+(farpos - pos));
+				if(farpos - pos > 256) {
+					unusedMemo(eldest.getValue());
+					return true;		
+				}
+				return false;
+			}
+		};
 	}
 
 	@Override
 	protected final void setMemo(long keypos, Peg keypeg, Pego generated, int consumed) {
 		ObjectMemo m = null;
 		m = newMemo();
+		long key = PEGUtils.memoKey(keypos, keypeg);
+		m.key = key;
 		m.keypeg = keypeg;
 		m.generated = generated;
 		m.consumed = consumed;
-		this.memoMap.put(PEGUtils.objectId(keypos, keypeg), m);
+		this.memoMap.put(key, m);
+		if(keypos > this.farpos) {
+			this.farpos = keypos;
+		}
 	}
 
 	@Override
 	protected final ObjectMemo getMemo(Peg keypeg, long keypos) {
-		ObjectMemo m = this.memoMap.get(PEGUtils.objectId(keypos, keypeg));
+		ObjectMemo m = this.memoMap.get(PEGUtils.memoKey(keypos, keypeg));
 		if(m != null) {
 			this.MemoHit += 1;
 		}
@@ -226,12 +239,12 @@ class DirectMemo extends MemoMap {
 	}
 }
 
-class OpenHashMemo extends MemoMap {
+class OpenFifoMemo extends MemoMap {
 	private ObjectMemo[] memoArray;
 	private long statSetCount = 0;
 	private long statExpireCount = 0;
 
-	OpenHashMemo(int slotSize) {
+	OpenFifoMemo(int slotSize) {
 		this.memoArray = new ObjectMemo[slotSize * 111 + 1];
 		for(int i = 0; i < this.memoArray.length; i++) {
 			this.memoArray[i] = new ObjectMemo();
@@ -243,18 +256,18 @@ class OpenHashMemo extends MemoMap {
 		long key = PEGUtils.memoKey(keypos, keypeg);
 		int hash =  (Math.abs((int)key) % memoArray.length);
 		ObjectMemo m = this.memoArray[hash];
-		if(m.key != 0) {
-			long diff = keypos - PEGUtils.getpos(m.key);
-			if(diff > 0 && diff < 80) {
-				this.statExpireCount += 1;
-			}
-		}
+//		if(m.key != 0) {
+//			long diff = keypos - PEGUtils.getpos(m.key);
+//			if(diff > 0 && diff < 80) {
+//				this.statExpireCount += 1;
+//			}
+//		}
 		m.key = key;
 		m.keypeg = keypeg;
 		m.generated = generated;
 		m.consumed = consumed;
-		this.statSetCount += 1;
-		//System.out.println("SET " + key + "/"+ hash + " kp: " + keypeg.uniqueId);
+//		this.statSetCount += 1;
+//		//System.out.println("SET " + key + "/"+ hash + " kp: " + keypeg.uniqueId);
 	}
 
 	@Override

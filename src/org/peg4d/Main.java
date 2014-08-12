@@ -52,12 +52,17 @@ public class Main {
 
 	// --test
 	public static boolean TestMode = false;
+
+	// --a
+	public static boolean DiskMode = false;
 	
 	// --verbose:stat
 	public static int     StatLevel = -1;
 
 	// --static => false
+	public static String  ParserName = null;
 	public static boolean TracingMemo = true;
+	public static boolean UseFifo = false;
 	public static boolean AllExpressionMemo  = true;
 	public static boolean PackratStyleMemo   = false;
 	public static boolean ObjectFocusedMemo  = false;
@@ -119,6 +124,9 @@ public class Main {
 			else if (argument.equals("-c")) {
 				RecognitionOnlyMode = true;
 			}
+			else if (argument.equals("-a")) {
+				DiskMode = true;
+			}
 			else if(argument.startsWith("--test")) {
 				TestMode = true;
 			}
@@ -147,6 +155,10 @@ public class Main {
 				}
 				index = index + 1;
 			}
+			else if (argument.equals("--name")) {
+				ParserName = args[index];
+				index = index + 1;
+			}
 			else if(argument.startsWith("--memo")) {
 				if(argument.equals("--memo:packrat")) {
 					AllExpressionMemo = false;
@@ -166,6 +178,9 @@ public class Main {
 				}
 				else if(argument.equals("--memo:static")) {
 					TracingMemo = false;
+				}
+				else if(argument.equals("--memo:fifo")) {
+					UseFifo = true;
 				}
 				else {
 					ShowUsage("unknown option: " + argument);
@@ -243,11 +258,14 @@ public class Main {
 		ParserContext p = peg.newParserContext(Main.loadSource(peg, fileName));
 		if(Main.StatLevel == 0) {
 			long t = System.currentTimeMillis();
+			p.setRecognitionOnly(true);
 			while(System.currentTimeMillis()-t < 5000) {
 				System.out.print(".");System.out.flush();
 				p.parseNode(startPoint);
 				p.sourcePosition = 0;
 			}
+			p.initMemo();
+			p.setRecognitionOnly(false);
 			System.out.println();
 		}
 		//while(p.hasNode()) {
@@ -347,7 +365,6 @@ public class Main {
 			return null;
 		}
 	}
-
 
 	private static void PrintStackTrace(Exception e, long linenum) {
 		StackTraceElement[] elements = e.getStackTrace();

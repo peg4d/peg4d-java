@@ -314,7 +314,12 @@ class Stat {
 
 		this.statObject(pego);
 		p.peg.updateStat(this);
-		this.setText("StatId", id);
+		if(Main.ParserName == null) {
+			this.setText("StatId", id);
+		}
+		else {
+			this.setText("StatId", Main.ParserName);
+		}
 		this.setCount("Latency", this.ErapsedTime);  // ms
 		this.setRatio("Throughput", this.ConsumedLength, this.ErapsedTime);
 		
@@ -476,7 +481,7 @@ class Stat {
 		/** **/
 
 		this.CSV(sb, "MemoHit");
-		this.CSV(sb, "MemoMiss");
+		sb.append("*Memo*,");  // mark
 		this.CSV(sb, "Hit/Miss");
 		
 		/** **/

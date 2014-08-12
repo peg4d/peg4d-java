@@ -73,7 +73,7 @@ class PegVisitor {
 	public void visitChoice(PegChoice e) {
 		this.visitList(e);
 	}
-	public void visitNewObject(PegNewObject e) {
+	public void visitNewObject(PegConstructor e) {
 		this.visitList(e);
 	}
 	public void visitOperation(PegOperation e) {
@@ -172,7 +172,7 @@ class Formatter extends PegVisitor {
 		if(prefix != null) {
 			sb.append(prefix);
 		}
-		if(e.inner instanceof PegTerm || e.inner instanceof PegNewObject) {
+		if(e.inner instanceof PegTerm || e.inner instanceof PegConstructor) {
 			e.inner.visit(this);
 		}
 		else {
@@ -221,8 +221,8 @@ class Formatter extends PegVisitor {
 	@Override
 	public void visitExport(PegExport e) {
 		sb.append("<| ");
-		if(e.inner instanceof PegNewObject) {
-			this.format((PegNewObject)e.inner);
+		if(e.inner instanceof PegConstructor) {
+			this.format((PegConstructor)e.inner);
 		}
 		else {
 			e.inner.visit(this);
@@ -269,7 +269,7 @@ class Formatter extends PegVisitor {
 	}
 
 	@Override
-	public void visitNewObject(PegNewObject e) {
+	public void visitNewObject(PegConstructor e) {
 		if(e.leftJoin) {
 			sb.append("<{^ ");
 		}
@@ -456,7 +456,7 @@ class NonTerminalChecker extends PegVisitor {
 	}
 	
 	@Override
-	public void visitNewObject(PegNewObject e) {
+	public void visitNewObject(PegConstructor e) {
 		int stackedLength = this.consumedMinimumLength;
 		for(int i = 0; i < e.size(); i++) {
 			e.get(i).visit(this);
@@ -623,7 +623,7 @@ class Optimizer extends PegVisitor {
 	}
 
 	@Override
-	public void visitNewObject(PegNewObject e) {
+	public void visitNewObject(PegConstructor e) {
 		int prefetchIndex = 0;
 		for(int i = 0; i < e.size(); i++) {
 			Peg sub = e.get(i);
@@ -814,7 +814,7 @@ class ObjectRemover extends PegVisitor {
 		this.returnPeg = e.trim();
 	}
 	@Override
-	public void visitNewObject(PegNewObject e) {
+	public void visitNewObject(PegConstructor e) {
 		UList<Peg> l = new UList<Peg>(new Peg[e.size()]);
 		for(int i = 0; i < e.size(); i++) {
 			Peg ne = removeObjectOperation(e.get(i));
