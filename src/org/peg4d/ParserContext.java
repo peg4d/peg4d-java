@@ -116,13 +116,13 @@ public class ParserContext {
 		return this.sourcePosition < this.endPosition;
 	}
 
-	public Pego parseNode(String startPoint) {
+	public ParsingObject parseNode(String startPoint) {
 		this.initMemo();
 		Peg start = this.peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
-		Pego pego = start.simpleMatch(Pego.newSource("#toplevel", this.source, 0), this);
+		ParsingObject pego = start.simpleMatch(ParsingObject.newSource("#toplevel", this.source, 0), this);
 		if(pego.isFailure()) {
 			pego = this.newErrorObject();
 			String msg = this.source.formatErrorMessage("syntax error", pego.getSourcePosition(), "");
@@ -137,11 +137,11 @@ public class ParserContext {
 		this.memoMap = new NoMemo();
 	}
 	
-	protected Pego successResult = null;
+	protected ParsingObject successResult = null;
 	
 	public final void setRecognitionOnly(boolean checkMode) {
 		if(checkMode) {
-			this.successResult = Pego.newSource("#success", this.source, 0);
+			this.successResult = ParsingObject.newSource("#success", this.source, 0);
 		}
 		else {
 			this.successResult = null;
@@ -152,31 +152,31 @@ public class ParserContext {
 		return this.successResult != null;
 	}
 	
-	public final Pego newPegObject1(String tagName, long pos, PegConstructor created) {
+	public final ParsingObject newPegObject1(String tagName, long pos, PegConstructor created) {
 		if(this.isRecognitionOnly()) {
 			this.successResult.setSourcePosition(pos);
 			return this.successResult;
 		}
 		else {
-			return Pego.newSource(tagName, this.source, pos, created);
+			return ParsingObject.newSource(tagName, this.source, pos, created);
 		}
 	}
 	
 	private long failurePosition = 0;
-	private final Pego foundFailureNode = Pego.newSource(null, this.source, 0);
+	private final ParsingObject foundFailureNode = ParsingObject.newSource(null, this.source, 0);
 
-	public final Pego newErrorObject() {
-		return Pego.newErrorSource(this.source, this.failurePosition);
+	public final ParsingObject newErrorObject() {
+		return ParsingObject.newErrorSource(this.source, this.failurePosition);
 	}
 	
-	public final Pego foundFailure(Peg e) {
+	public final ParsingObject foundFailure(Peg e) {
 		if(this.sourcePosition >= PEGUtils.getpos(this.failurePosition)) {  // adding error location
 			this.failurePosition = PEGUtils.failure(this.sourcePosition, e);
 		}
 		return this.foundFailureNode;
 	}
 
-	public final Pego refoundFailure(Peg e, long pos) {
+	public final ParsingObject refoundFailure(Peg e, long pos) {
 		this.failurePosition = PEGUtils.failure(pos, e);
 		return this.foundFailureNode;
 	}
@@ -188,7 +188,7 @@ public class ParserContext {
 	private class LinkLog {
 		LinkLog next;
 		int  index;
-		Pego childNode;
+		ParsingObject childNode;
 	}
 
 	LinkLog logStack = null;  // needs first logs
@@ -226,7 +226,7 @@ public class ParserContext {
 		assert(mark == this.stackSize);
 	}
 	
-	protected final void logSetter(Pego parentNode, int index, Pego childNode) {
+	protected final void logSetter(ParsingObject parentNode, int index, ParsingObject childNode) {
 		if(!this.isRecognitionOnly()) {
 			LinkLog l = this.newLog();
 //			l.parentNode = parentNode;
@@ -239,7 +239,7 @@ public class ParserContext {
 		}
 	}
 
-	protected final void popNewObject(Pego newnode, long startIndex, int mark) {
+	protected final void popNewObject(ParsingObject newnode, long startIndex, int mark) {
 		if(!this.isRecognitionOnly()) {
 			LinkLog first = null;
 			int objectSize = 0;
@@ -257,7 +257,7 @@ public class ParserContext {
 				}
 			}
 			if(objectSize > 0) {
-				newnode = Pego.newAst(newnode, objectSize);
+				newnode = ParsingObject.newAst(newnode, objectSize);
 				for(int i = 0; i < objectSize; i++) {
 					LinkLog cur = first;
 					first = first.next;
@@ -313,8 +313,8 @@ public class ParserContext {
 //	long statExportSize  = 0;
 //	long statExportFailure  = 0;
 
-	public Pego matchExport(Pego left, PegExport e) {
-		Pego pego = e.inner.simpleMatch(left, this);
+	public ParsingObject matchExport(ParsingObject left, PegExport e) {
+		ParsingObject pego = e.inner.simpleMatch(left, this);
 		if(!pego.isFailure()) {
 //			this.statExportCount += 1;
 //			this.statExportSize += pego.getLength();
@@ -326,8 +326,8 @@ public class ParserContext {
 		return left;
 	}
 
-	private BlockingQueue<Pego> queue = null; 
-	protected void pushBlockingQueue(Pego pego) {
+	private BlockingQueue<ParsingObject> queue = null; 
+	protected void pushBlockingQueue(ParsingObject pego) {
 		if(this.queue != null) {
 			try {
 				this.queue.put(pego);
@@ -386,7 +386,7 @@ public class ParserContext {
 		}
 	}
 
-	public void endPerformStat(Pego pego) {
+	public void endPerformStat(ParsingObject pego) {
 		if(stat != null) {
 			stat.end(pego, this);
 		}

@@ -8,7 +8,7 @@ import java.io.OutputStream;
 public class Generator {
 	private class Counter {
 		int count = 1;
-		Pego lastRoot = null;
+		ParsingObject lastRoot = null;
 	}
 
 	private OutputStream out;
@@ -73,13 +73,13 @@ public class Generator {
 		}
 	}
 	
-	public final void writePego(Pego pego) {
+	public final void writePego(ParsingObject pego) {
 		this.writePego(pego, "");
 		this.write(LF);
 		this.close();
 	}
 
-	private void writePego(Pego pego, String indent) {
+	private void writePego(ParsingObject pego, String indent) {
 		if(pego.size() == 0) {
 			this.write(LF);
 			this.write(indent);
@@ -101,11 +101,11 @@ public class Generator {
 		}
 	}
 	
-	public final void writeCommaSeparateValue(Pego pego, double ratio) {
+	public final void writeCommaSeparateValue(ParsingObject pego, double ratio) {
 		UList<String> names = new UList<String>(new String[8]);
 		UMap<Counter> schema =  new UMap<Counter>();
 		for(int i = 0; i < pego.size(); i++) {
-			Pego p = pego.get(i);
+			ParsingObject p = pego.get(i);
 			extractSchema(p, p, "", names, schema);
 		}
 		Main.printVerbose("CSV Schema Extraction", pego.size());
@@ -121,15 +121,15 @@ public class Generator {
 		}
 		printCSVHeader(headers);
 		for(int i = 0; i < pego.size(); i++) {
-			Pego p = pego.get(i);
+			ParsingObject p = pego.get(i);
 			printCSVBody(headers, p);
 		}
 		this.close();
 	}
 	
-	private void extractSchema(Pego root, Pego pego, String prefix, UList<String> names, UMap<Counter> schema) {
+	private void extractSchema(ParsingObject root, ParsingObject pego, String prefix, UList<String> names, UMap<Counter> schema) {
 		for(int i = 0; i < pego.size(); i++) {
-			Pego p = pego.get(i);
+			ParsingObject p = pego.get(i);
 			String key = prefix + p.getTag();
 			if(p.size() == 0) {
 				Counter c = schema.get(key);
@@ -161,13 +161,13 @@ public class Generator {
 		write(CRLF);
 	}
 
-	private void printCSVBody(UList<String> headers, Pego pego) {
+	private void printCSVBody(UList<String> headers, ParsingObject pego) {
 		for(int i = 0; i < headers.size(); i++) {
 			if(i > 0) {
 				write(",");
 			}
 			String key = headers.ArrayValues[i];
-			Pego p = pego.getPath(key);
+			ParsingObject p = pego.getPath(key);
 			if(p != null) {
 				printCSV(p.getText());
 			}
@@ -223,12 +223,12 @@ public class Generator {
 	}
 	
 	
-	public final void writeJSON(Pego pego) {
+	public final void writeJSON(ParsingObject pego) {
 		writeJSON("", "", pego);
 		close();
 	}
 
-	private final void writeJSON(String lf, String indent, Pego pego) {
+	private final void writeJSON(String lf, String indent, ParsingObject pego) {
 		if(pego.size() > 0) {
 //			if(pego.size() == 1) {
 //				writeJSON(lf, indent, pego.get(0));  // flatten
@@ -248,10 +248,10 @@ public class Generator {
 		}
 	}
 	
-	private boolean isJSONArray(Pego pego) {
+	private boolean isJSONArray(ParsingObject pego) {
 		UMap<Counter> schema =  new UMap<Counter>();
 		for(int i = 0; i < pego.size(); i++) {
-			Pego p = pego.get(i);
+			ParsingObject p = pego.get(i);
 			String tag = p.getTag();
 			Counter c = schema.get(tag);
 			if(c != null) { // found duplicated
@@ -263,11 +263,11 @@ public class Generator {
 		return false;
 	}
 	
-	private void writeJSONArray(String lf, String indent, Pego pego) {
+	private void writeJSONArray(String lf, String indent, ParsingObject pego) {
 		write(lf, "", "[");
 		String nindent = TAB + indent;
 		for(int i = 0; i < pego.size(); i++) {
-			Pego p = pego.get(i);
+			ParsingObject p = pego.get(i);
 			writeJSON(LF + nindent, nindent, p);
 			if(i + 1 < pego.size()) {
 				write(",");
@@ -276,11 +276,11 @@ public class Generator {
 		write(LF, indent, "]");
 	}
 	
-	private void writeJSONObject(String lf, String indent, Pego pego) {
+	private void writeJSONObject(String lf, String indent, ParsingObject pego) {
 		write(lf, "", "{");
 		String nindent = TAB + indent;
 		for(int i = 0; i < pego.size(); i++) {
-			Pego p = pego.get(i);
+			ParsingObject p = pego.get(i);
 			write(LF, nindent, "\"" + p.getTag() + "\": ");
 			writeJSON("", nindent, p);
 			if(i + 1 < pego.size()) {

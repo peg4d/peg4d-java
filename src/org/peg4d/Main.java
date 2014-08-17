@@ -250,7 +250,7 @@ public class Main {
 		return d;
 	}
 
-	private static void loadInputFile(Grammar peg, String fileName) {
+	private synchronized static void loadInputFile(Grammar peg, String fileName) {
 		String startPoint = StartingPoint;
 		Main.printVerbose("FileName", fileName);
 		Main.printVerbose("Grammar", peg.getName());
@@ -259,18 +259,23 @@ public class Main {
 		if(Main.StatLevel == 0) {
 			long t = System.currentTimeMillis();
 			p.setRecognitionOnly(true);
-			while(System.currentTimeMillis()-t < 5000) {
+			while(System.currentTimeMillis()-t < 4000) {
 				System.out.print(".");System.out.flush();
 				p.parseNode(startPoint);
 				p.sourcePosition = 0;
 			}
-			p.initMemo();
 			p.setRecognitionOnly(false);
-			System.out.println();
+			p.initMemo();
+			System.gc();
+			try{
+				Thread.sleep(500);
+			}catch(InterruptedException e){
+			}
+			System.out.println(" GO!!");
 		}
 		//while(p.hasNode()) {
 		p.beginPeformStat();
-		Pego pego = p.parseNode(startPoint);
+		ParsingObject pego = p.parseNode(startPoint);
 		p.endPerformStat(pego);
 		//}
 		if(p.hasChar()) {
@@ -305,7 +310,7 @@ public class Main {
 			}
 			PegInput source = new StringSource(peg, "(stdin)", linenum, line);
 			ParserContext p = peg.newParserContext(source);
-			Pego pego = p.parseNode(startPoint);
+			ParsingObject pego = p.parseNode(startPoint);
 			System.out.println("Parsed: " + pego);
 			linenum = linenum + 1;
 		}

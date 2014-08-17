@@ -58,7 +58,7 @@ public class Grammar {
 		}
 		p.setRecognitionOnly(false);
 		while(p.hasNode()) {
-			Pego pego = p.parseNode("TopLevel");
+			ParsingObject pego = p.parseNode("TopLevel");
 			if(pego.isFailure()) {
 				Main._Exit(1, "FAILED: " + pego);
 				break;
@@ -700,7 +700,7 @@ public class Grammar {
 }
 
 class PEG4dGrammar extends Grammar {
-	static boolean performExpressionConstruction(Grammar loadingGrammar, ParserContext context, Pego pego) {
+	static boolean performExpressionConstruction(Grammar loadingGrammar, ParserContext context, ParsingObject pego) {
 		//System.out.println("DEBUG? parsed: " + pego);		
 		if(pego.is("#PegRule")) {
 			String ruleName = pego.textAt(0, "");
@@ -734,7 +734,7 @@ class PEG4dGrammar extends Grammar {
 		return "lib/"+filePath;
 	}
 	
-	private static Peg toParsingExpression(Grammar loadingGrammar, String ruleName, Pego node) {
+	private static Peg toParsingExpression(Grammar loadingGrammar, String ruleName, ParsingObject node) {
 		Peg e = toParsingExpressionImpl(loadingGrammar, ruleName, node);
 		e.source = node.getSource();
 		e.sourcePosition = (int)node.getSourcePosition();
@@ -743,7 +743,7 @@ class PEG4dGrammar extends Grammar {
 		return e;
 	}	
 	
-	private static Peg toParsingExpressionImpl(Grammar loadingGrammar, String ruleName, Pego pego) {
+	private static Peg toParsingExpressionImpl(Grammar loadingGrammar, String ruleName, ParsingObject pego) {
 		if(pego.is("#PegNonTerminal")) {
 			String nonTerminalSymbol = pego.getText();
 			if(ruleName.equals(nonTerminalSymbol)) {

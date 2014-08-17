@@ -52,7 +52,7 @@ public abstract class Peg {
 	public Peg getExpression() {
 		return this;
 	}
-	public abstract Pego simpleMatch(Pego left, ParserContext context);
+	public abstract ParsingObject simpleMatch(ParsingObject left, ParserContext context);
 	//public abstract int fastMatch(int left, MonadicParser context);
 
 	boolean acceptC1(int ch) {
@@ -173,7 +173,7 @@ class PegNonTerminal extends PegTerm {
 		return this.jumpExpression.base != this.base;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		return this.jumpExpression.simpleMatch(left, context);
 	}
 }
@@ -197,7 +197,7 @@ class PegString extends PegTerm {
 		return UCharset.getFirstChar(this.textByte) == ch;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		if(context.match(this.textByte)) {
 			return left;
 		}
@@ -212,7 +212,7 @@ class PegString1 extends PegString {
 		this.symbol1 = this.textByte[0] & 0xff;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
 		if(context.charAt(pos) == this.symbol1) {
 			context.consume(1);
@@ -231,7 +231,7 @@ class PegString2 extends PegString {
 		this.symbol2 = this.textByte[1] & 0xff;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
 		if(context.charAt(pos) == this.symbol1 && context.charAt(pos+1) == this.symbol2) {
 			context.consume(2);
@@ -253,7 +253,7 @@ class PegAny extends PegTerm {
 		probe.visitAny(this);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		if(context.hasChar()) {
 			context.consume(1);
 			return left;
@@ -280,9 +280,9 @@ class PegNotAny extends PegTerm {
 		return this.not.acceptC1(ch) && this.orig.acceptC1(ch);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
-		Pego right = this.exclude.simpleMatch(left, context);
+		ParsingObject right = this.exclude.simpleMatch(left, context);
 		if(right.isFailure()) {
 			assert(pos == context.getPosition());
 			if(context.hasChar()) {
@@ -311,7 +311,7 @@ class PegCharacter extends PegTerm {
 		return this.charset.match(ch);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		int ch = context.getChar();
 		if(!this.charset.match(ch)) {
 			return context.foundFailure(this);
@@ -376,9 +376,9 @@ class PegOptional extends PegUnary {
 		return true;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
-		Pego right = this.inner.simpleMatch(left, context);
+		ParsingObject right = this.inner.simpleMatch(left, context);
 		if(right.isFailure()) {
 			assert(pos == context.getPosition());
 //			context.setPosition(pos);
@@ -395,7 +395,7 @@ class PegOptionalString extends PegOptional {
 		this.textByte = e.textByte;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		context.match(this.textByte);
 		return left;
 	}
@@ -408,7 +408,7 @@ class PegOptionalString1 extends PegOptional {
 		this.symbol1 = e.symbol1;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		context.match(this.symbol1);
 		return left;
 	}
@@ -421,7 +421,7 @@ class PegOptionalCharacter extends PegOptional {
 		this.charset = e.charset;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		context.match(this.charset);
 		return left;
 	}
@@ -445,12 +445,12 @@ class PegRepeat extends PegUnary {
 		return true;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long ppos = -1;
 		long pos = context.getPosition();
 		int count = 0;
 		while(ppos < pos) {
-			Pego right = this.inner.simpleMatch(left, context);
+			ParsingObject right = this.inner.simpleMatch(left, context);
 			if(right.isFailure()) {
 				break;
 			}
@@ -473,7 +473,7 @@ class PegOneMoreCharacter extends PegRepeat {
 		charset = e.charset;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
 		int ch = context.charAt(pos);
 		if(!this.charset.match(ch)) {
@@ -498,7 +498,7 @@ class PegZeroMoreCharacter extends PegRepeat {
 		this.charset = e.charset;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
 		for(;context.hasChar();pos++) {
 			int ch = context.charAt(pos);
@@ -520,9 +520,9 @@ class PegAnd extends PegUnary {
 		probe.visitAnd(this);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
-		Pego right = this.inner.simpleMatch(left, context);
+		ParsingObject right = this.inner.simpleMatch(left, context);
 		context.rollback(pos);
 		return right;
 	}
@@ -545,9 +545,9 @@ class PegNot extends PegUnary {
 		return !this.inner.acceptC1(ch);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
-		Pego right = this.inner.simpleMatch(left, context);
+		ParsingObject right = this.inner.simpleMatch(left, context);
 		if(right.isFailure()) {
 			return left;
 		}
@@ -563,7 +563,7 @@ class PegNotString extends PegNot {
 		this.textBuffer = e.textByte;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
 		if(context.match(this.textBuffer)) {
 			//context.setPosition(pos);
@@ -580,7 +580,7 @@ class PegNotString1 extends PegNotString {
 		this.symbol = e.symbol1;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		if(this.symbol == context.getChar()) {
 			return context.foundFailure(this);
 		}
@@ -597,7 +597,7 @@ class PegNotString2 extends PegNotString {
 		this.symbol2 = e.symbol2;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
 		if(this.symbol1 == context.charAt(pos) && this.symbol2 == context.charAt(pos+1)) {
 			return context.foundFailure(this);
@@ -617,7 +617,7 @@ class PegNotCharacter extends PegNot {
 		this.charset = e.charset;
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
 		if(context.match(this.charset)) {
 			context.setPosition(pos);
@@ -767,11 +767,11 @@ class PegSequence extends PegList {
 		probe.visitSequence(this);
 	}	
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
 		int mark = context.markObjectStack();
 		for(int i = 0; i < this.size(); i++) {
-			Pego right = this.get(i).simpleMatch(left, context);
+			ParsingObject right = this.get(i).simpleMatch(left, context);
 			if(right.isFailure()) {
 				context.rollbackObjectStack(mark);
 				context.rollback(pos);
@@ -806,9 +806,9 @@ class PegChoice extends PegList {
 	}
 			
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		for(int i = 0; i < this.size(); i++) {
-			Pego right = this.get(i).simpleMatch(left, context);
+			ParsingObject right = this.get(i).simpleMatch(left, context);
 			if(!right.isFailure()) {
 				return right;
 			}
@@ -823,7 +823,7 @@ class PegSelectiveChoice extends PegChoice {
 		super(base, flag, list);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		int ch = context.getChar();
 		if(this.caseOf == null) {
 			tryPrediction();
@@ -902,7 +902,7 @@ class PegWordChoice extends PegChoice {
 	}
 	
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		if(this.charset != null) {
 			if(context.match(this.charset)) {
 				return left;
@@ -923,7 +923,7 @@ class PegAlwaysFailure extends PegString {
 		super(orig.base, 0, "\0");
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		return context.foundFailure(this);
 	}
 }
@@ -943,12 +943,12 @@ class PegSetter extends PegUnary {
 		return this.inner.acceptC1(ch);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = left.getSourcePosition();
 //		if(this.inner instanceof PegNonTerminal) {
 //			System.out.println("label=" + this.inner);
 //		}
-		Pego node = this.inner.simpleMatch(left, context);
+		ParsingObject node = this.inner.simpleMatch(left, context);
 		if(node.isFailure() || left == node) {
 			return node;
 		}
@@ -973,7 +973,7 @@ class PegTagging extends PegTerm {
 		probe.visitTagging(this);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		left.setTag(this.symbol);
 		return left;
 	}
@@ -990,7 +990,7 @@ class PegMessage extends PegTerm {
 		probe.visitMessage(this);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		left.setMessage(this.symbol);
 		return left;
 	}
@@ -1010,11 +1010,11 @@ class PegConstructor extends PegList {
 		probe.visitNewObject(this);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
-		Pego leftNode = left;
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+		ParsingObject leftNode = left;
 		long startIndex = context.getPosition();
 		for(int i = 0; i < this.prefetchIndex; i++) {
-			Pego right = this.get(i).simpleMatch(left, context);
+			ParsingObject right = this.get(i).simpleMatch(left, context);
 			if(right.isFailure()) {
 				context.rollback(startIndex);
 				return right;
@@ -1028,12 +1028,12 @@ class PegConstructor extends PegList {
 			assert(left == right);
 		}
 		int mark = context.markObjectStack();
-		Pego newnode = context.newPegObject1(this.tagName, startIndex, this);
+		ParsingObject newnode = context.newPegObject1(this.tagName, startIndex, this);
 		if(this.leftJoin) {
 			context.logSetter(newnode, -1, leftNode);
 		}
 		for(int i = this.prefetchIndex; i < this.size(); i++) {
-			Pego node = this.get(i).simpleMatch(newnode, context);
+			ParsingObject node = this.get(i).simpleMatch(newnode, context);
 			if(node.isFailure()) {
 				context.rollbackObjectStack(mark);
 				context.rollback(startIndex);
@@ -1049,10 +1049,10 @@ class PegConstructor extends PegList {
 		}
 		return newnode;
 	}
-	public void lazyMatch(Pego newnode, ParserContext context, long pos) {
+	public void lazyMatch(ParsingObject newnode, ParserContext context, long pos) {
 		int mark = context.markObjectStack();
 		for(int i = 0; i < this.size(); i++) {
-			Pego node = this.get(i).simpleMatch(newnode, context);
+			ParsingObject node = this.get(i).simpleMatch(newnode, context);
 			if(node.isFailure()) {
 				break;  // this not happens
 			}
@@ -1074,7 +1074,7 @@ class PegExport extends PegUnary {
 		return this.inner.acceptC1(ch);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		return context.matchExport(left, this);
 	}
 }
@@ -1092,7 +1092,7 @@ class PegIndent extends PegTerm {
 		return (ch == '\t' || ch == ' ');
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		String indent = left.getSource().getIndentText(left.getSourcePosition());
 		if(context.match(indent.getBytes())) {  // very slow
 			return left;
@@ -1112,7 +1112,7 @@ class PegIndex extends PegTerm {
 		probe.visitIndex(this);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 //		String indent = left.getSource().getIndentText(left.getSourcePosition());
 //		if(context.match(indent.getBytes())) {  // very slow
 //			return left;
@@ -1153,7 +1153,7 @@ class PegMemo extends PegOperation {
 	}
 
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		if(!this.enableMemo) {
 			return this.inner.simpleMatch(left, context);
 		}
@@ -1167,7 +1167,7 @@ class PegMemo extends PegOperation {
 			}
 			return m.generated;
 		}
-		Pego right = this.inner.simpleMatch(left, context);
+		ParsingObject right = this.inner.simpleMatch(left, context);
 		int length = (int)(context.getPosition() - pos);
 //		if(length > 0) {
 			if(right == left) {
@@ -1215,7 +1215,7 @@ class PegMemo extends PegOperation {
 			System.out.println(this.inner.getClass().getSimpleName() + " #h/m=" + this.memoHit + "," + this.memoMiss + ", f=" + f + " " + this.inner);
 		}
 	}
-	public Pego simpleMatch1(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch1(ParsingObject left, ParserContext context) {
 		if(!this.enableMemo) {
 			return this.inner.simpleMatch(left, context);
 		}
@@ -1234,7 +1234,7 @@ class PegMemo extends PegOperation {
 //			}
 			return m.generated;
 		}
-		Pego result = this.inner.simpleMatch(left, context);
+		ParsingObject result = this.inner.simpleMatch(left, context);
 		if(result.isFailure()) {
 			context.memoMap.setMemo(pos, this, null, /*(int)(result.getSourcePosition() - pos*/0);
 		}
@@ -1256,7 +1256,7 @@ class PegMonad extends PegOperation {
 		super(inner);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		int mark = context.markObjectStack();
 		left = this.inner.simpleMatch(left, context);
 		context.rollbackObjectStack(mark);
@@ -1269,7 +1269,7 @@ class PegCommit extends PegOperation {
 		super(inner);
 	}
 	@Override
-	public Pego simpleMatch(Pego left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		int mark = context.markObjectStack();
 		left = this.inner.simpleMatch(left, context);
 		if(left.isFailure()) {

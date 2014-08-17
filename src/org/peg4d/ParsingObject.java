@@ -13,23 +13,23 @@ package org.peg4d;
 //	}
 //}
 
-public class Pego {
+public class ParsingObject {
 	private PegInput    source = null;
 	private long            pospeg = 0;
 	private int             length = 0;
 	String          tag = null;
 	private String          message = null;
-	Pego            parent = null;
-	private Pego            AST[] = null;
+	ParsingObject            parent = null;
+	private ParsingObject            AST[] = null;
 
-	Pego(String tag, PegInput source, long pos) {
+	ParsingObject(String tag, PegInput source, long pos) {
 		this.tag        = tag;
 		this.source     = source;
 		this.pospeg     = PEGUtils.objectId(pos, (short)0);
 		this.length     = 0;
 	}
 
-	Pego(String tag, PegInput source, long pos, Peg e) {
+	ParsingObject(String tag, PegInput source, long pos, Peg e) {
 		this.tag        = tag;
 		this.source     = source;
 		this.pospeg     = PEGUtils.objectId(pos, e);
@@ -37,7 +37,7 @@ public class Pego {
 		this.length     = 0;
 	}
 
-	public final Pego getParent() {
+	public final ParsingObject getParent() {
 		return this.parent;
 	}
 
@@ -82,7 +82,7 @@ public class Pego {
 		return this.tag.equals(tag);
 	}
 
-	public final boolean equals2(Pego o) {
+	public final boolean equals2(ParsingObject o) {
 		if(this != o) {
 			if(this.pospeg == o.pospeg && this.length == o.length) {
 				if(this.tag == null) {
@@ -132,7 +132,7 @@ public class Pego {
 		return null;
 	}
 
-	private final static Pego[] LazyAST = new Pego[0];
+	private final static ParsingObject[] LazyAST = new ParsingObject[0];
 
 	private void checkLazyAST() {
 		if(this.AST == LazyAST) {
@@ -163,19 +163,19 @@ public class Pego {
 		return this.AST.length;
 	}
 
-	public final Pego get(int index) {
+	public final ParsingObject get(int index) {
 		checkLazyAST();
 		return this.AST[index];
 	}
 
-	public final Pego get(int index, Pego defaultValue) {
+	public final ParsingObject get(int index, ParsingObject defaultValue) {
 		if(index < this.size()) {
 			return this.AST[index];
 		}
 		return defaultValue;
 	}
 
-	public final void set(int index, Pego node) {
+	public final void set(int index, ParsingObject node) {
 		if(index == -1) {
 			this.append(node);
 		}
@@ -190,10 +190,10 @@ public class Pego {
 	
 	private void resizeAst(int size) {
 		if(this.AST == null && size > 0) {
-			this.AST = new Pego[size];
+			this.AST = new ParsingObject[size];
 		}
 		else if(this.AST.length != size) {
-			Pego[] newast = new Pego[size];
+			ParsingObject[] newast = new ParsingObject[size];
 			if(size > this.AST.length) {
 				System.arraycopy(this.AST, 0, newast, 0, this.AST.length);
 			}
@@ -213,7 +213,7 @@ public class Pego {
 	public final void checkNullEntry() {
 		for(int i = 0; i < this.size(); i++) {
 			if(this.get(i) == null) {
-				this.set(i, new Pego("#empty", this.source, PEGUtils.getpos(this.pospeg)));
+				this.set(i, new ParsingObject("#empty", this.source, PEGUtils.getpos(this.pospeg)));
 			}
 		}
 	}
@@ -226,17 +226,17 @@ public class Pego {
 	}
 
 	
-	public final void append(Pego childNode) {
+	public final void append(ParsingObject childNode) {
 		int size = this.size();
 		this.expandAstToSize(size+1);
 		this.AST[size] = childNode;
 		childNode.parent = this;
 	}
 
-	public final void insert(int index, Pego childNode) {
+	public final void insert(int index, ParsingObject childNode) {
 		int oldsize = this.size();
 		if(index < oldsize) {
-			Pego[] newast = new Pego[oldsize+1];
+			ParsingObject[] newast = new ParsingObject[oldsize+1];
 			if(index > 0) {
 				System.arraycopy(this.AST, 0, newast, 0, index);
 			}
@@ -255,7 +255,7 @@ public class Pego {
 	public final void removeAt(int index) {
 		int oldsize = this.size();
 		if(oldsize > 1) {
-			Pego[] newast = new Pego[oldsize-1];
+			ParsingObject[] newast = new ParsingObject[oldsize-1];
 			if(index > 0) {
 				System.arraycopy(this.AST, 0, newast, 0, index);
 			}
@@ -269,7 +269,7 @@ public class Pego {
 		}
 	}
 	
-	public void replace(Pego oldone, Pego newone) {
+	public void replace(ParsingObject oldone, ParsingObject newone) {
 		for(int i = 0; i < this.size(); i++) {
 			if(this.AST[i] == oldone) {
 				this.AST[i] = newone;
@@ -305,8 +305,8 @@ public class Pego {
 		}
 	}
 
-	public final Pego findParentNode(String name) {
-		Pego node = this;
+	public final ParsingObject findParentNode(String name) {
+		ParsingObject node = this;
 		while(node != null) {
 			if(node.is(name)) {
 				return node;
@@ -381,7 +381,7 @@ public class Pego {
 		return this.tag;
 	}
 
-	public final Pego getPath(String path) {
+	public final ParsingObject getPath(String path) {
 		int loc = path.indexOf('#', 1);
 		if(loc == -1) {
 			return this.getPathByTag(path);
@@ -393,9 +393,9 @@ public class Pego {
 		}
 	}
 	
-	private final Pego getPathByTag(String tag) {
+	private final ParsingObject getPathByTag(String tag) {
 		for(int i = 0; i < this.size(); i++) {
-			Pego p = this.get(i);
+			ParsingObject p = this.get(i);
 			if(p.is(tag)) {
 				return p;
 			}
@@ -403,23 +403,23 @@ public class Pego {
 		return null;
 	}
 
-	public static Pego newSource(String tag, PegInput source, long pos, PegConstructor created) {
-		Pego pego = new Pego(tag, source, pos, created);
+	public static ParsingObject newSource(String tag, PegInput source, long pos, PegConstructor created) {
+		ParsingObject pego = new ParsingObject(tag, source, pos, created);
 		return pego;
 	}
 
-	public static Pego newSource(String tag, PegInput source, long pos) {
-		Pego pego = new Pego(tag, source, pos);
+	public static ParsingObject newSource(String tag, PegInput source, long pos) {
+		ParsingObject pego = new ParsingObject(tag, source, pos);
 		return pego;
 	}
 	
-	public static Pego newErrorSource(PegInput source, long pospeg) {
-		Pego pego = new Pego("#error", source, 0);
+	public static ParsingObject newErrorSource(PegInput source, long pospeg) {
+		ParsingObject pego = new ParsingObject("#error", source, 0);
 		pego.pospeg = pospeg;
 		return pego;
 	}
 
-	public static Pego newAst(Pego pego, int size) {
+	public static ParsingObject newAst(ParsingObject pego, int size) {
 		pego.expandAstToSize(size);
 		return pego;
 	}

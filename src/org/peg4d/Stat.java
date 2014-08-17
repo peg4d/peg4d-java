@@ -101,7 +101,7 @@ class Stat {
 		this.ObjectCount += 1;
 	}
 	
-	final void statObject(Pego pego) {
+	final void statObject(ParsingObject pego) {
 		UMap<ObjectCounter> m = new UMap<ObjectCounter>();
 		this.UsedObjectCount = 0;
 		this.EdgeCount = 0;
@@ -134,7 +134,7 @@ class Stat {
 //		this.setRatio("DataLength", data.length, data.count);
 	}
 
-	private void statObjectImpl(Pego pego, int depth, UMap<ObjectCounter> m) {
+	private void statObjectImpl(ParsingObject pego, int depth, UMap<ObjectCounter> m) {
 		if(depth > this.ObjectMaxDepth) {
 			this.ObjectMaxDepth = depth;
 		}
@@ -246,7 +246,7 @@ class Stat {
 		this.ErapsedTime = System.currentTimeMillis();
 	}
 	
-	public void end(Pego pego, ParserContext p) {
+	public void end(ParsingObject pego, ParserContext p) {
 		this.ErapsedTime = (System.currentTimeMillis() - ErapsedTime);
 
 		System.gc(); // meaningless ?
@@ -439,23 +439,28 @@ class Stat {
 
 	public final void writeCSV() {
 		UStringBuilder sb = new UStringBuilder();
-		sb.append("v2,");
+		sb.append("v3,");
 		this.CSV(sb, "StatId");
-		this.CSV(sb, "MemoFactor");
+//		this.CSV(sb, "MemoFactor");
 		this.CSV(sb, "Optimization");
 		this.CSV(sb, "Memory");
 		/** **/
+		sb.append("*PEG,");  // mark
+		this.CSV(sb, "Peg");
+		this.CSV(sb, "PegSize");		
+		/** **/
+		sb.append("*File,");  // mark
 		this.CSV(sb, "FileName");
 		this.CSV(sb, "FileSize");
 		this.CSV(sb, "Latency");
 		this.CSV(sb, "Throughput");
+		sb.append("*M,");  // mark
 		this.CSV(sb, "HeapSize");
 		this.CSV(sb, "Heap/File");
-		this.CSV(sb, "PegSize");		
 		this.CSV(sb, "UsedObject");
 
 		/** **/
-		sb.append("*,");  // mark
+		sb.append("*B,");  // mark
 		this.CSV(sb, "Backtrack/Consumed");
 		this.CSV(sb, "WorstBacktrack");
 		this.CSV(sb, "Backtrack");
@@ -471,20 +476,17 @@ class Stat {
 //		this.CSV(sb, "Backtrack64");
 //		this.CSV(sb, "Backtrack128");
 		
-		/** **/
-		sb.append("*PEG,");  // mark
-		this.CSV(sb, "Peg");
-		this.CSV(sb, "PegSize");
-		this.CSV(sb, "Complexity");
-		this.CSV(sb, "Predictablity");
+//		this.CSV(sb, "PegSize");
+//		this.CSV(sb, "Complexity");
+//		this.CSV(sb, "Predictablity");
 		
 		/** **/
-
-		this.CSV(sb, "MemoHit");
 		sb.append("*Memo*,");  // mark
+		this.CSV(sb, "MemoHit");
 		this.CSV(sb, "Hit/Miss");
 		
 		/** **/
+		sb.append("*Object,");  // mark
 		this.CSV(sb, "UsedObject");
 		this.CSV(sb, "DisposedObject");
 		this.CSV(sb, "Disposal/Used");
