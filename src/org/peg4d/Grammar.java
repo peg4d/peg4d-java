@@ -849,17 +849,17 @@ class PEG4dGrammar extends Grammar {
 		return new TracingPackratParser(this, source, 0);  // best parser
 	}
 
-	// Definiton of Bun's Peg	
-	private final Peg s(String token) {
+	// Definiton of PEG4d 	
+	private final Peg t(String token) {
 		return new PegString(this, 0, token);
 	}
 	private final Peg c(String charSet) {
 		return new PegCharacter(this, 0, new UCharset(charSet));
 	}
-	public Peg n(String ruleName) {
+	private final Peg n(String ruleName) {
 		return new PegNonTerminal(this, 0, ruleName);
 	}
-	private final Peg opt(Peg e) {
+	private final Peg Optional(Peg e) {
 		return new PegOptional(this, 0, e);
 	}
 	private final Peg zero(Peg e) {
@@ -881,20 +881,20 @@ class PEG4dGrammar extends Grammar {
 		}
 		return new PegSequence(this, 0, l);
 	}
-	private final Peg choice(Peg ... elist) {
+	private final Peg Choice(Peg ... elist) {
 		UList<Peg> l = new UList<Peg>(new Peg[8]);
 		for(Peg e : elist) {
 			this.addChoice(l, e);
 		}
 		return new PegChoice(this, 0, l);
 	}
-	private Peg not(Peg e) {
+	private final Peg Not(Peg e) {
 		return new PegNot(this, 0, e);
 	}
-	private Peg L(String label) {
-		return new PegTagging(this, 0, label);
+	private final Peg Tag(String tag) {
+		return newTagging(tag);
 	}
-	private Peg O(Peg ... elist) {
+	private final Peg Constructor(Peg ... elist) {
 		UList<Peg> l = new UList<Peg>(new Peg[8]);
 		for(Peg e : elist) {
 			this.addSequence(l, e);
@@ -913,76 +913,56 @@ class PEG4dGrammar extends Grammar {
 	}
 
 	public Grammar loadPEG4dGrammar() {
-		Peg Any = new PegAny(this, 0);
+		Peg Any = newAny();
 		Peg NewLine = c("\\r\\n");
-//		Comment
-//		  = '/*' (!'*/' .)* '*/'
-//		  / '//' (![\r\n] .)* [\r\n]
-//		  ;
-		Peg _Comment = choice(
-			seq(s("/*"), zero(not(s("*/")), Any), s("*/")),
-			seq(s("//"), zero(not(NewLine), Any), NewLine)	
+		Peg WhiteSpace = c(" \\t\\r\\n");
+		this.setRule("COMMENT", 
+			Choice(
+				seq(t("/*"), zero(Not(t("*/")), Any), t("*/")),
+				seq(t("//"), zero(Not(NewLine), Any), NewLine)
+			)
 		);
-		this.setRule("Comment", _Comment);
 //		_ = 
 //		  ([ \t\r\n]+ / Comment )* 
 //		  ;
-		this.setRule("_", zero(choice(one(c(" \\t\\n\\r")), n("Comment"))));
+		this.setRule("_", zero(Choice(one(WhiteSpace), n("COMMENT"))));
 		
 //		RuleName
 //		  = << [A-Za-z_] [A-Za-z0-9_]* #PegNonTerminal >>
 //		  ;
-		this.setRule("NonTerminal", O(c("A-Za-z_"), zero(c("A-Za-z0-9_:")), L("#PegNonTerminal")));
-		this.setRule("RuleName", O(c("A-Za-z_"), zero(c("A-Za-z0-9_")), L("#name")));
-		this.setRule("LibName",  O(c("A-Za-z_"), zero(c("A-Za-z0-9_.")), L("#name")));
-////	String
-////	  = "'" << (!"'" .)*  #PegString >> "'"
-////	  / '"' <<  (!'"' .)* #PegString >> '"'
-////	  ;
-		Peg _String = choice(
-			seq(s("'"), O(zero(not(s("'")), Any), L("#PegString")), s("'")),
-			seq(s("\""), O(zero(not(s("\"")), Any), L("#PegString")), s("\"")),
-			seq(s("`"), O(zero(not(s("`")), Any), L("#PegMessage")), s("`"))
-		);	
-//	Character 
-//	  = "[" <<  (!']' .)* #PegCharacter >> "]"
-//	  ;
-		Peg _Character = seq(s("["), O(zero(not(s("]")), Any), L("#PegCharacter")), s("]"));
-//	Any
-//	  = << '.' #PegAny >>
-//	  ;
-		Peg _Any = O(s("."), L("#PegAny"));
-//	ObjectLabel 
-//	  = << '#' [A-z0-9_.]+ #PegTagging>>
-//	  ;
-		Peg _Tagging = O(s("#"), 
-			choice(
-					seq(s("<"), opt(n("_")), set(n("Expr")), opt(n("_")), L("#PegCaptureTagging"), s(">")), 
-					seq(one(c("A-Za-z0-9_.")), L("#PegTagging"))
+		this.setRule("NonTerminal", Constructor(c("A-Za-z_"), zero(c("A-Za-z0-9_:")), Tag("#PegNonTerminal")));
+		this.setRule("RuleName", Constructor(c("A-Za-z_"), zero(c("A-Za-z0-9_")), Tag("#name")));
+		this.setRule("LibName",  Constructor(c("A-Za-z_"), zero(c("A-Za-z0-9_.")), Tag("#name")));
+//		Peg StringContent = zero(Choice(t("\\\\'"), seq(Not(t("'")), Any)));
+//		Peg StringContent2 = zero(Choice(t("\\\\\""), seq(Not(t("\"")), Any)));
+		Peg StringContent = zero(Not(t("'")), Any);
+		Peg StringContent2 = zero(Not(t("\"")), Any);
+		this.setRule("String", 
+			Choice(
+				seq(t("'"), Constructor(StringContent, Tag("#PegString")), t("'")),
+				seq(t("\""), Constructor(StringContent2, Tag("#PegString")), t("\""))
 			)
 		);
-//	Index
-//	  = << [0-9] #PegIndex >>
-//	  ;
-		Peg _Index = O(c("0-9"), L("#PegIndex"));
-//		Index
-//		  = << [0-9] #PegIndex >>
-//		Peg _Pipe = seq(s("|>"), opt(n("_")), O(c("A-Za-z_"), zero(c("A-Za-z0-9_")), L("#pipe")));
-		Peg _Export = O(s("<|"), opt(n("_")), set(n("Expr")), opt(n("_")), L("#PegExport"), s("|>"));
+		Peg _Message =
+			seq(t("`"), Constructor(zero(Not(t("`")), Any), Tag("#PegMessage")), t("`"));
+		Peg CharacterContent = zero(Not(t("]")), Any);
+		Peg _Character = seq(t("["), Constructor(CharacterContent, Tag("#PegCharacter")), t("]"));
+		Peg _Any = Constructor(t("."), Tag("#PegAny"));
+		Peg _Tagging = Constructor(t("#"), seq(one(c("A-Za-z0-9_.")), Tag("#PegTagging")));
 //	Setter
 //	  = '@' <<@ [0-9]? #PegSetter>>
 //	  ;
-		setRule("Setter", seq(choice(s("^"), s("@")), LO(opt(c("0-9")), L("#PegSetter"))));
+		setRule("Setter", seq(Choice(t("^"), t("@")), LO(Optional(c("0-9")), Tag("#PegSetter"))));
 //		SetterTerm
 //		  = '(' Expr ')' Setter?
 //		  / '<<' << ('@' [ \t\n] ##PegNewObjectJoin / '' #PegNewObject) _? Expr@ >> _? '>>' Setter?
 //		  / RuleName Setter?
 //		  ;
-		Peg _SetterTerm = choice(
-			seq(s("("), opt(n("_")), n("Expr"), opt(n("_")), s(")"), opt(n("Setter"))),
-			seq(O(choice(s("<<"), s("<{"), s("8<")), choice(seq(choice(s("^"), s("@")), c(" \\t\\n\\r"), L("##PegNewObjectJoin")), seq(s(""), L("#PegNewObject"))), 
-					opt(n("_")), set(n("Expr")), opt(n("_")), choice(s(">>"), s("}>"), s(">8"))), opt(n("Setter"))),
-			seq(n("NonTerminal"), opt(n("Setter")))
+		Peg _SetterTerm = Choice(
+			seq(t("("), Optional(n("_")), n("Expr"), Optional(n("_")), t(")"), Optional(n("Setter"))),
+			seq(Constructor(Choice(t("<<"), t("<{"), t("8<")), Choice(seq(Choice(t("^"), t("@")), c(" \\t\\n\\r"), Tag("##PegNewObjectJoin")), seq(t(""), Tag("#PegNewObject"))), 
+					Optional(n("_")), set(n("Expr")), Optional(n("_")), Choice(t(">>"), t("}>"), t(">8"))), Optional(n("Setter"))),
+			seq(n("NonTerminal"), Optional(n("Setter")))
 		);
 //	Term
 //	  = String 
@@ -992,19 +972,19 @@ class PEG4dGrammar extends Grammar {
 //	  / Index
 //	  / SetterTerm
 //	  ;
-		setRule("Term", choice(
-			_String, _Character, _Any, _Tagging, _Index, _Export, _SetterTerm
+		setRule("Term", Choice(
+			n("String"), _Message, _Character, _Any, _Tagging, _SetterTerm
 		));
 //
 //	SuffixTerm
 //	  = Term <<@ ('*' #PegZeroMore / '+' #PegOneMore / '?' #PegOptional) >>?
 //	  ;
-		this.setRule("SuffixTerm", seq(n("Term"), opt(LO(choice(seq(s("*"), L("#PegZeroMore")), seq(s("+"), L("#PegOneMore")), seq(s("?"), L("#PegOptional")))))));
+		this.setRule("SuffixTerm", seq(n("Term"), Optional(LO(Choice(seq(t("*"), Tag("#PegZeroMore")), seq(t("+"), Tag("#PegOneMore")), seq(t("?"), Tag("#PegOptional")))))));
 //	Predicated
 //	  = << ('&' #PegAnd / '!' #PegNot) SuffixTerm@ >> / SuffixTerm 
 //	  ;
-		this.setRule("Predicate",  choice(
-			O(choice(seq(s("&"), L("#PegAnd")),seq(s("!"), L("#PegNot"))), set(n("SuffixTerm"))), 
+		this.setRule("Predicate",  Choice(
+			Constructor(Choice(seq(t("&"), Tag("#PegAnd")),seq(t("!"), Tag("#PegNot"))), set(n("SuffixTerm"))), 
 			n("SuffixTerm")
 		));
 //  Catch
@@ -1014,11 +994,11 @@ class PEG4dGrammar extends Grammar {
 //	Sequence 
 //	  = Predicated <<@ (_ Predicated@)+ #seq >>?
 //	  ;
-		setRule("Sequence", seq(n("Predicate"), opt(LO(L("#PegSequence"), one(n("_"), set(n("Predicate")))))));
+		setRule("Sequence", seq(n("Predicate"), Optional(LO(Tag("#PegSequence"), one(n("_"), set(n("Predicate")))))));
 //	Choice
 //	  = Sequence <<@ _? ('/' _? Sequence@)+ #PegChoice >>?
 //	  ;
-		Peg _Choice = seq(n("Sequence"), opt(LO( L("#PegChoice"), one(opt(n("_")), s("/"), opt(n("_")), set(n("Sequence"))))));
+		Peg _Choice = seq(n("Sequence"), Optional(LO( Tag("#PegChoice"), one(Optional(n("_")), t("/"), Optional(n("_")), set(n("Sequence"))))));
 //	Expr
 //	  = Choice
 //	  ;
@@ -1026,18 +1006,18 @@ class PEG4dGrammar extends Grammar {
 //	Rule
 //	  = << RuleName@ _? '=' _? Expr@ #rule>>
 //	  ;
-		this.setRule("Rule", O(L("#PegRule"), set(n("RuleName")), opt(n("_")), s("="), opt(n("_")), set(n("Expr"))));
+		this.setRule("Rule", Constructor(Tag("#PegRule"), set(n("RuleName")), Optional(n("_")), t("="), Optional(n("_")), set(n("Expr"))));
 //	Import
 //    = << 'import' _ RuleName@ from String@ #import>>
 //		  ;
-		this.setRule("Import", O(s("import"), L("#PegImport"), n("_"), choice(set(_String), n("LibName")), n("_"), s("as"), n("_"), set(n("RuleName"))));
+		this.setRule("Import", Constructor(t("import"), Tag("#PegImport"), n("_"), Choice(set(n("String")), n("LibName")), n("_"), t("as"), n("_"), set(n("RuleName"))));
 		
 		//	TopLevel   
 //	  =  Rule _? ';'
 //	  ;
 //		this.setRule("TopLevel", seq(n("Rule"), opt(n("_")), s(";"), opt(n("_"))));
 		this.setRule("TopLevel", seq(
-			opt(n("_")), choice(n("Rule"), n("Import")), opt(n("_")), s(";"), opt(n("_"))
+			Optional(n("_")), Choice(n("Rule"), n("Import")), Optional(n("_")), t(";"), Optional(n("_"))
 		));
 		this.verify(null);
 		return this;
