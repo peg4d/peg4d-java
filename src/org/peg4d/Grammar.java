@@ -927,6 +927,7 @@ class PEG4dGrammar extends Grammar {
 //		  ([ \t\r\n]+ / Comment )* 
 //		  ;
 		this.setRule("_", zero(Choice(one(WhiteSpace), n("COMMENT"))));
+		Peg Spacing = Optional(n("_"));
 		
 //		RuleName
 //		  = << [A-Za-z_] [A-Za-z0-9_]* #PegNonTerminal >>
@@ -1005,22 +1006,35 @@ class PEG4dGrammar extends Grammar {
 			Constructor(Choice(seq(t("&"), Tag("#PegAnd")),seq(t("!"), Tag("#PegNot"))), set(n("SuffixTerm"))), 
 			n("SuffixTerm")
 		));
-//  Catch
-//    = << 'catch' Expr@ >>
-//    ;
-//		Peg Catch = O(s("catch"), n("_"), L("#catch"), set(n("Expr")));
-//	Sequence 
-//	  = Predicated <<@ (_ Predicated@)+ #seq >>?
-//	  ;
-		setRule("Sequence", seq(n("Predicate"), Optional(LeftJoin(Tag("#PegSequence"), one(n("_"), set(n("Predicate")))))));
-//	Choice
-//	  = Sequence <<@ _? ('/' _? Sequence@)+ #PegChoice >>?
-//	  ;
-		Peg _Choice = seq(n("Sequence"), Optional(LeftJoin( Tag("#PegChoice"), one(Optional(n("_")), t("/"), Optional(n("_")), set(n("Sequence"))))));
-//	Expr
-//	  = Choice
-//	  ;
-		this.setRule("Expr", _Choice);
+
+		this.setRule("Sequence", 
+			seq(
+				n("Predicate"), 
+				Optional(
+					LeftJoin(
+						Tag("#PegSequence"), 
+						one(
+							Spacing, 
+							set(n("Predicate"))
+						)
+					)
+				)
+			)
+		);
+		this.setRule("Expr", 
+			seq(
+				n("Sequence"), 
+				Optional(
+					LeftJoin(
+						Tag("#PegChoice"), 
+						one(
+							Spacing, t("/"), Spacing, 
+							set(n("Sequence"))
+						)
+					)
+				)
+			)
+		);
 //	Rule
 //	  = << RuleName@ _? '=' _? Expr@ #rule>>
 //	  ;
