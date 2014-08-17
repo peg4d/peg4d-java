@@ -997,26 +997,44 @@ class PEG4dGrammar extends Grammar {
 //	SuffixTerm
 //	  = Term <<@ ('*' #PegZeroMore / '+' #PegOneMore / '?' #PegOptional) >>?
 //	  ;
-		this.setRule("SuffixTerm", seq(n("Term"), Optional(LeftJoin(Choice(seq(t("*"), Tag("#PegZeroMore")), seq(t("+"), Tag("#PegOneMore")), seq(t("?"), Tag("#PegOptional")))))));
-//	Predicated
-//	  = << ('&' #PegAnd / '!' #PegNot) SuffixTerm@ >> / SuffixTerm 
-//	  ;
+		this.setRule("SuffixTerm", 
+			seq(
+				n("Term"), 
+				Optional(
+					LeftJoin(
+						Choice(
+							seq(t("*"), Tag("#PegZeroMore")), 
+							seq(t("+"), Tag("#PegOneMore")), 
+							seq(t("?"), Tag("#PegOptional"))
+						)
+					)
+				)
+			)
+		);
+		
 		this.setRule("Predicate",  
 			Choice(
-			Constructor(Choice(seq(t("&"), Tag("#PegAnd")),seq(t("!"), Tag("#PegNot"))), set(n("SuffixTerm"))), 
-			n("SuffixTerm")
-		));
+					Constructor(
+						Choice(
+							seq(t("&"), Tag("#PegAnd")),
+							seq(t("!"), Tag("#PegNot"))
+						), 
+						set(n("SuffixTerm"))
+					), 
+					n("SuffixTerm")
+			)
+		);
 
 		this.setRule("Sequence", 
 			seq(
 				n("Predicate"), 
 				Optional(
 					LeftJoin(
-						Tag("#PegSequence"), 
 						one(
 							Spacing, 
 							set(n("Predicate"))
-						)
+						),
+						Tag("#PegSequence") 
 					)
 				)
 			)
@@ -1026,11 +1044,11 @@ class PEG4dGrammar extends Grammar {
 				n("Sequence"), 
 				Optional(
 					LeftJoin(
-						Tag("#PegChoice"), 
 						one(
 							Spacing, t("/"), Spacing, 
 							set(n("Sequence"))
-						)
+						),
+						Tag("#PegChoice") 
 					)
 				)
 			)
