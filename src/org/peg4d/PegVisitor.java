@@ -727,12 +727,10 @@ class MemoRemover extends PegVisitor {
 }
 
 class ObjectRemover extends PegVisitor {
-	
 	ObjectRemover() {
 	}
-
-	private Peg returnPeg = null;
 	
+	private Peg returnPeg = null;
 	Peg removeObjectOperation(Peg e) {
 		Peg stack = this.returnPeg;
 		this.returnPeg = e;
@@ -744,6 +742,9 @@ class ObjectRemover extends PegVisitor {
 	
 	@Override
 	public void visitNonTerminal(PegNonTerminal e) {
+		if(e.jumpExpression.hasObjectOperation()) {
+			this.returnPeg = e.base.newNonTerminal(e.symbol + "'");
+		}
 	}
 	
 	@Override
@@ -772,7 +773,6 @@ class ObjectRemover extends PegVisitor {
 	public void visitIndex(PegIndex e) {
 		this.returnPeg = null;
 	}
-
 	@Override
 	public void visitUnary(PegUnary e) {
 		Peg ne = this.removeObjectOperation(e.inner);
@@ -813,6 +813,7 @@ class ObjectRemover extends PegVisitor {
 		}
 		this.returnPeg = e.trim();
 	}
+
 	@Override
 	public void visitNewObject(PegConstructor e) {
 		UList<Peg> l = new UList<Peg>(new Peg[e.size()]);
@@ -825,6 +826,5 @@ class ObjectRemover extends PegVisitor {
 		//System.out.println("@@@ size=" + l.size() + " e=" + e);
 		this.returnPeg = e.base.newSequence(l);
 	}
-	
 }
 

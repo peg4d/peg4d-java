@@ -67,11 +67,11 @@ public class Grammar {
 				break;
 			}
 		}
-		ObjectRemover objectRemover = null;
-		if(Main.RecognitionOnlyMode) {
-			objectRemover = new ObjectRemover();
-		}
-		this.verify(objectRemover);
+//		ObjectRemover objectRemover = null;
+//		if(Main.RecognitionOnlyMode) {
+//			objectRemover = new ObjectRemover();
+//		}
+		this.verify(/*objectRemover*/);
 		return this.foundError;
 	}
 	
@@ -140,6 +140,10 @@ public class Grammar {
 		this.ruleMap.put(ruleName, new PegRule(ruleName, e));
 	}
 
+	public final void setRule(String ruleName, PegRule rule) {
+		this.ruleMap.put(ruleName, rule);
+	}
+	
 	public final UList<PegRule> getRuleList() {
 		UList<String> nameList = this.ruleMap.keys();
 		UList<PegRule> pegList = new UList<PegRule>(new PegRule[nameList.size()]);
@@ -160,15 +164,12 @@ public class Grammar {
 		return pegList;
 	}
 
-	public final void verify(ObjectRemover objectRemover) {
+	public final void verify() {
 		//this.objectLabelMap = new UMap<String>();
 		this.foundError = false;
 		this.exportedRuleList = null;
 		UList<String> nameList = this.ruleMap.keys();
 		NonTerminalChecker nc = new NonTerminalChecker();
-		if(this.foundError) {
-			Main._Exit(1, "PegError found");
-		}
 		for(int i = 0; i < nameList.size(); i++) {
 			String ruleName = nameList.ArrayValues[i];
 			PegRule rule = this.getRule(ruleName);
@@ -176,14 +177,23 @@ public class Grammar {
 				rule.expr = new PegMemo(rule.expr);
 				this.EnabledMemo += 1;
 			}
-			if(objectRemover != null) {
-				//System.out.println("B: " + ruleName + "= " + nonTerminal);
-				rule.expr = objectRemover.removeObjectOperation(rule.expr);
-				//System.out.println("A: " + ruleName + "= " + nonTerminal);
-			}
 			nc.verify(ruleName, rule.expr);
 		}
+		if(this.foundError) {
+			Main._Exit(1, "PegError found");
+		}
 		this.getExportRuleList();
+		ObjectRemover objectRemover = new ObjectRemover();
+		for(int i = 0; i < nameList.size(); i++) {
+			String ruleName = nameList.ArrayValues[i];
+			PegRule rule = this.getRule(ruleName);
+			if(rule.expr.hasObjectOperation()) {
+				String name = ruleName + "'";
+				Peg e = objectRemover.removeObjectOperation(rule.expr);
+				this.setRule(name, e);
+			}
+		}
+
 
 		new Inliner(this).performInlining();
 		new Optimizer(this).optimize();
@@ -795,7 +805,6 @@ class PEG4dGrammar extends Grammar {
 		if(pego.is("#PegMessage")) {
 			return loadingGrammar.newMessage(pego.getText());
 		}
-
 		if(pego.is("#PegNot")) {
 			return loadingGrammar.newNot(toParsingExpression(loadingGrammar, ruleName, pego.get(0)));
 		}
@@ -819,19 +828,6 @@ class PEG4dGrammar extends Grammar {
 			Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));
 			return loadingGrammar.newConstructor(ruleName, seq);
 		}
-		if(pego.is("#PegExport")) {
-			Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));
-			Peg o = loadingGrammar.newConstructor(ruleName, seq);
-			return new PegExport(loadingGrammar, 0, o);
-		}
-		if(pego.is("#PegSetter")) {
-			int index = -1;
-			String indexString = pego.getText();
-			if(indexString.length() > 0) {
-				index = UCharset.parseInt(indexString, -1);
-			}
-			return loadingGrammar.newConnector(toParsingExpression(loadingGrammar, ruleName, pego.get(0)), index);
-		}
 		if(pego.is("#PegConnector")) {
 			int index = -1;
 			if(pego.size() == 2) {
@@ -839,6 +835,19 @@ class PEG4dGrammar extends Grammar {
 			}
 			return loadingGrammar.newConnector(toParsingExpression(loadingGrammar, ruleName, pego.get(0)), index);
 		}
+//		if(pego.is("#PegExport")) {
+//		Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));
+//		Peg o = loadingGrammar.newConstructor(ruleName, seq);
+//		return new PegExport(loadingGrammar, 0, o);
+//	}
+//	if(pego.is("#PegSetter")) {
+//		int index = -1;
+//		String indexString = pego.getText();
+//		if(indexString.length() > 0) {
+//			index = UCharset.parseInt(indexString, -1);
+//		}
+//		return loadingGrammar.newConnector(toParsingExpression(loadingGrammar, ruleName, pego.get(0)), index);
+//	}
 //		if(node.is("#pipe")) {
 //			return new PegPipe(node.getText());
 //		}
@@ -1156,7 +1165,7 @@ class PEG4dGrammar extends Grammar {
 			t(";"), 
 			Spacing 
 		));
-		this.verify(null);
+		this.verify(/*null*/);
 		return this;
 	}
 
