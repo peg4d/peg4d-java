@@ -901,7 +901,7 @@ class PEG4dGrammar extends Grammar {
 		}
 		return new PegConstructor(this, 0, false, null, l);
 	}
-	private Peg LO(Peg ... elist) {
+	private Peg LeftJoin(Peg ... elist) {
 		UList<Peg> l = new UList<Peg>(new Peg[8]);
 		for(Peg e : elist) {
 			this.addSequence(l, e);
@@ -916,6 +916,7 @@ class PEG4dGrammar extends Grammar {
 		Peg Any = newAny();
 		Peg NewLine = c("\\r\\n");
 		Peg WhiteSpace = c(" \\t\\r\\n");
+		Peg Number = one(c("0-9"));
 		this.setRule("COMMENT", 
 			Choice(
 				seq(t("/*"), zero(Not(t("*/")), Any), t("*/")),
@@ -943,8 +944,7 @@ class PEG4dGrammar extends Grammar {
 				seq(t("\""), Constructor(StringContent2, Tag("#PegString")), t("\""))
 			)
 		);
-		Peg _Message =
-			seq(t("`"), Constructor(zero(Not(t("`")), Any), Tag("#PegMessage")), t("`"));
+		Peg _Message = seq(t("`"), Constructor(zero(Not(t("`")), Any), Tag("#PegMessage")), t("`"));
 		Peg CharacterContent = zero(Not(t("]")), Any);
 		Peg _Character = seq(t("["), Constructor(CharacterContent, Tag("#PegCharacter")), t("]"));
 		Peg _Any = Constructor(t("."), Tag("#PegAny"));
@@ -952,16 +952,31 @@ class PEG4dGrammar extends Grammar {
 //	Setter
 //	  = '@' <<@ [0-9]? #PegSetter>>
 //	  ;
-		setRule("Setter", seq(Choice(t("^"), t("@")), LO(Optional(c("0-9")), Tag("#PegSetter"))));
 //		SetterTerm
 //		  = '(' Expr ')' Setter?
 //		  / '<<' << ('@' [ \t\n] ##PegNewObjectJoin / '' #PegNewObject) _? Expr@ >> _? '>>' Setter?
 //		  / RuleName Setter?
 //		  ;
+		Peg Begin = Choice(t("<<"), t("<{"), t("8<"));
+		Peg Connector  = Choice(t("@"), t("^"));
+		Peg End   = Choice(t(">>"), t("}>"), t(">8"));
+		setRule("Setter", seq(Connector, LeftJoin(Optional(Number), Tag("#PegSetter"))));
+		Peg _Constructor =
+			seq(Begin, 
+				Constructor(
+					Choice(
+						seq(Connector, WhiteSpace, Tag("##PegNewObjectJoin")), 
+						Tag("#PegNewObject")
+					), 
+					Optional(n("_")), 
+					set(n("Expr")), 
+					Optional(n("_"))), 
+				End,
+				Optional(n("Setter"))
+			);
 		Peg _SetterTerm = Choice(
 			seq(t("("), Optional(n("_")), n("Expr"), Optional(n("_")), t(")"), Optional(n("Setter"))),
-			seq(Constructor(Choice(t("<<"), t("<{"), t("8<")), Choice(seq(Choice(t("^"), t("@")), c(" \\t\\n\\r"), Tag("##PegNewObjectJoin")), seq(t(""), Tag("#PegNewObject"))), 
-					Optional(n("_")), set(n("Expr")), Optional(n("_")), Choice(t(">>"), t("}>"), t(">8"))), Optional(n("Setter"))),
+			_Constructor, 
 			seq(n("NonTerminal"), Optional(n("Setter")))
 		);
 //	Term
@@ -972,18 +987,21 @@ class PEG4dGrammar extends Grammar {
 //	  / Index
 //	  / SetterTerm
 //	  ;
-		setRule("Term", Choice(
-			n("String"), _Message, _Character, _Any, _Tagging, _SetterTerm
-		));
+		setRule("Term", 
+			Choice(
+				n("String"), _Message, _Character, _Any, _Tagging, _SetterTerm
+			)
+		);
 //
 //	SuffixTerm
 //	  = Term <<@ ('*' #PegZeroMore / '+' #PegOneMore / '?' #PegOptional) >>?
 //	  ;
-		this.setRule("SuffixTerm", seq(n("Term"), Optional(LO(Choice(seq(t("*"), Tag("#PegZeroMore")), seq(t("+"), Tag("#PegOneMore")), seq(t("?"), Tag("#PegOptional")))))));
+		this.setRule("SuffixTerm", seq(n("Term"), Optional(LeftJoin(Choice(seq(t("*"), Tag("#PegZeroMore")), seq(t("+"), Tag("#PegOneMore")), seq(t("?"), Tag("#PegOptional")))))));
 //	Predicated
 //	  = << ('&' #PegAnd / '!' #PegNot) SuffixTerm@ >> / SuffixTerm 
 //	  ;
-		this.setRule("Predicate",  Choice(
+		this.setRule("Predicate",  
+			Choice(
 			Constructor(Choice(seq(t("&"), Tag("#PegAnd")),seq(t("!"), Tag("#PegNot"))), set(n("SuffixTerm"))), 
 			n("SuffixTerm")
 		));
@@ -994,11 +1012,11 @@ class PEG4dGrammar extends Grammar {
 //	Sequence 
 //	  = Predicated <<@ (_ Predicated@)+ #seq >>?
 //	  ;
-		setRule("Sequence", seq(n("Predicate"), Optional(LO(Tag("#PegSequence"), one(n("_"), set(n("Predicate")))))));
+		setRule("Sequence", seq(n("Predicate"), Optional(LeftJoin(Tag("#PegSequence"), one(n("_"), set(n("Predicate")))))));
 //	Choice
 //	  = Sequence <<@ _? ('/' _? Sequence@)+ #PegChoice >>?
 //	  ;
-		Peg _Choice = seq(n("Sequence"), Optional(LO( Tag("#PegChoice"), one(Optional(n("_")), t("/"), Optional(n("_")), set(n("Sequence"))))));
+		Peg _Choice = seq(n("Sequence"), Optional(LeftJoin( Tag("#PegChoice"), one(Optional(n("_")), t("/"), Optional(n("_")), set(n("Sequence"))))));
 //	Expr
 //	  = Choice
 //	  ;
