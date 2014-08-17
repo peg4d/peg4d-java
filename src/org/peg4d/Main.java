@@ -24,7 +24,7 @@ public class Main {
 	private static String GrammarFile = null; // default
 
 	// -s StartingPoint
-	private static String StartingPoint = "TopLevel";  // default
+	private static String StartingPoint = "File";  // default
 
 	// -t output
 	private static String OutputType = "pego";  // default
