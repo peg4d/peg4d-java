@@ -994,10 +994,16 @@ class PEG4dGrammar extends Grammar {
 			)
 		);
 		
-//		Peg StringContent = zero(Choice(t("\\\\'"), seq(Not(t("'")), Any)));
-//		Peg StringContent2 = zero(Choice(t("\\\\\""), seq(Not(t("\"")), Any)));
-		Peg StringContent = zero(Not(t("'")), Any);
-		Peg StringContent2 = zero(Not(t("\"")), Any);
+		Peg StringContent  = zero(Choice(
+			t("\\'"), t("\\\\"), 
+			seq(Not(t("'")), Any)
+		));
+		Peg StringContent2 = zero(Choice(
+				t("\\\""), t("\\\\"),
+				seq(Not(t("\"")), Any)
+		));
+//		Peg StringContent = zero(Not(t("'")), Any);
+//		Peg StringContent2 = zero(Not(t("\"")), Any);
 		this.setRule("String", 
 			Choice(
 				seq(t("'"), Constructor(StringContent, Tag("#PegString")), t("'")),
