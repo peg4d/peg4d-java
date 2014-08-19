@@ -39,18 +39,15 @@ public abstract class Peg {
 	protected Peg(Grammar base, int flag) {
 		this.base = base;
 		this.flag = flag;
-		base.definedExpressionList.add(this);
-		this.uniqueId = (short)base.definedExpressionList.size();
+		this.uniqueId = base.composer.issue(this);
 		this.semanticId = this.uniqueId;
 	}
 		
-	//protected abstract Peg clone(Grammar base, PegTransformer tr);
 	protected abstract void visit(PegVisitor probe);
 	public Peg getExpression() {
 		return this;
 	}
 	public abstract ParsingObject simpleMatch(ParsingObject left, ParserContext context);
-	//public abstract int fastMatch(int left, MonadicParser context);
 
 	boolean acceptC1(int ch) {
 		return true;
