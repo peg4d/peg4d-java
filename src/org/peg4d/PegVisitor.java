@@ -53,7 +53,7 @@ class PegVisitor {
 	public void visitOptional(PegOptional e) {
 		this.visitUnary(e);
 	}
-	public void visitRepeat(PegRepeat e) {
+	public void visitRepetition(PegRepetition e) {
 		this.visitUnary(e);
 	}
 	public void visitSetter(PegSetter e) {
@@ -190,7 +190,7 @@ class Formatter extends PegVisitor {
 	}
 
 	@Override
-	public void visitRepeat(PegRepeat e) {
+	public void visitRepetition(PegRepetition e) {
 		if(e.atleast == 1) {
 			this.format( null, e, "+");
 		}
@@ -398,7 +398,7 @@ class NonTerminalChecker extends PegVisitor {
 		this.consumedMinimumLength = stackedLength;
 	}
 	@Override
-	public void visitRepeat(PegRepeat e) {
+	public void visitRepetition(PegRepetition e) {
 		int stackedLength = this.consumedMinimumLength;
 		this.visitUnary(e);
 		if(e.atleast == 0) {
@@ -470,7 +470,7 @@ class Inliner extends PegVisitor {
 	final Peg doInline(Peg parent, PegNonTerminal r) {
 		//System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " Memo? " + (r.nextRule1 instanceof PegMemo) + " e=" + r.nextRule1);
 		this.peg.InliningCount += 1;
-		if(parent instanceof PegRepeat) {
+		if(parent instanceof PegRepetition) {
 			System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " Memo? " + (r.jumpExpression instanceof PegMemo) + " e=" + r.jumpExpression);
 		}
 		return r.jumpExpression;
@@ -568,7 +568,7 @@ class Optimizer extends PegVisitor {
 		this.visitUnary(e);
 	}
 	@Override
-	public void visitRepeat(PegRepeat e) {
+	public void visitRepetition(PegRepetition e) {
 		removeCommit(e);
 		this.visitUnary(e);
 	}
@@ -601,7 +601,7 @@ class Optimizer extends PegVisitor {
 	}
 	
 	private boolean needsObjectContext(Peg e) {
-		if(e.is(Peg.HasNewObject) || e.is(Peg.HasSetter) || e.is(Peg.HasTagging) || e.is(Peg.HasMessage) || e.is(Peg.HasContext)) {
+		if(e.is(Peg.HasConstructor) || e.is(Peg.HasConnector) || e.is(Peg.HasTagging) || e.is(Peg.HasMessage) || e.is(Peg.HasContext)) {
 			return true;
 		}
 		return false;

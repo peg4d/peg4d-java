@@ -7,22 +7,22 @@ public abstract class Peg {
 	public final static int HasString         = 1 << 2;
 	public final static int HasCharacter      = 1 << 3;
 	public final static int HasAny            = 1 << 4;
-	public final static int HasRepetation     = 1 << 5;
+	public final static int HasRepetition     = 1 << 5;
 	public final static int HasOptional       = 1 << 6;
 	public final static int HasChoice         = 1 << 7;
 	public final static int HasAnd            = 1 << 8;
 	public final static int HasNot            = 1 << 9;
 	
-	public final static int HasNewObject      = 1 << 10;
-	public final static int HasSetter         = 1 << 11;
+	public final static int HasConstructor    = 1 << 10;
+	public final static int HasConnector      = 1 << 11;
 	public final static int HasTagging        = 1 << 12;
 	public final static int HasMessage        = 1 << 13;
 	public final static int HasContext        = 1 << 14;
 	public final static int HasReserved       = 1 << 15;
 	public final static int hasReserved2       = 1 << 16;
 	public final static int Mask = HasNonTerminal | HasString | HasCharacter | HasAny
-	                             | HasRepetation | HasOptional | HasChoice | HasAnd | HasNot
-	                             | HasNewObject | HasSetter | HasTagging | HasMessage 
+	                             | HasRepetition | HasOptional | HasChoice | HasAnd | HasNot
+	                             | HasConstructor | HasConnector | HasTagging | HasMessage 
 	                             | HasReserved | hasReserved2 | HasContext;
 	public final static int LeftObjectOperation    = 1 << 17;
 	public final static int PossibleDifferentRight = 1 << 18;
@@ -125,7 +125,7 @@ public abstract class Peg {
 	}
 	
 	public final boolean hasObjectOperation() {
-		return this.is(Peg.HasNewObject) || this.is(Peg.HasSetter) || this.is(Peg.HasTagging) || this.is(Peg.HasMessage);
+		return this.is(Peg.HasConstructor) || this.is(Peg.HasConnector) || this.is(Peg.HasTagging) || this.is(Peg.HasMessage);
 	}
 
 }
@@ -428,15 +428,15 @@ class PegOptionalCharacter extends PegOptional {
 }
 
 
-class PegRepeat extends PegUnary {
+class PegRepetition extends PegUnary {
 	public int atleast = 0; 
-	protected PegRepeat(Grammar base, int flag, Peg e, int atLeast) {
-		super(base, flag | Peg.HasRepetation, e);
+	protected PegRepetition(Grammar base, int flag, Peg e, int atLeast) {
+		super(base, flag | Peg.HasRepetition, e);
 		this.atleast = atLeast;
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
-		probe.visitRepeat(this);
+		probe.visitRepetition(this);
 	}
 	@Override boolean acceptC1(int ch) {
 		if(this.atleast > 0) {
@@ -466,7 +466,7 @@ class PegRepeat extends PegUnary {
 	}
 }
 
-class PegOneMoreCharacter extends PegRepeat {
+class PegOneMoreCharacter extends PegRepetition {
 	UCharset charset;
 	public PegOneMoreCharacter(Grammar base, int flag, PegCharacter e) {
 		super(base, flag, e, 1);
@@ -491,7 +491,7 @@ class PegOneMoreCharacter extends PegRepeat {
 	}
 }
 
-class PegZeroMoreCharacter extends PegRepeat {
+class PegZeroMoreCharacter extends PegRepetition {
 	UCharset charset;
 	public PegZeroMoreCharacter(Grammar base, int flag, PegCharacter e) {
 		super(base, flag, e, 0);
@@ -680,7 +680,7 @@ abstract class PegList extends Peg {
 		if(e instanceof PegOptional) {
 			return true;
 		}
-		if(e instanceof PegRepeat && ((PegRepeat) e).atleast == 0) {
+		if(e instanceof PegRepetition && ((PegRepetition) e).atleast == 0) {
 			return true;
 		}
 		return false;
@@ -931,7 +931,7 @@ class PegAlwaysFailure extends PegString {
 class PegSetter extends PegUnary {
 	public int index;
 	public PegSetter(Grammar base, int flag, Peg e, int index) {
-		super(base, flag | Peg.HasSetter | Peg.NoMemo, e);
+		super(base, flag | Peg.HasConnector | Peg.NoMemo, e);
 		this.index = index;
 	}
 	@Override
@@ -1001,7 +1001,7 @@ class PegConstructor extends PegList {
 	String tagName;
 	int prefetchIndex = 0;
 	public PegConstructor(Grammar base, int flag, boolean leftJoin, String tagName, UList<Peg> list) {
-		super(base, flag | Peg.HasNewObject, list);
+		super(base, flag | Peg.HasConstructor, list);
 		this.leftJoin = leftJoin;
 		this.tagName = tagName == null ? "#new" : tagName;
 	}

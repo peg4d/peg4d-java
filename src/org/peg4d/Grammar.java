@@ -424,14 +424,14 @@ public class Grammar {
 	}
 	
 	private Peg newCommit(Peg p) {
-		if(!p.is(Peg.HasNewObject) && !p.is(Peg.HasNonTerminal) && !p.is(Peg.HasSetter)) {
+		if(!p.is(Peg.HasConstructor) && !p.is(Peg.HasNonTerminal) && !p.is(Peg.HasConnector)) {
 			return p;
 		}
 		return new PegCommit(p);
 	}
 
 	private Peg newMonad(Peg p) {
-		if(!p.is(Peg.HasNewObject) && !p.is(Peg.HasNonTerminal) && !p.is(Peg.HasSetter)) {
+		if(!p.is(Peg.HasConstructor) && !p.is(Peg.HasNonTerminal) && !p.is(Peg.HasConnector)) {
 			return p;
 		}
 		return new PegMonad(p);
@@ -453,7 +453,7 @@ public class Grammar {
 				return new PegOneMoreCharacter(this, 0, (PegCharacter)p);
 			}
 		}
-		return new PegRepeat(this, 0, newCommit(p), 1);
+		return new PegRepetition(this, 0, newCommit(p), 1);
 	}
 	
 	public final Peg newZeroMore(Peg p) {
@@ -470,7 +470,7 @@ public class Grammar {
 			this.LexicalOptimization += 1;
 			return new PegZeroMoreCharacter(this, 0, (PegCharacter)p);
 		}
-		return new PegRepeat(this, 0, newCommit(p), 0);
+		return new PegRepetition(this, 0, newCommit(p), 0);
 	}
 
 	public final Peg newAnd(Peg p) {
@@ -885,16 +885,16 @@ class PEG4dGrammar extends Grammar {
 		return new PegOptional(this, 0, e);
 	}
 	private final Peg zero(Peg e) {
-		return new PegRepeat(this, 0, e, 0);
+		return new PegRepetition(this, 0, e, 0);
 	}
 	private final Peg zero(Peg ... elist) {
-		return new PegRepeat(this, 0, seq(elist), 0);
+		return new PegRepetition(this, 0, seq(elist), 0);
 	}
 	private final Peg one(Peg e) {
-		return new PegRepeat(this, 0, e, 1);
+		return new PegRepetition(this, 0, e, 1);
 	}
 	private final Peg one(Peg ... elist) {
-		return new PegRepeat(this, 0, seq(elist), 1);
+		return new PegRepetition(this, 0, seq(elist), 1);
 	}
 	private final Peg seq(Peg ... elist) {
 		UList<Peg> l = new UList<Peg>(new Peg[8]);
