@@ -23,15 +23,6 @@ public class Grammar {
 	int PredictionOptimization    = 0;
 
 	MemoRemover memoRemover = null;
-
-	class PegRule {
-		String ruleName;
-		Peg expr;
-		public PegRule(String ruleName, Peg e) {
-			this.ruleName = ruleName;
-			this.expr = e;
-		}
-	}
 	
 	public Grammar(GrammarComposer db) {
 		this.composer = db;
@@ -137,7 +128,7 @@ public class Grammar {
 	}
 
 	public final void setRule(String ruleName, Peg e) {
-		this.ruleMap.put(ruleName, new PegRule(ruleName, e));
+		this.ruleMap.put(ruleName, new PegRule(null, 0, ruleName, e));
 	}
 
 	public final void setRule(String ruleName, PegRule rule) {
@@ -223,7 +214,7 @@ public class Grammar {
 				for(int i = 0; i < e.size(); i++) {
 					Peg se = e.get(i);
 					if(se instanceof PegNonTerminal) {
-						PegRule rule = new PegRule(((PegNonTerminal) se).symbol, ((PegNonTerminal) se).getNext());
+						PegRule rule = this.getRule(((PegNonTerminal) se).symbol);
 						l.add(rule);
 						Main.printVerbose("export", rule.ruleName);
 					}
@@ -708,6 +699,34 @@ public class Grammar {
 	}
 
 }
+
+class PegRule {
+	ParsingSource source;
+	long     pos;
+	String ruleName;
+	Peg expr;
+	int checked = 0;
+	int length = 0;
+	boolean objectType;
+	public PegRule(ParsingSource source, long pos, String ruleName, Peg e) {
+		this.source = source;
+		this.pos = pos;
+		this.ruleName = ruleName;
+		this.expr = e;
+		this.objectType = false;
+	}
+	public void reportError(String msg) {
+		if(this.source != null) {
+			Main._PrintLine(this.source.formatErrorMessage("error", this.pos, msg));
+		}
+	}
+	public void reportWarning(String msg) {
+		if(this.source != null) {
+			Main._PrintLine(this.source.formatErrorMessage("warning", this.pos, msg));
+		}
+	}
+}
+
 
 class PEG4dGrammar extends Grammar {
 	static boolean performExpressionConstruction(Grammar loadingGrammar, ParserContext context, ParsingObject pego) {
