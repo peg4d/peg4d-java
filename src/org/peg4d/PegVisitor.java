@@ -166,7 +166,6 @@ class Formatter extends PegVisitor {
 	public void visitIndex(PegIndex e) {
 		sb.appendInt(e.index);
 	}
-
 	
 	protected void format(String prefix, PegUnary e, String suffix) {
 		if(prefix != null) {
@@ -212,22 +211,11 @@ class Formatter extends PegVisitor {
 
 	@Override
 	public void visitSetter(PegSetter e) {
-		this.format( null, e, "^");
+		String predicate = "@";
 		if(e.index != -1) {
-			sb.appendInt(e.index);
+			predicate += "[" + e.index + "]";
 		}
-	}
-
-	@Override
-	public void visitExport(PegExport e) {
-		sb.append("<| ");
-		if(e.inner instanceof PegConstructor) {
-			this.format((PegConstructor)e.inner);
-		}
-		else {
-			e.inner.visit(this);
-		}
-		sb.append(" |>");
+		this.format(predicate, e, null);
 	}
 
 	protected void format(PegList l) {
@@ -271,16 +259,14 @@ class Formatter extends PegVisitor {
 	@Override
 	public void visitNewObject(PegConstructor e) {
 		if(e.leftJoin) {
-			sb.append("<{^ ");
+			sb.append("{@ ");
 		}
 		else {
-			sb.append("<{ ");
+			sb.append("{ ");
 		}
 		this.format(e);
-		sb.append(" }>");
+		sb.append(" }");
 	}
-	
-
 }
 
 class ListMaker extends PegVisitor {
@@ -310,8 +296,6 @@ class ListMaker extends PegVisitor {
 		}
 	}
 }
-
-
 
 class NonTerminalChecker extends PegVisitor {
 	String startPoint;
@@ -464,6 +448,7 @@ class NonTerminalChecker extends PegVisitor {
 		e.length = this.consumedMinimumLength - stackedLength;
 	}
 }
+
 
 class Inliner extends PegVisitor {
 	Grammar peg;

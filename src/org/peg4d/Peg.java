@@ -147,7 +147,7 @@ abstract class PegTerm extends Peg {
 class PegNonTerminal extends PegTerm {
 	String symbol;
 	Peg    jumpExpression = null;
-	int    length = -1;  // to be set by Verifier
+	int    length = -1;
 	
 	PegNonTerminal(Grammar base, int flag, String ruleName) {
 		super(base, flag | Peg.HasNonTerminal | Peg.NoMemo);

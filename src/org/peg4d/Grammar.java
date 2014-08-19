@@ -184,16 +184,16 @@ public class Grammar {
 		}
 		this.getExportRuleList();
 		ObjectRemover objectRemover = new ObjectRemover();
-		for(int i = 0; i < nameList.size(); i++) {
-			String ruleName = nameList.ArrayValues[i];
-			PegRule rule = this.getRule(ruleName);
-			if(rule.expr.hasObjectOperation()) {
-				String name = ruleName + "'";
-				Peg e = objectRemover.removeObjectOperation(rule.expr);
-				this.setRule(name, e);
-			}
-		}
-
+//		for(int i = 0; i < nameList.size(); i++) {
+//			String ruleName = nameList.ArrayValues[i];
+//			PegRule rule = this.getRule(ruleName);
+//			if(rule.expr.hasObjectOperation()) {
+//				String name = ruleName + "'";
+//				Peg e = objectRemover.removeObjectOperation(rule.expr);
+//				this.setRule(name, e);
+//				System.out.println(name + " = " + e);
+//			}
+//		}
 
 		new Inliner(this).performInlining();
 		new Optimizer(this).optimize();
