@@ -19,7 +19,43 @@ public class UCharset {
 
 	@Override
 	public final String toString() {
-		return this.text;
+		StringBuilder sb = new StringBuilder();
+		for(int ch = 0; ch < MAX; ch++) {
+			if(!this.asciiBitMap[ch]) {
+				continue;
+			}
+			sb.append(stringfy(ch));
+			int ch2 = findRange(ch+1);
+			if(ch2 > ch) {
+				sb.append("-");
+				sb.append(stringfy(ch2));
+				ch = ch2;
+			}
+		}
+		return sb.toString();
+	}
+
+	private int findRange(int start) {
+		for(int ch = start; ch < MAX; ch++) {
+			if(!this.asciiBitMap[ch]) {
+				return ch - 1;
+			}
+		}
+		return MAX-1;
+	}
+
+	private String stringfy(int c) {
+		char ch = (char)c;
+		switch(c) {
+		case '\n' : return "\\n";
+		case '\t' : return "\\t";
+		case '\r' : return "\\r";
+		case '\\' : return "\\\\";
+		}
+		if(Character.isISOControl(ch)) {
+			return String.format("\\x%x", c);
+		}
+		return "" + ch;
 	}
 
 	public final boolean hasChar(int ch) {
