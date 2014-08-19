@@ -319,7 +319,7 @@ class NonTerminalChecker extends PegVisitor {
 	public void visitNonTerminal(PegNonTerminal e) {
 		Peg next = e.base.getExpression(e.symbol);
 		if(next == null) {
-			Main._PrintLine(e.source.formatErrorMessage("error", e.sourcePosition, "undefined label: " + e.symbol));
+			//Main._PrintLine(e.source.formatErrorMessage("error", e.sourcePosition, "undefined label: " + e.symbol));
 			e.base.foundError = true;
 			return;
 		}

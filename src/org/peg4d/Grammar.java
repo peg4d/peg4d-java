@@ -768,8 +768,8 @@ class PEG4dGrammar extends Grammar {
 	
 	private static Peg toParsingExpression(Grammar loadingGrammar, String ruleName, ParsingObject node) {
 		Peg e = toParsingExpressionImpl(loadingGrammar, ruleName, node);
-		e.source = node.getSource();
-		e.sourcePosition = (int)node.getSourcePosition();
+//		e.source = node.getSource();
+//		e.sourcePosition = (int)node.getSourcePosition();
 		//System.out.println("seq: " + e.getClass() + ", size="+e.size());
 		loadingGrammar.DefinedPegSize += 1;
 		return e;

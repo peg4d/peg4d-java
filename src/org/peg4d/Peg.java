@@ -35,10 +35,7 @@ public abstract class Peg {
 	short      uniqueId   = 0;
 	short      semanticId = 0;
 	int        refc       = 0;
-	
-	ParsingSource source = null;
-	int          sourcePosition = 0;
-	
+		
 	protected Peg(Grammar base, int flag) {
 		this.base = base;
 		this.flag = flag;
@@ -106,17 +103,6 @@ public abstract class Peg {
 	public final String format(String name) {
 		return this.format(name, new Formatter());
 	}
-
-	protected final void report(String type, String msg) {
-		if(Main.StatLevel == 0) {
-			if(this.source != null) {
-				System.out.println(this.source.formatErrorMessage(type, this.sourcePosition-1, msg));
-			}
-			else {
-				System.out.println(type + ": " + msg + "\n\t" + this);
-			}
-		}
-	}
 	
 	protected void warning(String msg) {
 		if(Main.VerbosePeg && Main.StatLevel == 0) {
@@ -127,7 +113,7 @@ public abstract class Peg {
 	public final boolean hasObjectOperation() {
 		return this.is(Peg.HasConstructor) || this.is(Peg.HasConnector) || this.is(Peg.HasTagging) || this.is(Peg.HasMessage);
 	}
-
+	
 }
 
 abstract class PegTerm extends Peg {
@@ -180,11 +166,11 @@ class PegNonTerminal extends PegTerm {
 
 class PegString extends PegTerm {
 	String text;
-	byte[] textByte;
+	byte[] utf8;
 	public PegString(Grammar base, int flag, String text) {
 		super(base, Peg.HasString | Peg.NoMemo | flag);
 		this.text = text;
-		textByte = UCharset.toUtf8(text);
+		utf8 = UCharset.toUtf8(text);
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
@@ -194,11 +180,11 @@ class PegString extends PegTerm {
 		if(this.text.length() == 0) {
 			return true;
 		}
-		return UCharset.getFirstChar(this.textByte) == ch;
+		return UCharset.getFirstChar(this.utf8) == ch;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		if(context.match(this.textByte)) {
+		if(context.match(this.utf8)) {
 			return left;
 		}
 		return context.foundFailure(this);
@@ -209,7 +195,7 @@ class PegString1 extends PegString {
 	int symbol1;
 	public PegString1(Grammar base, int flag, String token) {
 		super(base, flag, token);
-		this.symbol1 = this.textByte[0] & 0xff;
+		this.symbol1 = this.utf8[0] & 0xff;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
@@ -227,8 +213,8 @@ class PegString2 extends PegString {
 	int symbol2;
 	public PegString2(Grammar base, int flag, String token) {
 		super(base, flag, token);
-		this.symbol1 = this.textByte[0] & 0xff;
-		this.symbol2 = this.textByte[1] & 0xff;
+		this.symbol1 = this.utf8[0] & 0xff;
+		this.symbol2 = this.utf8[1] & 0xff;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
@@ -321,29 +307,26 @@ class PegCharacter extends PegTerm {
 	}
 }
 
-//class PegUtf8Range extends PegTerm {
-//	char fromChar;
-//	char toChar;
+//class PegUtf8Range extends PegCharacter {
+//	int fromChar;
+//	int toChar;
 //	public PegUtf8Range(Grammar base, int flag, char fromChar, char toChar) {
-//		super(base, Peg.HasCharacter | Peg.NoMemo | flag);
-//		this.fromChar = fromChar;
-//		this.toChar   = toChar;
-//	}
-//	@Override
-//	protected void visit(PegVisitor probe) {
-//		probe.visitUtf8Range(this);
+//		super(base, flag, new UCharset(fromChar, toChar));
+//		this.fromChar = UCharset.getFirstChar("" +fromChar);
+//		this.toChar   = UCharset.getFirstChar("" +toChar);
 //	}
 //	@Override boolean acceptC1(int ch) {
-//		return this.charset.match(ch);
+//		return (this.fromChar <= ch && ch <= this.toChar);
 //	}
 //	@Override
-//	public Pego simpleMatch(Pego left, ParserContext context) {
-//		int ch = context.getChar();
-//		if(!this.charset.match(ch)) {
-//			return context.foundFailure(this);
+//	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+//		int len = UCharset.lengthOfUtf8(context.getChar());
+//		int uchar = context.getUChar();
+//		if(this.fromChar <= uchar && uchar <= this.toChar ) {
+//			context.consume(len);
+//			return left;
 //		}
-//		context.consume(1);
-//		return left;
+//		return context.foundFailure(this);
 //	}
 //}
 
@@ -377,11 +360,12 @@ class PegOptional extends PegUnary {
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		long pos = context.getPosition();
+//		long pos = context.getPosition();
+		long f = context.rememberFailure();
 		ParsingObject right = this.inner.simpleMatch(left, context);
 		if(right.isFailure()) {
-			assert(pos == context.getPosition());
-//			context.setPosition(pos);
+//			assert(pos == context.getPosition());
+			context.forgetFailure(f);
 			return left;
 		}
 		return right;
@@ -389,14 +373,14 @@ class PegOptional extends PegUnary {
 }
 
 class PegOptionalString extends PegOptional {
-	byte[] textByte;
+	byte[] utf8;
 	public PegOptionalString(Grammar base, int flag, PegString e) {
 		super(base, flag | Peg.NoMemo, e);
-		this.textByte = e.textByte;
+		this.utf8 = e.utf8;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		context.match(this.textByte);
+		context.match(this.utf8);
 		return left;
 	}
 }
@@ -427,7 +411,6 @@ class PegOptionalCharacter extends PegOptional {
 	}
 }
 
-
 class PegRepetition extends PegUnary {
 	public int atleast = 0; 
 	protected PegRepetition(Grammar base, int flag, Peg e, int atLeast) {
@@ -448,6 +431,7 @@ class PegRepetition extends PegUnary {
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long ppos = -1;
 		long pos = context.getPosition();
+		long f = context.rememberFailure();
 		int count = 0;
 		while(ppos < pos) {
 			ParsingObject right = this.inner.simpleMatch(left, context);
@@ -462,6 +446,7 @@ class PegRepetition extends PegUnary {
 		if(count < this.atleast) {
 			return context.foundFailure(this);
 		}
+		context.forgetFailure(f);
 		return left;
 	}
 }
@@ -547,8 +532,10 @@ class PegNot extends PegUnary {
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
+		long f   = context.rememberFailure();
 		ParsingObject right = this.inner.simpleMatch(left, context);
 		if(right.isFailure()) {
+			context.forgetFailure(f);
 			return left;
 		}
 		context.rollback(pos);
@@ -557,15 +544,15 @@ class PegNot extends PegUnary {
 }
 
 class PegNotString extends PegNot {
-	byte[] textBuffer;
+	byte[] utf8;
 	public PegNotString(Grammar peg, int flag, PegString e) {
 		super(peg, flag | Peg.NoMemo, e);
-		this.textBuffer = e.textByte;
+		this.utf8 = e.utf8;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
-		if(context.match(this.textBuffer)) {
+		if(context.match(this.utf8)) {
 			//context.setPosition(pos);
 			return context.foundFailure(this);
 		}
@@ -690,7 +677,7 @@ abstract class PegList extends Peg {
 		if(e instanceof PegNot && e instanceof PegAnd) {
 			return true;
 		}
-		if(e instanceof PegString && ((PegString)e).textByte.length == 0) {
+		if(e instanceof PegString && ((PegString)e).utf8.length == 0) {
 			return true;
 		}
 		if(e instanceof PegIndent) {
@@ -896,7 +883,7 @@ class PegWordChoice extends PegChoice {
 				charset.append(((PegCharacter)se).charset);
 			}
 			if(se instanceof PegString) {
-				wordList.add(((PegString)se).textByte);
+				wordList.add(((PegString)se).utf8);
 			}
 		}
 	}
