@@ -5,7 +5,7 @@ import java.io.File;
 public class Grammar {
 	public final static PEG4dGrammar PEG4d = new PEG4dGrammar();
 
-	GrammarComposer     db;
+	GrammarComposer     composer;
 	UMap<PegRule>       nsRuleMap;
 	String              name;
 	UMap<PegRule>       ruleMap;
@@ -34,7 +34,7 @@ public class Grammar {
 	}
 	
 	public Grammar(GrammarComposer db) {
-		this.db = db;
+		this.composer = db;
 		this.nsRuleMap = null;
 		this.ruleMap  = new UMap<PegRule>();
 		this.definedExpressionList = new UList<Peg>(new Peg[128]);
@@ -89,7 +89,7 @@ public class Grammar {
 	public final static char NameSpaceSeparator = ':';
 
 	public final void importGramamr(String ns, String filePath) {
-		Grammar peg = this.db.getGrammar(filePath);
+		Grammar peg = this.composer.getGrammar(filePath);
 		if(peg != null) {
 			UList<PegRule> ruleList = peg.getExportRuleList();
 			//System.out.println("filePath: " + filePath + " peg=" + ruleList);
@@ -863,7 +863,7 @@ class PEG4dGrammar extends Grammar {
 		this.optimizationLevel = 0;
 		this.loadPEG4dGrammar();
 		this.name = "PEG4d";
-		this.db.setGrammar("peg", this);
+		this.composer.setGrammar("peg", this);
 	}
 	
 	@Override
