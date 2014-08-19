@@ -308,7 +308,7 @@ public class Main {
 				startPoint = switchStaringPoint(peg, line.substring(1), startPoint);
 				continue;
 			}
-			PegInput source = new StringSource(peg, "(stdin)", linenum, line);
+			ParsingSource source = new StringSource(peg, "(stdin)", linenum, line);
 			ParserContext p = peg.newParserContext(source);
 			ParsingObject pego = p.parseNode(startPoint);
 			System.out.println("Parsed: " + pego);
@@ -403,7 +403,7 @@ public class Main {
 
 	// file
 
-	public final static PegInput loadSource(Grammar peg, String fileName) {
+	public final static ParsingSource loadSource(Grammar peg, String fileName) {
 		InputStream Stream = Main.class.getResourceAsStream("/" + fileName);
 		if (Stream == null) {
 			try {

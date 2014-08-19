@@ -1,11 +1,11 @@
 package org.peg4d;
 
-public abstract class PegInput {
+public abstract class ParsingSource {
 	Grammar peg;
 	String fileName;
 	Stat stat = null;
 	
-	public PegInput(Grammar peg, String fileName, long linenum) {
+	public ParsingSource(Grammar peg, String fileName, long linenum) {
 		this.peg = peg;
 		this.fileName = fileName;
 		this.pushLineMemo(0, linenum);

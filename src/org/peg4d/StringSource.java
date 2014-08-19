@@ -2,7 +2,7 @@ package org.peg4d;
 
 import java.io.UnsupportedEncodingException;
 
-class StringSource extends PegInput {
+class StringSource extends ParsingSource {
 	private byte[] textBuffer;
 	StringSource(Grammar peg, String fileName, long linenum, String sourceText) {
 		super(peg, fileName, linenum);

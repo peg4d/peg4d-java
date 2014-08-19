@@ -36,7 +36,7 @@ public abstract class Peg {
 	short      semanticId = 0;
 	int        refc       = 0;
 	
-	PegInput source = null;
+	ParsingSource source = null;
 	int          sourcePosition = 0;
 	
 	protected Peg(Grammar base, int flag) {

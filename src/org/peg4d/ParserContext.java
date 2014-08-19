@@ -5,12 +5,12 @@ import java.util.concurrent.BlockingQueue;
 public class ParserContext {
 	public    Grammar     peg = null;
 	
-	public final          PegInput source;
+	public final          ParsingSource source;
 	protected long        sourcePosition = 0;
 	public    long        endPosition;
 	protected Stat stat   = null;
 	
-	public ParserContext(Grammar peg, PegInput source, long startIndex, long endIndex) {
+	public ParserContext(Grammar peg, ParsingSource source, long startIndex, long endIndex) {
 		this.peg = peg;
 		this.source = source;
 		this.sourcePosition = startIndex;

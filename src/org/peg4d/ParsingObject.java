@@ -14,7 +14,7 @@ package org.peg4d;
 //}
 
 public class ParsingObject {
-	private PegInput    source = null;
+	private ParsingSource    source = null;
 	private long            pospeg = 0;
 	private int             length = 0;
 	String          tag = null;
@@ -22,14 +22,14 @@ public class ParsingObject {
 	ParsingObject            parent = null;
 	private ParsingObject            AST[] = null;
 
-	ParsingObject(String tag, PegInput source, long pos) {
+	ParsingObject(String tag, ParsingSource source, long pos) {
 		this.tag        = tag;
 		this.source     = source;
 		this.pospeg     = PEGUtils.objectId(pos, (short)0);
 		this.length     = 0;
 	}
 
-	ParsingObject(String tag, PegInput source, long pos, Peg e) {
+	ParsingObject(String tag, ParsingSource source, long pos, Peg e) {
 		this.tag        = tag;
 		this.source     = source;
 		this.pospeg     = PEGUtils.objectId(pos, e);
@@ -41,7 +41,7 @@ public class ParsingObject {
 		return this.parent;
 	}
 
-	public PegInput getSource() {
+	public ParsingSource getSource() {
 		return this.source;
 	}
 
@@ -403,17 +403,17 @@ public class ParsingObject {
 		return null;
 	}
 
-	public static ParsingObject newSource(String tag, PegInput source, long pos, PegConstructor created) {
+	public static ParsingObject newSource(String tag, ParsingSource source, long pos, PegConstructor created) {
 		ParsingObject pego = new ParsingObject(tag, source, pos, created);
 		return pego;
 	}
 
-	public static ParsingObject newSource(String tag, PegInput source, long pos) {
+	public static ParsingObject newSource(String tag, ParsingSource source, long pos) {
 		ParsingObject pego = new ParsingObject(tag, source, pos);
 		return pego;
 	}
 	
-	public static ParsingObject newErrorSource(PegInput source, long pospeg) {
+	public static ParsingObject newErrorSource(ParsingSource source, long pospeg) {
 		ParsingObject pego = new ParsingObject("#error", source, 0);
 		pego.pospeg = pospeg;
 		return pego;

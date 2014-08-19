@@ -7,7 +7,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class FileSource extends PegInput {
+public class FileSource extends ParsingSource {
 	final static int PageSize = 4096;
 	
 	private RandomAccessFile file;

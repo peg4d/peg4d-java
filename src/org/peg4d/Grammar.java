@@ -271,7 +271,7 @@ public class Grammar {
 		}
 	}
 
-	public ParserContext newParserContext(PegInput source) {
+	public ParserContext newParserContext(ParsingSource source) {
 		ParserContext p = new TracingPackratParser(this, source);
 		if(Main.RecognitionOnlyMode) {
 			p.setRecognitionOnly(true);
@@ -867,7 +867,7 @@ class PEG4dGrammar extends Grammar {
 	}
 	
 	@Override
-	public ParserContext newParserContext(PegInput source) {
+	public ParserContext newParserContext(ParsingSource source) {
 		return new TracingPackratParser(this, source, 0);  // best parser
 	}
 
