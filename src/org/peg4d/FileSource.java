@@ -65,17 +65,42 @@ public class FileSource extends ParsingSource {
 			this.readMainBuffer(this.buffer_offset);
 			buffer_pos = (int)(n - this.buffer_offset);
 		}
-		int ch = this.buffer[buffer_pos] & 0xff;
-//		if(ch > 127) {
-//			System.out.println("pos=" + n + ", ch="+ch);
-//		}
-		return ch;
+		return this.buffer[buffer_pos] & 0xff;
 	}
 
 	@Override
 	public final boolean match(long pos, byte[] text) {
+		int offset = (int)(pos - this.buffer_offset);
+		if(offset >= 0 && offset + text.length <= PageSize) {
+			switch(text.length) {
+			case 0:
+				break;
+			case 1:
+				if(text[0] != this.buffer[offset]) {
+					return false;
+				}
+				break;
+			case 2:
+				if(text[0] != this.buffer[offset] || text[1] != this.buffer[offset+1]) {
+					return false;
+				}
+				break;
+			case 3:
+				if(text[0] != this.buffer[offset] || text[1] != this.buffer[offset+1] || text[2] != this.buffer[offset+2]) {
+					return false;
+				}
+				break;
+			default:
+				for(int i = 0; i < text.length; i++) {
+					if(text[i] != this.buffer[offset+i]) {
+						return false;
+					}
+				}
+			}
+			return true;
+		}
 		for(int i = 0; i < text.length; i++) {
-			if(text[i] != this.charAt(pos + i)) {
+			if((text[i] & 0xff) != this.charAt(pos + i)) {
 				return false;
 			}
 		}

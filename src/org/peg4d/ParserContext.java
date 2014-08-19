@@ -54,7 +54,12 @@ public class ParserContext {
 	protected final int getChar() {
 		return this.charAt(this.sourcePosition);
 	}
-	
+
+	protected final int getUChar() {
+		System.out.println("TODO: getUChar()");
+		return 0;
+	}
+
 	public String substring(long startIndex, long endIndex) {
 		if(endIndex <= this.endPosition) {
 			return this.source.substring(startIndex, endIndex);
@@ -67,21 +72,17 @@ public class ParserContext {
 	}
 
 	protected final boolean match(int ch) {
-		if(ch == this.getChar()) {
+		if(ch == this.charAt(this.sourcePosition)) {
 			this.consume(1);
 			return true;
 		}
 		return false;
 	}
 
-	protected final boolean match(byte[] text) {
-		if(this.endPosition - this.sourcePosition >= text.length) {
-			for(int i = 0; i < text.length; i++) {
-				if(text[i] != this.source.charAt(this.sourcePosition + i)) {
-					return false;
-				}
-			}
-			this.consume(text.length);
+	protected final boolean match(byte[] utf8) {
+		long pos = this.sourcePosition;
+		if(pos + utf8.length <= this.endPosition && this.source.match(pos, utf8)) {
+			this.consume(utf8.length);
 			return true;
 		}
 		return false;
@@ -162,7 +163,7 @@ public class ParserContext {
 		}
 	}
 	
-	private long failurePosition = 0;
+	private long  failurePosition = 0;
 	private final ParsingObject foundFailureNode = ParsingObject.newSource(null, this.source, 0);
 
 	public final ParsingObject newErrorObject() {
@@ -179,6 +180,14 @@ public class ParserContext {
 	public final ParsingObject refoundFailure(Peg e, long pos) {
 		this.failurePosition = PEGUtils.failure(pos, e);
 		return this.foundFailureNode;
+	}
+
+	final long rememberFailure() {
+		return this.failurePosition;
+	}
+	
+	final void forgetFailure(long f) {
+		this.failurePosition = f;
 	}
 
 //	public final Peg getRule(String name) {
