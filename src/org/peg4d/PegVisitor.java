@@ -409,7 +409,6 @@ class NonTerminalChecker extends PegVisitor {
 	public void visitSetter(PegSetter e) {
 		int stackedLength = this.consumedMinimumLength;
 		this.visitUnary(e);
-		this.consumedMinimumLength = stackedLength;
 	}
 	@Override
 	public void visitExport(PegExport e) {

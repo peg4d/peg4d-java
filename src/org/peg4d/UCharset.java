@@ -93,11 +93,16 @@ public class UCharset {
 		while(ch != 0) {
 			char next = r.readChar();
 			if(next == '-') {
-				this.setRange(ch, r.readChar());
+				int ch2 = r.readChar();
+				if(ch > 0 && ch2 < 128) {
+					this.setRange(ch, ch2);
+				}
 				ch = r.readChar();
 			}
 			else {
-				this.set(ch);
+				if(ch > 0 && ch < 128) {
+					this.set(ch);
+				}
 				ch = next; //r.readChar();
 			}
 		}
