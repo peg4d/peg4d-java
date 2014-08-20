@@ -186,7 +186,9 @@ class PString extends PTerm {
 	public PString(Grammar base, int flag, String text) {
 		super(base, PExpression.HasString | PExpression.NoMemo | flag);
 		this.text = text;
-		utf8 = UCharset.toUtf8(text);
+		if(text != null) {
+			utf8 = UCharset.toUtf8(text);
+		}
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
@@ -209,9 +211,15 @@ class PString extends PTerm {
 
 class PString1 extends PString {
 	int symbol1;
-	public PString1(Grammar base, int flag, String token) {
+	PString1(Grammar base, int flag, String token) {
 		super(base, flag, token);
 		this.symbol1 = this.utf8[0] & 0xff;
+	}
+	PString1(Grammar base, int flag, int ch, String text) {
+		super(base, flag, null);
+		this.utf8 = new byte[1];
+		this.utf8[0] = (byte)ch;
+		this.symbol1 = ch & 0xff;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
@@ -225,7 +233,7 @@ class PString1 extends PString {
 }
 
 class PAny extends PTerm {
-	public PAny(Grammar base, int flag) {
+	PAny(Grammar base, int flag) {
 		super(base, PExpression.HasAny | PExpression.NoMemo | flag);
 	}
 	@Override boolean checkFirstCharcter(int ch) {
@@ -245,8 +253,8 @@ class PAny extends PTerm {
 	}
 }
 
-class PUnicodeAny extends PAny {
-	public PUnicodeAny(Grammar base, int flag) {
+class PUtf8Any extends PAny {
+	PUtf8Any(Grammar base, int flag) {
 		super(base, flag);
 	}
 	@Override

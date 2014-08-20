@@ -261,6 +261,24 @@ public class UCharset {
 		}
 		return getFirstChar(toUtf8(text));
 	}
+
+	public static int parseHex2(String t) {
+		return hex(t.charAt(t.length()-2)) * 16 + hex(t.charAt(t.length()-1)); 
+	}
+
+	static int hex(int c) {
+		if('0' <= c && c <= '9') {
+			return c - '0';
+		}
+		if('a' <= c && c <= 'f') {
+			return c - 'a' + 10;
+		}
+		if('A' <= c && c <= 'F') {
+			return c - 'A' + 10;
+		}
+		return 0;
+	}
+
 }
 
 class CharacterReader {
@@ -317,24 +335,11 @@ class CharacterReader {
 	}
 
 	private char readUtf(char ch1, char ch2, char ch3, char ch4) {
-		int c = this.hex(ch1);
-		c = (c * 16) + this.hex(ch2);
-		c = (c * 16) + this.hex(ch3);
-		c = (c * 16) + this.hex(ch4);
+		int c = UCharset.hex(ch1);
+		c = (c * 16) + UCharset.hex(ch2);
+		c = (c * 16) + UCharset.hex(ch3);
+		c = (c * 16) + UCharset.hex(ch4);
 		return (char)c;
-	}
-
-	private int hex(int c) {
-		if('0' <= c && c <= '9') {
-			return c - '0';
-		}
-		if('a' <= c && c <= 'f') {
-			return c - 'a' + 10;
-		}
-		if('A' <= c && c <= 'F') {
-			return c - 'A' + 10;
-		}
-		return 0;
 	}
 
 }

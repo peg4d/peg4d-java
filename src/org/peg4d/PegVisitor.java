@@ -443,14 +443,21 @@ class NonTerminalChecker extends PegVisitor {
 		int stackedLength = this.consumedMinimumLength;
 		e.get(0).visit(this);		
 		int min = this.consumedMinimumLength;
+		boolean _objectType = this.checking.objectType;
+		boolean foundObject = false;
 		for(int i = 1; i < e.size(); i++) {
 			this.consumedMinimumLength = stackedLength;
+			this.checking.objectType = _objectType;
 			e.get(i).visit(this);
 			if(this.consumedMinimumLength < min) {
 				min = this.consumedMinimumLength;
 			}
+			if(this.checking.objectType) {
+				foundObject = true;
+			}
 		}
 		this.consumedMinimumLength = stackedLength;
+		this.checking.objectType = foundObject;
 	}
 	@Override
 	public void visitConstructor(PConstructor e) {
@@ -459,6 +466,7 @@ class NonTerminalChecker extends PegVisitor {
 			e.get(i).visit(this);
 		}
 		e.length = this.consumedMinimumLength - stackedLength;
+		this.checking.objectType = true;
 	}
 }
 
@@ -721,12 +729,11 @@ class ObjectRemover extends PegVisitor {
 			this.returnPeg = e.base.newNonTerminal(e.symbol + "'");
 		}
 	}
-	
 	@Override
 	public void visitNotAny(PNotAny e) {
 		PExpression ne = this.removeObjectOperation(e.not);
 		if(ne == null) {
-			this.returnPeg = e.base.newAny();
+			this.returnPeg = e.base.newAny(".");
 			return ;
 		}
 		e.not = (PNot)ne;

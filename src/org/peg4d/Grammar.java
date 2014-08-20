@@ -295,9 +295,12 @@ public class Grammar {
 	final PExpression newString(String text) {
 		return this.composer.newString(this, text);
 	}
-	final PExpression newAny() {
-		return this.composer.newAny(this);
+	final PExpression newAny(String t) {
+		return this.composer.newAny(this, t);
 	}	
+	public PExpression newByte(int ch, String t) {
+		return this.composer.newByte(this, ch, t);
+	}
 	final PExpression newCharacter(String text) {
 		return this.composer.newCharacter(this, text);
 	}
@@ -514,8 +517,13 @@ class PEG4dGrammar extends Grammar {
 		if(pego.is("#PCharacter")) {
 			return loading.newCharacter(pego.getText());
 		}
+		if(pego.is("#PByte")) {
+			String t = pego.getText();
+			int ch = UCharset.parseHex2(t);
+			return loading.newByte(ch, t);
+		}
 		if(pego.is("#PAny")) {
-			return loading.newAny();
+			return loading.newAny(pego.getText());
 		}
 		if(pego.is("#PChoice")) {
 			UList<PExpression> l = new UList<PExpression>(new PExpression[pego.size()]);
@@ -675,7 +683,7 @@ class PEG4dGrammar extends Grammar {
 	}
 
 	public Grammar loadPEG4dGrammar() {
-		PExpression Any = newAny();
+		PExpression Any = newAny(".");
 		PExpression _NEWLINE = c("\\r\\n");
 		PExpression _WS = c(" \\t\\r\\n");
 		PExpression _NUMBER = one(c("0-9"));
@@ -687,6 +695,8 @@ class PEG4dGrammar extends Grammar {
 		);
 		this.setRule("_", zero(Choice(one(_WS), n("COMMENT"))));
 		this.setRule("idchar", c("A-Za-z0-9_."));
+		this.setRule("digit", c("0-9"));
+		this.setRule("hexdigit", c("0-9A-Fa-f"));
 		PExpression Spacing = Optional(n("_"));
 		this.setRule("RuleName", Constructor(c("A-Za-z_"), zero(c("A-Za-z0-9_")), Tag("#name")));
 		this.setRule("LibName",  Constructor(c("A-Za-z_"), zero(c("A-Za-z0-9_.")), Tag("#name")));
@@ -730,9 +740,9 @@ class PEG4dGrammar extends Grammar {
 		PExpression _Message = seq(t("`"), Constructor(zero(Not(t("`")), Any), Tag("#PMessage")), t("`"));
 		PExpression CharacterContent = zero(Not(t("]")), Any);
 		PExpression _Character = seq(t("["), Constructor(CharacterContent, Tag("#PCharacter")), t("]"));
-		PExpression _Any = Constructor(t("."), Tag("#PAny"));
+		PExpression _Any = Constructor(t("."), Optional(t(".")), Tag("#PAny"));
 		PExpression _Tagging = Constructor(t("#"), seq(one(c("A-Za-z0-9_.")), Tag("#PTagging")));
-
+		PExpression _Byte = Constructor(t("0x"), c("0-9A-Fa-f"), c("0-9A-Fa-f"), Tag("#PByte"));
 		PExpression ConstructorBegin = Choice(t("{"), t("<{"), t("<<"), t("8<"));
 		PExpression Connector  = Choice(t("@"), t("^"));
 		PExpression ConstructorEnd   = Choice(t("}>"), t("}"), t(">>"), t(">8"));
@@ -762,12 +772,18 @@ class PEG4dGrammar extends Grammar {
 			set(n("Expr")), Spacing, t(">"),
 			Tag("#PMatch")
 		);
+		PExpression _TimesFunc = Constructor(
+			t("<times"), _WS,
+			set(n("Number")), _WS, 
+			set(n("Expr")), Spacing, t(">"),
+			Tag("#PTimes")
+		);
 		setRule("Term", 
 			Choice(
-				n("String"), _Character, _Any, _Message, _Tagging, 
+				n("String"), _Character, _Any, _Message, _Tagging, _Byte, 
 				seq(t("("), Spacing, n("Expr"), Spacing, t(")")),
 				n("Constructor"), n("NonTerminal"), 
-				_LazyFunc, _MatchFunc
+				_LazyFunc, _MatchFunc, _TimesFunc
 			)
 		);
 		this.setRule("SuffixTerm", seq(

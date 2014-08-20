@@ -362,14 +362,16 @@ public class Main {
 			ParsingSource source = new StringSource(peg, "(stdin)", linenum, line);
 			for(int i = 0; i < ruleList.size(); i++) {
 				PegRule rule = ruleList.ArrayValues[i];
-				p.resetSource(source);
-				ParsingObject pego = p.match(rule.ruleName);
-				if(pego.isFailure()) {
-					continue;
+				if(rule.objectType) {
+					p.resetSource(source);
+					ParsingObject pego = p.match(rule.ruleName);
+					if(pego.isFailure()) {
+						continue;
+					}
+					seq.add(rule.ruleName);
+					infer(ruleList, p, seq);
+					seq.pop();
 				}
-				seq.add(rule.ruleName);
-				infer(ruleList, p, seq);
-				seq.pop();
 			}
 			linenum = linenum + 1;
 		}
@@ -385,15 +387,17 @@ public class Main {
 		long pos = p.getPosition();
 		for(int i = 0; i < ruleList.size(); i++) {
 			PegRule rule = ruleList.ArrayValues[i];
-			p.setPosition(pos);
-			ParsingObject pego = p.match(rule.ruleName);
-			if(pego.isFailure()) {
-				continue;
+			if(rule.objectType) {
+				p.setPosition(pos);
+				ParsingObject pego = p.match(rule.ruleName);
+				if(pego.isFailure()) {
+					continue;
+				}
+				seq.add(rule.ruleName);
+				foundRule = true;
+				infer(ruleList, p, seq);
+				seq.pop();
 			}
-			seq.add(rule.ruleName);
-			foundRule = true;
-			infer(ruleList, p, seq);
-			seq.pop();
 		}
 		if(!foundRule) {
 			p.setPosition(pos);

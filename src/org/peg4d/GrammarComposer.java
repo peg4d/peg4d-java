@@ -49,6 +49,7 @@ public class GrammarComposer {
 
 	private static String prefixNonTerminal = "a\b";
 	private static String prefixString = "t\b";
+	private static String prefixByte   = "b\b";
 	private static String prefixCharacter = "c\b";
 	private static String prefixNot = "!\b";
 	private static String prefixAnd = "&\b";
@@ -86,18 +87,19 @@ public class GrammarComposer {
 	}
 
 	public final PExpression newNonTerminal(Grammar peg, String text) {
-		PExpression e = getsem(prefixNonTerminal + text);
+		String key = prefixNonTerminal + text;
+		PExpression e = getsem(key);
 		if(e == null) {
-			e = new PNonTerminal(peg, 0, text);
-			e = putsem(prefixNonTerminal + text, e);
+			e = putsem(key, new PNonTerminal(peg, 0, text));
 		}
 		return e;
 	}
 
 	public final PExpression newString(Grammar peg, String text) {
-		PExpression e = getsem(prefixString + text);
+		String key = prefixString + text;
+		PExpression e = getsem(key);
 		if(e == null) {
-			e = putsem(prefixString + text, this.newStringImpl(peg, text));
+			e = putsem(key, this.newStringImpl(peg, text));
 		}
 		return e;
 	}
@@ -111,12 +113,22 @@ public class GrammarComposer {
 		}
 		return new PString(peg, 0, text);	
 	}
-	
-	public final PExpression newAny(Grammar peg) {
-		PExpression e = getsem("");
+
+	public final PExpression newByte(Grammar peg, int ch, String text) {
+		String key = prefixByte + text;
+		PExpression e = getsem(key);
 		if(e == null) {
-			e = new PAny(peg, 0);
-			e = putsem("", e);
+			e = putsem(key, new PString1(peg, 0, ch, text));
+		}
+		return e;
+	}
+
+	
+	public final PExpression newAny(Grammar peg, String text) {
+		PExpression e = getsem(text);
+		if(e == null) {
+			e = (text.equals((".."))) ? new PUtf8Any(peg, 0) : new PAny(peg, 0);
+			e = putsem(text, e);
 		}
 		return e;
 	}
