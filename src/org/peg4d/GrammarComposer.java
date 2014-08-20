@@ -1,7 +1,7 @@
 package org.peg4d;
 
 public class GrammarComposer {
-	UList<Peg> definedExpressionList = new UList<Peg>(new Peg[128]);
+	UList<PExpression> definedExpressionList = new UList<PExpression>(new PExpression[128]);
 	UMap<Grammar> pegMap = new UMap<Grammar>();
 	
 	Grammar getGrammar(String filePath) {
@@ -30,19 +30,19 @@ public class GrammarComposer {
 		return Grammar.load(this, filePath);
 	}
 	
-	short issue(Peg peg) {
+	short issue(PExpression peg) {
 		this.definedExpressionList.add(peg);
 		return (short)this.definedExpressionList.size();
 	}
 
-	public final Peg getDefinedExpression(long oid) {
+	public final PExpression getDefinedExpression(long oid) {
 		int index = (short)oid;
 		return this.definedExpressionList.ArrayValues[index-1];
 	}
 
 	// factory
 	
-	UMap<Peg> semMap = new UMap<Peg>();
+	UMap<PExpression> semMap = new UMap<PExpression>();
 
 	private static String prefixNonTerminal = "a\b";
 	private static String prefixString = "t\b";
@@ -59,16 +59,16 @@ public class GrammarComposer {
 	private static String prefixTagging = "T\b";
 	private static String prefixMessage = "M\b";
 	
-	private Peg getsem(String t) {
-		Peg e = semMap.get(t);
+	private PExpression getsem(String t) {
+		PExpression e = semMap.get(t);
 		if(e != null) {
 			e.refc += 1;
 		}
 		return e;
 	}
 
-	private Peg putsem(String t, Peg e) {
-		if(Main.AllExpressionMemo && !e.is(Peg.NoMemo)) {
+	private PExpression putsem(String t, PExpression e) {
+		if(Main.AllExpressionMemo && !e.is(PExpression.NoMemo)) {
 			e.base.EnabledMemo += 1;
 			e = newMemo(e);
 		}
@@ -76,229 +76,222 @@ public class GrammarComposer {
 		return e;
 	}
 	
-	public final Peg newMemo(Peg e) {
-		if(e instanceof PegMemo) {
+	public final PExpression newMemo(PExpression e) {
+		if(e instanceof PMemo) {
 			return e;
 		}
-		return new PegMemo(e);
+		return new PMemo(e);
 	}
 
-	public final Peg newNonTerminal(Grammar peg, String text) {
-		Peg e = getsem(prefixNonTerminal + text);
+	public final PExpression newNonTerminal(Grammar peg, String text) {
+		PExpression e = getsem(prefixNonTerminal + text);
 		if(e == null) {
-			e = new PegNonTerminal(peg, 0, text);
+			e = new PNonTerminal(peg, 0, text);
 			e = putsem(prefixNonTerminal + text, e);
 		}
 		return e;
 	}
 
-	public final Peg newString(Grammar peg, String text) {
-		Peg e = getsem(prefixString + text);
+	public final PExpression newString(Grammar peg, String text) {
+		PExpression e = getsem(prefixString + text);
 		if(e == null) {
 			e = putsem(prefixString + text, this.newStringImpl(peg, text));
 		}
 		return e;
 	}
 
-	private Peg newStringImpl(Grammar peg, String text) {
+	private PExpression newStringImpl(Grammar peg, String text) {
 		if(peg.optimizationLevel > 0) {
 			if(UCharset.toUtf8(text).length == 1) {
 				peg.LexicalOptimization += 1;
-				return new PegString1(peg, 0, text);				
-			}
-			if(UCharset.toUtf8(text).length == 2) {
-				peg.LexicalOptimization += 1;
-				return new PegString2(peg, 0, text);				
+				return new PString1(peg, 0, text);				
 			}
 		}
-		return new PegString(peg, 0, text);	
+		return new PString(peg, 0, text);	
 	}
 	
-	public final Peg newAny(Grammar peg) {
-		Peg e = getsem("");
+	public final PExpression newAny(Grammar peg) {
+		PExpression e = getsem("");
 		if(e == null) {
-			e = new PegAny(peg, 0);
+			e = new PAny(peg, 0);
 			e = putsem("", e);
 		}
 		return e;
 	}
 	
-	public final Peg newCharacter(Grammar peg, String text) {
+	public final PExpression newCharacter(Grammar peg, String text) {
 		UCharset u = new UCharset(text);
 		String key = prefixCharacter + u.key();
-		Peg e = getsem(key);
+		PExpression e = getsem(key);
 		if(e == null) {
-			e = new PegCharacter(peg, 0, u);
+			e = new PCharacter(peg, 0, u);
 			e = putsem(key, e);
 		}
 		return e;
 	}
 
-	public final Peg newOptional(Grammar peg, Peg p) {
+	public final PExpression newOptional(Grammar peg, PExpression p) {
 		String key = prefixOptional + p.key();
-		Peg e = getsem(key);
+		PExpression e = getsem(key);
 		if(e == null) {
 			e = putsem(key, newOptionalImpl(peg, p));
 		}
 		return e;
 	}
 
-	private Peg newOptionalImpl(Grammar peg, Peg p) {
-		if(p instanceof PegString1) {
+	private PExpression newOptionalImpl(Grammar peg, PExpression p) {
+		if(p instanceof PString1) {
 			peg.LexicalOptimization += 1;
-			return new PegOptionalString1(peg, 0, (PegString1)p);
+			return new POptionalString1(peg, 0, (PString1)p);
 		}
-		if(p instanceof PegString) {
+		if(p instanceof PString) {
 			peg.LexicalOptimization += 1;
-			return new PegOptionalString(peg, 0, (PegString)p);
+			return new POptionalString(peg, 0, (PString)p);
 		}
-		if(p instanceof PegCharacter) {
+		if(p instanceof PCharacter) {
 			peg.LexicalOptimization += 1;
-			return new PegOptionalCharacter(peg, 0, (PegCharacter)p);
+			return new POptionalCharacter(peg, 0, (PCharacter)p);
 		}
-		return new PegOptional(peg, 0, newCommit(peg, p));
+		return new POptional(peg, 0, newCommit(peg, p));
 	}
 	
-	private Peg newCommit(Grammar peg, Peg p) {
-		if(!p.is(Peg.HasConstructor) && !p.is(Peg.HasNonTerminal) && !p.is(Peg.HasConnector)) {
+	private PExpression newCommit(Grammar peg, PExpression p) {
+		if(!p.is(PExpression.HasConstructor) && !p.is(PExpression.HasNonTerminal) && !p.is(PExpression.HasConnector)) {
 			return p;
 		}
-		return new PegCommit(p);
+		return new PCommit(p);
 	}
 
-	private Peg newMonad(Grammar peg, Peg p) {
-		if(!p.is(Peg.HasConstructor) && !p.is(Peg.HasNonTerminal) && !p.is(Peg.HasConnector)) {
+	private PExpression newMonad(Grammar peg, PExpression p) {
+		if(!p.is(PExpression.HasConstructor) && !p.is(PExpression.HasNonTerminal) && !p.is(PExpression.HasConnector)) {
 			return p;
 		}
-		return new PegMonad(p);
+		return new PMonad(p);
 	}
 	
-	public final Peg newOneMore(Grammar peg, Peg p) {
+	public final PExpression newOneMore(Grammar peg, PExpression p) {
 		String key = prefixOneMore + p.key();
-		Peg e = getsem(key);
+		PExpression e = getsem(key);
 		if(e == null) {
 			e = putsem(key, newOneMoreImpl(peg, p));
 		}
 		return e;
 	}
 
-	private Peg newOneMoreImpl(Grammar peg, Peg p) {
+	private PExpression newOneMoreImpl(Grammar peg, PExpression p) {
 		if(peg.optimizationLevel > 0) {
-			if(p instanceof PegCharacter) {
+			if(p instanceof PCharacter) {
 				peg.LexicalOptimization += 1;
-				return new PegOneMoreCharacter(peg, 0, (PegCharacter)p);
+				return new POneMoreCharacter(peg, 0, (PCharacter)p);
 			}
 		}
-		return new PegRepetition(peg, 0, newCommit(peg, p), 1);
+		return new PRepetition(peg, 0, newCommit(peg, p), 1);
 	}
 	
-	public final Peg newZeroMore(Grammar peg, Peg p) {
+	public final PExpression newZeroMore(Grammar peg, PExpression p) {
 		String key = prefixZeroMore + p.key();
-		Peg e = getsem(key);
+		PExpression e = getsem(key);
 		if(e == null) {
 			e = putsem(key, newZeroMoreImpl(peg, p));
 		}
 		return e;
 	}
 
-	private Peg newZeroMoreImpl(Grammar peg, Peg p) {
-		if(p instanceof PegCharacter) {
+	private PExpression newZeroMoreImpl(Grammar peg, PExpression p) {
+		if(p instanceof PCharacter) {
 			peg.LexicalOptimization += 1;
-			return new PegZeroMoreCharacter(peg, 0, (PegCharacter)p);
+			return new PZeroMoreCharacter(peg, 0, (PCharacter)p);
 		}
-		return new PegRepetition(peg, 0, newCommit(peg, p), 0);
+		return new PRepetition(peg, 0, newCommit(peg, p), 0);
 	}
 
-	public final Peg newAnd(Grammar peg, Peg p) {
+	public final PExpression newAnd(Grammar peg, PExpression p) {
 		String key = prefixAnd + p.key();
-		Peg e = getsem(key);
+		PExpression e = getsem(key);
 		if(e == null) {
 			e = putsem(key, this.newAndImpl(peg, p));
 		}
 		return e;
 	}
 	
-	private Peg newAndImpl(Grammar peg, Peg p) {
-		if(p instanceof PegOperation) {
-			p = ((PegOperation)p).inner;
+	private PExpression newAndImpl(Grammar peg, PExpression p) {
+		if(p instanceof POperator) {
+			p = ((POperator)p).inner;
 		}
-		return new PegAnd(peg, 0, p);
+		return new PAnd(peg, 0, p);
 	}
 
-	public final Peg newNot(Grammar peg, Peg p) {
+	public final PExpression newNot(Grammar peg, PExpression p) {
 		String key = prefixNot + p.key();
-		Peg e = getsem(key);
+		PExpression e = getsem(key);
 		if(e == null) {
 			e = putsem(key, this.newNotImpl(peg, p));
 		}
 		return e;
 	}
 	
-	private Peg newNotImpl(Grammar peg, Peg p) {
+	private PExpression newNotImpl(Grammar peg, PExpression p) {
 		if(peg.optimizationLevel > 0) {
-			if(p instanceof PegString) {
+			if(p instanceof PString) {
 				peg.LexicalOptimization += 1;
-				if(p instanceof PegString1) {
-					return new PegNotString1(peg, 0, (PegString1)p);
+				if(p instanceof PString1) {
+					return new PNotString1(peg, 0, (PString1)p);
 				}
-				if(p instanceof PegString2) {
-					return new PegNotString2(peg, 0, (PegString2)p);
-				}
-				return new PegNotString(peg, 0, (PegString)p);
+				return new PNotString(peg, 0, (PString)p);
 			}
-			if(p instanceof PegCharacter) {
+			if(p instanceof PCharacter) {
 				peg.LexicalOptimization += 1;
-				return new PegNotCharacter(peg, 0, (PegCharacter)p);
+				return new PNotCharacter(peg, 0, (PCharacter)p);
 			}
 		}
-		if(p instanceof PegOperation) {
-			p = ((PegOperation)p).inner;
+		if(p instanceof POperator) {
+			p = ((POperator)p).inner;
 		}
-		return new PegNot(peg, 0, newMonad(peg, p));
+		return new PNot(peg, 0, newMonad(peg, p));
 	}
 	
-	public Peg newChoice(Grammar peg, UList<Peg> l) {
+	public PExpression newChoice(Grammar peg, UList<PExpression> l) {
 		if(l.size() == 1) {
 			return l.ArrayValues[0];
 		}
 		String key = prefixChoice;
 		boolean isAllText = true;
 		for(int i = 0; i < l.size(); i++) {
-			Peg se = l.ArrayValues[i];
+			PExpression se = l.ArrayValues[i];
 			key += se.key();
-			if(!(se instanceof PegString) && !(se instanceof PegString)) {
+			if(!(se instanceof PString) && !(se instanceof PString)) {
 				isAllText = false;
 			}
 		}
-		Peg e = getsem(key);
+		PExpression e = getsem(key);
 		if(e == null) {
 			e = putsem(key, newChoiceImpl(peg, l, isAllText));
 		}
 		return e;
 	}
 
-	private Peg newChoiceImpl(Grammar peg, UList<Peg> l, boolean isAllText) {
+	private PExpression newChoiceImpl(Grammar peg, UList<PExpression> l, boolean isAllText) {
 		if(peg.optimizationLevel > 0) {
 			if(isAllText) {
 				return new PegWordChoice(peg, 0, l);
 			}
 		}
 		if(peg.optimizationLevel > 2) {
-			return new PegSelectiveChoice(peg, 0, l);
+			return new PMappedChoice(peg, 0, l);
 		}		
-		return new PegChoice(peg, 0, l);
+		return new PChoice(peg, 0, l);
 	}
 	
-	public Peg mergeChoice(Grammar peg, Peg e, Peg e2) {
+	public PExpression mergeChoice(Grammar peg, PExpression e, PExpression e2) {
 		if(e == null) return e2;
 		if(e2 == null) return e;
-		UList<Peg> l = new UList<Peg>(new Peg[e.size()+e2.size()]);
+		UList<PExpression> l = new UList<PExpression>(new PExpression[e.size()+e2.size()]);
 		addChoice(peg, l, e);
 		addChoice(peg, l, e2);
-		return new PegChoice(peg, 0, l);
+		return new PChoice(peg, 0, l);
 	}
 
-	public Peg newSequence(Grammar peg, UList<Peg> l) {
+	public PExpression newSequence(Grammar peg, UList<PExpression> l) {
 		if(l.size() == 1) {
 			return l.ArrayValues[0];
 		}
@@ -309,7 +302,7 @@ public class GrammarComposer {
 		for(int i = 0; i < l.size(); i++) {
 			key += l.ArrayValues[i].key();
 		}
-		Peg e = getsem(key);
+		PExpression e = getsem(key);
 		if(e == null) {
 			e = newSequenceImpl(peg, l);
 			e = putsem(key, e);
@@ -317,14 +310,14 @@ public class GrammarComposer {
 		return e;
 	}
 
-	private Peg newSequenceImpl(Grammar peg, UList<Peg> l) {
-		Peg orig = new PegSequence(peg, 0, l);
+	private PExpression newSequenceImpl(Grammar peg, UList<PExpression> l) {
+		PExpression orig = new PSequence(peg, 0, l);
 		if(peg.optimizationLevel > 1) {
 			int nsize = l.size()-1;
-			if(nsize > 0 && l.ArrayValues[nsize] instanceof PegAny) {
+			if(nsize > 0 && l.ArrayValues[nsize] instanceof PAny) {
 				boolean allNot = true;
 				for(int i = 0; i < nsize; i++) {
-					if(!(l.ArrayValues[nsize] instanceof PegNot)) {
+					if(!(l.ArrayValues[nsize] instanceof PNot)) {
 						allNot = false;
 						break;
 					}
@@ -337,92 +330,92 @@ public class GrammarComposer {
 		return orig;
 	}
 
-	public Peg newConstructor(Grammar peg, String tagName, Peg p) {
-		Peg e = new PegConstructor(peg, 0, false, "#"+tagName, toSequenceList(p));
+	public PExpression newConstructor(Grammar peg, String tagName, PExpression p) {
+		PExpression e = new PConstructor(peg, 0, false, "#"+tagName, toSequenceList(p));
 		if(peg.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
-			e = new PegMemo(e);
+			e = new PMemo(e);
 		}
 		return e;
 	}
 
-	public Peg newJoinConstructor(Grammar peg, String tagName, Peg p) {
-		Peg e = new PegConstructor(peg, 0, true, "#"+tagName, toSequenceList(p));
+	public PExpression newJoinConstructor(Grammar peg, String tagName, PExpression p) {
+		PExpression e = new PConstructor(peg, 0, true, "#"+tagName, toSequenceList(p));
 		if(peg.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
-			e = new PegMemo(e);
+			e = new PMemo(e);
 		}
 		return e;
 	}
 	
-	public UList<Peg> toSequenceList(Peg e) {
-		if(e instanceof PegSequence) {
-			return ((PegSequence) e).list;
+	public UList<PExpression> toSequenceList(PExpression e) {
+		if(e instanceof PSequence) {
+			return ((PSequence) e).list;
 		}
-		UList<Peg> l = new UList<Peg>(new Peg[1]);
+		UList<PExpression> l = new UList<PExpression>(new PExpression[1]);
 		l.add(e);
 		return l;
 	}
 	
-	private Peg newNotAnyImpl(Grammar peg, Peg orig, UList<Peg> l, int nsize) {
+	private PExpression newNotAnyImpl(Grammar peg, PExpression orig, UList<PExpression> l, int nsize) {
 		if(nsize == 1) {
-			return new PegNotAny(peg, 0, (PegNot)l.ArrayValues[0], orig);
+			return new PNotAny(peg, 0, (PNot)l.ArrayValues[0], orig);
 		}
 		return orig;
 	}
 	
-	public final Peg newConnector(Grammar peg, Peg p, int index) {
+	public final PExpression newConnector(Grammar peg, PExpression p, int index) {
 		String key = prefixSetter + index + p.key();
-		Peg e = getsem(key);
+		PExpression e = getsem(key);
 		if(e == null) {
-			e = new PegSetter(peg, 0, p, index);
+			e = new PConnector(peg, 0, p, index);
 			e = putsem(key, e);
 		}
 		return e;
 	}
 
-	public final Peg newTagging(Grammar peg, String tag) {
+	public final PExpression newTagging(Grammar peg, String tag) {
 		String key = prefixTagging + tag;
-		Peg e = getsem(key);
+		PExpression e = getsem(key);
 		if(e == null) {
-			e = new PegTagging(peg, 0, tag);
+			e = new PTagging(peg, 0, tag);
 			e = putsem(key, e);
 		}
 		return e;
 	}
 
-	public final Peg newMessage(Grammar peg, String msg) {
+	public final PExpression newMessage(Grammar peg, String msg) {
 		String key = prefixMessage + msg;
-		Peg e = getsem(key);
+		PExpression e = getsem(key);
 		if(e == null) {
-			e = new PegMessage(peg, 0, msg);
+			e = new PMessage(peg, 0, msg);
 			e = putsem(key, e);
 		}
 		return e;
 	}
 		
-	public void addChoice(Grammar peg, UList<Peg> l, Peg e) {
-		if(e instanceof PegChoice) {
+	public void addChoice(Grammar peg, UList<PExpression> l, PExpression e) {
+		if(e instanceof PChoice) {
 			for(int i = 0; i < e.size(); i++) {
 				addChoice(peg, l, e.get(i));
 			}
 			return;
 		}
 		if(peg.optimizationLevel > 0) {
-			if(l.size() > 0 && (e instanceof PegString1 || e instanceof PegCharacter)) {
-				Peg prev = l.ArrayValues[l.size()-1];
-				if(prev instanceof PegString1) {
+			if(l.size() > 0 && (e instanceof PString1 || e instanceof PCharacter)) {
+				PExpression prev = l.ArrayValues[l.size()-1];
+				if(prev instanceof PString1) {
 					UCharset charset = new UCharset("");
-					charset.append((char)((PegString1) prev).symbol1);
-					PegCharacter c = new PegCharacter(e.base, 0, charset);
+					charset.append((char)((PString1) prev).symbol1);
+					PCharacter c = new PCharacter(e.base, 0, charset);
 					l.ArrayValues[l.size()-1] = c;
 					prev = c;
 				}
-				if(prev instanceof PegCharacter) {
-					UCharset charset = ((PegCharacter) prev).charset;
-					if(e instanceof PegCharacter) {
-						charset.append(((PegCharacter) e).charset);
+				if(prev instanceof PCharacter) {
+					UCharset charset = ((PCharacter) prev).charset;
+					if(e instanceof PCharacter) {
+						charset.append(((PCharacter) e).charset);
 					}
 					else {
-						charset.append((char)((PegString1) e).symbol1);
+						charset.append((char)((PString1) e).symbol1);
 					}
 					return;
 				}
@@ -431,8 +424,8 @@ public class GrammarComposer {
 		l.add(e);
 	}
 
-	public void addSequence(UList<Peg> l, Peg e) {
-		if(e instanceof PegSequence) {
+	public void addSequence(UList<PExpression> l, PExpression e) {
+		if(e instanceof PSequence) {
 			for(int i = 0; i < e.size(); i++) {
 				this.addSequence(l, e.get(i));
 			}

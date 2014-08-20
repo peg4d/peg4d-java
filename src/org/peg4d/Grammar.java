@@ -71,7 +71,7 @@ public class Grammar {
 		return peg;
 	}
 	
-	public final Peg getDefinedExpression(long oid) {
+	public final PExpression getDefinedExpression(long oid) {
 		return this.getDefinedExpression(oid);
 	}
 
@@ -117,7 +117,7 @@ public class Grammar {
 		return this.ruleMap.get(ruleName);
 	}
 
-	public final Peg getExpression(String ruleName) {
+	public final PExpression getExpression(String ruleName) {
 		PegRule rule = this.getRule(ruleName);
 		if(rule != null) {
 			return rule.expr;
@@ -125,7 +125,7 @@ public class Grammar {
 		return null;
 	}
 
-	public final void setRule(String ruleName, Peg e) {
+	public final void setRule(String ruleName, PExpression e) {
 		this.ruleMap.put(ruleName, new PegRule(null, 0, ruleName, e));
 	}
 
@@ -143,9 +143,9 @@ public class Grammar {
 		return pegList;
 	}
 
-	public final UList<Peg> getExpressionList() {
+	public final UList<PExpression> getExpressionList() {
 		UList<String> nameList = this.ruleMap.keys();
-		UList<Peg> pegList = new UList<Peg>(new Peg[nameList.size()]);
+		UList<PExpression> pegList = new UList<PExpression>(new PExpression[nameList.size()]);
 		for(int i = 0; i < nameList.size(); i++) {
 			String ruleName = nameList.ArrayValues[i];
 			pegList.add(this.getRule(ruleName).expr);
@@ -201,14 +201,14 @@ public class Grammar {
 	}
 
 	private void appendExportRuleList(UList<PegRule> l, String name) {
-		Peg e = this.getExpression(name);
+		PExpression e = this.getExpression(name);
 		if(e != null) {
 			e = e.getExpression();
-			if(e instanceof PegChoice) {
+			if(e instanceof PChoice) {
 				for(int i = 0; i < e.size(); i++) {
-					Peg se = e.get(i);
-					if(se instanceof PegNonTerminal) {
-						PegRule rule = this.getRule(((PegNonTerminal) se).symbol);
+					PExpression se = e.get(i);
+					if(se instanceof PNonTerminal) {
+						PegRule rule = this.getRule(((PNonTerminal) se).symbol);
 						l.add(rule);
 						Main.printVerbose("export", rule.ruleName);
 					}
@@ -277,65 +277,65 @@ public class Grammar {
 		UList<String> list = makeList(startPoint);
 		for(int i = 0; i < list.size(); i++) {
 			String name = list.ArrayValues[i];
-			Peg e = this.getExpression(name);
+			PExpression e = this.getExpression(name);
 			fmt.formatRule(name, e, sb);
 		}
 		System.out.println(sb.toString());
 	}
 	
 	
-	final Peg newNonTerminal(String text) {
+	final PExpression newNonTerminal(String text) {
 		return this.composer.newNonTerminal(this, text);
 	}
-	final Peg newString(String text) {
+	final PExpression newString(String text) {
 		return this.composer.newString(this, text);
 	}
-	final Peg newAny() {
+	final PExpression newAny() {
 		return this.composer.newAny(this);
 	}	
-	final Peg newCharacter(String text) {
+	final PExpression newCharacter(String text) {
 		return this.composer.newCharacter(this, text);
 	}
-	final Peg newOptional(Peg p) {
+	final PExpression newOptional(PExpression p) {
 		return this.composer.newOptional(this, p);
 	}
-	final Peg newOneMore(Peg p) {
+	final PExpression newOneMore(PExpression p) {
 		return this.composer.newOneMore(this, p);
 	}
-	final Peg newZeroMore(Peg p) {
+	final PExpression newZeroMore(PExpression p) {
 		return this.composer.newZeroMore(this, p);
 	}
-	final Peg newAnd(Peg p) {
+	final PExpression newAnd(PExpression p) {
 		return this.composer.newAnd(this, p);
 	}
-	final Peg newNot(Peg p) {
+	final PExpression newNot(PExpression p) {
 		return this.composer.newNot(this, p);
 	}
-	final Peg newChoice(UList<Peg> l) {
+	final PExpression newChoice(UList<PExpression> l) {
 		return this.composer.newChoice(this, l);
 	}
-	final Peg newSequence(UList<Peg> l) {
+	final PExpression newSequence(UList<PExpression> l) {
 		return this.composer.newSequence(this, l);
 	}
-	final Peg newConstructor(String tagName, Peg p) {
+	final PExpression newConstructor(String tagName, PExpression p) {
 		return this.composer.newConstructor(this, tagName, p);
 	}
-	final Peg newJoinConstructor(String tagName, Peg p) {
+	final PExpression newJoinConstructor(String tagName, PExpression p) {
 		return this.composer.newJoinConstructor(this, tagName, p);
 	}
-	final Peg newConnector(Peg p, int index) {
+	final PExpression newConnector(PExpression p, int index) {
 		return this.composer.newConnector(this, p, index);
 	}
-	final Peg newTagging(String tag) {
+	final PExpression newTagging(String tag) {
 		return this.composer.newTagging(this, tag);
 	}
-	final Peg newMessage(String msg) {
+	final PExpression newMessage(String msg) {
 		return this.composer.newMessage(this, msg);
 	}
-	final void addChoice(UList<Peg> l, Peg e) {
+	final void addChoice(UList<PExpression> l, PExpression e) {
 		this.composer.addChoice(this, l, e);
 	}
-	final void addSequence(UList<Peg> l, Peg e) {
+	final void addSequence(UList<PExpression> l, PExpression e) {
 		this.composer.addSequence(l, e);
 	}
 }
@@ -344,11 +344,11 @@ class PegRule {
 	ParsingSource source;
 	long     pos;
 	String ruleName;
-	Peg expr;
+	PExpression expr;
 	int checked = 0;
 	int length = 0;
 	boolean objectType;
-	public PegRule(ParsingSource source, long pos, String ruleName, Peg e) {
+	public PegRule(ParsingSource source, long pos, String ruleName, PExpression e) {
 		this.source = source;
 		this.pos = pos;
 		this.ruleName = ruleName;
@@ -379,7 +379,7 @@ class PEG4dGrammar extends Grammar {
 				System.out.println("DEBUG? parsed: " + pego);		
 			}
 			String ruleName = pego.textAt(0, "");
-			Peg e = toParsingExpression(loadingGrammar, ruleName, pego.get(1));
+			PExpression e = toParsingExpression(loadingGrammar, ruleName, pego.get(1));
 			loadingGrammar.setRule(ruleName, e);
 			return true;
 		}
@@ -409,8 +409,8 @@ class PEG4dGrammar extends Grammar {
 		return "lib/"+filePath;
 	}
 	
-	private static Peg toParsingExpression(Grammar loadingGrammar, String ruleName, ParsingObject node) {
-		Peg e = toParsingExpressionImpl(loadingGrammar, ruleName, node);
+	private static PExpression toParsingExpression(Grammar loadingGrammar, String ruleName, ParsingObject node) {
+		PExpression e = toParsingExpressionImpl(loadingGrammar, ruleName, node);
 //		e.source = node.getSource();
 //		e.sourcePosition = (int)node.getSourcePosition();
 		//System.out.println("seq: " + e.getClass() + ", size="+e.size());
@@ -418,23 +418,23 @@ class PEG4dGrammar extends Grammar {
 		return e;
 	}	
 	
-	private static Peg toParsingExpressionImpl(Grammar loading, String ruleName, ParsingObject pego) {
+	private static PExpression toParsingExpressionImpl(Grammar loading, String ruleName, ParsingObject pego) {
 		if(pego.is("#PegNonTerminal")) {
 			String nonTerminalSymbol = pego.getText();
 			if(ruleName.equals(nonTerminalSymbol)) {
-				Peg e = loading.getExpression(ruleName);
+				PExpression e = loading.getExpression(ruleName);
 				if(e != null) {
 					// self-redefinition
 					return e;  // FIXME
 				}
 			}
 			if(nonTerminalSymbol.equals("indent") && !loading.hasRule("indent")) {
-				loading.setRule("indent", new PegIndent(loading, 0));
+				loading.setRule("indent", new PIndent(loading, 0));
 			}
 			if(nonTerminalSymbol.equals("_") && !loading.hasRule("_")) {
 				loading.setRule("_", Grammar.PEG4d.getExpression("_"));
 			}
-			return new PegNonTerminal(loading, 0, nonTerminalSymbol);
+			return new PNonTerminal(loading, 0, nonTerminalSymbol);
 		}
 		if(pego.is("#PegString")) {
 			return loading.newString(UCharset._UnquoteString(pego.getText()));
@@ -446,17 +446,17 @@ class PEG4dGrammar extends Grammar {
 			return loading.newAny();
 		}
 		if(pego.is("#PegChoice")) {
-			UList<Peg> l = new UList<Peg>(new Peg[pego.size()]);
+			UList<PExpression> l = new UList<PExpression>(new PExpression[pego.size()]);
 			for(int i = 0; i < pego.size(); i++) {
-				Peg e = toParsingExpression(loading, ruleName, pego.get(i));
+				PExpression e = toParsingExpression(loading, ruleName, pego.get(i));
 				loading.addChoice(l, e);
 			}
 			return loading.newChoice(l);
 		}
 		if(pego.is("#PegSequence")) {
-			UList<Peg> l = new UList<Peg>(new Peg[pego.size()]);
+			UList<PExpression> l = new UList<PExpression>(new PExpression[pego.size()]);
 			for(int i = 0; i < pego.size(); i++) {
-				Peg e = toParsingExpression(loading, ruleName, pego.get(i));
+				PExpression e = toParsingExpression(loading, ruleName, pego.get(i));
 				loading.addSequence(l, e);
 			}
 			return loading.newSequence(l);
@@ -483,11 +483,11 @@ class PEG4dGrammar extends Grammar {
 			return loading.newOptional(toParsingExpression(loading, ruleName, pego.get(0)));
 		}
 		if(pego.is("##PegNewObjectJoin")) {
-			Peg seq = toParsingExpression(loading, ruleName, pego.get(0));
+			PExpression seq = toParsingExpression(loading, ruleName, pego.get(0));
 			return loading.newJoinConstructor(ruleName, seq);
 		}
 		if(pego.is("#PegNewObject")) {
-			Peg seq = toParsingExpression(loading, ruleName, pego.get(0));
+			PExpression seq = toParsingExpression(loading, ruleName, pego.get(0));
 			return loading.newConstructor(ruleName, seq);
 		}
 		if(pego.is("#PegConnector")) {
@@ -534,76 +534,76 @@ class PEG4dGrammar extends Grammar {
 	}
 
 	// Definiton of PEG4d 	
-	private final Peg t(String token) {
-		return new PegString(this, 0, token);
+	private final PExpression t(String token) {
+		return new PString(this, 0, token);
 	}
-	private final Peg c(String charSet) {
-		return new PegCharacter(this, 0, new UCharset(charSet));
+	private final PExpression c(String charSet) {
+		return new PCharacter(this, 0, new UCharset(charSet));
 	}
-	private final Peg n(String ruleName) {
-		return new PegNonTerminal(this, 0, ruleName);
+	private final PExpression n(String ruleName) {
+		return new PNonTerminal(this, 0, ruleName);
 	}
-	private final Peg Optional(Peg e) {
-		return new PegOptional(this, 0, e);
+	private final PExpression Optional(PExpression e) {
+		return new POptional(this, 0, e);
 	}
-	private final Peg zero(Peg e) {
-		return new PegRepetition(this, 0, e, 0);
+	private final PExpression zero(PExpression e) {
+		return new PRepetition(this, 0, e, 0);
 	}
-	private final Peg zero(Peg ... elist) {
-		return new PegRepetition(this, 0, seq(elist), 0);
+	private final PExpression zero(PExpression ... elist) {
+		return new PRepetition(this, 0, seq(elist), 0);
 	}
-	private final Peg one(Peg e) {
-		return new PegRepetition(this, 0, e, 1);
+	private final PExpression one(PExpression e) {
+		return new PRepetition(this, 0, e, 1);
 	}
-	private final Peg one(Peg ... elist) {
-		return new PegRepetition(this, 0, seq(elist), 1);
+	private final PExpression one(PExpression ... elist) {
+		return new PRepetition(this, 0, seq(elist), 1);
 	}
-	private final Peg seq(Peg ... elist) {
-		UList<Peg> l = new UList<Peg>(new Peg[8]);
-		for(Peg e : elist) {
+	private final PExpression seq(PExpression ... elist) {
+		UList<PExpression> l = new UList<PExpression>(new PExpression[8]);
+		for(PExpression e : elist) {
 			this.addSequence(l, e);
 		}
-		return new PegSequence(this, 0, l);
+		return new PSequence(this, 0, l);
 	}
-	private final Peg Choice(Peg ... elist) {
-		UList<Peg> l = new UList<Peg>(new Peg[8]);
-		for(Peg e : elist) {
+	private final PExpression Choice(PExpression ... elist) {
+		UList<PExpression> l = new UList<PExpression>(new PExpression[8]);
+		for(PExpression e : elist) {
 			this.addChoice(l, e);
 		}
-		return new PegChoice(this, 0, l);
+		return new PChoice(this, 0, l);
 	}
-	private final Peg Not(Peg e) {
-		return new PegNot(this, 0, e);
+	private final PExpression Not(PExpression e) {
+		return new PNot(this, 0, e);
 	}
-	private final Peg Tag(String tag) {
+	private final PExpression Tag(String tag) {
 		return newTagging(tag);
 	}
-	private final Peg Constructor(Peg ... elist) {
-		UList<Peg> l = new UList<Peg>(new Peg[8]);
-		for(Peg e : elist) {
+	private final PExpression Constructor(PExpression ... elist) {
+		UList<PExpression> l = new UList<PExpression>(new PExpression[8]);
+		for(PExpression e : elist) {
 			this.addSequence(l, e);
 		}
-		return new PegConstructor(this, 0, false, null, l);
+		return new PConstructor(this, 0, false, null, l);
 	}
-	private Peg LeftJoin(Peg ... elist) {
-		UList<Peg> l = new UList<Peg>(new Peg[8]);
-		for(Peg e : elist) {
+	private PExpression LeftJoin(PExpression ... elist) {
+		UList<PExpression> l = new UList<PExpression>(new PExpression[8]);
+		for(PExpression e : elist) {
 			this.addSequence(l, e);
 		}
-		return new PegConstructor(this, 0, true, null, l);
+		return new PConstructor(this, 0, true, null, l);
 	}
-	private Peg set(Peg e) {
-		return new PegSetter(this, 0, e, -1);
+	private PExpression set(PExpression e) {
+		return new PConnector(this, 0, e, -1);
 	}
-	private Peg set(int index, Peg e) {
-		return new PegSetter(this, 0, e, index);
+	private PExpression set(int index, PExpression e) {
+		return new PConnector(this, 0, e, index);
 	}
 
 	public Grammar loadPEG4dGrammar() {
-		Peg Any = newAny();
-		Peg _NEWLINE = c("\\r\\n");
-		Peg _WS = c(" \\t\\r\\n");
-		Peg _NUMBER = one(c("0-9"));
+		PExpression Any = newAny();
+		PExpression _NEWLINE = c("\\r\\n");
+		PExpression _WS = c(" \\t\\r\\n");
+		PExpression _NUMBER = one(c("0-9"));
 		this.setRule("COMMENT", 
 			Choice(
 				seq(t("/*"), zero(Not(t("*/")), Any), t("*/")),
@@ -611,7 +611,7 @@ class PEG4dGrammar extends Grammar {
 			)
 		);
 		this.setRule("_", zero(Choice(one(_WS), n("COMMENT"))));
-		Peg Spacing = Optional(n("_"));
+		PExpression Spacing = Optional(n("_"));
 		this.setRule("RuleName", Constructor(c("A-Za-z_"), zero(c("A-Za-z0-9_")), Tag("#name")));
 		this.setRule("LibName",  Constructor(c("A-Za-z_"), zero(c("A-Za-z0-9_.")), Tag("#name")));
 
@@ -637,11 +637,11 @@ class PEG4dGrammar extends Grammar {
 			)
 		);
 		
-		Peg StringContent  = zero(Choice(
+		PExpression StringContent  = zero(Choice(
 			t("\\'"), t("\\\\"), 
 			seq(Not(t("'")), Any)
 		));
-		Peg StringContent2 = zero(Choice(
+		PExpression StringContent2 = zero(Choice(
 				t("\\\""), t("\\\\"),
 				seq(Not(t("\"")), Any)
 		));
@@ -653,15 +653,15 @@ class PEG4dGrammar extends Grammar {
 				seq(t("\""), Constructor(StringContent2, Tag("#PegString")), t("\""))
 			)
 		);
-		Peg _Message = seq(t("`"), Constructor(zero(Not(t("`")), Any), Tag("#PegMessage")), t("`"));
-		Peg CharacterContent = zero(Not(t("]")), Any);
-		Peg _Character = seq(t("["), Constructor(CharacterContent, Tag("#PegCharacter")), t("]"));
-		Peg _Any = Constructor(t("."), Tag("#PegAny"));
-		Peg _Tagging = Constructor(t("#"), seq(one(c("A-Za-z0-9_.")), Tag("#PegTagging")));
+		PExpression _Message = seq(t("`"), Constructor(zero(Not(t("`")), Any), Tag("#PegMessage")), t("`"));
+		PExpression CharacterContent = zero(Not(t("]")), Any);
+		PExpression _Character = seq(t("["), Constructor(CharacterContent, Tag("#PegCharacter")), t("]"));
+		PExpression _Any = Constructor(t("."), Tag("#PegAny"));
+		PExpression _Tagging = Constructor(t("#"), seq(one(c("A-Za-z0-9_.")), Tag("#PegTagging")));
 
-		Peg ConstructorBegin = Choice(t("{"), t("<{"), t("<<"), t("8<"));
-		Peg Connector  = Choice(t("@"), t("^"));
-		Peg ConstructorEnd   = Choice(t("}>"), t("}"), t(">>"), t(">8"));
+		PExpression ConstructorBegin = Choice(t("{"), t("<{"), t("<<"), t("8<"));
+		PExpression Connector  = Choice(t("@"), t("^"));
+		PExpression ConstructorEnd   = Choice(t("}>"), t("}"), t(">>"), t(">8"));
 //		setRule("Setter", seq(Connector, LeftJoin(Optional(Number), Tag("#PegSetter"))));
 
 		this.setRule("Constructor", Constructor(
@@ -675,7 +675,7 @@ class PEG4dGrammar extends Grammar {
 			Spacing,
 			ConstructorEnd
 		));
-		Peg _AssertFunc = Constructor(
+		PExpression _AssertFunc = Constructor(
 			t("<assert"), 
 			_WS,
 			n("Expr"),
@@ -683,12 +683,12 @@ class PEG4dGrammar extends Grammar {
 			t(">"),
 			Tag("#assert")
 		);
-		Peg _ChoiceFunc = Constructor(
+		PExpression _ChoiceFunc = Constructor(
 			t("<choice"), _WS,
 			n("Expr"), Spacing, t(">"),
 			Tag("#choice")
 		);
-		Peg _RangeFunc = Constructor(
+		PExpression _RangeFunc = Constructor(
 			t("<range"), _WS,
 			n("String"), _WS,
 			n("String"), Spacing, t(">"),

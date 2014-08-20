@@ -29,7 +29,7 @@ public class ParsingObject {
 		this.length     = 0;
 	}
 
-	ParsingObject(String tag, ParsingSource source, long pos, Peg e) {
+	ParsingObject(String tag, ParsingSource source, long pos, PExpression e) {
 		this.tag        = tag;
 		this.source     = source;
 		this.pospeg     = PEGUtils.objectId(pos, e);
@@ -124,7 +124,7 @@ public class ParsingObject {
 
 	// AST[]
 	
-	public Peg getSourceExpression() {
+	public PExpression getSourceExpression() {
 		short pegid = PEGUtils.getpegid(pospeg);
 		if(pegid > 0 && source.peg != null) {
 			return source.peg.getDefinedExpression(pegid);
@@ -136,7 +136,7 @@ public class ParsingObject {
 
 	private void checkLazyAST() {
 		if(this.AST == LazyAST) {
-			PegConstructor e = (PegConstructor)this.getSourceExpression();
+			PConstructor e = (PConstructor)this.getSourceExpression();
 			this.AST = null;
 			long pos = this.getSourcePosition();
 			e.lazyMatch(this, new ParserContext(source.peg, source, pos, pos+this.getLength()), pos);
@@ -145,8 +145,8 @@ public class ParsingObject {
 
 	boolean compactAST() {
 		if(this.AST != null) {
-			Peg e = this.getSourceExpression();
-			if(e instanceof PegConstructor && !((PegConstructor) e).leftJoin) {
+			PExpression e = this.getSourceExpression();
+			if(e instanceof PConstructor && !((PConstructor) e).leftJoin) {
 				this.AST = LazyAST;
 				return true;				
 			}
@@ -403,7 +403,7 @@ public class ParsingObject {
 		return null;
 	}
 
-	public static ParsingObject newSource(String tag, ParsingSource source, long pos, PegConstructor created) {
+	public static ParsingObject newSource(String tag, ParsingSource source, long pos, PConstructor created) {
 		ParsingObject pego = new ParsingObject(tag, source, pos, created);
 		return pego;
 	}

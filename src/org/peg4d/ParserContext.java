@@ -44,6 +44,10 @@ public class ParserContext {
 		return this.sourcePosition < this.endPosition;
 	}
 
+	public final boolean hasChar(int len) {
+		return this.sourcePosition + len <= this.endPosition;
+	}
+
 	protected final int charAt(long pos) {
 		if(pos < this.endPosition) {
 			return this.source.charAt(pos);
@@ -119,7 +123,7 @@ public class ParserContext {
 
 	public ParsingObject parseNode(String startPoint) {
 		this.initMemo();
-		Peg start = this.peg.getExpression(startPoint);
+		PExpression start = this.peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
@@ -153,7 +157,7 @@ public class ParserContext {
 		return this.successResult != null;
 	}
 	
-	public final ParsingObject newPegObject1(String tagName, long pos, PegConstructor created) {
+	public final ParsingObject newPegObject1(String tagName, long pos, PConstructor created) {
 		if(this.isRecognitionOnly()) {
 			this.successResult.setSourcePosition(pos);
 			return this.successResult;
@@ -170,14 +174,14 @@ public class ParserContext {
 		return ParsingObject.newErrorSource(this.source, this.failurePosition);
 	}
 	
-	public final ParsingObject foundFailure(Peg e) {
+	public final ParsingObject foundFailure(PExpression e) {
 		if(this.sourcePosition >= PEGUtils.getpos(this.failurePosition)) {  // adding error location
 			this.failurePosition = PEGUtils.failure(this.sourcePosition, e);
 		}
 		return this.foundFailureNode;
 	}
 
-	public final ParsingObject refoundFailure(Peg e, long pos) {
+	public final ParsingObject refoundFailure(PExpression e, long pos) {
 		this.failurePosition = PEGUtils.failure(pos, e);
 		return this.foundFailureNode;
 	}
@@ -322,7 +326,7 @@ public class ParserContext {
 //	long statExportSize  = 0;
 //	long statExportFailure  = 0;
 
-	public ParsingObject matchExport(ParsingObject left, PegExport e) {
+	public ParsingObject matchExport(ParsingObject left, PExport e) {
 		ParsingObject pego = e.inner.simpleMatch(left, this);
 		if(!pego.isFailure()) {
 //			this.statExportCount += 1;

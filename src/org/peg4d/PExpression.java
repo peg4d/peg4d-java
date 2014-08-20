@@ -1,7 +1,7 @@
 package org.peg4d;
 import org.peg4d.MemoMap.ObjectMemo;
 
-public abstract class Peg {
+public abstract class PExpression {
 	public final static int CyclicRule       = 1;
 	public final static int HasNonTerminal    = 1 << 1;
 	public final static int HasString         = 1 << 2;
@@ -36,7 +36,7 @@ public abstract class Peg {
 	short      semanticId = 0;
 	int        refc       = 0;
 		
-	protected Peg(Grammar base, int flag) {
+	protected PExpression(Grammar base, int flag) {
 		this.base = base;
 		this.flag = flag;
 		this.uniqueId = base.composer.issue(this);
@@ -44,12 +44,12 @@ public abstract class Peg {
 	}
 		
 	protected abstract void visit(PegVisitor probe);
-	public Peg getExpression() {
+	public PExpression getExpression() {
 		return this;
 	}
 	public abstract ParsingObject simpleMatch(ParsingObject left, ParserContext context);
 
-	boolean acceptC1(int ch) {
+	boolean checkFirstCharcter(int ch) {
 		return true;
 	}
 
@@ -61,8 +61,8 @@ public abstract class Peg {
 		this.flag = this.flag | uflag;
 	}
 
-	protected void derived(Peg e) {
-		this.flag |= (e.flag & Peg.Mask);
+	protected void derived(PExpression e) {
+		this.flag |= (e.flag & PExpression.Mask);
 	}
 	
 	public String key() {
@@ -72,11 +72,11 @@ public abstract class Peg {
 	public int size() {
 		return 0;
 	}
-	public Peg get(int index) {
+	public PExpression get(int index) {
 		return this;  // to avoid NullPointerException
 	}
 	
-	public Peg get(int index, Peg def) {
+	public PExpression get(int index, PExpression def) {
 		return def;
 	}
 
@@ -108,13 +108,13 @@ public abstract class Peg {
 	}
 	
 	public final boolean hasObjectOperation() {
-		return this.is(Peg.HasConstructor) || this.is(Peg.HasConnector) || this.is(Peg.HasTagging) || this.is(Peg.HasMessage);
+		return this.is(PExpression.HasConstructor) || this.is(PExpression.HasConnector) || this.is(PExpression.HasTagging) || this.is(PExpression.HasMessage);
 	}
 	
 }
 
-abstract class PegTerm extends Peg {
-	public PegTerm (Grammar base, int flag) {
+abstract class PTerm extends PExpression {
+	PTerm (Grammar base, int flag) {
 		super(base, flag);
 	}
 	@Override
@@ -122,31 +122,31 @@ abstract class PegTerm extends Peg {
 		return 0;
 	}
 	@Override
-	public final Peg get(int index) {
+	public final PExpression get(int index) {
 		return this;  // just avoid NullPointerException
 	}
 }
 
-class PegNonTerminal extends PegTerm {
+class PNonTerminal extends PTerm {
 	String symbol;
-	Peg    jumpExpression = null;
+	PExpression    jumpExpression = null;
 	int    length = -1;
 	
-	PegNonTerminal(Grammar base, int flag, String ruleName) {
-		super(base, flag | Peg.HasNonTerminal | Peg.NoMemo);
+	PNonTerminal(Grammar base, int flag, String ruleName) {
+		super(base, flag | PExpression.HasNonTerminal | PExpression.NoMemo);
 		this.symbol = ruleName;
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
 		probe.visitNonTerminal(this);
 	}
-	@Override boolean acceptC1(int ch) {
+	@Override boolean checkFirstCharcter(int ch) {
 		if(this.jumpExpression != null) {
-			return this.jumpExpression.acceptC1(ch);
+			return this.jumpExpression.checkFirstCharcter(ch);
 		}
 		return true;
 	}
-	final Peg getNext() {
+	final PExpression getNext() {
 		if(this.jumpExpression == null) {
 			return this.base.getExpression(this.symbol);
 		}
@@ -161,11 +161,11 @@ class PegNonTerminal extends PegTerm {
 	}
 }
 
-class PegString extends PegTerm {
+class PString extends PTerm {
 	String text;
 	byte[] utf8;
-	public PegString(Grammar base, int flag, String text) {
-		super(base, Peg.HasString | Peg.NoMemo | flag);
+	public PString(Grammar base, int flag, String text) {
+		super(base, PExpression.HasString | PExpression.NoMemo | flag);
 		this.text = text;
 		utf8 = UCharset.toUtf8(text);
 	}
@@ -173,7 +173,7 @@ class PegString extends PegTerm {
 	protected void visit(PegVisitor probe) {
 		probe.visitString(this);
 	}
-	@Override boolean acceptC1(int ch) {
+	@Override boolean checkFirstCharcter(int ch) {
 		if(this.text.length() == 0) {
 			return true;
 		}
@@ -188,9 +188,9 @@ class PegString extends PegTerm {
 	}
 }
 
-class PegString1 extends PegString {
+class PString1 extends PString {
 	int symbol1;
-	public PegString1(Grammar base, int flag, String token) {
+	public PString1(Grammar base, int flag, String token) {
 		super(base, flag, token);
 		this.symbol1 = this.utf8[0] & 0xff;
 	}
@@ -205,30 +205,11 @@ class PegString1 extends PegString {
 	}
 }
 
-class PegString2 extends PegString {
-	int symbol1;
-	int symbol2;
-	public PegString2(Grammar base, int flag, String token) {
-		super(base, flag, token);
-		this.symbol1 = this.utf8[0] & 0xff;
-		this.symbol2 = this.utf8[1] & 0xff;
+class PAny extends PTerm {
+	public PAny(Grammar base, int flag) {
+		super(base, PExpression.HasAny | PExpression.NoMemo | flag);
 	}
-	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		long pos = context.getPosition();
-		if(context.charAt(pos) == this.symbol1 && context.charAt(pos+1) == this.symbol2) {
-			context.consume(2);
-			return left;
-		}
-		return context.foundFailure(this);
-	}
-}
-
-class PegAny extends PegTerm {
-	public PegAny(Grammar base, int flag) {
-		super(base, Peg.HasAny | Peg.NoMemo | flag);
-	}
-	@Override boolean acceptC1(int ch) {
+	@Override boolean checkFirstCharcter(int ch) {
 		return true;
 	}
 	@Override
@@ -245,12 +226,43 @@ class PegAny extends PegTerm {
 	}
 }
 
-class PegNotAny extends PegTerm {
-	PegNot not;
-	Peg exclude;
-	Peg orig;
-	public PegNotAny(Grammar base, int flag, PegNot e, Peg orig) {
-		super(base, flag | Peg.NoMemo);
+class PUnicodeAny extends PAny {
+	public PUnicodeAny(Grammar base, int flag) {
+		super(base, flag);
+	}
+	@Override
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+		int len = UCharset.lengthOfUtf8(context.getChar());
+		if(context.hasChar(len)) {
+			context.consume(len);
+			return left;
+		}
+		return context.foundFailure(this);
+	}
+}
+
+class PSkip extends PAny {
+	int skip;
+	public PSkip(Grammar base, int flag, int skip) {
+		super(base, flag);
+		this.skip = skip;
+	}
+	@Override
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+		if(context.hasChar(skip)) {
+			context.consume(skip);
+			return left;
+		}
+		return context.foundFailure(this);
+	}
+}
+
+class PNotAny extends PTerm {
+	PNot not;
+	PExpression exclude;
+	PExpression orig;
+	public PNotAny(Grammar base, int flag, PNot e, PExpression orig) {
+		super(base, flag | PExpression.NoMemo);
 		this.not = e;
 		this.exclude = e.inner;
 		this.orig = orig;
@@ -259,8 +271,8 @@ class PegNotAny extends PegTerm {
 	protected void visit(PegVisitor probe) {
 		probe.visitNotAny(this);
 	}
-	@Override boolean acceptC1(int ch) {
-		return this.not.acceptC1(ch) && this.orig.acceptC1(ch);
+	@Override boolean checkFirstCharcter(int ch) {
+		return this.not.checkFirstCharcter(ch) && this.orig.checkFirstCharcter(ch);
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
@@ -280,17 +292,17 @@ class PegNotAny extends PegTerm {
 	}
 }
 
-class PegCharacter extends PegTerm {
+class PCharacter extends PTerm {
 	UCharset charset;
-	public PegCharacter(Grammar base, int flag, UCharset charset) {
-		super(base, Peg.HasCharacter | Peg.NoMemo | flag);
+	public PCharacter(Grammar base, int flag, UCharset charset) {
+		super(base, PExpression.HasCharacter | PExpression.NoMemo | flag);
 		this.charset = charset;
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
 		probe.visitCharacter(this);
 	}
-	@Override boolean acceptC1(int ch) {
+	@Override boolean checkFirstCharcter(int ch) {
 		return this.charset.match(ch);
 	}
 	@Override
@@ -327,9 +339,9 @@ class PegCharacter extends PegTerm {
 //	}
 //}
 
-abstract class PegUnary extends Peg {
-	Peg inner;
-	public PegUnary(Grammar base, int flag, Peg e) {
+abstract class PUnary extends PExpression {
+	PExpression inner;
+	public PUnary(Grammar base, int flag, PExpression e) {
 		super(base, flag);
 		this.inner = e;
 		this.derived(e);
@@ -339,20 +351,20 @@ abstract class PegUnary extends Peg {
 		return 1;
 	}
 	@Override
-	public final Peg get(int index) {
+	public final PExpression get(int index) {
 		return this.inner;
 	}
 }
 
-class PegOptional extends PegUnary {
-	public PegOptional(Grammar base, int flag, Peg e) {
-		super(base, flag | Peg.HasOptional | Peg.NoMemo, e);
+class POptional extends PUnary {
+	public POptional(Grammar base, int flag, PExpression e) {
+		super(base, flag | PExpression.HasOptional | PExpression.NoMemo, e);
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
 		probe.visitOptional(this);
 	}
-	@Override boolean acceptC1(int ch) {
+	@Override boolean checkFirstCharcter(int ch) {
 		return true;
 	}
 	@Override
@@ -369,10 +381,10 @@ class PegOptional extends PegUnary {
 	}
 }
 
-class PegOptionalString extends PegOptional {
+class POptionalString extends POptional {
 	byte[] utf8;
-	public PegOptionalString(Grammar base, int flag, PegString e) {
-		super(base, flag | Peg.NoMemo, e);
+	public POptionalString(Grammar base, int flag, PString e) {
+		super(base, flag | PExpression.NoMemo, e);
 		this.utf8 = e.utf8;
 	}
 	@Override
@@ -382,10 +394,10 @@ class PegOptionalString extends PegOptional {
 	}
 }
 
-class PegOptionalString1 extends PegOptional {
+class POptionalString1 extends POptional {
 	int symbol1;
-	public PegOptionalString1(Grammar base, int flag, PegString1 e) {
-		super(base, flag | Peg.NoMemo, e);
+	public POptionalString1(Grammar base, int flag, PString1 e) {
+		super(base, flag | PExpression.NoMemo, e);
 		this.symbol1 = e.symbol1;
 	}
 	@Override
@@ -395,10 +407,10 @@ class PegOptionalString1 extends PegOptional {
 	}
 }
 
-class PegOptionalCharacter extends PegOptional {
+class POptionalCharacter extends POptional {
 	UCharset charset;
-	public PegOptionalCharacter(Grammar base, int flag, PegCharacter e) {
-		super(base, flag | Peg.NoMemo, e);
+	public POptionalCharacter(Grammar base, int flag, PCharacter e) {
+		super(base, flag | PExpression.NoMemo, e);
 		this.charset = e.charset;
 	}
 	@Override
@@ -408,19 +420,19 @@ class PegOptionalCharacter extends PegOptional {
 	}
 }
 
-class PegRepetition extends PegUnary {
+class PRepetition extends PUnary {
 	public int atleast = 0; 
-	protected PegRepetition(Grammar base, int flag, Peg e, int atLeast) {
-		super(base, flag | Peg.HasRepetition, e);
+	protected PRepetition(Grammar base, int flag, PExpression e, int atLeast) {
+		super(base, flag | PExpression.HasRepetition, e);
 		this.atleast = atLeast;
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
 		probe.visitRepetition(this);
 	}
-	@Override boolean acceptC1(int ch) {
+	@Override boolean checkFirstCharcter(int ch) {
 		if(this.atleast > 0) {
-			return this.inner.acceptC1(ch);
+			return this.inner.checkFirstCharcter(ch);
 		}
 		return true;
 	}
@@ -448,9 +460,9 @@ class PegRepetition extends PegUnary {
 	}
 }
 
-class PegOneMoreCharacter extends PegRepetition {
+class POneMoreCharacter extends PRepetition {
 	UCharset charset;
-	public PegOneMoreCharacter(Grammar base, int flag, PegCharacter e) {
+	public POneMoreCharacter(Grammar base, int flag, PCharacter e) {
 		super(base, flag, e, 1);
 		charset = e.charset;
 	}
@@ -473,9 +485,9 @@ class PegOneMoreCharacter extends PegRepetition {
 	}
 }
 
-class PegZeroMoreCharacter extends PegRepetition {
+class PZeroMoreCharacter extends PRepetition {
 	UCharset charset;
-	public PegZeroMoreCharacter(Grammar base, int flag, PegCharacter e) {
+	public PZeroMoreCharacter(Grammar base, int flag, PCharacter e) {
 		super(base, flag, e, 0);
 		this.charset = e.charset;
 	}
@@ -493,9 +505,9 @@ class PegZeroMoreCharacter extends PegRepetition {
 	}
 }
 
-class PegAnd extends PegUnary {
-	PegAnd(Grammar base, int flag, Peg e) {
-		super(base, flag | Peg.HasAnd, e);
+class PAnd extends PUnary {
+	PAnd(Grammar base, int flag, PExpression e) {
+		super(base, flag | PExpression.HasAnd, e);
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
@@ -509,22 +521,22 @@ class PegAnd extends PegUnary {
 		return right;
 	}
 	@Override
-	boolean acceptC1(int ch) {
-		return this.inner.acceptC1(ch);
+	boolean checkFirstCharcter(int ch) {
+		return this.inner.checkFirstCharcter(ch);
 	}
 }
 
-class PegNot extends PegUnary {
-	PegNot(Grammar base, int flag, Peg e) {
-		super(base, Peg.HasNot | flag, e);
+class PNot extends PUnary {
+	PNot(Grammar base, int flag, PExpression e) {
+		super(base, PExpression.HasNot | flag, e);
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
 		probe.visitNot(this);
 	}
 	@Override
-	boolean acceptC1(int ch) {
-		return !this.inner.acceptC1(ch);
+	boolean checkFirstCharcter(int ch) {
+		return !this.inner.checkFirstCharcter(ch);
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
@@ -540,10 +552,10 @@ class PegNot extends PegUnary {
 	}
 }
 
-class PegNotString extends PegNot {
+class PNotString extends PNot {
 	byte[] utf8;
-	public PegNotString(Grammar peg, int flag, PegString e) {
-		super(peg, flag | Peg.NoMemo, e);
+	PNotString(Grammar peg, int flag, PString e) {
+		super(peg, flag | PExpression.NoMemo, e);
 		this.utf8 = e.utf8;
 	}
 	@Override
@@ -557,9 +569,9 @@ class PegNotString extends PegNot {
 	}
 }
 
-class PegNotString1 extends PegNotString {
+class PNotString1 extends PNotString {
 	int symbol;
-	public PegNotString1(Grammar peg, int flag, PegString1 e) {
+	PNotString1(Grammar peg, int flag, PString1 e) {
 		super(peg, flag, e);
 		this.symbol = e.symbol1;
 	}
@@ -572,32 +584,10 @@ class PegNotString1 extends PegNotString {
 	}
 }	
 
-class PegNotString2 extends PegNotString {
-	int symbol1;
-	int symbol2;
-	public PegNotString2(Grammar peg, int flag, PegString2 e) {
-		super(peg, flag, e);
-		this.symbol1 = e.symbol1;
-		this.symbol2 = e.symbol2;
-	}
-	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		long pos = context.getPosition();
-		if(this.symbol1 == context.charAt(pos) && this.symbol2 == context.charAt(pos+1)) {
-			return context.foundFailure(this);
-		}
-//		if(this.nextAny) {
-//			return this.matchNextAny(left, context);
-//		}
-		return left;
-	}
-}
-
-
-class PegNotCharacter extends PegNot {
+class PNotCharacter extends PNot {
 	UCharset charset;
-	public PegNotCharacter(Grammar base, int flag, PegCharacter e) {
-		super(base, flag | Peg.NoMemo, e);
+	PNotCharacter(Grammar base, int flag, PCharacter e) {
+		super(base, flag | PExpression.NoMemo, e);
 		this.charset = e.charset;
 	}
 	@Override
@@ -611,23 +601,23 @@ class PegNotCharacter extends PegNot {
 	}
 }
 
-abstract class PegList extends Peg {
-	UList<Peg> list;
+abstract class PList extends PExpression {
+	UList<PExpression> list;
 	String[] nonTerminaNames = null;
 	int length = 0;
-	PegList(Grammar base, int flag, UList<Peg> list) {
+	PList(Grammar base, int flag, UList<PExpression> list) {
 		super(base, flag);
 		this.list = list;
 		this.indexName();
 	}
 	void indexName() {
 		for(int i = 0; i < this.size(); i++) {
-			Peg e = this.get(i);
-			if(e instanceof PegNonTerminal) {
+			PExpression e = this.get(i);
+			if(e instanceof PNonTerminal) {
 				if(this.nonTerminaNames == null) {
 					this.nonTerminaNames = new String[this.size()];
 				}
-				this.nonTerminaNames[i] = ((PegNonTerminal) e).symbol;
+				this.nonTerminaNames[i] = ((PNonTerminal) e).symbol;
 			}
 		}
 	}
@@ -643,71 +633,67 @@ abstract class PegList extends Peg {
 		return this.list.size();
 	}
 	@Override
-	public final Peg get(int index) {
+	public final PExpression get(int index) {
 		return this.list.ArrayValues[index];
 	}
-	public final void set(int index, Peg e) {
+	public final void set(int index, PExpression e) {
 		this.list.ArrayValues[index] = e;
 	}
 	@Override
-	public final Peg get(int index, Peg def) {
+	public final PExpression get(int index, PExpression def) {
 		if(index < this.size()) {
 			return this.list.ArrayValues[index];
 		}
 		return def;
 	}
-//	public void add(Peg e) {
-//		this.list.add(e);
-//	}
-
-	private boolean isOptional(Peg e) {
-		if(e instanceof PegOptional) {
+	private boolean isOptional(PExpression e) {
+		if(e instanceof POptional) {
 			return true;
 		}
-		if(e instanceof PegRepetition && ((PegRepetition) e).atleast == 0) {
+		if(e instanceof PRepetition && ((PRepetition) e).atleast == 0) {
 			return true;
 		}
 		return false;
 	}
 
-	private boolean isUnconsumed(Peg e) {
-		if(e instanceof PegNot && e instanceof PegAnd) {
+	private boolean isUnconsumed(PExpression e) {
+		if(e instanceof PNot && e instanceof PAnd) {
 			return true;
 		}
-		if(e instanceof PegString && ((PegString)e).utf8.length == 0) {
+		if(e instanceof PString && ((PString)e).utf8.length == 0) {
 			return true;
 		}
-		if(e instanceof PegIndent) {
+		if(e instanceof PIndent) {
 			return true;
 		}
 		return false;
 	}
 		
 	@Override
-	boolean acceptC1(int ch) {
+	boolean checkFirstCharcter(int ch) {
 		for(int start = 0; start < this.size(); start++) {
-			Peg e = this.get(start);
-			if(e instanceof PegTagging || e instanceof PegMessage) {
+			PExpression e = this.get(start);
+			if(e instanceof PTagging || e instanceof PMessage) {
 				continue;
 			}
 			if(this.isOptional(e)) {
-				if(((PegUnary)e).inner.acceptC1(ch)) {
+				if(((PUnary)e).inner.checkFirstCharcter(ch)) {
 					return true;
 				}
 				continue;  // unconsumed
 			}
 			if(this.isUnconsumed(e)) {
-				if(!e.acceptC1(ch)) {
+				if(!e.checkFirstCharcter(ch)) {
 					return false;
 				}
 				continue;
 			}
-			return e.acceptC1(ch);
+			return e.checkFirstCharcter(ch);
 		}
 		return true;
 	}
 
-	public final Peg trim() {
+	public final PExpression trim() {
 		int size = this.size();
 		boolean hasNull = true;
 		while(hasNull) {
@@ -736,14 +722,14 @@ abstract class PegList extends Peg {
 	}
 	
 	public final void swap(int i, int j) {
-		Peg e = this.list.ArrayValues[i];
+		PExpression e = this.list.ArrayValues[i];
 		this.list.ArrayValues[i] = this.list.ArrayValues[j];
 		this.list.ArrayValues[j] = e;
 	}
 }
 
-class PegSequence extends PegList {
-	PegSequence(Grammar base, int flag, UList<Peg> l) {
+class PSequence extends PList {
+	PSequence(Grammar base, int flag, UList<PExpression> l) {
 		super(base, flag, l);
 	}
 	@Override
@@ -767,28 +753,23 @@ class PegSequence extends PegList {
 	}
 }
 
-class PegChoice extends PegList {
-//	PegChoice(Grammar base, int flag, int initsize) {
-//		super(base, flag | Peg.HasChoice, initsize);
-//	}	
-	PegChoice(Grammar base, int flag, UList<Peg> list) {
-		super(base, flag | Peg.HasChoice, list);
+class PChoice extends PList {
+	PChoice(Grammar base, int flag, UList<PExpression> list) {
+		super(base, flag | PExpression.HasChoice, list);
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
 		probe.visitChoice(this);
 	}
-	
 	@Override
-	boolean acceptC1(int ch) {
+	boolean checkFirstCharcter(int ch) {
 		for(int i = 0; i < this.size(); i++) {
-			if(this.get(i).acceptC1(ch)) {
+			if(this.get(i).checkFirstCharcter(ch)) {
 				return true;
 			}
 		}
 		return false;
 	}
-			
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		for(int i = 0; i < this.size(); i++) {
@@ -802,8 +783,9 @@ class PegChoice extends PegList {
 }
 
 
-class PegSelectiveChoice extends PegChoice {
-	PegSelectiveChoice(Grammar base, int flag, UList<Peg> list) {
+class PMappedChoice extends PChoice {
+	PExpression[] caseOf = null;
+	PMappedChoice(Grammar base, int flag, UList<PExpression> list) {
 		super(base, flag, list);
 	}
 	@Override
@@ -814,31 +796,27 @@ class PegSelectiveChoice extends PegChoice {
 		}
 		return caseOf[ch].simpleMatch(left, context);
 	}
-
-	Peg[] caseOf = null;
-
 	void tryPrediction() {
 		if(this.caseOf == null) {
-			this.caseOf = new Peg[UCharset.MAX];
-			Peg failed = new PegAlwaysFailure(this);
+			this.caseOf = new PExpression[UCharset.MAX];
+			PExpression failed = new PAlwaysFailure(this);
 			for(int ch = 0; ch < UCharset.MAX; ch++) {
 				this.caseOf[ch] = selectC1(ch, failed);
 			}
 			this.base.PredictionOptimization += 1;
 		}
 	}
-	
-	private Peg selectC1(int ch, Peg failed) {
-		Peg e = null;
-		UList<Peg> l = null; // new UList<Peg>(new Peg[2]);
+	private PExpression selectC1(int ch, PExpression failed) {
+		PExpression e = null;
+		UList<PExpression> l = null; // new UList<Peg>(new Peg[2]);
 		for(int i = 0; i < this.size(); i++) {
-			if(this.get(i).acceptC1(ch)) {
+			if(this.get(i).checkFirstCharcter(ch)) {
 				if(e == null) {
 					e = this.get(i);
 				}
 				else {
 					if(l == null) {
-						l = new UList<Peg>(new Peg[2]);
+						l = new UList<PExpression>(new PExpression[2]);
 						l.add(e);
 					}
 					l.add(get(i));
@@ -846,7 +824,7 @@ class PegSelectiveChoice extends PegChoice {
 			}
 		}
 		if(l != null) {
-			e = new PegChoice(e.base, 0, l);
+			e = new PChoice(e.base, 0, l);
 			e.base.UnpredicatedChoiceL1 += 1;
 		}
 		else {
@@ -859,28 +837,28 @@ class PegSelectiveChoice extends PegChoice {
 	}
 }
 
-class PegWordChoice extends PegChoice {
+class PegWordChoice extends PChoice {
 	UCharset charset = null;
 	UList<byte[]> wordList = null;
-	PegWordChoice(Grammar base, int flag, UList<Peg> list) {
-		super(base, flag | Peg.HasChoice, list);
+	PegWordChoice(Grammar base, int flag, UList<PExpression> list) {
+		super(base, flag | PExpression.HasChoice, list);
 		this.wordList = new UList<byte[]>(new byte[list.size()][]);
 		for(int i = 0; i < list.size(); i++) {
-			Peg se = list.ArrayValues[i];
-			if(se instanceof PegString1) {
+			PExpression se = list.ArrayValues[i];
+			if(se instanceof PString1) {
 				if(charset == null) {
 					charset = new UCharset("");
 				}
-				charset.append(((PegString1)se).symbol1);
+				charset.append(((PString1)se).symbol1);
 			}
-			if(se instanceof PegCharacter) {
+			if(se instanceof PCharacter) {
 				if(charset == null) {
 					charset = new UCharset("");
 				}
-				charset.append(((PegCharacter)se).charset);
+				charset.append(((PCharacter)se).charset);
 			}
-			if(se instanceof PegString) {
-				wordList.add(((PegString)se).utf8);
+			if(se instanceof PString) {
+				wordList.add(((PString)se).utf8);
 			}
 		}
 	}
@@ -899,11 +877,10 @@ class PegWordChoice extends PegChoice {
 		}
 		return context.foundFailure(this);
 	}
-	
 }
 
-class PegAlwaysFailure extends PegString {
-	public PegAlwaysFailure(Peg orig) {
+class PAlwaysFailure extends PString {
+	public PAlwaysFailure(PExpression orig) {
 		super(orig.base, 0, "\0");
 	}
 	@Override
@@ -912,26 +889,23 @@ class PegAlwaysFailure extends PegString {
 	}
 }
 
-class PegSetter extends PegUnary {
+class PConnector extends PUnary {
 	public int index;
-	public PegSetter(Grammar base, int flag, Peg e, int index) {
-		super(base, flag | Peg.HasConnector | Peg.NoMemo, e);
+	public PConnector(Grammar base, int flag, PExpression e, int index) {
+		super(base, flag | PExpression.HasConnector | PExpression.NoMemo, e);
 		this.index = index;
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
-		probe.visitSetter(this);
+		probe.visitConnector(this);
 	}
 	@Override
-	boolean acceptC1(int ch) {
-		return this.inner.acceptC1(ch);
+	boolean checkFirstCharcter(int ch) {
+		return this.inner.checkFirstCharcter(ch);
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = left.getSourcePosition();
-//		if(this.inner instanceof PegNonTerminal) {
-//			System.out.println("label=" + this.inner);
-//		}
 		ParsingObject node = this.inner.simpleMatch(left, context);
 		if(node.isFailure() || left == node) {
 			return node;
@@ -946,10 +920,10 @@ class PegSetter extends PegUnary {
 	}
 }
 
-class PegTagging extends PegTerm {
+class PTagging extends PTerm {
 	String symbol;
-	public PegTagging(Grammar base, int flag, String tagName) {
-		super(base, Peg.HasTagging | Peg.NoMemo | flag);
+	public PTagging(Grammar base, int flag, String tagName) {
+		super(base, PExpression.HasTagging | PExpression.NoMemo | flag);
 		this.symbol = tagName;
 	}
 	@Override
@@ -963,10 +937,10 @@ class PegTagging extends PegTerm {
 	}
 }
 
-class PegMessage extends PegTerm {
+class PMessage extends PTerm {
 	String symbol;
-	public PegMessage(Grammar base, int flag, String message) {
-		super(base, flag | Peg.NoMemo | Peg.HasMessage);
+	public PMessage(Grammar base, int flag, String message) {
+		super(base, flag | PExpression.NoMemo | PExpression.HasMessage);
 		this.symbol = message;
 	}
 	@Override
@@ -980,18 +954,18 @@ class PegMessage extends PegTerm {
 	}
 }
 
-class PegConstructor extends PegList {
+class PConstructor extends PList {
 	boolean leftJoin = false;
 	String tagName;
 	int prefetchIndex = 0;
-	public PegConstructor(Grammar base, int flag, boolean leftJoin, String tagName, UList<Peg> list) {
-		super(base, flag | Peg.HasConstructor, list);
+	public PConstructor(Grammar base, int flag, boolean leftJoin, String tagName, UList<PExpression> list) {
+		super(base, flag | PExpression.HasConstructor, list);
 		this.leftJoin = leftJoin;
 		this.tagName = tagName == null ? "#new" : tagName;
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
-		probe.visitNewObject(this);
+		probe.visitConstructor(this);
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
@@ -1045,34 +1019,16 @@ class PegConstructor extends PegList {
 	}
 }
 
-class PegExport extends PegUnary {
-	public PegExport(Grammar base, int flag, Peg e) {
-		super(base, flag | Peg.NoMemo, e);
-	}
-	@Override
-	protected void visit(PegVisitor probe) {
-		probe.visitExport(this);
-	}
-	@Override
-	boolean acceptC1(int ch) {
-		return this.inner.acceptC1(ch);
-	}
-	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		return context.matchExport(left, this);
-	}
-}
-
-class PegIndent extends PegTerm {
-	PegIndent(Grammar base, int flag) {
-		super(base, flag | Peg.HasContext);
+class PIndent extends PTerm {
+	PIndent(Grammar base, int flag) {
+		super(base, flag | PExpression.HasContext);
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
 		probe.visitIndent(this);
 	}
 	@Override
-	boolean acceptC1(int ch) {
+	boolean checkFirstCharcter(int ch) {
 		return (ch == '\t' || ch == ' ');
 	}
 	@Override
@@ -1085,29 +1041,27 @@ class PegIndent extends PegTerm {
 	}
 }
 
-class PegIndex extends PegTerm {
-	int index;
-	PegIndex(Grammar base, int flag, int index) {
-		super(base, flag | Peg.HasContext);
-		this.index = index;
+class PExport extends PUnary {
+	public PExport(Grammar base, int flag, PExpression e) {
+		super(base, flag | PExpression.NoMemo, e);
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
-		probe.visitIndex(this);
+		probe.visitExport(this);
+	}
+	@Override
+	boolean checkFirstCharcter(int ch) {
+		return this.inner.checkFirstCharcter(ch);
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-//		String indent = left.getSource().getIndentText(left.getSourcePosition());
-//		if(context.match(indent.getBytes())) {  // very slow
-//			return left;
-//		}
-		return context.foundFailure(this);
+		return context.matchExport(left, this);
 	}
 }
 
-abstract class PegOperation extends Peg {
-	Peg inner;
-	protected PegOperation(Peg inner) {
+abstract class POperator extends PExpression {
+	PExpression inner;
+	protected POperator(PExpression inner) {
 		super(inner.base, inner.flag);
 		this.inner = inner;
 	}
@@ -1116,22 +1070,22 @@ abstract class PegOperation extends Peg {
 		probe.visitOperation(this);
 	}
 	@Override
-	boolean acceptC1(int ch) {
-		return this.inner.acceptC1(ch);
+	boolean checkFirstCharcter(int ch) {
+		return this.inner.checkFirstCharcter(ch);
 	}
 	@Override
-	public Peg getExpression() {
+	public PExpression getExpression() {
 		return this.inner;
 	}
 }
 
-class PegMemo extends PegOperation {
-	Peg parent = null;
+class PMemo extends POperator {
+	PExpression parent = null;
 	boolean enableMemo = true;
 	int memoHit = 0;
 	int memoMiss = 0;
 
-	protected PegMemo(Peg inner) {
+	protected PMemo(PExpression inner) {
 		super(inner);
 		this.semanticId = inner.semanticId;
 	}
@@ -1235,8 +1189,8 @@ class PegMemo extends PegOperation {
 	}
 }
 
-class PegMonad extends PegOperation {
-	protected PegMonad(Peg inner) {
+class PMonad extends POperator {
+	protected PMonad(PExpression inner) {
 		super(inner);
 	}
 	@Override
@@ -1248,8 +1202,8 @@ class PegMonad extends PegOperation {
 	}
 }
 
-class PegCommit extends PegOperation {
-	protected PegCommit(Peg inner) {
+class PCommit extends POperator {
+	protected PCommit(PExpression inner) {
 		super(inner);
 	}
 	@Override

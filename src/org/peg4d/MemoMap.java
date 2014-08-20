@@ -15,7 +15,7 @@ public abstract class MemoMap {
 
 	public final class ObjectMemo {
 		ObjectMemo next;
-		Peg  keypeg;
+		PExpression  keypeg;
 		ParsingObject generated;
 		int  consumed;
 		long key;
@@ -59,8 +59,8 @@ public abstract class MemoMap {
 		m.next = n;
 	}			
 
-	protected abstract void setMemo(long keypos, Peg keypeg, ParsingObject generated, int consumed);
-	protected abstract ObjectMemo getMemo(Peg keypeg, long keypos);
+	protected abstract void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed);
+	protected abstract ObjectMemo getMemo(PExpression keypeg, long keypos);
 
 //	public final static long makekey(long pos, Peg keypeg) {
 //		return (pos << 24) | keypeg.uniqueId;
@@ -111,11 +111,11 @@ public abstract class MemoMap {
 
 class NoMemo extends MemoMap {
 	@Override
-	protected void setMemo(long keypos, Peg keypeg, ParsingObject generated, int consumed) {
+	protected void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
 	}
 
 	@Override
-	protected ObjectMemo getMemo(Peg keypeg, long keypos) {
+	protected ObjectMemo getMemo(PExpression keypeg, long keypos) {
 		this.MemoMiss += 1;
 		return null;
 	}
@@ -130,7 +130,7 @@ class PackratMemo extends MemoMap {
 		this(new HashMap<Long, ObjectMemo>(initSize));
 	}
 	@Override
-	protected final void setMemo(long keypos, Peg keypeg, ParsingObject generated, int consumed) {
+	protected final void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
 		ObjectMemo m = null;
 		m = newMemo();
 		m.keypeg = keypeg;
@@ -140,7 +140,7 @@ class PackratMemo extends MemoMap {
 		this.memoMap.put(keypos, m);
 	}
 	@Override
-	protected final ObjectMemo getMemo(Peg keypeg, long keypos) {
+	protected final ObjectMemo getMemo(PExpression keypeg, long keypos) {
 		ObjectMemo m = this.memoMap.get(keypos);
 		while(m != null) {
 			if(m.keypeg == keypeg) {
@@ -162,12 +162,12 @@ class DebugMemo extends MemoMap {
 		this.m2 = m2;
 	}
 	@Override
-	protected final void setMemo(long keypos, Peg keypeg, ParsingObject generated, int consumed) {
+	protected final void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
 		this.m1.setMemo(keypos, keypeg, generated, consumed);
 		this.m2.setMemo(keypos, keypeg, generated, consumed);
 	}
 	@Override
-	protected final ObjectMemo getMemo(Peg keypeg, long keypos) {
+	protected final ObjectMemo getMemo(PExpression keypeg, long keypos) {
 		ObjectMemo o1 = this.m1.getMemo(keypeg, keypos);
 		ObjectMemo o2 = this.m2.getMemo(keypeg, keypos);
 		if(o1 == null && o2 == null) {
@@ -212,7 +212,7 @@ class FifoMemo extends MemoMap {
 	}
 
 	@Override
-	protected final void setMemo(long keypos, Peg keypeg, ParsingObject generated, int consumed) {
+	protected final void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
 		ObjectMemo m = null;
 		m = newMemo();
 		long key = PEGUtils.memoKey(keypos, keypeg);
@@ -227,7 +227,7 @@ class FifoMemo extends MemoMap {
 	}
 
 	@Override
-	protected final ObjectMemo getMemo(Peg keypeg, long keypos) {
+	protected final ObjectMemo getMemo(PExpression keypeg, long keypos) {
 		ObjectMemo m = this.memoMap.get(PEGUtils.memoKey(keypos, keypeg));
 		if(m != null) {
 			this.MemoHit += 1;
@@ -252,7 +252,7 @@ class OpenFifoMemo extends MemoMap {
 	}
 	
 	@Override
-	protected final void setMemo(long keypos, Peg keypeg, ParsingObject generated, int consumed) {
+	protected final void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
 		long key = PEGUtils.memoKey(keypos, keypeg);
 		int hash =  (Math.abs((int)key) % memoArray.length);
 		ObjectMemo m = this.memoArray[hash];
@@ -271,7 +271,7 @@ class OpenFifoMemo extends MemoMap {
 	}
 
 	@Override
-	protected final ObjectMemo getMemo(Peg keypeg, long keypos) {
+	protected final ObjectMemo getMemo(PExpression keypeg, long keypos) {
 		long key = PEGUtils.memoKey(keypos, keypeg);
 		int hash =  (Math.abs((int)key) % memoArray.length);
 		ObjectMemo m = this.memoArray[hash];
