@@ -161,12 +161,10 @@ class Formatter extends PegVisitor {
 	public void visitIndent(PegIndent e) {
 		sb.append("indent");
 	}
-
 	@Override
 	public void visitIndex(PegIndex e) {
 		sb.appendInt(e.index);
 	}
-	
 	protected void format(String prefix, PegUnary e, String suffix) {
 		if(prefix != null) {
 			sb.append(prefix);
@@ -183,12 +181,10 @@ class Formatter extends PegVisitor {
 			sb.append(suffix);
 		}
 	}
-
 	@Override
 	public void visitOptional(PegOptional e) {
 		this.format( null, e, "?");
 	}
-
 	@Override
 	public void visitRepetition(PegRepetition e) {
 		if(e.atleast == 1) {
@@ -198,7 +194,6 @@ class Formatter extends PegVisitor {
 			this.format(null, e, "*");
 		}
 	}
-
 	@Override
 	public void visitAnd(PegAnd e) {
 		this.format( "&", e, null);
@@ -272,7 +267,6 @@ class Formatter extends PegVisitor {
 class ListMaker extends PegVisitor {
 	private UList<String> nameList;
 	private Grammar peg;
-	
 	UList<String> make(Grammar peg, String startPoint) {
 		this.nameList = new UList<String>(new String[8]);
 		this.peg = peg;
@@ -280,14 +274,12 @@ class ListMaker extends PegVisitor {
 		this.visitImpl(startPoint);
 		return this.nameList;
 	}
-
 	void visitImpl(String name) {
 		this.visited(name);
 		this.nameList.add(name);
 		Peg next = peg.getExpression(name);
 		next.visit(this);
 	}
-	
 	@Override
 	public void visitNonTerminal(PegNonTerminal e) {
 		if(	!e.isForeignNonTerminal() && !this.isVisited(e.symbol)) {
@@ -298,60 +290,75 @@ class ListMaker extends PegVisitor {
 }
 
 class NonTerminalChecker extends PegVisitor {
-	String startPoint;
-	Peg startRule;
-	int consumedMinimumLength;
-	boolean hasNext = false;
+	PegRule startRule;
+	PegRule checking;
+	int     consumedMinimumLength;
 
-	void verify(String startPoint, Peg startRule) {
+	void verify(PegRule rule) {
 		this.initVisitor();
-		this.startPoint = startPoint;
-		this.verifyImpl(startRule);
+		if(Main.PackratStyleMemo && !(rule.expr instanceof PegMemo)) {
+			rule.expr = new PegMemo(rule.expr);
+			rule.expr.base.EnabledMemo += 1;
+		}
+		this.startRule = rule;
+		this.verifyImpl(rule);
 	}
 
-	void verifyImpl(Peg startRule) {
-		this.startRule = startRule;
+	void verifyImpl(PegRule checking) {
+		this.checking = checking;
 		this.consumedMinimumLength = 0;
-		this.startRule.visit(this);
+		this.checking.expr.visit(this);
+		if(checking.length < this.consumedMinimumLength) {
+			checking.length = this.consumedMinimumLength;
+		}
 	}
-
 	@Override
 	public void visitNonTerminal(PegNonTerminal e) {
-		Peg next = e.base.getExpression(e.symbol);
+		PegRule next = e.base.getRule(e.symbol);
 		if(next == null) {
-			//Main._PrintLine(e.source.formatErrorMessage("error", e.sourcePosition, "undefined label: " + e.symbol));
+			checking.reportError("undefined label: " + e.symbol);
 			e.base.foundError = true;
 			return;
 		}
-		e.jumpExpression = next;
-		if(this.startPoint.equals(e.symbol)) {
-//			if(this.length == 0) {
-//				System.out.println("left recursion: " + e.symbol);
-//			}
-			if(e.length == -1) {
-				e.length = this.consumedMinimumLength;
+		e.jumpExpression = next.expr;
+		if(next == checking) {
+			if(this.consumedMinimumLength == 0) {
+				checking.reportError("left recursion: " + e.symbol);
+				e.base.foundError = true;
+				return;				
 			}
-			else {
-				if(this.consumedMinimumLength < e.length) {
-					e.length = this.consumedMinimumLength;
-				}
+			if(next.length < this.consumedMinimumLength) {
+				next.length = this.consumedMinimumLength;
 			}
-			if(!this.startRule.is(Peg.CyclicRule)) {
+			if(!this.checking.expr.is(Peg.CyclicRule)) {
 				Main.printVerbose("cyclic rule", e.symbol);
-				this.startRule.set(Peg.CyclicRule);
+				this.checking.expr.set(Peg.CyclicRule);
+			}
+		}
+		if(next == startRule) {
+//			if(this.consumedMinimumLength == 0) {
+//				startRule.reportError("indirect left recursion: " + e.symbol);
+//				e.base.foundError = true;
+//				return;				
+//			}
+			if(next.length < this.consumedMinimumLength) {
+				next.length = this.consumedMinimumLength;
+			}
+			if(!startRule.expr.is(Peg.CyclicRule)) {
+				Main.printVerbose("cyclic rule", e.symbol);
+				startRule.expr.set(Peg.CyclicRule);
 			}
 		}
 		if(!this.isVisited(e.symbol)) {
 			visited(e.symbol);
-			Peg stackedRule = this.startRule;
-			int stackedLength = this.consumedMinimumLength;
-			this.verifyImpl(e.getNext());
-			e.length = this.consumedMinimumLength;
-			this.consumedMinimumLength = stackedLength;
-			this.startRule = stackedRule;
-			this.startRule.derived(e.getNext());
+			PegRule _checking = this.checking;
+			int _length = this.consumedMinimumLength;
+			this.verifyImpl(next);
+			this.consumedMinimumLength = _length;
+			this.checking = _checking;
 		}
-		this.consumedMinimumLength += e.length;
+		this.consumedMinimumLength += next.length;
+		this.startRule.expr.derived(next.expr);
 	}
 	
 	@Override
@@ -366,18 +373,6 @@ class NonTerminalChecker extends PegVisitor {
 	@Override
 	public void visitAny(PegAny e) {
 		this.consumedMinimumLength += 1;
-	}
-	@Override
-	public void visitTagging(PegTagging e) {
-	}
-	@Override
-	public void visitMessage(PegMessage e) {
-	}
-	@Override
-	public void visitIndent(PegIndent e) {
-	}
-	@Override
-	public void visitIndex(PegIndex e) {
 	}
 	@Override
 	public void visitNot(PegNot e) {
@@ -407,7 +402,6 @@ class NonTerminalChecker extends PegVisitor {
 	}
 	@Override
 	public void visitSetter(PegSetter e) {
-		int stackedLength = this.consumedMinimumLength;
 		this.visitUnary(e);
 	}
 	@Override
@@ -426,18 +420,17 @@ class NonTerminalChecker extends PegVisitor {
 	@Override
 	public void visitChoice(PegChoice e) {
 		int stackedLength = this.consumedMinimumLength;
-		int min = Integer.MAX_VALUE;
-		for(int i = 0; i < e.size(); i++) {
+		e.get(0).visit(this);		
+		int min = this.consumedMinimumLength;
+		for(int i = 1; i < e.size(); i++) {
 			this.consumedMinimumLength = stackedLength;
 			e.get(i).visit(this);
 			if(this.consumedMinimumLength < min) {
 				min = this.consumedMinimumLength;
 			}
 		}
-		e.length = min;
-		this.consumedMinimumLength = stackedLength + min;
+		this.consumedMinimumLength = stackedLength;
 	}
-	
 	@Override
 	public void visitNewObject(PegConstructor e) {
 		int stackedLength = this.consumedMinimumLength;

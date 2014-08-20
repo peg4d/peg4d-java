@@ -162,11 +162,7 @@ public class Grammar {
 		for(int i = 0; i < nameList.size(); i++) {
 			String ruleName = nameList.ArrayValues[i];
 			PegRule rule = this.getRule(ruleName);
-			if(Main.PackratStyleMemo && !(rule.expr instanceof PegMemo)) {
-				rule.expr = new PegMemo(rule.expr);
-				this.EnabledMemo += 1;
-			}
-			nc.verify(ruleName, rule.expr);
+			nc.verify(rule);
 		}
 		if(this.foundError) {
 			Main._Exit(1, "PegError found");
@@ -362,6 +358,9 @@ class PegRule {
 	public void reportError(String msg) {
 		if(this.source != null) {
 			Main._PrintLine(this.source.formatErrorMessage("error", this.pos, msg));
+		}
+		else {
+			System.out.println("ERROR: " + msg);
 		}
 	}
 	public void reportWarning(String msg) {
