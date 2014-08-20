@@ -4,8 +4,7 @@ import java.util.concurrent.BlockingQueue;
 
 public class ParserContext {
 	public    Grammar     peg = null;
-	
-	public final          ParsingSource source;
+	public    ParsingSource source;
 	protected long        sourcePosition = 0;
 	public    long        endPosition;
 	protected Stat stat   = null;
@@ -17,6 +16,13 @@ public class ParserContext {
 		this.endPosition = endIndex;
 	}
 	
+	public void resetSource(ParsingSource source) {
+		this.peg = source.peg;
+		this.source = source;
+		this.sourcePosition = 0;
+		this.endPosition = source.length();
+	}
+
 	protected final long getPosition() {
 		return this.sourcePosition;
 	}
@@ -121,13 +127,18 @@ public class ParserContext {
 		return this.sourcePosition < this.endPosition;
 	}
 
-	public ParsingObject parseNode(String startPoint) {
+	public ParsingObject match(String startPoint) {
 		this.initMemo();
 		PExpression start = this.peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
-		ParsingObject pego = start.simpleMatch(ParsingObject.newSource("#toplevel", this.source, 0), this);
+		return start.simpleMatch(ParsingObject.newSource("#toplevel", this.source, 0), this);
+	}
+
+	
+	public ParsingObject parseNode(String startPoint) {
+		ParsingObject pego = this.match(startPoint);
 		if(pego.isFailure()) {
 			pego = this.newErrorObject();
 			String msg = this.source.formatErrorMessage("syntax error", pego.getSourcePosition(), "");
@@ -286,42 +297,6 @@ public class ParserContext {
 		}
 	}
 	
-//	public Pego matchNewObject(Pego left, PegNewObject e) {
-//		Pego leftNode = left;
-//		long startIndex = this.getPosition();
-////		if(e.predictionIndex > 0) {
-//		for(int i = 0; i < e.prefetchIndex; i++) {
-//			Pego node = e.get(i).simpleMatch(left, this);
-//			if(node.isFailure()) {
-//				this.rollback(startIndex);
-//				return node;
-//			}
-//			assert(left == node);
-//		}
-////		}
-//		int mark = this.markObjectStack();
-//		Pego newnode = this.newPegObject(e.tagName, startIndex, e);
-//		if(e.leftJoin) {
-//			this.logSetter(newnode, -1, leftNode);
-//		}
-//		for(int i = e.prefetchIndex; i < e.size(); i++) {
-//			Pego node = e.get(i).simpleMatch(newnode, this);
-//			if(node.isFailure()) {
-//				this.rollbackObjectStack(mark);
-//				this.rollback(startIndex);
-//				return node;
-//			}
-//			//			if(node != newnode) {
-//			//				e.warning("dropping @" + newnode.name + " " + node);
-//			//			}
-//		}
-//		this.popNewObject(newnode, startIndex, mark);
-//		if(this.stat != null) {
-//			this.stat.countObjectCreation();
-//		}
-//		return newnode;
-//	}
-	
 //	long statExportCount = 0;
 //	long statExportSize  = 0;
 //	long statExportFailure  = 0;
@@ -350,45 +325,6 @@ public class ParserContext {
 		}
 	}
 
-//	public Pego matchSetter(Pego left, PegSetter e) {
-//		long pos = left.getSourcePosition();
-//		Pego node = e.inner.simpleMatch(left, this);
-//		if(node.isFailure() || left == node) {
-//			return node;
-//		}
-//		if(this.isRecognitionOnly()) {
-//			left.setSourcePosition(pos);
-//		}
-//		else {
-//			this.logSetter(left, e.index, node);
-//		}
-//		return left;
-//	}
-
-//	public Pego matchTag(Pego left, PegTagging e) {
-//		left.setTag(e.symbol);
-//		return left;
-//	}
-//
-//	public Pego matchMessage(Pego left, PegMessage e) {
-//		left.setMessage(e.symbol);
-//		//left.startIndex = this.getPosition();
-//		return left;
-//	}
-//	
-//	public Pego matchIndent(Pego left, PegIndent e) {
-//	}
-//
-//	public Pego matchIndex(Pego left, PegIndex e) {
-////		String text = left.textAt(e.index, null);
-////		if(text != null) {
-////			if(this.match(text)) {
-////				return left;
-////			}
-////		}
-//		return this.foundFailure(e);
-//	}
-
 	public void beginPeformStat() {
 		if(Main.StatLevel >= 0) {
 			this.stat = new Stat(this.peg, this.source);
@@ -408,5 +344,6 @@ public class ParserContext {
 	public String getName() {
 		return this.getClass().getSimpleName();
 	}
+
 }
 

@@ -1,0 +1,59 @@
+//
+// XML1.0 PEG4d file
+// 
+// Nested CDATA Section
+
+
+File
+	= PROLOG? SPC* DTD? SPC* Xml SPC*
+	;
+PROLOG
+	= '<?xml' (!'?>' .)* '?>'
+	;
+SPC
+	= [\t\n\r ]
+	;
+DTD
+	= '<!' (!'>' .)* '>'
+	;
+
+TopLevel
+	= Xml
+	;
+export
+	= Xml
+	;
+Xml
+	[example: <x><y z="z"/></x>]
+	= { '<' @Name (SPC+ @Attribute)* SPC* ( '/>' / '>' SPC* Content '</' NAME '>' ) #Element } SPC*
+	;
+Name
+	= { NAME #Name }
+	;
+NAME
+	= [:A-Za-z] ('-' / [.0-9:A-Z_a-z])*
+	;
+Attribute
+	= { @Name SPC* '=' SPC* @String #Attr }
+	;
+String
+	= '"' { (!'"' .)* #Value } '"'
+	;
+Content
+	= (@Xml / @CDataSec / COMMENT / @Text)*
+	;
+CDataSec
+	[example: <![CDATA[ .. <![CDATA[ .. ]]> .. ]]>]
+	= '<![CDATA[' { CDATA #cdata } ']]>' SPC*
+	;
+CDATA
+	= (!']]>' !'<![CDATA[' .)*
+	  ('<![CDATA[' CDATA ']]>' CDATA)?
+	;
+COMMENT
+	= '<!--' (!'-->' .)* '-->' SPC*
+	;
+Text
+	= { (!'<' .)+ #Text } / ''
+	;
+

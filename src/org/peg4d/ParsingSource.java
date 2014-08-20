@@ -407,6 +407,10 @@ class FileSource extends ParsingSource {
 
 class StringSource extends ParsingSource {
 	private byte[] textBuffer;
+	StringSource(Grammar peg, String sourceText) {
+		super(peg, "(string)", 0);
+		this.textBuffer = UCharset.toUtf8(sourceText);
+	}
 	StringSource(Grammar peg, String fileName, long linenum, String sourceText) {
 		super(peg, fileName, linenum);
 		this.textBuffer = UCharset.toUtf8(sourceText);

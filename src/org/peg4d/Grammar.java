@@ -166,7 +166,7 @@ public class Grammar {
 			Main._Exit(1, "PegError found");
 		}
 		this.getExportRuleList();
-		ObjectRemover objectRemover = new ObjectRemover();
+//		ObjectRemover objectRemover = new ObjectRemover();
 //		for(int i = 0; i < nameList.size(); i++) {
 //			String ruleName = nameList.ArrayValues[i];
 //			PegRule rule = this.getRule(ruleName);
@@ -184,8 +184,14 @@ public class Grammar {
 			Main._Exit(1, "PegError found");
 		}
 		this.memoRemover = new MemoRemover(this);
+		ParserContext c = this.newParserContext();
+		for(int i = 0; i < nameList.size(); i++) {
+			PegRule rule = this.getRule(nameList.ArrayValues[i]);
+			if(rule.getGrammar() == this) {
+				rule.testExample(c);
+			}
+		}
 	}
-	
 
 	final UList<PegRule> getExportRuleList() {
 		if(this.exportedRuleList == null) {
@@ -249,6 +255,10 @@ public class Grammar {
 //				}
 //			}
 //		}
+	}
+
+	public ParserContext newParserContext() {
+		return new TracingPackratParser(this, new StringSource(this, ""), 0);
 	}
 
 	public ParserContext newParserContext(ParsingSource source) {
@@ -338,11 +348,12 @@ public class Grammar {
 class PegRule {
 	ParsingSource source;
 	long     pos;
+	
 	String ruleName;
 	PExpression expr;
-	int checked = 0;
 	int length = 0;
 	boolean objectType;
+
 	public PegRule(ParsingSource source, long pos, String ruleName, PExpression e) {
 		this.source = source;
 		this.pos = pos;
@@ -354,7 +365,12 @@ class PegRule {
 	public String toString() {
 		return this.ruleName + "=" + this.expr;
 	}
-	public void reportError(String msg) {
+	
+	Grammar getGrammar() {
+		return this.expr.base;
+	}
+	
+	void reportError(String msg) {
 		if(this.source != null) {
 			Main._PrintLine(this.source.formatErrorMessage("error", this.pos, msg));
 		}
@@ -362,23 +378,61 @@ class PegRule {
 			System.out.println("ERROR: " + msg);
 		}
 	}
-	public void reportWarning(String msg) {
+	void reportWarning(String msg) {
 		if(this.source != null) {
 			Main._PrintLine(this.source.formatErrorMessage("warning", this.pos, msg));
 		}
 	}
+
+	class PegRuleAnnotation {
+		String key;
+		String value;
+		PegRuleAnnotation next;
+		PegRuleAnnotation(String key, String value, PegRuleAnnotation next) {
+			this.key = key;
+			this.value = value;
+			this.next = next;
+		}
+	}
+
+	PegRuleAnnotation annotation;
+	public void addAnotation(String key, String value) {
+		this.annotation = new PegRuleAnnotation(key,value, this.annotation);
+	}
+	
+	public void testExample(ParserContext context) {
+		PegRuleAnnotation a = this.annotation;
+		while(a != null) {
+			if(a.key.equals("ex") || a.key.equals("eg") || a.key.equals("example")) {
+				System.out.println("Testing " + this.ruleName + " " + a.value);
+				ParsingSource s = new StringSource(this.getGrammar(), "string", 1, a.value);
+				context.resetSource(s);
+				ParsingObject p = context.match(this.ruleName);
+				if(p.isFailure() || context.hasChar()) {
+					System.out.println("FAILED: " + this.ruleName + " " + a.value);
+				}
+			}
+			a = a.next;
+		}
+	}
+	
+	
 }
 
 class PEG4dGrammar extends Grammar {
 	static boolean performExpressionConstruction(Grammar loading, ParserContext context, ParsingObject pego) {
 		//System.out.println("DEBUG? parsed: " + pego);		
 		if(pego.is("#PRule")) {
-			if(pego.size() > 2) {
+			if(pego.size() > 3) {
 				System.out.println("DEBUG? parsed: " + pego);		
 			}
 			String ruleName = pego.textAt(0, "");
 			PExpression e = toParsingExpression(loading, ruleName, pego.get(1));
-			loading.setRule(ruleName, new PegRule(pego.getSource(), pego.getSourcePosition(), ruleName, e));
+			PegRule rule = new PegRule(pego.getSource(), pego.getSourcePosition(), ruleName, e);
+			loading.setRule(ruleName, rule);
+			if(pego.size() >= 3) {
+				readAnnotations(rule, pego.get(2));
+			}
 			return true;
 		}
 		if(pego.is("#PImport")) {
@@ -396,6 +450,18 @@ class PEG4dGrammar extends Grammar {
 		return false;
 	}
 	
+	private static void readAnnotations(PegRule rule, ParsingObject pego) {
+		for(int i = 0; i < pego.size(); i++) {
+			ParsingObject p = pego.get(i);
+			if(p.is("#PAnnotation")) {
+				String key = p.textAt(0, "");
+				String value = p.textAt(1, "");
+				rule.addAnotation(key, value);
+			}
+		}
+		
+	}
+
 	private static String searchPegFilePath(ParserContext context, String filePath) {
 		String f = context.source.getFilePath(filePath);
 		if(new File(f).exists()) {
@@ -763,21 +829,28 @@ class PEG4dGrammar extends Grammar {
 				t("]")
 			)
 		);
+		this.setRule("DOC", seq(
+			zero(Not(t("]")), Not(t("[")), Any),
+			Optional(seq(t("["), n("DOC"), t("]"), n("DOC") ))
+		));
+		
 		this.setRule("Annotation",
 			seq(
 				t("["),
 				Constructor(
 					set(n("RuleName")),
-					t(": "),
+					t(":"), 
+					Spacing, 
 					set(
 						Constructor(
-							zero(Not(t("]")), Any),
+							n("DOC"),
 							Tag("#value") 
 						)
 					),
 					Tag("#PAnnotation") 
 				),
-				t("]")
+				t("]"),
+				Spacing
 			)
 		);
 		this.setRule("Annotations",
@@ -789,8 +862,8 @@ class PEG4dGrammar extends Grammar {
 		this.setRule("Rule", 
 			Constructor(
 				set(0, n("RuleName")), Spacing, 
-				Optional(seq(set(2, n("Param")), Spacing)),
-				Optional(seq(set(3, n("Annotations")), Spacing)),
+				Optional(seq(set(3, n("Param")), Spacing)),
+				Optional(seq(set(2, n("Annotations")), Spacing)),
 				t("="), Spacing, 
 				set(1, n("Expr")),
 				Tag("#PRule") 
