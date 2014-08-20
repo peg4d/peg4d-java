@@ -475,19 +475,22 @@ class Inliner extends PegVisitor {
 		}
 	}
 	final boolean isInlinable(PExpression e) {
-		if(e instanceof PNonTerminal && peg.optimizationLevel > 1) {
-			return ! ((PNonTerminal) e).jumpExpression.is(PExpression.CyclicRule);
+		if(e instanceof PNonTerminal) {
+			PNonTerminal n = (PNonTerminal)e;
+			n.derived(n.getNext());
+			if(peg.optimizationLevel > 3) {
+				return ! n.jumpExpression.is(PExpression.CyclicRule);
+			}
 		}
 		return false;
 	}
+	
 	final PExpression doInline(PExpression parent, PNonTerminal r) {
-		//System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " Memo? " + (r.nextRule1 instanceof PegMemo) + " e=" + r.nextRule1);
+//		System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " e=" + r.jumpExpression);
 		this.peg.InliningCount += 1;
-		if(parent instanceof PRepetition) {
-			System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " Memo? " + (r.jumpExpression instanceof PMemo) + " e=" + r.jumpExpression);
-		}
 		return r.jumpExpression;
 	}
+
 	@Override
 	public void visitUnary(PUnary e) {
 		if(isInlinable(e.inner)) {
@@ -513,101 +516,74 @@ class Inliner extends PegVisitor {
 	}
 	@Override
 	public void visitOperation(POperator e) {
-		e.inner.visit(this);
+		if(isInlinable(e.inner)) {
+			e.inner = doInline(e, (PNonTerminal)e.inner);
+		}
+		else {
+			e.inner.visit(this);
+		}
 		e.derived(e.inner);
 	}
 }
 
 class Optimizer extends PegVisitor {
 	Grammar peg;
-	
 	Optimizer(Grammar peg) {
 		this.peg = peg;
 	}
-
 	void optimize() {
 		UList<PExpression> pegList = this.peg.getExpressionList();
 		for(int i = 0; i < pegList.size(); i++) {
 			pegList.ArrayValues[i].visit(this);
 		}
 	}
-	
-	@Override
-	public void visitNonTerminal(PNonTerminal e) {
-		if(!this.isVisited(e.symbol)) {
-			visited(e.symbol);
-			e.base.getExpression(e.symbol).visit(this);
-		}
-	}
-//	public void visitNotAny(PegNotAny e) {
-//		e.orig.visit(this);
+//	@Override
+//	public void visitNonTerminal(PNonTerminal e) {
+//		if(!this.isVisited(e.symbol)) {
+//			visited(e.symbol);
+//			e.base.getExpression(e.symbol).visit(this);
+//		}
 //	}
-
-	private void removeMonad(PUnary e) {
-		if(e.inner instanceof PMatch) {
-			PMatch pm = (PMatch)e.inner;
-			if(!pm.inner.hasObjectOperation()) {
+	
+	private PExpression removeOperation(PExpression e) {
+		if(e instanceof PMatch) {
+			PExpression inner = ((PMatch) e).inner;
+			if(!inner.hasObjectOperation()) {
 				this.peg.InterTerminalOptimization += 1;
-				e.inner = pm.inner;
+				//System.out.println("removed: " + e);
+				return inner;
 			}
+			//System.out.println("unremoved: " + e);
 		}
-	}
-
-	private void removeCommit(PUnary e) {
-		if(e.inner instanceof PCommit) {
-			PCommit pm = (PCommit)e.inner;
-			if(!pm.inner.hasObjectOperation()) {
+		if(e instanceof PCommit) {
+			PExpression inner = ((PCommit) e).inner;
+			if(!inner.is(PExpression.HasConnector)) {
 				this.peg.InterTerminalOptimization += 1;
-				e.inner = pm.inner;
+				//System.out.println("removed: " + e);
+				return inner;
 			}
+			//System.out.println("unremoved: " + e);
 		}
+		return e;
 	}
 
 	@Override
-	public void visitNot(PNot e) {
-		removeMonad(e);
-		this.visitUnary(e);
-	}
-	
-	@Override
-	public void visitAnd(PAnd e) {
-		removeMonad(e);
-		this.visitUnary(e);
-	}
-	
-	@Override
-	public void visitOptional(POptional e) {
-		removeCommit(e);
-		this.visitUnary(e);
+	public void visitUnary(PUnary e) {
+		e.inner = removeOperation(e.inner);
+		e.inner.visit(this);
 	}
 	@Override
-	public void visitRepetition(PRepetition e) {
-		removeCommit(e);
-		this.visitUnary(e);
+	public void visitOperation(POperator e) {
+		e.inner = removeOperation(e.inner);
+		e.inner.visit(this);
 	}
-	
-	@Override
-	public void visitConnector(PConnector e) {
-		this.visitUnary(e);
-	}
-	
-	@Override
-	public void visitExport(PExport e) {
-		this.visitUnary(e);
-	}
+
 	@Override
 	public void visitList(PList e) {
 		for(int i = 0; i < e.size(); i++) {
+			e.set(i, removeOperation(e.get(i)));
 			e.get(i).visit(this);
 		}
-	}
-	@Override
-	public void visitSequence(PSequence e) {
-		this.visitList(e);
-	}
-	@Override
-	public void visitChoice(PChoice e) {
-		this.visitList(e);
 		if(e instanceof PMappedChoice) {
 			((PMappedChoice) e).tryPrediction();
 		}
@@ -622,6 +598,7 @@ class Optimizer extends PegVisitor {
 
 	@Override
 	public void visitConstructor(PConstructor e) {
+		this.visitList(e);
 		int prefetchIndex = 0;
 		for(int i = 0; i < e.size(); i++) {
 			PExpression sub = e.get(i);
