@@ -78,6 +78,10 @@ public class UList<T> {
 		this.currentSize = index;
 	}
 
+	public void pop() {
+		this.currentSize -= 1;
+	}
+
 	public final T[] compactArray() {
 		if(this.currentSize == this.ArrayValues.length) {
 			return this.ArrayValues;
@@ -93,5 +97,6 @@ public class UList<T> {
 	//	public static void ThrowOutOfArrayIndex(int Size, long Index) {
 	//		throw new SoftwareFault("out of array index " + Index + " < " + Size);
 	//	}
+
 
 }

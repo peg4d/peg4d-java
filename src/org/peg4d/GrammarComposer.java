@@ -21,8 +21,11 @@ public class GrammarComposer {
 	}
 	
 	private Grammar loadLibraryGrammar(String filePath) {
-		if(!filePath.endsWith(".peg")) {
-			filePath = "lib/" + filePath + ".peg";
+		if(!filePath.endsWith(".p4d")) {
+			filePath = filePath + ".p4d";
+			if(!filePath.startsWith("lib/")) {
+				filePath = "lib/" + filePath;
+			}
 		}
 		if(Main.VerbosePeg) {
 			System.out.println("importing " + filePath);

@@ -38,6 +38,9 @@ public class Main {
 	// -c
 	public static boolean RecognitionOnlyMode = false;
 
+	// --find
+	private static int FindFileIndex = -1;
+	
 	//
 	private static String InputFileName = null;
 	
@@ -74,6 +77,15 @@ public class Main {
 
 	public final static void main(String[] args) {
 		parseCommandArguments(args);
+		if(FindFileIndex != -1) {
+			Grammar peg = new Grammar(new GrammarComposer());
+			for(int i = FindFileIndex; i < args.length; i++) {
+				peg.importGramamr("", args[i]);
+			}
+			peg.verify();
+			performShell2(peg);
+			return;
+		}
 		Grammar peg = GrammarFile == null ? Grammar.PEG4d : Grammar.load(new GrammarComposer(), GrammarFile);
 		if(PegFormat != null) {
 			Formatter fmt = loadFormatter(PegFormat);
@@ -102,6 +114,10 @@ public class Main {
 			if ((argument.equals("-p") || argument.equals("--peg")) && (index < args.length)) {
 				GrammarFile = args[index];
 				index = index + 1;
+			}
+			else if ((argument.equals("--find")) && (index < args.length)) {
+				FindFileIndex = index;
+				return;
 			}
 			else if ((argument.equals("-s") || argument.equals("--start")) && (index < args.length)) {
 				StartingPoint = args[index];
@@ -296,9 +312,13 @@ public class Main {
 		}
 	}
 
-	public final static void performShell(Grammar peg) {
+	private final static void displayShellVersion(Grammar peg) {
 		Main._PrintLine(ProgName + "-" + Version + " (" + CodeName + ") on " + Main._GetPlatform());
 		Main._PrintLine(Copyright);
+	}
+
+	public final static void performShell(Grammar peg) {
+		displayShellVersion(peg);
 		Main._PrintLine("Tips: \\Name to switch the starting point to Name");
 		int linenum = 1;
 		String line = null;
@@ -331,6 +351,70 @@ public class Main {
 		return startPoint;
 	}
 
+	public final static void performShell2(Grammar peg) {
+		displayShellVersion(peg);
+		UList<PegRule> ruleList = peg.getRuleList();
+		UList<String> seq = new UList<String>(new String[16]);
+		int linenum = 1;
+		String line = null;
+		while ((line = readMultiLine("?>>> ", "    ")) != null) {
+			ParserContext p = peg.newParserContext();
+			ParsingSource source = new StringSource(peg, "(stdin)", linenum, line);
+			for(int i = 0; i < ruleList.size(); i++) {
+				PegRule rule = ruleList.ArrayValues[i];
+				p.resetSource(source);
+				ParsingObject pego = p.match(rule.ruleName);
+				if(pego.isFailure()) {
+					continue;
+				}
+				seq.add(rule.ruleName);
+				infer(ruleList, p, seq);
+				seq.pop();
+			}
+			linenum = linenum + 1;
+		}
+		System.out.println("");
+	}
+	
+	static void infer(UList<PegRule> ruleList, ParserContext p, UList<String> seq) {
+		if(!p.hasChar()) {
+			printSequence(seq);
+			return;
+		}
+		boolean foundRule = false;
+		long pos = p.getPosition();
+		for(int i = 0; i < ruleList.size(); i++) {
+			PegRule rule = ruleList.ArrayValues[i];
+			p.setPosition(pos);
+			ParsingObject pego = p.match(rule.ruleName);
+			if(pego.isFailure()) {
+				continue;
+			}
+			seq.add(rule.ruleName);
+			foundRule = true;
+			infer(ruleList, p, seq);
+			seq.pop();
+		}
+		if(!foundRule) {
+			p.setPosition(pos);
+			int ch = p.getChar();
+			seq.add("'" + (char)ch + "'");
+			p.consume(1);
+			infer(ruleList, p, seq);
+			seq.pop();
+		}
+	}
+
+	static void printSequence(UList<String> seq) {
+		StringBuilder sb = new StringBuilder();
+		sb.append("matched: ");
+		for(int i = 0; i < seq.size(); i++) {
+			sb.append(" ");
+			sb.append(seq.ArrayValues[i]);
+		}
+		System.out.println(sb.toString());
+	}
+	
 	private static jline.ConsoleReader ConsoleReader = null;
 
 	private final static String readMultiLine(String prompt, String prompt2) {

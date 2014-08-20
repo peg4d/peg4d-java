@@ -89,7 +89,7 @@ public class Grammar {
 				if(this.ruleMap.hasKey(key)) {
 					Main.printVerbose("duplicated: ", key + " ");
 				}
-				Main.printVerbose("importing: ", key + " " + rule);
+				Main.printVerbose("importing: ", rule);
 				this.ruleMap.put(key, rule);
 			}
 		}
@@ -497,8 +497,14 @@ class PEG4dGrammar extends Grammar {
 			if(nonTerminalSymbol.equals("indent") && !loading.hasRule("indent")) {
 				loading.setRule("indent", new PIndent(loading, 0));
 			}
-			if(nonTerminalSymbol.equals("_") && !loading.hasRule("_")) {
+			if(nonTerminalSymbol.equals("_") && !loading.hasRule("_")) {      // space
 				loading.setRule("_", Grammar.PEG4d.getExpression("_"));
+			}
+			if(nonTerminalSymbol.equals("COMMENT") && !loading.hasRule("COMMENT")) { // comment
+				loading.setRule("COMMENT", Grammar.PEG4d.getRule("COMMENT"));
+			}
+			if(nonTerminalSymbol.equals("idchar") && !loading.hasRule("idchar")) { // comment
+				loading.setRule("idchar", Grammar.PEG4d.getRule("idchar"));
 			}
 			return new PNonTerminal(loading, 0, nonTerminalSymbol);
 		}
@@ -680,10 +686,10 @@ class PEG4dGrammar extends Grammar {
 			)
 		);
 		this.setRule("_", zero(Choice(one(_WS), n("COMMENT"))));
+		this.setRule("idchar", c("A-Za-z0-9_."));
 		PExpression Spacing = Optional(n("_"));
 		this.setRule("RuleName", Constructor(c("A-Za-z_"), zero(c("A-Za-z0-9_")), Tag("#name")));
 		this.setRule("LibName",  Constructor(c("A-Za-z_"), zero(c("A-Za-z0-9_.")), Tag("#name")));
-
 		this.setRule("Number", Constructor(_NUMBER, Tag("#Integer")));
 		
 		this.setRule("NonTerminalName", 
