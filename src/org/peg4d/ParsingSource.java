@@ -250,20 +250,25 @@ class FileSource extends ParsingSource {
 			case 0:
 				break;
 			case 1:
-				if(text[0] != this.buffer[offset]) {
-					return false;
+				if(text[0] == this.buffer[offset]) {
+					return true;
 				}
-				break;
+				return false;
 			case 2:
-				if(text[0] != this.buffer[offset] || text[1] != this.buffer[offset+1]) {
-					return false;
+				if(text[0] == this.buffer[offset] && text[1] == this.buffer[offset+1]) {
+					return true;
 				}
-				break;
+				return false;
 			case 3:
-				if(text[0] != this.buffer[offset] || text[1] != this.buffer[offset+1] || text[2] != this.buffer[offset+2]) {
-					return false;
+				if(text[0] == this.buffer[offset] && text[1] == this.buffer[offset+1] && text[2] == this.buffer[offset+2]) {
+					return true;
 				}
-				break;
+				return false;
+			case 4:
+				if(text[0] == this.buffer[offset] && text[1] == this.buffer[offset+1] && text[2] == this.buffer[offset+2] && text[3] == this.buffer[offset+3]) {
+					return true;
+				}
+				return false;
 			default:
 				for(int i = 0; i < text.length; i++) {
 					if(text[i] != this.buffer[offset+i]) {

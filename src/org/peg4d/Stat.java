@@ -272,7 +272,7 @@ class Stat {
 		if(fileName.lastIndexOf('.') > 0) {
 			id = fileName.substring(0, fileName.lastIndexOf('.'));
 		}
-		id += "#" + p.peg.DefinedPegSize;
+		id += "#" + p.peg.DefinedExpressionSize;
 
 		this.set(new vText("FileName", fileName));
 		this.setCount1("FileSize", this.statFileLength);

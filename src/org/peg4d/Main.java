@@ -63,8 +63,8 @@ public class Main {
 	public static String  ParserName = null;
 	public static boolean TracingMemo = true;
 	public static boolean UseFifo = false;
-	public static boolean AllExpressionMemo  = true;
-	public static boolean PackratStyleMemo   = false;
+	public static boolean AllExpressionMemo  = false;
+	public static boolean PackratStyleMemo   = true;
 	public static boolean ObjectFocusedMemo  = false;
 	
 	// -O
@@ -160,12 +160,7 @@ public class Main {
 				index = index + 1;
 			}
 			else if(argument.startsWith("--memo")) {
-				if(argument.equals("--memo:packrat")) {
-					AllExpressionMemo = false;
-					PackratStyleMemo = true;
-					ObjectFocusedMemo = false;
-				}
-				else if(argument.equals("--memo:data")) {
+				if(argument.equals("--memo:data")) {
 					AllExpressionMemo = false;
 					PackratStyleMemo = false;
 					ObjectFocusedMemo = true;
@@ -175,6 +170,11 @@ public class Main {
 					PackratStyleMemo = false;
 					ObjectFocusedMemo = false;
 					TracingMemo = false;
+				}
+				else if(argument.equals("--memo:all")) {
+					AllExpressionMemo = true;
+					PackratStyleMemo = false;
+					ObjectFocusedMemo = false;
 				}
 				else if(argument.equals("--memo:static")) {
 					TracingMemo = false;
@@ -297,12 +297,12 @@ public class Main {
 	}
 
 	public final static void performShell(Grammar peg) {
-		Main._PrintLine(ProgName + Version + " (" + CodeName + ") on " + Main._GetPlatform());
+		Main._PrintLine(ProgName + "-" + Version + " (" + CodeName + ") on " + Main._GetPlatform());
 		Main._PrintLine(Copyright);
 		Main._PrintLine("Tips: \\Name to switch the starting point to Name");
 		int linenum = 1;
 		String line = null;
-		String startPoint = StartingPoint;
+		String startPoint = "TopLevel";
 		while ((line = readMultiLine(startPoint + ">>> ", "    ")) != null) {
 			if(line.startsWith("\\")) {
 				startPoint = switchStaringPoint(peg, line.substring(1), startPoint);
