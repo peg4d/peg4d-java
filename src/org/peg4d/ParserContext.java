@@ -153,23 +153,21 @@ public class ParserContext {
 		this.memoMap = new NoMemo();
 	}
 	
-	protected ParsingObject successResult = null;
+	private boolean isMatchingOnly = false;
+	protected ParsingObject successResult = ParsingObject.newSource("#success", this.source, 0);
 	
-	public final void setRecognitionOnly(boolean checkMode) {
-		if(checkMode) {
-			this.successResult = ParsingObject.newSource("#success", this.source, 0);
-		}
-		else {
-			this.successResult = null;
-		}
+	public final boolean isRecognitionMode() {
+		return this.isMatchingOnly;
+	}
+
+	public final boolean setRecognitionMode(boolean recognitionMode) {
+		boolean b = this.isMatchingOnly;
+		this.isMatchingOnly = recognitionMode;
+		return b;
 	}
 	
-	public final boolean isRecognitionOnly() {
-		return this.successResult != null;
-	}
-	
-	public final ParsingObject newPegObject1(String tagName, long pos, PConstructor created) {
-		if(this.isRecognitionOnly()) {
+	public final ParsingObject newParsingObject(String tagName, long pos, PConstructor created) {
+		if(this.isRecognitionMode()) {
 			this.successResult.setSourcePosition(pos);
 			return this.successResult;
 		}
@@ -179,7 +177,7 @@ public class ParserContext {
 	}
 	
 	private long  failurePosition = 0;
-	private final ParsingObject foundFailureNode = ParsingObject.newSource(null, this.source, 0);
+	private final ParsingObject failureResult = ParsingObject.newSource(null, this.source, 0);
 
 	public final ParsingObject newErrorObject() {
 		return ParsingObject.newErrorSource(this.source, this.failurePosition);
@@ -189,12 +187,12 @@ public class ParserContext {
 		if(this.sourcePosition >= PEGUtils.getpos(this.failurePosition)) {  // adding error location
 			this.failurePosition = PEGUtils.failure(this.sourcePosition, e);
 		}
-		return this.foundFailureNode;
+		return this.failureResult;
 	}
 
 	public final ParsingObject refoundFailure(PExpression e, long pos) {
 		this.failurePosition = PEGUtils.failure(pos, e);
-		return this.foundFailureNode;
+		return this.failureResult;
 	}
 
 	final long rememberFailure() {
@@ -204,10 +202,6 @@ public class ParserContext {
 	final void forgetFailure(long f) {
 		this.failurePosition = f;
 	}
-
-//	public final Peg getRule(String name) {
-//		return this.peg.getRule(name);
-//	}
 	
 	private class LinkLog {
 		LinkLog next;
@@ -215,10 +209,9 @@ public class ParserContext {
 		ParsingObject childNode;
 	}
 
-	LinkLog logStack = null;  // needs first logs
+	LinkLog logStack = null;
 	LinkLog unusedLog = null;
 	int stackSize = 0;
-//	int usedLog = 0;
 	
 	private LinkLog newLog() {
 		if(this.unusedLog == null) {
@@ -250,51 +243,48 @@ public class ParserContext {
 		assert(mark == this.stackSize);
 	}
 	
-	protected final void logSetter(ParsingObject parentNode, int index, ParsingObject childNode) {
-		if(!this.isRecognitionOnly()) {
-			LinkLog l = this.newLog();
-//			l.parentNode = parentNode;
-			l.childNode  = childNode;
-			childNode.parent = parentNode;
-			l.index = index;
-			l.next = this.logStack;
-			this.logStack = l;
-			this.stackSize += 1;
-		}
+	final void pushConnection(ParsingObject parentNode, int index, ParsingObject childNode) {
+		assert(!this.isRecognitionMode());
+		LinkLog l = this.newLog();
+		l.childNode  = childNode;
+		childNode.parent = parentNode;
+		l.index = index;
+		l.next = this.logStack;
+		this.logStack = l;
+		this.stackSize += 1;
 	}
 
-	protected final void popNewObject(ParsingObject newnode, long startIndex, int mark) {
-		if(!this.isRecognitionOnly()) {
-			LinkLog first = null;
-			int objectSize = 0;
-			while(mark < this.stackSize) {
-				LinkLog cur = this.logStack;
-				this.logStack = this.logStack.next;
-				this.stackSize--;
-				if(cur.childNode.parent == newnode) {
-					cur.next = first;
-					first = cur;
-					objectSize += 1;
-				}
-				else {
-					disposeLog(cur);
-				}
+	final void popConnection(ParsingObject newnode, long startIndex, int mark) {
+		assert(!this.isRecognitionMode());
+		LinkLog first = null;
+		int objectSize = 0;
+		while(mark < this.stackSize) {
+			LinkLog cur = this.logStack;
+			this.logStack = this.logStack.next;
+			this.stackSize--;
+			if(cur.childNode.parent == newnode) {
+				cur.next = first;
+				first = cur;
+				objectSize += 1;
 			}
-			if(objectSize > 0) {
-				newnode = ParsingObject.newAst(newnode, objectSize);
-				for(int i = 0; i < objectSize; i++) {
-					LinkLog cur = first;
-					first = first.next;
-					if(cur.index == -1) {
-						cur.index = i;
-					}
-					newnode.set(cur.index, cur.childNode);
-					this.disposeLog(cur);
-				}
-				newnode.checkNullEntry();
+			else {
+				disposeLog(cur);
 			}
-			newnode.setLength((int)(this.getPosition() - startIndex));
 		}
+		if(objectSize > 0) {
+			newnode = ParsingObject.newAst(newnode, objectSize);
+			for(int i = 0; i < objectSize; i++) {
+				LinkLog cur = first;
+				first = first.next;
+				if(cur.index == -1) {
+					cur.index = i;
+				}
+				newnode.set(cur.index, cur.childNode);
+				this.disposeLog(cur);
+			}
+			newnode.checkNullEntry();
+		}
+		newnode.setLength((int)(this.getPosition() - startIndex));
 	}
 	
 //	long statExportCount = 0;

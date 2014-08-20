@@ -62,7 +62,6 @@ public class GrammarComposer {
 	private PExpression getsem(String t) {
 		PExpression e = semMap.get(t);
 		if(e != null) {
-			e.refc += 1;
 		}
 		return e;
 	}
@@ -156,17 +155,18 @@ public class GrammarComposer {
 	}
 	
 	private PExpression newCommit(Grammar peg, PExpression p) {
-		if(!p.is(PExpression.HasConstructor) && !p.is(PExpression.HasNonTerminal) && !p.is(PExpression.HasConnector)) {
-			return p;
-		}
-		return new PCommit(p);
+//		if(!p.is(PExpression.HasConstructor) && !p.is(PExpression.HasNonTerminal) && !p.is(PExpression.HasConnector)) {
+//			return p;
+//		}
+//		return new PCommit(p);
+		return p;
 	}
 
-	private PExpression newMonad(Grammar peg, PExpression p) {
-		if(!p.is(PExpression.HasConstructor) && !p.is(PExpression.HasNonTerminal) && !p.is(PExpression.HasConnector)) {
+	public final PExpression newMatch(Grammar peg, PExpression p) {
+		if(!p.hasObjectOperation() && !p.is(PExpression.HasNonTerminal)) {
 			return p;
 		}
-		return new PMonad(p);
+		return new PMatch(p);
 	}
 	
 	public final PExpression newOneMore(Grammar peg, PExpression p) {
@@ -247,7 +247,7 @@ public class GrammarComposer {
 		if(p instanceof POperator) {
 			p = ((POperator)p).inner;
 		}
-		return new PNot(peg, 0, newMonad(peg, p));
+		return new PNot(peg, 0, newMatch(peg, p));
 	}
 	
 	public PExpression newChoice(Grammar peg, UList<PExpression> l) {
@@ -434,6 +434,7 @@ public class GrammarComposer {
 			l.add(e);
 		}
 	}
+
 	
 //	int memoId = 0;
 //	PegMemo newMemo(Peg e) {

@@ -24,6 +24,9 @@ class PegVisitor {
 			e.base.getExpression(e.symbol).visit(this);
 		}
 	}
+	public void visitLazyNonTerminal(PLazyNonTerminal e) {
+
+	}
 	public void visitString(PString e) {
 	}
 	public void visitCharacter(PCharacter e) {
@@ -130,6 +133,12 @@ class Formatter extends PegVisitor {
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
 		this.formatRuleName(e.symbol, e);
+	}
+	@Override
+	public void visitLazyNonTerminal(PLazyNonTerminal e) {
+		sb.append("<lazy ");
+		sb.append(e.symbol);
+		sb.append(">");
 	}
 	@Override
 	public void visitString(PString e) {
@@ -256,6 +265,24 @@ class Formatter extends PegVisitor {
 		this.format(e);
 		sb.append(" }");
 	}
+
+	@Override
+	public void visitOperation(POperator e) {
+		if(e instanceof PMatch) {
+			sb.append("<match ");
+			e.inner.visit(this);
+			sb.append(">");
+		}
+		else if(e instanceof PCommit) {
+			sb.append("<commit ");
+			e.inner.visit(this);
+			sb.append(">");
+		}
+		else {
+			e.inner.visit(this);
+		}
+	}
+
 }
 
 class ListMaker extends PegVisitor {
@@ -517,8 +544,8 @@ class Optimizer extends PegVisitor {
 //	}
 
 	private void removeMonad(PUnary e) {
-		if(e.inner instanceof PMonad) {
-			PMonad pm = (PMonad)e.inner;
+		if(e.inner instanceof PMatch) {
+			PMatch pm = (PMatch)e.inner;
 			if(!pm.inner.hasObjectOperation()) {
 				this.peg.InterTerminalOptimization += 1;
 				e.inner = pm.inner;

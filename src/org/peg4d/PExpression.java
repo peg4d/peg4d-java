@@ -24,6 +24,8 @@ public abstract class PExpression {
 	                             | HasRepetition | HasOptional | HasChoice | HasAnd | HasNot
 	                             | HasConstructor | HasConnector | HasTagging | HasMessage 
 	                             | HasReserved | hasReserved2 | HasContext;
+	public final static int HasLazyNonTerminal = Mask;
+
 	public final static int LeftObjectOperation    = 1 << 17;
 	public final static int PossibleDifferentRight = 1 << 18;
 	
@@ -34,7 +36,6 @@ public abstract class PExpression {
 	int        flag       = 0;
 	short      uniqueId   = 0;
 	short      semanticId = 0;
-	int        refc       = 0;
 		
 	protected PExpression(Grammar base, int flag) {
 		this.base = base;
@@ -96,21 +97,17 @@ public abstract class PExpression {
 		fmt.formatRule(name, this, sb);
 		return sb.toString();
 	}
-
 	public final String format(String name) {
 		return this.format(name, new Formatter());
 	}
-	
 	protected void warning(String msg) {
 		if(Main.VerbosePeg && Main.StatLevel == 0) {
 			Main._PrintLine("PEG warning: " + msg);
 		}
 	}
-	
 	public final boolean hasObjectOperation() {
 		return this.is(PExpression.HasConstructor) || this.is(PExpression.HasConnector) || this.is(PExpression.HasTagging) || this.is(PExpression.HasMessage);
 	}
-	
 }
 
 abstract class PTerm extends PExpression {
@@ -130,7 +127,6 @@ abstract class PTerm extends PExpression {
 class PNonTerminal extends PTerm {
 	String symbol;
 	PExpression    jumpExpression = null;
-	int    length = -1;
 	
 	PNonTerminal(Grammar base, int flag, String ruleName) {
 		super(base, flag | PExpression.HasNonTerminal | PExpression.NoMemo);
@@ -158,6 +154,29 @@ class PNonTerminal extends PTerm {
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		return this.jumpExpression.simpleMatch(left, context);
+	}
+}
+
+class PLazyNonTerminal extends PTerm {
+	String symbol;
+	PLazyNonTerminal(Grammar base, int flag, String ruleName) {
+		super(base, flag| PExpression.HasLazyNonTerminal | PExpression.NoMemo);
+		this.symbol = ruleName;
+	}
+	@Override
+	protected void visit(PegVisitor probe) {
+		probe.visitLazyNonTerminal(this);
+	}
+	@Override boolean checkFirstCharcter(int ch) {
+		return true;
+	}
+	@Override
+	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+		PExpression next = context.peg.getExpression(this.symbol);
+		if(next != null) {
+			return next.simpleMatch(left, context);
+		}
+		return left;
 	}
 }
 
@@ -910,11 +929,11 @@ class PConnector extends PUnary {
 		if(node.isFailure() || left == node) {
 			return node;
 		}
-		if(context.isRecognitionOnly()) {
+		if(context.isRecognitionMode()) {
 			left.setSourcePosition(pos);
 		}
 		else {
-			context.logSetter(left, this.index, node);
+			context.pushConnection(left, this.index, node);
 		}
 		return left;
 	}
@@ -969,44 +988,58 @@ class PConstructor extends PList {
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		ParsingObject leftNode = left;
 		long startIndex = context.getPosition();
-		for(int i = 0; i < this.prefetchIndex; i++) {
-			ParsingObject right = this.get(i).simpleMatch(left, context);
-			if(right.isFailure()) {
-				context.rollback(startIndex);
-				return right;
+		if(context.isRecognitionMode()) {
+			ParsingObject newnode = context.newParsingObject(this.tagName, startIndex, this);
+			for(int i = 0; i < this.size(); i++) {
+				ParsingObject node = this.get(i).simpleMatch(newnode, context);
+				if(node.isFailure()) {
+					context.rollback(startIndex);
+					return node;
+				}
 			}
-//			if(left != right) {
-//				System.out.println("DEBUG: @" + i + " < " + this.prefetchIndex + " in " + this);
-//				System.out.println("LEFT: " + left);
-//				System.out.println("RIGHT: " + right);
-//				System.out.println("FLAGS: " + this.get(i).hasObjectOperation());
-//			}
-			assert(left == right);
+			return newnode;
 		}
-		int mark = context.markObjectStack();
-		ParsingObject newnode = context.newPegObject1(this.tagName, startIndex, this);
-		if(this.leftJoin) {
-			context.logSetter(newnode, -1, leftNode);
-		}
-		for(int i = this.prefetchIndex; i < this.size(); i++) {
-			ParsingObject node = this.get(i).simpleMatch(newnode, context);
-			if(node.isFailure()) {
-				context.rollbackObjectStack(mark);
-				context.rollback(startIndex);
-				return node;
+		else {
+			ParsingObject leftNode = left;
+			for(int i = 0; i < this.prefetchIndex; i++) {
+				ParsingObject right = this.get(i).simpleMatch(left, context);
+				if(right.isFailure()) {
+					context.rollback(startIndex);
+					return right;
+				}
+				//			if(left != right) {
+				//				System.out.println("DEBUG: @" + i + " < " + this.prefetchIndex + " in " + this);
+				//				System.out.println("LEFT: " + left);
+				//				System.out.println("RIGHT: " + right);
+				//				System.out.println("FLAGS: " + this.get(i).hasObjectOperation());
+				//			}
+				assert(left == right);
 			}
-			//			if(node != newnode) {
-			//				e.warning("dropping @" + newnode.name + " " + node);
-			//			}
+			int mark = context.markObjectStack();
+			ParsingObject newnode = context.newParsingObject(this.tagName, startIndex, this);
+			if(this.leftJoin) {
+				context.pushConnection(newnode, -1, leftNode);
+			}
+			for(int i = this.prefetchIndex; i < this.size(); i++) {
+				ParsingObject node = this.get(i).simpleMatch(newnode, context);
+				if(node.isFailure()) {
+					context.rollbackObjectStack(mark);
+					context.rollback(startIndex);
+					return node;
+				}
+				//			if(node != newnode) {
+				//				e.warning("dropping @" + newnode.name + " " + node);
+				//			}
+			}
+			context.popConnection(newnode, startIndex, mark);
+			if(context.stat != null) {
+				context.stat.countObjectCreation();
+			}
+			return newnode;
 		}
-		context.popNewObject(newnode, startIndex, mark);
-		if(context.stat != null) {
-			context.stat.countObjectCreation();
-		}
-		return newnode;
 	}
+		
 	public void lazyMatch(ParsingObject newnode, ParserContext context, long pos) {
 		int mark = context.markObjectStack();
 		for(int i = 0; i < this.size(); i++) {
@@ -1015,7 +1048,7 @@ class PConstructor extends PList {
 				break;  // this not happens
 			}
 		}
-		context.popNewObject(newnode, pos, mark);
+		context.popConnection(newnode, pos, mark);
 	}
 }
 
@@ -1189,16 +1222,19 @@ class PMemo extends POperator {
 	}
 }
 
-class PMonad extends POperator {
-	protected PMonad(PExpression inner) {
+class PMatch extends POperator {
+	protected PMatch(PExpression inner) {
 		super(inner);
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		int mark = context.markObjectStack();
-		left = this.inner.simpleMatch(left, context);
-		context.rollbackObjectStack(mark);
-		return left;
+		boolean oldMode = context.setRecognitionMode(true);
+		ParsingObject right = this.inner.simpleMatch(left, context);
+		context.setRecognitionMode(oldMode);
+		if(!right.isFailure()) {
+			return left;
+		}
+		return right;
 	}
 }
 

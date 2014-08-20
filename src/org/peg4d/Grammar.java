@@ -44,7 +44,7 @@ public class Grammar {
 		if(fileName.indexOf('/') > 0) {
 			this.name = fileName.substring(fileName.lastIndexOf('/')+1);
 		}
-		p.setRecognitionOnly(false);
+		p.setRecognitionMode(false);
 		while(p.hasNode()) {
 			ParsingObject pego = p.parseNode("TopLevel");
 			if(pego.isFailure()) {
@@ -264,7 +264,7 @@ public class Grammar {
 	public ParserContext newParserContext(ParsingSource source) {
 		ParserContext p = new TracingPackratParser(this, source);
 		if(Main.RecognitionOnlyMode) {
-			p.setRecognitionOnly(true);
+			p.setRecognitionMode(true);
 		}
 		return p;
 	}
@@ -337,12 +337,17 @@ public class Grammar {
 	final PExpression newMessage(String msg) {
 		return this.composer.newMessage(this, msg);
 	}
+	final PExpression newMatch(PExpression e) {
+		return this.composer.newMatch(this, e);
+	}
+
 	final void addChoice(UList<PExpression> l, PExpression e) {
 		this.composer.addChoice(this, l, e);
 	}
 	final void addSequence(UList<PExpression> l, PExpression e) {
 		this.composer.addSequence(l, e);
 	}
+
 }
 
 class PegRule {
@@ -558,6 +563,9 @@ class PEG4dGrammar extends Grammar {
 			}
 			return loading.newConnector(toParsingExpression(loading, ruleName, pego.get(0)), index);
 		}
+		if(pego.is("#PMatch")) {
+			return loading.newMatch(toParsingExpression(loading, ruleName, pego.get(0)));
+		}
 //		if(pego.is("#PExport")) {
 //		Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));
 //		Peg o = loadingGrammar.newConstructor(ruleName, seq);
@@ -735,31 +743,25 @@ class PEG4dGrammar extends Grammar {
 			Spacing,
 			ConstructorEnd
 		));
-		PExpression _AssertFunc = Constructor(
-			t("<assert"), 
+		PExpression _LazyFunc = Constructor(
+			t("<lazy"), 
 			_WS,
-			n("Expr"),
+			set(n("NonTerminal")),
 			Spacing,
 			t(">"),
-			Tag("#assert")
+			Tag("#PLazyNonTerminal")
 		);
-		PExpression _ChoiceFunc = Constructor(
-			t("<choice"), _WS,
-			n("Expr"), Spacing, t(">"),
-			Tag("#choice")
-		);
-		PExpression _RangeFunc = Constructor(
-			t("<range"), _WS,
-			n("String"), _WS,
-			n("String"), Spacing, t(">"),
-			Tag("#range")
+		PExpression _MatchFunc = Constructor(
+			t("<match"), _WS,
+			set(n("Expr")), Spacing, t(">"),
+			Tag("#PMatch")
 		);
 		setRule("Term", 
 			Choice(
 				n("String"), _Character, _Any, _Message, _Tagging, 
 				seq(t("("), Spacing, n("Expr"), Spacing, t(")")),
 				n("Constructor"), n("NonTerminal"), 
-				_AssertFunc, _ChoiceFunc, _RangeFunc
+				_LazyFunc, _MatchFunc
 			)
 		);
 		this.setRule("SuffixTerm", seq(

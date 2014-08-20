@@ -258,13 +258,13 @@ public class Main {
 		ParserContext p = peg.newParserContext(Main.loadSource(peg, fileName));
 		if(Main.StatLevel == 0) {
 			long t = System.currentTimeMillis();
-			p.setRecognitionOnly(true);
+			p.setRecognitionMode(true);
 			while(System.currentTimeMillis()-t < 4000) {
 				System.out.print(".");System.out.flush();
 				p.parseNode(startPoint);
 				p.sourcePosition = 0;
 			}
-			p.setRecognitionOnly(false);
+			p.setRecognitionMode(false);
 			p.initMemo();
 			System.gc();
 			try{
