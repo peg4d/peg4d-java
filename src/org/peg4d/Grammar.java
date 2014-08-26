@@ -541,12 +541,6 @@ class PEG4dGrammar extends Grammar {
 			}
 			return loading.newSequence(l);
 		}
-		if(pego.is("#PTagging")) {
-			return loading.newTagging(pego.getText());
-		}
-		if(pego.is("#PMessage")) {
-			return loading.newMessage(pego.getText());
-		}
 		if(pego.is("#PNot")) {
 			return loading.newNot(toParsingExpression(loading, ruleName, pego.get(0)));
 		}
@@ -561,6 +555,21 @@ class PEG4dGrammar extends Grammar {
 		}
 		if(pego.is("#POptional")) {
 			return loading.newOptional(toParsingExpression(loading, ruleName, pego.get(0)));
+		}
+		if(pego.is("#PTimes")) {
+			int n = UCharset.parseInt(pego.textAt(0, ""), 1);
+			PExpression e = toParsingExpression(loading, ruleName, pego.get(0));
+			UList<PExpression> l = new UList<PExpression>(new PExpression[n]);
+			for(int i = 0; i < n; i++) {
+				loading.addSequence(l, e);
+			}
+			return loading.newSequence(l);
+		}
+		if(pego.is("#PTagging")) {
+			return loading.newTagging(pego.getText());
+		}
+		if(pego.is("#PMessage")) {
+			return loading.newMessage(pego.getText());
 		}
 		if(pego.is("#PLeftJoin")) {
 			PExpression seq = toParsingExpression(loading, ruleName, pego.get(0));

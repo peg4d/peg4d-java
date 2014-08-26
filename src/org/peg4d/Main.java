@@ -387,7 +387,7 @@ public class Main {
 		long pos = p.getPosition();
 		for(int i = 0; i < ruleList.size(); i++) {
 			PegRule rule = ruleList.ArrayValues[i];
-			if(rule.objectType) {
+			//if(rule.objectType) {
 				p.setPosition(pos);
 				ParsingObject pego = p.match(rule.ruleName);
 				if(pego.isFailure()) {
@@ -397,7 +397,7 @@ public class Main {
 				foundRule = true;
 				infer(ruleList, p, seq);
 				seq.pop();
-			}
+			//}
 		}
 		if(!foundRule) {
 			p.setPosition(pos);

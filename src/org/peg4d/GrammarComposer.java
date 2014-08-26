@@ -166,6 +166,11 @@ public class GrammarComposer {
 			peg.LexicalOptimization += 1;
 			return new POptionalCharacter(peg, 0, (PCharacter)p);
 		}
+		if(p instanceof PRepetition) {
+			((PRepetition) p).atleast = 0;
+			peg.LexicalOptimization += 1;
+			return p;
+		}
 		return new POptional(peg, 0, newCommit(peg, p));
 	}
 	
