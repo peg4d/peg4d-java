@@ -821,13 +821,17 @@ class PEG4dGrammar extends Grammar {
 				), 
 				n("SuffixTerm")
 		));
-
+		PExpression _notRule = Not(Choice(
+				n("Rule"), 
+				n("Import")
+		));
 		this.setRule("Sequence", seq(
 				n("Predicate"), 
 				Optional(
 					LeftJoin(
 						one(
 							Spacing, 
+							_notRule,
 							set(n("Predicate"))
 						),
 						Tag("#PSequence") 
@@ -929,8 +933,7 @@ class PEG4dGrammar extends Grammar {
 				n("Import")
 			), 
 			Spacing, 
-			t(";"), 
-			Spacing 
+			Optional(seq(t(";"), Spacing)) 
 		));
 		this.verify(/*null*/);
 		return this;
