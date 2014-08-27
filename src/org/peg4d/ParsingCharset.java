@@ -51,7 +51,7 @@ public abstract class ParsingCharset {
 		return u.appendChar(c, c2);
 	}
 
-	final static String _QuoteString(char OpenChar, String Text, char CloseChar) {
+	public final static String quoteString(char OpenChar, String Text, char CloseChar) {
 		char SlashChar = '\\';
 		StringBuilder sb = new StringBuilder();
 		sb.append(OpenChar);
@@ -82,36 +82,36 @@ public abstract class ParsingCharset {
 		return sb.toString();
 	}
 
-	final static String _QuoteString(String OpenQuote, String Text, String CloseQuote) {
-		StringBuilder sb = new StringBuilder();
-		sb.append(OpenQuote);
-		int i = 0;
-		for(; i < Text.length(); i = i + 1) {
-			char ch = Main._GetChar(Text, i);
-			if(ch == '\n') {
-				sb.append("\\n");
-			}
-			else if(ch == '\t') {
-				sb.append("\\t");
-			}
-			else if(ch == '"') {
-				sb.append("\\\"");
-			}
-			else if(ch == '\'') {
-				sb.append("\\'");
-			}
-			else if(ch == '\\') {
-				sb.append("\\\\");
-			}
-			else {
-				sb.append(ch);
-			}
-		}
-		sb.append(CloseQuote);
-		return sb.toString();
-	}
+//	final static String _QuoteString(String OpenQuote, String Text, String CloseQuote) {
+//		StringBuilder sb = new StringBuilder();
+//		sb.append(OpenQuote);
+//		int i = 0;
+//		for(; i < Text.length(); i = i + 1) {
+//			char ch = Main._GetChar(Text, i);
+//			if(ch == '\n') {
+//				sb.append("\\n");
+//			}
+//			else if(ch == '\t') {
+//				sb.append("\\t");
+//			}
+//			else if(ch == '"') {
+//				sb.append("\\\"");
+//			}
+//			else if(ch == '\'') {
+//				sb.append("\\'");
+//			}
+//			else if(ch == '\\') {
+//				sb.append("\\\\");
+//			}
+//			else {
+//				sb.append(ch);
+//			}
+//		}
+//		sb.append(CloseQuote);
+//		return sb.toString();
+//	}
 
-	final static String _UnquoteString(String text) {
+	final static String unquoteString(String text) {
 		if(text.indexOf("\\") == -1) {
 			return text;
 		}
@@ -125,10 +125,6 @@ public abstract class ParsingCharset {
 			sb.append(ch);
 		}
 		return sb.toString();
-	}
-
-	final static String _QuoteString(String Text) {
-		return ParsingCharset._QuoteString("\"", Text, "\"");
 	}
 
 	final static int parseInt(String text, int defval) {

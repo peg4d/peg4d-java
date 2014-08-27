@@ -39,7 +39,7 @@ public class UStringBuilder {
 	}
 
 	public final void AppendQuotedText(String Text) {
-		this.slist.add(ParsingCharset._QuoteString(Text));
+		this.slist.add(ParsingCharset.quoteString('"', Text, '"'));
 	}
 
 	public final void AppendLineFeed() {

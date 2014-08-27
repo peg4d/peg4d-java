@@ -275,7 +275,7 @@ public class ParsingObject {
 
 	final void stringfy(UStringBuilder sb) {
 		if(this.AST == null) {
-			sb.appendNewLine("{"+ this.tag+ " ", ParsingCharset._QuoteString('\'', this.getText(), '\''), "}");
+			sb.appendNewLine("{"+ this.tag+ " ", ParsingCharset.quoteString('\'', this.getText(), '\''), "}");
 		}
 		else {
 			sb.appendNewLine("");

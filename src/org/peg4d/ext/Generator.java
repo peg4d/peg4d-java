@@ -1,9 +1,15 @@
-package org.peg4d;
+package org.peg4d.ext;
 
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+
+import org.peg4d.Main;
+import org.peg4d.ParsingCharset;
+import org.peg4d.ParsingObject;
+import org.peg4d.UList;
+import org.peg4d.UMap;
 
 public class Generator {
 	private class Counter {
@@ -83,14 +89,14 @@ public class Generator {
 		if(pego.size() == 0) {
 			this.write(LF);
 			this.write(indent);
-			this.write("{" + pego.tag+ " "); 
-			this.write(ParsingCharset._QuoteString('\'', pego.getText(), '\''));
+			this.write("{" + pego.getTag()+ " "); 
+			this.write(ParsingCharset.quoteString('\'', pego.getText(), '\''));
 			this.write("}");
 		}
 		else {
 			this.write(LF);
 			this.write(indent);
-			this.write("{" + pego.tag);
+			this.write("{" + pego.getTag());
 			String nindent = TAB + indent;
 			for(int i = 0; i < pego.size(); i++) {
 				this.writePego(pego.get(i), nindent);
@@ -243,7 +249,7 @@ public class Generator {
 		}
 		else {
 			String text = pego.getText();
-			text = ParsingCharset._QuoteString('"', text, '"');
+			text = ParsingCharset.quoteString('"', text, '"');
 			write(lf, "", text);
 		}
 	}

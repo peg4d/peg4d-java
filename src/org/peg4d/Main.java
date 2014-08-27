@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+import org.peg4d.ext.Generator;
+
 public class Main {
 	public final static String  ProgName  = "PEG4d";
 	public final static String  CodeName  = "yokohama";

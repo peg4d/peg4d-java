@@ -146,7 +146,7 @@ class Formatter extends ParsingVisitor {
 		if(e.text.indexOf("'") != -1) {
 			quote = '"';
 		}
-		sb.append(ParsingCharset._QuoteString(quote, e.text, quote));
+		sb.append(ParsingCharset.quoteString(quote, e.text, quote));
 	}
 	@Override
 	public void visitCharacter(PCharacter e) {

@@ -518,7 +518,7 @@ class PEG4dGrammar extends Grammar {
 			return new PNonTerminal(loading, 0, nonTerminalSymbol);
 		}
 		if(pego.is("#PString")) {
-			return loading.newString(ParsingCharset._UnquoteString(pego.getText()));
+			return loading.newString(ParsingCharset.unquoteString(pego.getText()));
 		}
 		if(pego.is("#PCharacter")) {
 			return loading.newCharacter(pego.getText());
