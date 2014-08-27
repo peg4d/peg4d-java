@@ -4,7 +4,7 @@ import java.io.File;
 
 public class Grammar {
 	public final static PEG4dGrammar PEG4d = new PEG4dGrammar();
-	GrammarComposer     composer;
+	GrammarFactory     composer;
 	String              name;
 	UMap<PegRule>       ruleMap;
 
@@ -23,7 +23,7 @@ public class Grammar {
 	int EnabledMemo  = 0;
 	int DisabledMemo = 0;
 		
-	public Grammar(GrammarComposer db) {
+	public Grammar(GrammarFactory db) {
 		this.composer = db;
 		this.ruleMap  = new UMap<PegRule>();
 		this.optimizationLevel = Main.OptimizationLevel;
@@ -63,7 +63,7 @@ public class Grammar {
 		return this.foundError;
 	}
 	
-	public final static Grammar load(GrammarComposer db, String fileName) {
+	public final static Grammar load(GrammarFactory db, String fileName) {
 		Grammar peg = new Grammar(db);
 		peg.loadGrammarFile(fileName);
 		return peg;
@@ -613,7 +613,7 @@ class PEG4dGrammar extends Grammar {
 	}
 
 	PEG4dGrammar() {
-		super(new GrammarComposer());
+		super(new GrammarFactory());
 		this.optimizationLevel = 0;
 		this.loadPEG4dGrammar();
 		this.name = "PEG4d";

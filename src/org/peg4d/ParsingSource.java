@@ -1,6 +1,5 @@
 package org.peg4d;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
@@ -8,90 +7,76 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public abstract class ParsingSource {
-	Grammar peg;
-	String fileName;
-	Stat stat = null;
+	Grammar   peg;
+	String    fileName;
+	protected long startLineNum = 1;
+	Stat      stat = null;
 	
 	public ParsingSource(Grammar peg, String fileName, long linenum) {
 		this.peg = peg;
 		this.fileName = fileName;
-		this.pushLineMemo(0, linenum);
+		this.startLineNum = linenum;
+//		this.pushLineMemo(0, linenum);
 	}
 
-	public abstract long length();
-	public abstract int  charAt(long n);
+	public abstract long    length();
+	public abstract int     charAt(long n);
 	public abstract boolean match(long pos, byte[] text);
-	public abstract String substring(long startIndex, long endIndex);
-
-	private class LineMemo {
-		long pos;
-		long linenum;
-		LineMemo prev;
-		LineMemo(long pos, long linenum, LineMemo prev) {
-			this.pos = pos;
-			this.linenum = linenum;
-			this.prev = prev;
-		}
-	}
-
-	private LineMemo lineMemo;
-	protected void pushLineMemo(long pos, long linenum) {
-		if(lineMemo == null) {
-			this.lineMemo = new LineMemo(pos, linenum, null);
-		}
-		else {
-			if(pos - lineMemo.pos > 1000) {
-				this.lineMemo = new LineMemo(pos, linenum, this.lineMemo);
-			}
-		}
-	}
-
-	private final LineMemo searchLineMemo(long pos) {
-		LineMemo cur = this.lineMemo;
-		LineMemo found = null;
-		while(cur != null) {
-			if(cur.pos <= pos) {
-				if(found == null || found.pos < cur.pos) {
-					found = cur; 
-				}
-			}
-			cur = cur.prev;
-		}
-		return found;
-	}
+	public abstract String  substring(long startIndex, long endIndex);
+	public abstract long    linenum(long pos);
 	
-	public final long getLineNumber(long pos) {
-		LineMemo found = this.searchLineMemo(pos);
-		long LineNumber = found.linenum;
-		long i = found.pos;
-		while(i < pos) {
-			int ch = this.charAt(i);
-			if(ch == '\n') {
-				LineNumber = LineNumber + 1;
-			}
-			i = i + 1;
-		}
-		this.pushLineMemo(pos, LineNumber);
-		return LineNumber;
-	}
-//	public final int getIndentSize(int fromPosition) {
-//		int startPosition = this.getLineStartPosition(fromPosition);
-//		int length = 0;
-//		for(;startPosition < this.length(); startPosition = startPosition+1) {
-//			char ch = charAt(startPosition);
-//			if(ch == '\t') {
-//				length = length + 8;
-//			}
-//			else if(ch == ' ') {
-//				length = length + 1;
-//			}
-//			else {
-//				break;
+//	private class LineMemo {
+//		long pos;
+//		long linenum;
+//		LineMemo prev;
+//		LineMemo(long pos, long linenum, LineMemo prev) {
+//			this.pos = pos;
+//			this.linenum = linenum;
+//			this.prev = prev;
+//		}
+//	}
+//
+//	private LineMemo lineMemo;
+//	protected void pushLineMemo(long pos, long linenum) {
+//		if(lineMemo == null) {
+//			this.lineMemo = new LineMemo(pos, linenum, null);
+//		}
+//		else {
+//			if(pos - lineMemo.pos > 1000) {
+//				this.lineMemo = new LineMemo(pos, linenum, this.lineMemo);
 //			}
 //		}
-//		return length;
-//
 //	}
+//
+//	private final LineMemo searchLineMemo(long pos) {
+//		LineMemo cur = this.lineMemo;
+//		LineMemo found = null;
+//		while(cur != null) {
+//			if(cur.pos <= pos) {
+//				if(found == null || found.pos < cur.pos) {
+//					found = cur; 
+//				}
+//			}
+//			cur = cur.prev;
+//		}
+//		return found;
+//	}
+//	
+//	public final long getLineNumber(long pos) {
+//		LineMemo found = this.searchLineMemo(pos);
+//		long LineNumber = found.linenum;
+//		long i = found.pos;
+//		while(i < pos) {
+//			int ch = this.charAt(i);
+//			if(ch == '\n') {
+//				LineNumber = LineNumber + 1;
+//			}
+//			i = i + 1;
+//		}
+//		this.pushLineMemo(pos, LineNumber);
+//		return LineNumber;
+//	}
+
 	public final String getIndentText(long fromPosition) {
 		long startPosition = this.getLineStartPosition(fromPosition);
 		long i = startPosition;
@@ -157,7 +142,7 @@ public abstract class ParsingSource {
 	}
 
 	public final String formatErrorHeader(String error, long pos, String message) {
-		return "(" + this.fileName + ":" + this.getLineNumber(pos) + ") [" + error +"] " + message;
+		return "(" + this.fileName + ":" + this.linenum(pos) + ") [" + error +"] " + message;
 	}
 
 	public final String formatErrorMessage(String errorType, long pos, String msg) {
@@ -181,28 +166,79 @@ public abstract class ParsingSource {
 	}
 }
 
+class StringSource extends ParsingSource {
+	private byte[] utf8;
+	
+	StringSource(Grammar peg, String sourceText) {
+		super(peg, "(string)", 0);
+		this.utf8 = UCharset.toUtf8(sourceText);
+	}
+	
+	StringSource(Grammar peg, String fileName, long linenum, String sourceText) {
+		super(peg, fileName, linenum);
+		this.utf8 = UCharset.toUtf8(sourceText);
+	}
+	
+	@Override
+	public final long length() {
+		return this.utf8.length;
+	}
+
+	@Override
+	public final int charAt(long n) {
+		return this.utf8[(int)n] & 0xff;
+	}
+
+	@Override
+	public final boolean match(long pos, byte[] text) {
+		for(int i = 0; i < text.length; i++) {
+			if(text[i] != this.utf8[(int)pos + i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	@Override
+	public final String substring(long startIndex, long endIndex) {
+		try {
+			return new String(this.utf8, (int)(startIndex), (int)(endIndex - startIndex), UCharset.DefaultEncoding);
+		} catch (UnsupportedEncodingException e) {
+		}
+		return null;
+	}
+	
+	@Override
+	public final long linenum(long pos) {
+		long count = this.startLineNum;
+		for(int i = 0; i <= (int)pos; i++) {
+			if(this.utf8[i] == '\n') {
+				count++;
+			}
+		}
+		return count;
+	}
+}
+
 class FileSource extends ParsingSource {
-	final static int PageSize = 4096;
+	public final static int PageSize = 4096;
 	
 	private RandomAccessFile file;
 	private long fileLength = 0;
 	private long buffer_offset;
 	private byte[] buffer;
+	private long lines[];
 	
-	private StringSource debug = null;
 	private final int FifoSize = 8; 
 	private LinkedHashMap<Long, byte[]> fifoMap = null;
 	
-	FileSource(Grammar peg, String fileName) throws FileNotFoundException {
+	FileSource(Grammar peg, String fileName) throws IOException {
 		super(peg, fileName, 1);
 		this.file = new RandomAccessFile(fileName, "r");
-		try {
-			this.fileLength = this.file.length();
-		} catch (IOException e) {
-			e.printStackTrace();
-			this.fileLength = 0;
-		}
+		this.fileLength = this.file.length();
 		this.buffer_offset = 0;
+		lines = new long[((int)this.fileLength / PageSize) + 1];
+		lines[0] = 1;
 		if(this.FifoSize > 0) {
 			this.fifoMap = new LinkedHashMap<Long, byte[]>(FifoSize) {  //FIFO
 				private static final long serialVersionUID = 6725894996600788028L;
@@ -221,6 +257,7 @@ class FileSource extends ParsingSource {
 			this.buffer = new byte[PageSize];
 		}
 		this.readMainBuffer(this.buffer_offset);
+		
 	}
 	@Override
 	public final long length() {
@@ -285,19 +322,7 @@ class FileSource extends ParsingSource {
 		}
 		return true;
 	}
-	
-	public final int charAtDebug(long n) {
-		//assert(n < this.fileLength);
-		int c = this.charAt(n);
-		if(this.debug != null) {
-			int c2 = this.debug.charAt(n);
-			if(c != c2) {
-				Main._Exit(1, "different " + this.fileName + " pos=" + n + "c='"+c+"', c2='"+c2+"'");
-			}
-		}
-		return c;
-	}
-	
+		
 	@Override
 	public final String substring(long startIndex, long endIndex) {
 		if(endIndex > startIndex) {
@@ -309,12 +334,12 @@ class FileSource extends ParsingSource {
 						this.buffer_offset = off_s;
 						this.readMainBuffer(this.buffer_offset);
 					}
-					return new String(this.buffer, (int)(startIndex - this.buffer_offset), (int)(endIndex - startIndex), "UTF8");
+					return new String(this.buffer, (int)(startIndex - this.buffer_offset), (int)(endIndex - startIndex), UCharset.DefaultEncoding);
 				}
 				else {
 					byte[] b = new byte[(int)(endIndex - startIndex)];
 					this.readStringBuffer(startIndex, b);
-					return new String(b, "UTF8");
+					return new String(b, UCharset.DefaultEncoding);
 				}
 			} catch (UnsupportedEncodingException e) {
 				e.printStackTrace();
@@ -322,37 +347,40 @@ class FileSource extends ParsingSource {
 		}
 		return "";
 	}
-
-	public final String substringDebug(long startIndex, long endIndex) {
-		String s= this.substring(startIndex, endIndex);
-		if(this.debug != null) {
-			String s2= this.debug.substring(startIndex, endIndex);
-			if(!s.equals(s2)) {
-				System.out.println("s1: " + s);
-				System.out.println("s2: " + s2);
-				Main._Exit(1, "different " + this.fileName + " pos=" + startIndex + " end=" + endIndex);
-			}
-		}
-		return s;
+	
+	private int lineIndex(long pos) {
+		return (int)(pos / this.PageSize);
 	}
 
-	private void readBuffer(long pos, byte[] b) {
-		try {
-			//System.out.println("read buffer: " + pos + ", size = " + b.length);
-			this.file.seek(pos);
-			int readsize = this.file.read(b);
-			for(int i = readsize; i < b.length; i++) {
-				b[i] = 0;
-			}
-			if(this.stat != null) {
-				stat.readFile(b.length);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	private long startLineNum(long pos) {
+		int index = lineIndex(pos);
+		return this.lines[index];
 	}
-
+	
+	@Override
+	public final long linenum(long pos) {
+		long count = startLineNum(pos);
+		charAt(pos); // restore buffer at pos
+		int offset = (int)(pos - this.buffer_offset);
+		for(int i = 0; i < offset; i++) {
+			if(this.buffer[i] == '\n') {
+				count++;
+			}
+		}
+		return count;
+	}
+	
 	private void readMainBuffer(long pos) {
+		int index = lineIndex(pos);
+		if(this.lines[index] == 0) {
+			long count = this.lines[index-1];
+			for(int i = 0; i < this.buffer.length; i++) {
+				if(this.buffer[i] == '\n') {
+					count++;
+				}
+			}
+			this.lines[index] = count;
+		}
 		if(this.fifoMap != null) {
 			Long key = pos;
 			byte[] buf = this.fifoMap.get(key);
@@ -368,6 +396,21 @@ class FileSource extends ParsingSource {
 		}
 		else {
 			this.readBuffer(pos, this.buffer);
+		}
+	}
+	
+	private void readBuffer(long pos, byte[] b) {
+		try {
+			this.file.seek(pos);
+			int readsize = this.file.read(b);
+			for(int i = readsize; i < b.length; i++) {
+				b[i] = 0;
+			}
+			if(this.stat != null) {
+				stat.readFile(b.length);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -403,60 +446,65 @@ class FileSource extends ParsingSource {
 			this.readBuffer(pos, buf);
 		}
 	}
+	
+//	public final String substringDebug(long startIndex, long endIndex) {
+//		String s= this.substring(startIndex, endIndex);
+//		if(this.debug != null) {
+//			String s2= this.debug.substring(startIndex, endIndex);
+//			if(!s.equals(s2)) {
+//				System.out.println("s1: " + s);
+//				System.out.println("s2: " + s2);
+//				Main._Exit(1, "different " + this.fileName + " pos=" + startIndex + " end=" + endIndex);
+//			}
+//		}
+//		return s;
+//	}
+//	
+//	public final int charAtDebug(long n) {
+//		//assert(n < this.fileLength);
+//		int c = this.charAt(n);
+//		if(this.debug != null) {
+//			int c2 = this.debug.charAt(n);
+//			if(c != c2) {
+//				Main._Exit(1, "different " + this.fileName + " pos=" + n + "c='"+c+"', c2='"+c2+"'");
+//			}
+//		}
+//		return c;
+//	}
+
 }
 
-class StringSource extends ParsingSource {
-	private byte[] textBuffer;
-	StringSource(Grammar peg, String sourceText) {
-		super(peg, "(string)", 0);
-		this.textBuffer = UCharset.toUtf8(sourceText);
-	}
-	StringSource(Grammar peg, String fileName, long linenum, String sourceText) {
+class InputStreamSource extends ParsingSource {
+	public InputStreamSource(Grammar peg, String fileName, long linenum) {
 		super(peg, fileName, linenum);
-		this.textBuffer = UCharset.toUtf8(sourceText);
-	}
-
-//	StringSource(Grammar peg, String fileName) {
-//		super(peg, fileName, 1);
-//		try {
-//			RandomAccessFile f = new RandomAccessFile(fileName, "r");
-//			this.textBuffer = new byte[(int)f.length()];
-//			f.read(this.textBuffer);
-//			f.close();
-//		}
-//		catch(IOException e) {
-//		}
-//	}
-	
-	@Override
-	public final long length() {
-		return this.textBuffer.length;
 	}
 
 	@Override
-	public final int charAt(long n) {
-		return this.textBuffer[(int)n] & 0xff;
+	public long length() {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 	@Override
-	public final boolean match(long pos, byte[] text) {
-		for(int i = 0; i < text.length; i++) {
-			if(text[i] != this.textBuffer[(int)pos + i]) {
-				return false;
-			}
-		}
-		return true;
+	public int charAt(long n) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 	@Override
-	public final String substring(long startIndex, long endIndex) {
-		try {
-			return new String(this.textBuffer, (int)(startIndex), (int)(endIndex - startIndex), "UTF8");
-		} catch (UnsupportedEncodingException e) {
-		}
+	public boolean match(long pos, byte[] text) {
+		return false;
+	}
+
+	@Override
+	public String substring(long startIndex, long endIndex) {
 		return null;
 	}
-	
+
+	@Override
+	public long linenum(long pos) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 }
-
-

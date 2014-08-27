@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -78,7 +77,7 @@ public class Main {
 	public final static void main(String[] args) {
 		parseCommandArguments(args);
 		if(FindFileIndex != -1) {
-			Grammar peg = new Grammar(new GrammarComposer());
+			Grammar peg = new Grammar(new GrammarFactory());
 			for(int i = FindFileIndex; i < args.length; i++) {
 				peg.importGramamr("", args[i]);
 			}
@@ -86,7 +85,7 @@ public class Main {
 			performShell2(peg);
 			return;
 		}
-		Grammar peg = GrammarFile == null ? Grammar.PEG4d : Grammar.load(new GrammarComposer(), GrammarFile);
+		Grammar peg = GrammarFile == null ? Grammar.PEG4d : Grammar.load(new GrammarFactory(), GrammarFile);
 		if(PegFormat != null) {
 			Formatter fmt = loadFormatter(PegFormat);
 			peg.show(StartingPoint, fmt);
@@ -500,8 +499,8 @@ public class Main {
 					return new FileSource(peg, fileName);
 				}
 				Stream = new FileInputStream(fileName);
-			} catch (FileNotFoundException e) {
-				Main._Exit(1, "file not found: " + fileName);
+			} catch (IOException e) {
+				Main._Exit(1, "file error: " + fileName);
 				return null;
 			}
 		}

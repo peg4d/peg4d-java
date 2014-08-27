@@ -1,11 +1,22 @@
 package org.peg4d;
 
-public class GrammarComposer {
+public class GrammarFactory {
 	UList<PExpression> definedExpressionList = new UList<PExpression>(new PExpression[128]);
-	UMap<Grammar> pegMap = new UMap<Grammar>();
+	
+	short issue(PExpression peg) {
+		this.definedExpressionList.add(peg);
+		return (short)this.definedExpressionList.size();
+	}
+
+	public final PExpression getDefinedExpression(long oid) {
+		int index = (short)oid;
+		return this.definedExpressionList.ArrayValues[index-1];
+	}
+
+	UMap<Grammar> grammarMap = new UMap<Grammar>();
 	
 	Grammar getGrammar(String filePath) {
-		Grammar peg = pegMap.get(filePath);
+		Grammar peg = grammarMap.get(filePath);
 		if(peg != null) {
 			return peg;
 		}
@@ -17,7 +28,7 @@ public class GrammarComposer {
 	}
 	
 	void setGrammar(String path, Grammar peg) {
-		this.pegMap.put(path, peg);
+		this.grammarMap.put(path, peg);
 	}
 	
 	private Grammar loadLibraryGrammar(String filePath) {
@@ -33,16 +44,6 @@ public class GrammarComposer {
 		return Grammar.load(this, filePath);
 	}
 	
-	short issue(PExpression peg) {
-		this.definedExpressionList.add(peg);
-		return (short)this.definedExpressionList.size();
-	}
-
-	public final PExpression getDefinedExpression(long oid) {
-		int index = (short)oid;
-		return this.definedExpressionList.ArrayValues[index-1];
-	}
-
 	// factory
 	
 	UMap<PExpression> semMap = new UMap<PExpression>();

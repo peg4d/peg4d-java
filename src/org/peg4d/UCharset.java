@@ -242,9 +242,11 @@ public class UCharset {
 		return utf8len[ch];
 	}
 
+	public final static String DefaultEncoding = "UTF8";
+	
 	public final static byte[] toUtf8(String text) {
 		try {
-			return text.getBytes("UTF8");
+			return text.getBytes(DefaultEncoding);
 		} catch (UnsupportedEncodingException e) {
 			Main._Exit(1, "unsupported character: " + e);
 		}
