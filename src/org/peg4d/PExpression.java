@@ -40,15 +40,15 @@ public abstract class PExpression {
 	protected PExpression(Grammar base, int flag) {
 		this.base = base;
 		this.flag = flag;
-		this.uniqueId = base.composer.issue(this);
+		this.uniqueId = base.factory.issue(this);
 		this.semanticId = this.uniqueId;
 	}
 		
-	protected abstract void visit(PegVisitor probe);
+	protected abstract void visit(ParsingVisitor probe);
 	public PExpression getExpression() {
 		return this;
 	}
-	public abstract ParsingObject simpleMatch(ParsingObject left, ParserContext context);
+	public abstract ParsingObject simpleMatch(ParsingObject left, ParsingContext context);
 
 	boolean checkFirstByte(int ch) {
 		return true;
@@ -133,7 +133,7 @@ class PNonTerminal extends PTerm {
 		this.symbol = ruleName;
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitNonTerminal(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
@@ -152,7 +152,7 @@ class PNonTerminal extends PTerm {
 		return this.jumpExpression.base != this.base;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		return this.jumpExpression.simpleMatch(left, context);
 	}
 }
@@ -164,14 +164,14 @@ class PLazyNonTerminal extends PTerm {
 		this.symbol = ruleName;
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitLazyNonTerminal(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
 		return true;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		PExpression next = context.peg.getExpression(this.symbol);
 		if(next != null) {
 			return next.simpleMatch(left, context);
@@ -191,7 +191,7 @@ class PString extends PTerm {
 		}
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitString(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
@@ -201,7 +201,7 @@ class PString extends PTerm {
 		return ParsingCharset.getFirstChar(this.utf8) == ch;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		long pos = context.getPosition();
 		if(context.source.match(pos, this.utf8)) {
 			context.consume(this.utf8.length);
@@ -224,7 +224,7 @@ class PByteChar extends PString {
 		this.byteChar = ch & 0xff;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		if(context.byteAt(context.getPosition()) == this.byteChar) {
 			context.consume(1);
 			return left;
@@ -241,11 +241,11 @@ class PAny extends PTerm {
 		return true;
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitAny(this);
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		if(context.hasUnconsumedCharacter()) {
 			context.consume(1);
 			return left;
@@ -296,14 +296,14 @@ class PNotAny extends PTerm {
 		this.orig = orig;
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitNotAny(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
 		return this.not.checkFirstByte(ch) && this.orig.checkFirstByte(ch);
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		long pos = context.getPosition();
 		ParsingObject right = this.exclude.simpleMatch(left, context);
 		if(right.isFailure()) {
@@ -327,14 +327,14 @@ class PCharacter extends PTerm {
 		this.charset = charset;
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitCharacter(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
 		return this.charset.hasByte(ch);
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		int consumed = this.charset.consume(context.source, context.getPosition());
 		if(consumed == 0) {
 			return context.foundFailure(this);
@@ -389,14 +389,14 @@ class POptional extends PUnary {
 		super(base, flag | PExpression.HasOptional | PExpression.NoMemo, e);
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitOptional(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
 		return true;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		long f = context.rememberFailure();
 		ParsingObject right = this.inner.simpleMatch(left, context);
 		if(right.isFailure()) {
@@ -414,7 +414,7 @@ class POptionalString extends POptional {
 		this.utf8 = e.utf8;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		if(context.source.match(context.getPosition(), this.utf8)) {
 			context.consume(this.utf8.length);
 		}
@@ -429,7 +429,7 @@ class POptionalString1 extends POptional {
 		this.symbol1 = e.byteChar;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		if(context.getByteChar() == this.symbol1) {
 			context.consume(1);
 		}
@@ -444,7 +444,7 @@ class POptionalCharacter extends POptional {
 		this.charset = e.charset;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		int consumed = this.charset.consume(context.source, context.getPosition());
 		context.consume(consumed);
 		return left;
@@ -458,7 +458,7 @@ class PRepetition extends PUnary {
 		this.atleast = atLeast;
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitRepetition(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
@@ -468,7 +468,7 @@ class PRepetition extends PUnary {
 		return true;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		long ppos = -1;
 		long pos = context.getPosition();
 		long f = context.rememberFailure();
@@ -498,7 +498,7 @@ class POneMoreCharacter extends PRepetition {
 		charset = e.charset;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		long pos = context.getPosition();
 		int consumed = this.charset.consume(context.source, pos);
 		if(consumed == 0) {
@@ -522,7 +522,7 @@ class PZeroMoreCharacter extends PRepetition {
 		this.charset = e.charset;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		long pos = context.getPosition();
 		int consumed = 0;
 		do {
@@ -540,11 +540,11 @@ class PAnd extends PUnary {
 		super(base, flag | PExpression.HasAnd, e);
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitAnd(this);
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		long pos = context.getPosition();
 		ParsingObject right = this.inner.simpleMatch(left, context);
 		context.rollback(pos);
@@ -561,7 +561,7 @@ class PNot extends PUnary {
 		super(base, PExpression.HasNot | flag, e);
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitNot(this);
 	}
 	@Override
@@ -569,7 +569,7 @@ class PNot extends PUnary {
 		return !this.inner.checkFirstByte(ch);
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		long pos = context.getPosition();
 		long f   = context.rememberFailure();
 		ParsingObject right = this.inner.simpleMatch(left, context);
@@ -589,7 +589,7 @@ class PNotString extends PNot {
 		this.utf8 = e.utf8;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		long pos = context.getPosition();
 		if(context.source.match(pos, this.utf8)) {
 			return context.foundFailure(this);
@@ -605,7 +605,7 @@ class PNotString1 extends PNotString {
 		this.byteChar = e.byteChar;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		if(this.byteChar == context.getByteChar()) {
 			return context.foundFailure(this);
 		}
@@ -620,7 +620,7 @@ class PNotCharacter extends PNot {
 		this.charset = e.charset;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		long pos = context.getPosition();
 		if(this.charset.consume(context.source, pos) > 0) {
 			return context.foundFailure(this);
@@ -761,11 +761,11 @@ class PSequence extends PList {
 		super(base, flag, l);
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitSequence(this);
 	}	
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		long pos = context.getPosition();
 		int mark = context.markObjectStack();
 		for(int i = 0; i < this.size(); i++) {
@@ -786,7 +786,7 @@ class PChoice extends PList {
 		super(base, flag | PExpression.HasChoice, list);
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitChoice(this);
 	}
 	@Override
@@ -799,7 +799,7 @@ class PChoice extends PList {
 		return false;
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		for(int i = 0; i < this.size(); i++) {
 			ParsingObject right = this.get(i).simpleMatch(left, context);
 			if(!right.isFailure()) {
@@ -817,7 +817,7 @@ class PMappedChoice extends PChoice {
 		super(base, flag, list);
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		int ch = context.getByteChar();
 		if(this.caseOf == null) {
 			tryPrediction();
@@ -912,7 +912,7 @@ class PAlwaysFailure extends PString {
 		super(orig.base, 0, "\0");
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		return context.foundFailure(this);
 	}
 }
@@ -924,7 +924,7 @@ class PConnector extends PUnary {
 		this.index = index;
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitConnector(this);
 	}
 	@Override
@@ -932,7 +932,7 @@ class PConnector extends PUnary {
 		return this.inner.checkFirstByte(ch);
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		long pos = left.getSourcePosition();
 		ParsingObject node = this.inner.simpleMatch(left, context);
 		if(node.isFailure() || left == node) {
@@ -955,11 +955,11 @@ class PTagging extends PTerm {
 		this.symbol = tagName;
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitTagging(this);
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		left.setTag(this.symbol);
 		return left;
 	}
@@ -972,11 +972,11 @@ class PMessage extends PTerm {
 		this.symbol = message;
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitMessage(this);
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		left.setMessage(this.symbol);
 		return left;
 	}
@@ -992,11 +992,11 @@ class PConstructor extends PList {
 		this.tagName = tagName == null ? "#new" : tagName;
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitConstructor(this);
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		long startIndex = context.getPosition();
 		if(context.isRecognitionMode()) {
 			ParsingObject newnode = context.newParsingObject(this.tagName, startIndex, this);
@@ -1049,7 +1049,7 @@ class PConstructor extends PList {
 		}
 	}
 		
-	public void lazyMatch(ParsingObject newnode, ParserContext context, long pos) {
+	public void lazyMatch(ParsingObject newnode, ParsingContext context, long pos) {
 		int mark = context.markObjectStack();
 		for(int i = 0; i < this.size(); i++) {
 			ParsingObject node = this.get(i).simpleMatch(newnode, context);
@@ -1066,7 +1066,7 @@ class PIndent extends PTerm {
 		super(base, flag | PExpression.HasContext);
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitIndent(this);
 	}
 	@Override
@@ -1074,7 +1074,7 @@ class PIndent extends PTerm {
 		return (ch == '\t' || ch == ' ');
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		byte[] indent = context.getIndentSequence(left.getSourcePosition());
 		if(context.source.match(context.getPosition(), indent)) {
 			return left;
@@ -1088,7 +1088,7 @@ class PExport extends PUnary {
 		super(base, flag | PExpression.NoMemo, e);
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitExport(this);
 	}
 	@Override
@@ -1096,7 +1096,7 @@ class PExport extends PUnary {
 		return this.inner.checkFirstByte(ch);
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		return context.matchExport(left, this);
 	}
 }
@@ -1108,7 +1108,7 @@ abstract class POperator extends PExpression {
 		this.inner = inner;
 	}
 	@Override
-	protected void visit(PegVisitor probe) {
+	protected void visit(ParsingVisitor probe) {
 		probe.visitOperation(this);
 	}
 	@Override
@@ -1133,7 +1133,7 @@ class PMemo extends POperator {
 	}
 
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		if(!this.enableMemo) {
 			return this.inner.simpleMatch(left, context);
 		}
@@ -1195,7 +1195,7 @@ class PMemo extends POperator {
 			System.out.println(this.inner.getClass().getSimpleName() + " #h/m=" + this.memoHit + "," + this.memoMiss + ", f=" + f + " " + this.inner);
 		}
 	}
-	public ParsingObject simpleMatch1(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch1(ParsingObject left, ParsingContext context) {
 		if(!this.enableMemo) {
 			return this.inner.simpleMatch(left, context);
 		}
@@ -1236,7 +1236,7 @@ class PMatch extends POperator {
 		super(inner);
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		boolean oldMode = context.setRecognitionMode(true);
 		ParsingObject right = this.inner.simpleMatch(left, context);
 		context.setRecognitionMode(oldMode);
@@ -1252,7 +1252,7 @@ class PCommit extends POperator {
 		super(inner);
 	}
 	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
 		int mark = context.markObjectStack();
 		left = this.inner.simpleMatch(left, context);
 		if(left.isFailure()) {

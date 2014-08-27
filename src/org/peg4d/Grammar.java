@@ -4,27 +4,30 @@ import java.io.File;
 
 public class Grammar {
 	public final static PEG4dGrammar PEG4d = new PEG4dGrammar();
-	GrammarFactory     composer;
+	
+	GrammarFactory      factory;
 	String              name;
 	UMap<PegRule>       ruleMap;
 
 	UList<PegRule>      exportedRuleList;
 	UMap<String>        objectLabelMap = null;
 	public boolean      foundError = false;
-	int memoFactor      ;
-	int optimizationLevel;
 
+	MemoRemover memoRemover = null;
+
+	int memoFactor;
+	int optimizationLevel;
 	int LexicalOptimization       = 0;
 	int InliningCount             = 0;
 	int InterTerminalOptimization = 0;
 	int PredictionOptimization    = 0;
 
-	MemoRemover memoRemover = null;
 	int EnabledMemo  = 0;
 	int DisabledMemo = 0;
 		
-	public Grammar(GrammarFactory db) {
-		this.composer = db;
+	Grammar(GrammarFactory factory, String name) {
+		this.name = name;
+		this.factory = factory == null ? PEG4d.factory : factory;
 		this.ruleMap  = new UMap<PegRule>();
 		this.optimizationLevel = Main.OptimizationLevel;
 		this.memoFactor = Main.MemoFactor;
@@ -37,9 +40,9 @@ public class Grammar {
 		return this.name;
 	}
 
-	public final boolean loadGrammarFile(String fileName) {
+	final boolean loadGrammarFile(String fileName) {
 		PEG4dGrammar peg4d = Grammar.PEG4d;
-		ParserContext p = peg4d.newParserContext(Main.loadSource(peg4d, fileName));
+		ParsingContext p = peg4d.newParserContext(Main.loadSource(peg4d, fileName));
 		this.name = fileName;
 		if(fileName.indexOf('/') > 0) {
 			this.name = fileName.substring(fileName.lastIndexOf('/')+1);
@@ -55,19 +58,15 @@ public class Grammar {
 				break;
 			}
 		}
-//		ObjectRemover objectRemover = null;
-//		if(Main.RecognitionOnlyMode) {
-//			objectRemover = new ObjectRemover();
-//		}
 		this.verify(/*objectRemover*/);
 		return this.foundError;
 	}
 	
-	public final static Grammar load(GrammarFactory db, String fileName) {
-		Grammar peg = new Grammar(db);
-		peg.loadGrammarFile(fileName);
-		return peg;
-	}
+//	public final static Grammar load(GrammarFactory factory, String fileName) {
+//		Grammar peg = new Grammar(factory);
+//		peg.loadGrammarFile(fileName);
+//		return peg;
+//	}
 	
 	public final PExpression getDefinedExpression(long oid) {
 		return this.getDefinedExpression(oid);
@@ -75,8 +74,12 @@ public class Grammar {
 
 	public final static char NameSpaceSeparator = ':';
 
-	public final void importGramamr(String ns, String filePath) {
-		Grammar peg = this.composer.getGrammar(filePath);
+	public final void importGrammar(String filePath) {
+		this.importGrammar("", filePath);
+	}
+	
+	final void importGrammar(String ns, String filePath) {
+		Grammar peg = this.factory.getGrammar(filePath);
 		if(peg != null) {
 			UList<PegRule> ruleList = peg.getExportRuleList();
 			//System.out.println("filePath: " + filePath + " peg=" + ruleList);
@@ -94,6 +97,9 @@ public class Grammar {
 			}
 		}
 	}
+
+
+	
 	
 	public final boolean hasRule(String ruleName) {
 //		if(this.nsRuleMap != null) {
@@ -184,7 +190,7 @@ public class Grammar {
 			Main._Exit(1, "PegError found");
 		}
 		this.memoRemover = new MemoRemover(this);
-		ParserContext c = this.newParserContext();
+		ParsingContext c = this.newParserContext();
 		for(int i = 0; i < nameList.size(); i++) {
 			PegRule rule = this.getRule(nameList.ArrayValues[i]);
 			if(rule.getGrammar() == this) {
@@ -257,12 +263,12 @@ public class Grammar {
 //		}
 	}
 
-	public ParserContext newParserContext() {
+	public ParsingContext newParserContext() {
 		return new TracingPackratParser(this, new StringSource(this, ""), 0);
 	}
 
-	public ParserContext newParserContext(ParsingSource source) {
-		ParserContext p = new TracingPackratParser(this, source);
+	public ParsingContext newParserContext(ParsingSource source) {
+		ParsingContext p = new TracingPackratParser(this, source);
 		if(Main.RecognitionOnlyMode) {
 			p.setRecognitionMode(true);
 		}
@@ -290,65 +296,65 @@ public class Grammar {
 	
 	
 	final PExpression newNonTerminal(String text) {
-		return this.composer.newNonTerminal(this, text);
+		return this.factory.newNonTerminal(this, text);
 	}
 	final PExpression newString(String text) {
-		return this.composer.newString(this, text);
+		return this.factory.newString(this, text);
 	}
 	final PExpression newAny(String t) {
-		return this.composer.newAny(this, t);
+		return this.factory.newAny(this, t);
 	}	
 	public PExpression newByte(int ch, String t) {
-		return this.composer.newByte(this, ch, t);
+		return this.factory.newByte(this, ch, t);
 	}
 	final PExpression newCharacter(String text) {
-		return this.composer.newCharacter(this, text);
+		return this.factory.newCharacter(this, text);
 	}
 	final PExpression newOptional(PExpression p) {
-		return this.composer.newOptional(this, p);
+		return this.factory.newOptional(this, p);
 	}
 	final PExpression newOneMore(PExpression p) {
-		return this.composer.newOneMore(this, p);
+		return this.factory.newOneMore(this, p);
 	}
 	final PExpression newZeroMore(PExpression p) {
-		return this.composer.newZeroMore(this, p);
+		return this.factory.newZeroMore(this, p);
 	}
 	final PExpression newAnd(PExpression p) {
-		return this.composer.newAnd(this, p);
+		return this.factory.newAnd(this, p);
 	}
 	final PExpression newNot(PExpression p) {
-		return this.composer.newNot(this, p);
+		return this.factory.newNot(this, p);
 	}
 	final PExpression newChoice(UList<PExpression> l) {
-		return this.composer.newChoice(this, l);
+		return this.factory.newChoice(this, l);
 	}
 	final PExpression newSequence(UList<PExpression> l) {
-		return this.composer.newSequence(this, l);
+		return this.factory.newSequence(this, l);
 	}
 	final PExpression newConstructor(String tagName, PExpression p) {
-		return this.composer.newConstructor(this, tagName, p);
+		return this.factory.newConstructor(this, tagName, p);
 	}
 	final PExpression newJoinConstructor(String tagName, PExpression p) {
-		return this.composer.newJoinConstructor(this, tagName, p);
+		return this.factory.newJoinConstructor(this, tagName, p);
 	}
 	final PExpression newConnector(PExpression p, int index) {
-		return this.composer.newConnector(this, p, index);
+		return this.factory.newConnector(this, p, index);
 	}
 	final PExpression newTagging(String tag) {
-		return this.composer.newTagging(this, tag);
+		return this.factory.newTagging(this, tag);
 	}
 	final PExpression newMessage(String msg) {
-		return this.composer.newMessage(this, msg);
+		return this.factory.newMessage(this, msg);
 	}
 	final PExpression newMatch(PExpression e) {
-		return this.composer.newMatch(this, e);
+		return this.factory.newMatch(this, e);
 	}
 
 	final void addChoice(UList<PExpression> l, PExpression e) {
-		this.composer.addChoice(this, l, e);
+		this.factory.addChoice(this, l, e);
 	}
 	final void addSequence(UList<PExpression> l, PExpression e) {
-		this.composer.addSequence(l, e);
+		this.factory.addSequence(l, e);
 	}
 
 }
@@ -408,7 +414,7 @@ class PegRule {
 		this.annotation = new PegRuleAnnotation(key,value, this.annotation);
 	}
 	
-	public void testExample(ParserContext context) {
+	public void testExample(ParsingContext context) {
 		PegRuleAnnotation a = this.annotation;
 		while(a != null) {
 			if(a.key.equals("ex") || a.key.equals("eg") || a.key.equals("example")) {
@@ -428,7 +434,7 @@ class PegRule {
 }
 
 class PEG4dGrammar extends Grammar {
-	static boolean performExpressionConstruction(Grammar loading, ParserContext context, ParsingObject pego) {
+	static boolean performExpressionConstruction(Grammar loading, ParsingContext context, ParsingObject pego) {
 		//System.out.println("DEBUG? parsed: " + pego);		
 		if(pego.is("#PRule")) {
 			if(pego.size() > 3) {
@@ -446,7 +452,7 @@ class PEG4dGrammar extends Grammar {
 		if(pego.is("#PImport")) {
 			String filePath = searchPegFilePath(context, pego.textAt(0, ""));
 			String ns = pego.textAt(1, "");
-			loading.importGramamr(ns, filePath);
+			loading.importGrammar(ns, filePath);
 			return true;
 		}
 		if(pego.is("#error")) {
@@ -470,7 +476,7 @@ class PEG4dGrammar extends Grammar {
 		
 	}
 
-	private static String searchPegFilePath(ParserContext context, String filePath) {
+	private static String searchPegFilePath(ParsingContext context, String filePath) {
 		String f = context.source.getFilePath(filePath);
 		if(new File(f).exists()) {
 			return f;
@@ -613,15 +619,14 @@ class PEG4dGrammar extends Grammar {
 	}
 
 	PEG4dGrammar() {
-		super(new GrammarFactory());
+		super(new GrammarFactory(), "PEG4d");
 		this.optimizationLevel = 0;
 		this.loadPEG4dGrammar();
-		this.name = "PEG4d";
-		this.composer.setGrammar("peg", this);
+		this.factory.setGrammar("p4d", this);
 	}
 	
 	@Override
-	public ParserContext newParserContext(ParsingSource source) {
+	public ParsingContext newParserContext(ParsingSource source) {
 		return new TracingPackratParser(this, source, 0);  // best parser
 	}
 

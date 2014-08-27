@@ -1,16 +1,18 @@
 package org.peg4d;
 
 public class GrammarFactory {
-	UList<PExpression> definedExpressionList = new UList<PExpression>(new PExpression[128]);
 	
-	short issue(PExpression peg) {
-		this.definedExpressionList.add(peg);
-		return (short)this.definedExpressionList.size();
+	public GrammarFactory() {
 	}
 
-	public final PExpression getDefinedExpression(long oid) {
-		int index = (short)oid;
-		return this.definedExpressionList.ArrayValues[index-1];
+	public Grammar newGrammar(String name) {
+		return new Grammar(this, name);
+	}
+
+	public Grammar newGrammar(String name, String fileName) {
+		Grammar peg = new Grammar(this, name);
+		peg.loadGrammarFile(fileName);
+		return peg;
 	}
 
 	UMap<Grammar> grammarMap = new UMap<Grammar>();
@@ -41,11 +43,23 @@ public class GrammarFactory {
 		if(Main.VerbosePeg) {
 			System.out.println("importing " + filePath);
 		}
-		return Grammar.load(this, filePath);
+		return this.newGrammar(filePath, filePath);
 	}
 	
-	// factory
+	// Expression
+
+	UList<PExpression> definedExpressionList = new UList<PExpression>(new PExpression[128]);
 	
+	short issue(PExpression peg) {
+		this.definedExpressionList.add(peg);
+		return (short)this.definedExpressionList.size();
+	}
+
+	public final PExpression getDefinedExpression(long oid) {
+		int index = (short)oid;
+		return this.definedExpressionList.ArrayValues[index-1];
+	}
+
 	UMap<PExpression> semMap = new UMap<PExpression>();
 
 	private static String prefixNonTerminal = "a\b";

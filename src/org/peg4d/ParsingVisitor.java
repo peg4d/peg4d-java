@@ -1,6 +1,6 @@
 package org.peg4d;
 
-class PegVisitor {
+class ParsingVisitor {
 	private UMap<String> visitedMap = new UMap<String>();
 	boolean isVisited(String name) {
 		if(this.visitedMap != null) {
@@ -82,7 +82,7 @@ class PegVisitor {
 	}
 }
 
-class Formatter extends PegVisitor {
+class Formatter extends ParsingVisitor {
 	UStringBuilder sb;
 	public Formatter() {
 		sb = new UStringBuilder();
@@ -285,7 +285,7 @@ class Formatter extends PegVisitor {
 
 }
 
-class ListMaker extends PegVisitor {
+class ListMaker extends ParsingVisitor {
 	private UList<String> nameList;
 	private Grammar peg;
 	UList<String> make(Grammar peg, String startPoint) {
@@ -310,7 +310,7 @@ class ListMaker extends PegVisitor {
 	}
 }
 
-class NonTerminalChecker extends PegVisitor {
+class NonTerminalChecker extends ParsingVisitor {
 	PegRule startRule;
 	PegRule checking;
 	int     consumedMinimumLength;
@@ -471,7 +471,7 @@ class NonTerminalChecker extends PegVisitor {
 }
 
 
-class Inliner extends PegVisitor {
+class Inliner extends ParsingVisitor {
 	Grammar peg;
 	Inliner(Grammar peg) {
 		this.peg = peg;
@@ -534,7 +534,7 @@ class Inliner extends PegVisitor {
 	}
 }
 
-class Optimizer extends PegVisitor {
+class Optimizer extends ParsingVisitor {
 	Grammar peg;
 	Optimizer(Grammar peg) {
 		this.peg = peg;
@@ -625,7 +625,7 @@ class Optimizer extends PegVisitor {
 	}
 }
 
-class MemoRemover extends PegVisitor {
+class MemoRemover extends ParsingVisitor {
 	UList<PExpression> pegList;
 	int cutMiss = -1;
 	int RemovedCount = 0;
@@ -709,7 +709,7 @@ class MemoRemover extends PegVisitor {
 	
 }
 
-class ObjectRemover extends PegVisitor {
+class ObjectRemover extends ParsingVisitor {
 	ObjectRemover() {
 	}
 	

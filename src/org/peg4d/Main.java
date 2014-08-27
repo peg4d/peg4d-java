@@ -77,15 +77,15 @@ public class Main {
 	public final static void main(String[] args) {
 		parseCommandArguments(args);
 		if(FindFileIndex != -1) {
-			Grammar peg = new Grammar(new GrammarFactory());
+			Grammar peg = new GrammarFactory().newGrammar("main");
 			for(int i = FindFileIndex; i < args.length; i++) {
-				peg.importGramamr("", args[i]);
+				peg.importGrammar(args[i]);
 			}
 			peg.verify();
 			performShell2(peg);
 			return;
 		}
-		Grammar peg = GrammarFile == null ? Grammar.PEG4d : Grammar.load(new GrammarFactory(), GrammarFile);
+		Grammar peg = GrammarFile == null ? Grammar.PEG4d : new GrammarFactory().newGrammar("main", GrammarFile);
 		if(PegFormat != null) {
 			Formatter fmt = loadFormatter(PegFormat);
 			peg.show(StartingPoint, fmt);
@@ -270,7 +270,7 @@ public class Main {
 		Main.printVerbose("FileName", fileName);
 		Main.printVerbose("Grammar", peg.getName());
 		Main.printVerbose("StartingPoint", StartingPoint);
-		ParserContext p = peg.newParserContext(Main.loadSource(peg, fileName));
+		ParsingContext p = peg.newParserContext(Main.loadSource(peg, fileName));
 		if(Main.StatLevel == 0) {
 			long t = System.currentTimeMillis();
 			p.setRecognitionMode(true);
@@ -328,7 +328,7 @@ public class Main {
 				continue;
 			}
 			ParsingSource source = new StringSource(peg, "(stdin)", linenum, line);
-			ParserContext p = peg.newParserContext(source);
+			ParsingContext p = peg.newParserContext(source);
 			ParsingObject pego = p.parseNode(startPoint);
 			System.out.println("Parsed: " + pego);
 			linenum = linenum + 1;
@@ -357,7 +357,7 @@ public class Main {
 		int linenum = 1;
 		String line = null;
 		while ((line = readMultiLine("?>>> ", "    ")) != null) {
-			ParserContext p = peg.newParserContext();
+			ParsingContext p = peg.newParserContext();
 			ParsingSource source = new StringSource(peg, "(stdin)", linenum, line);
 			for(int i = 0; i < ruleList.size(); i++) {
 				PegRule rule = ruleList.ArrayValues[i];
@@ -377,7 +377,7 @@ public class Main {
 		System.out.println("");
 	}
 	
-	static void infer(UList<PegRule> ruleList, ParserContext p, UList<String> seq) {
+	static void infer(UList<PegRule> ruleList, ParsingContext p, UList<String> seq) {
 		if(!p.hasUnconsumedCharacter()) {
 			printSequence(seq);
 			return;

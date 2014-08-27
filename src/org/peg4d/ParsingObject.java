@@ -1,26 +1,13 @@
 package org.peg4d;
 
-//class PegSemantics {
-//	Grammar peg;
-//	String tag;
-//	PegSemantics(Grammar peg, String tag) {
-//		this.peg = peg;
-//		this.tag = tag;
-//	}
-//	@Override
-//	public String toString() {
-//		return tag;
-//	}
-//}
-
 public class ParsingObject {
 	private ParsingSource    source = null;
-	private long            pospeg = 0;
-	private int             length = 0;
-	String          tag = null;
-	private String          message = null;
+	private long             pospeg = 0;
+	private int              length = 0;
+	String                   tag = null;
+	private String           message = null;
 	ParsingObject            parent = null;
-	private ParsingObject            AST[] = null;
+	private ParsingObject    AST[] = null;
 
 	ParsingObject(String tag, ParsingSource source, long pos) {
 		this.tag        = tag;

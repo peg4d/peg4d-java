@@ -12,7 +12,7 @@ import java.util.Map;
 class Stat {
 
 	Stat(Grammar peg, ParsingSource source) {
-		this.PegSize = peg.composer.definedExpressionList.size();
+		this.PegSize = peg.factory.definedExpressionList.size();
 		source.stat = this;
 	}
 	
@@ -246,7 +246,7 @@ class Stat {
 		this.ErapsedTime = System.currentTimeMillis();
 	}
 	
-	public void end(ParsingObject pego, ParserContext p) {
+	public void end(ParsingObject pego, ParsingContext p) {
 		this.ErapsedTime = (System.currentTimeMillis() - ErapsedTime);
 
 		System.gc(); // meaningless ?

@@ -2,13 +2,13 @@ package org.peg4d;
 
 import java.util.concurrent.BlockingQueue;
 
-public class ParserContext {
+public class ParsingContext {
 	public    Grammar       peg = null;
 	public    ParsingSource source;
 	protected long          pos = 0;
 	protected Stat          stat   = null;
 	
-	ParserContext(Grammar peg, ParsingSource source) {
+	ParsingContext(Grammar peg, ParsingSource source) {
 		this.peg = peg;
 		this.source = source;
 		this.pos = 0;
