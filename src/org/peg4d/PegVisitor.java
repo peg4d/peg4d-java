@@ -146,7 +146,7 @@ class Formatter extends PegVisitor {
 		if(e.text.indexOf("'") != -1) {
 			quote = '"';
 		}
-		sb.append(UCharset._QuoteString(quote, e.text, quote));
+		sb.append(ParsingCharset._QuoteString(quote, e.text, quote));
 	}
 	@Override
 	public void visitCharacter(PCharacter e) {

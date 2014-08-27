@@ -26,7 +26,7 @@ public class UList<T> {
 
 	protected String Stringify(Object Value) {
 		if(Value instanceof String) {
-			return UCharset._QuoteString((String) Value);
+			return ParsingCharset._QuoteString((String) Value);
 		}
 		return Value.toString();
 	}

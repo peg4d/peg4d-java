@@ -3,111 +3,101 @@ package org.peg4d;
 import java.util.concurrent.BlockingQueue;
 
 public class ParserContext {
-	public    Grammar     peg = null;
+	public    Grammar       peg = null;
 	public    ParsingSource source;
-	protected long        sourcePosition = 0;
-	public    long        endPosition;
-	protected Stat stat   = null;
+	protected long          pos = 0;
+	protected Stat          stat   = null;
 	
-	public ParserContext(Grammar peg, ParsingSource source, long startIndex, long endIndex) {
+	ParserContext(Grammar peg, ParsingSource source) {
 		this.peg = peg;
 		this.source = source;
-		this.sourcePosition = startIndex;
-		this.endPosition = endIndex;
+		this.pos = 0;
 	}
 	
 	public void resetSource(ParsingSource source) {
 		this.peg = source.peg;
 		this.source = source;
-		this.sourcePosition = 0;
-		this.endPosition = source.length();
+		this.pos = 0;
 	}
 
 	protected final long getPosition() {
-		return this.sourcePosition;
+		return this.pos;
 	}
 	
 	protected final void setPosition(long pos) {
-		this.sourcePosition = pos;
+		this.pos = pos;
 	}
 	
 	protected final void rollback(long pos) {
-		if(stat != null && this.sourcePosition > pos) {
-			stat.statBacktrack1(pos, this.sourcePosition);
+		if(stat != null && this.pos > pos) {
+			stat.statBacktrack1(pos, this.pos);
 		}
-		this.sourcePosition = pos;
+		this.pos = pos;
 	}
 	
 	@Override
 	public final String toString() {
-		if(this.endPosition > this.sourcePosition) {
-			return this.source.substring(this.sourcePosition, this.endPosition);
-		}
+//		if(this.endPosition > this.pos) {
+//			return this.source.substring(this.pos, this.endPosition);
+//		}
 		return "";
 	}
 	
-	public final boolean hasChar() {
-		return this.sourcePosition < this.endPosition;
+	public final boolean hasUnconsumedCharacter() {
+		return this.source.byteAt(this.pos) != ParsingSource.EOF;
 	}
 
-	public final boolean hasChar(int len) {
-		return this.sourcePosition + len <= this.endPosition;
+//	public final boolean hasChar(int len) {
+//		return this.pos + len <= this.endPosition;
+//	}
+
+	protected final int byteAt(long pos) {
+		return this.source.byteAt(pos);
 	}
 
-	protected final int charAt(long pos) {
-		if(pos < this.endPosition) {
-			return this.source.charAt(pos);
-		}
-		return '\0';
-	}
-
-	protected final int getChar() {
-		return this.charAt(this.sourcePosition);
+	protected final int getByteChar() {
+		return this.byteAt(this.pos);
 	}
 
 	protected final int getUChar() {
-		System.out.println("TODO: getUChar()");
-		return 0;
+		return this.source.charAt(this.pos);
 	}
 
 	public String substring(long startIndex, long endIndex) {
-		if(endIndex <= this.endPosition) {
-			return this.source.substring(startIndex, endIndex);
-		}
-		return "";
+		return this.source.substring(startIndex, endIndex);
 	}
 
-	protected final void consume(long plus) {
-		this.sourcePosition = this.sourcePosition + plus;
+	protected final void consume(int plus) {
+		this.pos = this.pos + plus;
 	}
-
-	protected final boolean match(int ch) {
-		if(ch == this.charAt(this.sourcePosition)) {
-			this.consume(1);
-			return true;
-		}
-		return false;
-	}
-
-	protected final boolean match(byte[] utf8) {
-		long pos = this.sourcePosition;
-		if(pos + utf8.length <= this.endPosition && this.source.match(pos, utf8)) {
-			this.consume(utf8.length);
-			return true;
-		}
-		return false;
-	}
-	
-	protected final boolean match(UCharset charset) {
-		if(charset.match(this.getChar())) {
-			this.consume(1);
-			return true;
-		}
-		return false;
-	}
+//
+//	protected final boolean match(int ch) {
+//		if(ch == this.byteAt(this.pos)) {
+//			this.consume(1);
+//			return true;
+//		}
+//		return false;
+//	}
+//
+//	protected final boolean match(byte[] utf8) {
+//		long pos = this.pos;
+//		if(pos + utf8.length <= this.endPosition && this.source.match(pos, utf8)) {
+//			this.consume(utf8.length);
+//			return true;
+//		}
+//		return false;
+//	}
+//	
+//	protected final boolean match(ParsingCharset charset) {
+//		if(charset.match(this.getByte())) {
+//			this.consume(1);
+//			return true;
+//		}
+//		return false;
+//	}
 	
 	public final String formatErrorMessage(String msg1, String msg2) {
-		return this.source.formatErrorMessage(msg1, this.sourcePosition, msg2);
+		return this.source.formatErrorMessage(msg1, this.pos, msg2);
 	}
 
 	public final void showPosition(String msg) {
@@ -119,12 +109,12 @@ public class ParserContext {
 	}
 
 	public final void showErrorMessage(String msg) {
-		System.out.println(this.source.formatErrorMessage("error", this.sourcePosition, msg));
+		System.out.println(this.source.formatErrorMessage("error", this.pos, msg));
 		Main._Exit(1, msg);
 	}
 	
 	public boolean hasNode() {
-		return this.sourcePosition < this.endPosition;
+		return this.hasUnconsumedCharacter();
 	}
 
 	public ParsingObject match(String startPoint) {
@@ -143,7 +133,7 @@ public class ParserContext {
 			pego = this.newErrorObject();
 			String msg = this.source.formatErrorMessage("syntax error", pego.getSourcePosition(), "");
 			pego.setMessage(msg);
-			this.sourcePosition = this.endPosition;
+			//this.pos = this.endPosition;
 		}
 		return pego;
 	}
@@ -184,14 +174,14 @@ public class ParserContext {
 	}
 	
 	public final ParsingObject foundFailure(PExpression e) {
-		if(this.sourcePosition >= PEGUtils.getpos(this.failurePosition)) {  // adding error location
-			this.failurePosition = PEGUtils.failure(this.sourcePosition, e);
+		if(this.pos >= ParsingUtils.getpos(this.failurePosition)) {  // adding error location
+			this.failurePosition = ParsingUtils.failure(this.pos, e);
 		}
 		return this.failureResult;
 	}
 
 	public final ParsingObject refoundFailure(PExpression e, long pos) {
-		this.failurePosition = PEGUtils.failure(pos, e);
+		this.failurePosition = ParsingUtils.failure(pos, e);
 		return this.failureResult;
 	}
 
@@ -333,6 +323,10 @@ public class ParserContext {
 
 	public String getName() {
 		return this.getClass().getSimpleName();
+	}
+
+	public byte[] getIndentSequence(long pos) {
+		return this.source.getIndentText(pos).getBytes();
 	}
 
 }

@@ -107,9 +107,9 @@ public class GrammarFactory {
 
 	private PExpression newStringImpl(Grammar peg, String text) {
 		if(peg.optimizationLevel > 0) {
-			if(UCharset.toUtf8(text).length == 1) {
+			if(ParsingCharset.toUtf8(text).length == 1) {
 				peg.LexicalOptimization += 1;
-				return new PString1(peg, 0, text);				
+				return new PByteChar(peg, 0, text);				
 			}
 		}
 		return new PString(peg, 0, text);	
@@ -119,7 +119,7 @@ public class GrammarFactory {
 		String key = prefixByte + text;
 		PExpression e = getsem(key);
 		if(e == null) {
-			e = putsem(key, new PString1(peg, 0, ch, text));
+			e = putsem(key, new PByteChar(peg, 0, ch, text));
 		}
 		return e;
 	}
@@ -128,15 +128,15 @@ public class GrammarFactory {
 	public final PExpression newAny(Grammar peg, String text) {
 		PExpression e = getsem(text);
 		if(e == null) {
-			e = (text.equals((".."))) ? new PUtf8Any(peg, 0) : new PAny(peg, 0);
+			e = new PAny(peg, 0);
 			e = putsem(text, e);
 		}
 		return e;
 	}
 	
 	public final PExpression newCharacter(Grammar peg, String text) {
-		UCharset u = new UCharset(text);
-		String key = prefixCharacter + u.key();
+		ParsingCharset u = ParsingCharset.newParsingCharset(text);
+		String key = prefixCharacter + u.toString();
 		PExpression e = getsem(key);
 		if(e == null) {
 			e = new PCharacter(peg, 0, u);
@@ -155,9 +155,9 @@ public class GrammarFactory {
 	}
 
 	private PExpression newOptionalImpl(Grammar peg, PExpression p) {
-		if(p instanceof PString1) {
+		if(p instanceof PByteChar) {
 			peg.LexicalOptimization += 1;
-			return new POptionalString1(peg, 0, (PString1)p);
+			return new POptionalString1(peg, 0, (PByteChar)p);
 		}
 		if(p instanceof PString) {
 			peg.LexicalOptimization += 1;
@@ -255,8 +255,8 @@ public class GrammarFactory {
 		if(peg.optimizationLevel > 0) {
 			if(p instanceof PString) {
 				peg.LexicalOptimization += 1;
-				if(p instanceof PString1) {
-					return new PNotString1(peg, 0, (PString1)p);
+				if(p instanceof PByteChar) {
+					return new PNotString1(peg, 0, (PByteChar)p);
 				}
 				return new PNotString(peg, 0, (PString)p);
 			}
@@ -293,9 +293,9 @@ public class GrammarFactory {
 
 	private PExpression newChoiceImpl(Grammar peg, UList<PExpression> l, boolean isAllText) {
 		if(peg.optimizationLevel > 0) {
-			if(isAllText) {
-				return new PegWordChoice(peg, 0, l);
-			}
+//			if(isAllText) {
+//				return new PegWordChoice(peg, 0, l);
+//			}
 		}
 		if(peg.optimizationLevel > 2) {
 			return new PMappedChoice(peg, 0, l);
@@ -421,22 +421,23 @@ public class GrammarFactory {
 			return;
 		}
 		if(peg.optimizationLevel > 0) {
-			if(l.size() > 0 && (e instanceof PString1 || e instanceof PCharacter)) {
+			if(l.size() > 0 && (e instanceof PByteChar || e instanceof PCharacter)) {
 				PExpression prev = l.ArrayValues[l.size()-1];
-				if(prev instanceof PString1) {
-					UCharset charset = new UCharset("");
-					charset.append((char)((PString1) prev).symbol1);
+				if(prev instanceof PByteChar) {
+					int ch = ((PByteChar) prev).byteChar;
+					ParsingCharset charset = new ByteCharset(ch, ch);
 					PCharacter c = new PCharacter(e.base, 0, charset);
 					l.ArrayValues[l.size()-1] = c;
 					prev = c;
 				}
 				if(prev instanceof PCharacter) {
-					UCharset charset = ((PCharacter) prev).charset;
+					ParsingCharset charset = ((PCharacter) prev).charset;
 					if(e instanceof PCharacter) {
-						charset.append(((PCharacter) e).charset);
+						charset = charset.merge(((PCharacter) e).charset);
 					}
 					else {
-						charset.append((char)((PString1) e).symbol1);
+						int ch = ((PByteChar) e).byteChar;
+						charset.appendByte(ch, ch);
 					}
 					return;
 				}

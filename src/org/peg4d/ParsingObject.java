@@ -25,15 +25,15 @@ public class ParsingObject {
 	ParsingObject(String tag, ParsingSource source, long pos) {
 		this.tag        = tag;
 		this.source     = source;
-		this.pospeg     = PEGUtils.objectId(pos, (short)0);
+		this.pospeg     = ParsingUtils.objectId(pos, (short)0);
 		this.length     = 0;
 	}
 
 	ParsingObject(String tag, ParsingSource source, long pos, PExpression e) {
 		this.tag        = tag;
 		this.source     = source;
-		this.pospeg     = PEGUtils.objectId(pos, e);
-		assert(pos == PEGUtils.getpos(this.pospeg));
+		this.pospeg     = ParsingUtils.objectId(pos, e);
+		assert(pos == ParsingUtils.getpos(this.pospeg));
 		this.length     = 0;
 	}
 
@@ -46,12 +46,12 @@ public class ParsingObject {
 	}
 
 	public long getSourcePosition() {
-		return PEGUtils.getpos(this.pospeg);
+		return ParsingUtils.getpos(this.pospeg);
 	}
 
 	void setSourcePosition(long pos) {
-		this.pospeg = PEGUtils.objectId(pos, PEGUtils.getpegid(this.pospeg));
-		assert(pos == PEGUtils.getpos(this.pospeg));
+		this.pospeg = ParsingUtils.objectId(pos, ParsingUtils.getpegid(this.pospeg));
+		assert(pos == ParsingUtils.getpos(this.pospeg));
 	}
 
 	void setEndPosition(long pos) {
@@ -125,7 +125,7 @@ public class ParsingObject {
 	// AST[]
 	
 	public PExpression getSourceExpression() {
-		short pegid = PEGUtils.getpegid(pospeg);
+		short pegid = ParsingUtils.getpegid(pospeg);
 		if(pegid > 0 && source.peg != null) {
 			return source.peg.getDefinedExpression(pegid);
 		}
@@ -135,12 +135,12 @@ public class ParsingObject {
 	private final static ParsingObject[] LazyAST = new ParsingObject[0];
 
 	private void checkLazyAST() {
-		if(this.AST == LazyAST) {
-			PConstructor e = (PConstructor)this.getSourceExpression();
-			this.AST = null;
-			long pos = this.getSourcePosition();
-			e.lazyMatch(this, new ParserContext(source.peg, source, pos, pos+this.getLength()), pos);
-		}
+//		if(this.AST == LazyAST) {
+//			PConstructor e = (PConstructor)this.getSourceExpression();
+//			this.AST = null;
+//			long pos = this.getSourcePosition();
+//			e.lazyMatch(this, new ParserContext(source.peg, source, pos, pos+this.getLength()), pos);
+//		}
 	}
 
 	boolean compactAST() {
@@ -213,7 +213,7 @@ public class ParsingObject {
 	public final void checkNullEntry() {
 		for(int i = 0; i < this.size(); i++) {
 			if(this.get(i) == null) {
-				this.set(i, new ParsingObject("#empty", this.source, PEGUtils.getpos(this.pospeg)));
+				this.set(i, new ParsingObject("#empty", this.source, ParsingUtils.getpos(this.pospeg)));
 			}
 		}
 	}
@@ -288,7 +288,7 @@ public class ParsingObject {
 
 	final void stringfy(UStringBuilder sb) {
 		if(this.AST == null) {
-			sb.appendNewLine("{"+ this.tag+ " ", UCharset._QuoteString('\'', this.getText(), '\''), "}");
+			sb.appendNewLine("{"+ this.tag+ " ", ParsingCharset._QuoteString('\'', this.getText(), '\''), "}");
 		}
 		else {
 			sb.appendNewLine("");

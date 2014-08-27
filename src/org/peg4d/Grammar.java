@@ -416,7 +416,7 @@ class PegRule {
 				ParsingSource s = new StringSource(this.getGrammar(), "string", 1, a.value);
 				context.resetSource(s);
 				ParsingObject p = context.match(this.ruleName);
-				if(p.isFailure() || context.hasChar()) {
+				if(p.isFailure() || context.hasUnconsumedCharacter()) {
 					System.out.println("FAILED: " + this.ruleName + " " + a.value);
 				}
 			}
@@ -450,7 +450,7 @@ class PEG4dGrammar extends Grammar {
 			return true;
 		}
 		if(pego.is("#error")) {
-			int c = pego.getSource().charAt(pego.getSourcePosition());
+			int c = pego.getSource().byteAt(pego.getSourcePosition());
 			System.out.println(pego.formatSourceMessage("error", "syntax error: ascii=" + c));
 			return false;
 		}
@@ -512,14 +512,14 @@ class PEG4dGrammar extends Grammar {
 			return new PNonTerminal(loading, 0, nonTerminalSymbol);
 		}
 		if(pego.is("#PString")) {
-			return loading.newString(UCharset._UnquoteString(pego.getText()));
+			return loading.newString(ParsingCharset._UnquoteString(pego.getText()));
 		}
 		if(pego.is("#PCharacter")) {
 			return loading.newCharacter(pego.getText());
 		}
 		if(pego.is("#PByte")) {
 			String t = pego.getText();
-			int ch = UCharset.parseHex2(t);
+			int ch = ParsingCharset.parseHex2(t);
 			return loading.newByte(ch, t);
 		}
 		if(pego.is("#PAny")) {
@@ -557,7 +557,7 @@ class PEG4dGrammar extends Grammar {
 			return loading.newOptional(toParsingExpression(loading, ruleName, pego.get(0)));
 		}
 		if(pego.is("#PTimes")) {
-			int n = UCharset.parseInt(pego.textAt(0, ""), 1);
+			int n = ParsingCharset.parseInt(pego.textAt(0, ""), 1);
 			PExpression e = toParsingExpression(loading, ruleName, pego.get(0));
 			UList<PExpression> l = new UList<PExpression>(new PExpression[n]);
 			for(int i = 0; i < n; i++) {
@@ -582,7 +582,7 @@ class PEG4dGrammar extends Grammar {
 		if(pego.is("#PConnector")) {
 			int index = -1;
 			if(pego.size() == 2) {
-				index = UCharset.parseInt(pego.textAt(1, ""), -1);
+				index = ParsingCharset.parseInt(pego.textAt(1, ""), -1);
 			}
 			return loading.newConnector(toParsingExpression(loading, ruleName, pego.get(0)), index);
 		}
@@ -629,8 +629,8 @@ class PEG4dGrammar extends Grammar {
 	private final PExpression t(String token) {
 		return new PString(this, 0, token);
 	}
-	private final PExpression c(String charSet) {
-		return new PCharacter(this, 0, new UCharset(charSet));
+	private final PExpression c(String text) {
+		return new PCharacter(this, 0, ParsingCharset.newParsingCharset(text));
 	}
 	private final PExpression n(String ruleName) {
 		return new PNonTerminal(this, 0, ruleName);

@@ -84,7 +84,7 @@ public class Generator {
 			this.write(LF);
 			this.write(indent);
 			this.write("{" + pego.tag+ " "); 
-			this.write(UCharset._QuoteString('\'', pego.getText(), '\''));
+			this.write(ParsingCharset._QuoteString('\'', pego.getText(), '\''));
 			this.write("}");
 		}
 		else {
@@ -243,7 +243,7 @@ public class Generator {
 		}
 		else {
 			String text = pego.getText();
-			text = UCharset._QuoteString('"', text, '"');
+			text = ParsingCharset._QuoteString('"', text, '"');
 			write(lf, "", text);
 		}
 	}

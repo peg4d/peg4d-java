@@ -200,7 +200,7 @@ class FifoMemo extends MemoMap {
 			private static final long serialVersionUID = 6725894996600788028L;
 			@Override
 			protected boolean removeEldestEntry(Map.Entry<Long, ObjectMemo> eldest)  {
-				long pos = PEGUtils.getpos(eldest.getKey());
+				long pos = ParsingUtils.getpos(eldest.getKey());
 				//System.out.println("diff="+(farpos - pos));
 				if(farpos - pos > 256) {
 					unusedMemo(eldest.getValue());
@@ -215,7 +215,7 @@ class FifoMemo extends MemoMap {
 	protected final void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
 		ObjectMemo m = null;
 		m = newMemo();
-		long key = PEGUtils.memoKey(keypos, keypeg);
+		long key = ParsingUtils.memoKey(keypos, keypeg);
 		m.key = key;
 		m.keypeg = keypeg;
 		m.generated = generated;
@@ -228,7 +228,7 @@ class FifoMemo extends MemoMap {
 
 	@Override
 	protected final ObjectMemo getMemo(PExpression keypeg, long keypos) {
-		ObjectMemo m = this.memoMap.get(PEGUtils.memoKey(keypos, keypeg));
+		ObjectMemo m = this.memoMap.get(ParsingUtils.memoKey(keypos, keypeg));
 		if(m != null) {
 			this.MemoHit += 1;
 		}
@@ -253,7 +253,7 @@ class OpenFifoMemo extends MemoMap {
 	
 	@Override
 	protected final void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
-		long key = PEGUtils.memoKey(keypos, keypeg);
+		long key = ParsingUtils.memoKey(keypos, keypeg);
 		int hash =  (Math.abs((int)key) % memoArray.length);
 		ObjectMemo m = this.memoArray[hash];
 //		if(m.key != 0) {
@@ -272,7 +272,7 @@ class OpenFifoMemo extends MemoMap {
 
 	@Override
 	protected final ObjectMemo getMemo(PExpression keypeg, long keypos) {
-		long key = PEGUtils.memoKey(keypos, keypeg);
+		long key = ParsingUtils.memoKey(keypos, keypeg);
 		int hash =  (Math.abs((int)key) % memoArray.length);
 		ObjectMemo m = this.memoArray[hash];
 		if(m.key == key) {

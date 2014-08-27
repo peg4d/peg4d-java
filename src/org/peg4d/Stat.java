@@ -187,7 +187,7 @@ class Stat {
 			@Override
 			protected boolean removeEldestEntry(Map.Entry<Long, PExpression> eldest)  {
 				if(this.size() > MapFifoSize) {
-					long pos = PEGUtils.getpos(eldest.getKey());
+					long pos = ParsingUtils.getpos(eldest.getKey());
 					int delta = (int)(lastestEntryPosition - pos);
 					if(delta < MinimumStoredLength) {
 						MinimumStoredLength = delta;
@@ -206,7 +206,7 @@ class Stat {
 		this.CallCount += 1;
 		if(this.callCount != null) {
 			callCount[e.uniqueId] += 1;
-			Long key = PEGUtils.objectId(pos, e);
+			Long key = ParsingUtils.objectId(pos, e);
 			PExpression p = this.repeatMap.get(key);
 			if(p != null) {
 				assert(p == e);
@@ -251,7 +251,7 @@ class Stat {
 
 		System.gc(); // meaningless ?
 		this.ConsumedLength = p.getPosition();
-		this.UnconsumedLength = p.endPosition - p.getPosition();
+		this.UnconsumedLength = p.source.length() - p.getPosition();
 		this.statFileLength = p.source.length();
 
 		long total = Runtime.getRuntime().totalMemory();
@@ -264,7 +264,7 @@ class Stat {
 		this.setCount("Optimization", Main.OptimizationLevel);
 		this.setCount("MemoFactor", Main.MemoFactor);
 
-		String fileName = p.source.fileName;
+		String fileName = p.source.getResourceName();
 		if(fileName.lastIndexOf('/') > 0) {
 			fileName = fileName.substring(fileName.lastIndexOf('/')+1);
 		}

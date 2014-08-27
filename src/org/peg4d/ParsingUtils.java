@@ -1,6 +1,6 @@
 package org.peg4d;
 
-public class PEGUtils {
+public class ParsingUtils {
 	
 	public final static long objectId(long pos, short pegid) {
 		return (pos << 16) | pegid;

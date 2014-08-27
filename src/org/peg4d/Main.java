@@ -127,10 +127,10 @@ public class Main {
 				index = index + 1;
 			}
 			else if(argument.startsWith("-M")) {
-				Main.MemoFactor  = UCharset.parseInt(argument.substring(2), 256);
+				Main.MemoFactor  = ParsingCharset.parseInt(argument.substring(2), 256);
 			}
 			else if (argument.startsWith("-O")) {
-				OptimizationLevel = UCharset.parseInt(argument.substring(2), 2);
+				OptimizationLevel = ParsingCharset.parseInt(argument.substring(2), 2);
 			}
 			else if (argument.equals("-i")) {
 				Main.OptimizationLevel = 0;
@@ -146,7 +146,7 @@ public class Main {
 				TestMode = true;
 			}
 			else if(argument.startsWith("--stat")) {
-				StatLevel = UCharset.parseInt(argument.substring(6), 1);
+				StatLevel = ParsingCharset.parseInt(argument.substring(6), 1);
 				OutputType = "none";
 			}
 			else if(argument.startsWith("--csv") && (index < args.length)) {
@@ -277,7 +277,7 @@ public class Main {
 			while(System.currentTimeMillis()-t < 4000) {
 				System.out.print(".");System.out.flush();
 				p.parseNode(startPoint);
-				p.sourcePosition = 0;
+				p.pos = 0;
 			}
 			p.setRecognitionMode(false);
 			p.initMemo();
@@ -293,7 +293,7 @@ public class Main {
 		ParsingObject pego = p.parseNode(startPoint);
 		p.endPerformStat(pego);
 		//}
-		if(p.hasChar()) {
+		if(p.hasUnconsumedCharacter()) {
 			long pos = p.getPosition();
 			if(pos > 0) {
 				p.showPosition("consumed", pos-1);
@@ -378,7 +378,7 @@ public class Main {
 	}
 	
 	static void infer(UList<PegRule> ruleList, ParserContext p, UList<String> seq) {
-		if(!p.hasChar()) {
+		if(!p.hasUnconsumedCharacter()) {
 			printSequence(seq);
 			return;
 		}
@@ -400,7 +400,7 @@ public class Main {
 		}
 		if(!foundRule) {
 			p.setPosition(pos);
-			int ch = p.getChar();
+			int ch = p.getByteChar();
 			seq.add("'" + (char)ch + "'");
 			p.consume(1);
 			infer(ruleList, p, seq);

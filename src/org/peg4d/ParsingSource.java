@@ -1,94 +1,70 @@
 package org.peg4d;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 public abstract class ParsingSource {
+	public final static int EOF = 256; 
 	Grammar   peg;
-	String    fileName;
-	protected long startLineNum = 1;
+	private String    fileName;
+	protected long    startLineNum = 1;
 	Stat      stat = null;
 	
 	public ParsingSource(Grammar peg, String fileName, long linenum) {
 		this.peg = peg;
 		this.fileName = fileName;
 		this.startLineNum = linenum;
-//		this.pushLineMemo(0, linenum);
 	}
 
+	public abstract int     byteAt(long pos);
 	public abstract long    length();
-	public abstract int     charAt(long n);
+
+	public int charAt(long pos) {
+		int c = byteAt(pos);
+		int len = ParsingCharset.lengthOfUtf8(c);
+		switch(len) {
+		case 0:
+			return -1;
+		case 1:
+			return c;
+		case 2:
+			throw new RuntimeException("TODO");
+			// TODO;
+		}
+		return 0;
+	}
+
+	public int charLength(long pos) {
+		int c = byteAt(pos);
+		return ParsingCharset.lengthOfUtf8(c);
+	}
+
+	
+	
 	public abstract boolean match(long pos, byte[] text);
 	public abstract String  substring(long startIndex, long endIndex);
 	public abstract long    linenum(long pos);
 	
-//	private class LineMemo {
-//		long pos;
-//		long linenum;
-//		LineMemo prev;
-//		LineMemo(long pos, long linenum, LineMemo prev) {
-//			this.pos = pos;
-//			this.linenum = linenum;
-//			this.prev = prev;
-//		}
-//	}
-//
-//	private LineMemo lineMemo;
-//	protected void pushLineMemo(long pos, long linenum) {
-//		if(lineMemo == null) {
-//			this.lineMemo = new LineMemo(pos, linenum, null);
-//		}
-//		else {
-//			if(pos - lineMemo.pos > 1000) {
-//				this.lineMemo = new LineMemo(pos, linenum, this.lineMemo);
-//			}
-//		}
-//	}
-//
-//	private final LineMemo searchLineMemo(long pos) {
-//		LineMemo cur = this.lineMemo;
-//		LineMemo found = null;
-//		while(cur != null) {
-//			if(cur.pos <= pos) {
-//				if(found == null || found.pos < cur.pos) {
-//					found = cur; 
-//				}
-//			}
-//			cur = cur.prev;
-//		}
-//		return found;
-//	}
-//	
-//	public final long getLineNumber(long pos) {
-//		LineMemo found = this.searchLineMemo(pos);
-//		long LineNumber = found.linenum;
-//		long i = found.pos;
-//		while(i < pos) {
-//			int ch = this.charAt(i);
-//			if(ch == '\n') {
-//				LineNumber = LineNumber + 1;
-//			}
-//			i = i + 1;
-//		}
-//		this.pushLineMemo(pos, LineNumber);
-//		return LineNumber;
-//	}
-
-	public final String getIndentText(long fromPosition) {
-		long startPosition = this.getLineStartPosition(fromPosition);
-		long i = startPosition;
-		for(; i < fromPosition; i++) {
-			int ch = this.charAt(i);
-			if(ch != ' ' && ch != '\t') {
-				break;
-			}
-		}
-		return this.substring(startPosition, i);
+	public final String getResourceName() {
+		return fileName;
 	}
 
+//	public long skipNot(long pos, long end, ParsingCharset cset) {
+//		while(pos < end) {
+//			int ch = byteAt(pos);
+//			if(cset.match(ch)) {
+//				return pos;
+//			}
+//		}
+//		return this.length();
+//	}
+	
+	
+	
 	public final long getLineStartPosition(long fromPostion) {
 		long startIndex = fromPostion;
 		if(!(startIndex < this.length())) {
@@ -98,7 +74,7 @@ public abstract class ParsingSource {
 			startIndex = 0;
 		}
 		while(startIndex > 0) {
-			int ch = charAt(startIndex);
+			int ch = byteAt(startIndex);
 			if(ch == '\n') {
 				startIndex = startIndex + 1;
 				break;
@@ -108,11 +84,23 @@ public abstract class ParsingSource {
 		return startIndex;
 	}
 
+	public final String getIndentText(long fromPosition) {
+		long startPosition = this.getLineStartPosition(fromPosition);
+		long i = startPosition;
+		for(; i < fromPosition; i++) {
+			int ch = this.byteAt(i);
+			if(ch != ' ' && ch != '\t') {
+				break;
+			}
+		}
+		return this.substring(startPosition, i);
+	}
+
 	public final String getLineTextAt(long pos) {
 		long startIndex = this.getLineStartPosition(pos);
 		long endIndex = startIndex;
 		while(endIndex < this.length()) {
-			int ch = charAt(endIndex);
+			int ch = byteAt(endIndex);
 			if(ch == '\n') {
 				break;
 			}
@@ -126,7 +114,7 @@ public abstract class ParsingSource {
 		String markerLine = "";
 		long i = startIndex;
 		while(i < pos) {
-			int ch = charAt(i);
+			int ch = byteAt(i);
 			if(ch == '\n') {
 				break;
 			}
@@ -142,7 +130,7 @@ public abstract class ParsingSource {
 	}
 
 	public final String formatErrorHeader(String error, long pos, String message) {
-		return "(" + this.fileName + ":" + this.linenum(pos) + ") [" + error +"] " + message;
+		return "(" + this.getResourceName() + ":" + this.linenum(pos) + ") [" + error +"] " + message;
 	}
 
 	public final String formatErrorMessage(String errorType, long pos, String msg) {
@@ -158,39 +146,49 @@ public abstract class ParsingSource {
 	}
 
 	public final String getFilePath(String fileName) {
-		int loc = this.fileName.lastIndexOf("/");
+		int loc = this.getResourceName().lastIndexOf("/");
 		if(loc > 0) {
-			return this.fileName.substring(0, loc+1) + fileName; 
+			return this.getResourceName().substring(0, loc+1) + fileName; 
 		}
 		return fileName;
 	}
+
 }
 
 class StringSource extends ParsingSource {
 	private byte[] utf8;
+	long textLength;
 	
 	StringSource(Grammar peg, String sourceText) {
-		super(peg, "(string)", 0);
-		this.utf8 = UCharset.toUtf8(sourceText);
+		super(peg, "(string)", 1);
+		this.utf8 = ParsingCharset.toUtf8(sourceText);
+		this.textLength = utf8.length;
 	}
 	
 	StringSource(Grammar peg, String fileName, long linenum, String sourceText) {
 		super(peg, fileName, linenum);
-		this.utf8 = UCharset.toUtf8(sourceText);
+		this.utf8 = ParsingCharset.toUtf8(sourceText);
+		this.textLength = utf8.length;
 	}
 	
 	@Override
 	public final long length() {
-		return this.utf8.length;
+		return this.textLength;
 	}
 
 	@Override
-	public final int charAt(long n) {
-		return this.utf8[(int)n] & 0xff;
+	public final int byteAt(long pos) {
+		if(pos < this.textLength) {
+			return this.utf8[(int)pos] & 0xff;
+		}
+		return ParsingSource.EOF;
 	}
 
 	@Override
 	public final boolean match(long pos, byte[] text) {
+		if(pos + text.length > this.textLength) {
+			return false;
+		}
 		for(int i = 0; i < text.length; i++) {
 			if(text[i] != this.utf8[(int)pos + i]) {
 				return false;
@@ -202,7 +200,7 @@ class StringSource extends ParsingSource {
 	@Override
 	public final String substring(long startIndex, long endIndex) {
 		try {
-			return new String(this.utf8, (int)(startIndex), (int)(endIndex - startIndex), UCharset.DefaultEncoding);
+			return new String(this.utf8, (int)(startIndex), (int)(endIndex - startIndex), ParsingCharset.DefaultEncoding);
 		} catch (UnsupportedEncodingException e) {
 		}
 		return null;
@@ -269,12 +267,19 @@ class FileSource extends ParsingSource {
 	}
 
 	@Override
-	public final int charAt(long n) {
-		int buffer_pos = (int)(n - this.buffer_offset);
+	public final int byteAt(long pos) {
+		if(pos < this.fileLength) {
+			return byteAt_(pos);
+		}
+		return ParsingSource.EOF;
+	}
+
+	public final int byteAt_(long pos) {
+		int buffer_pos = (int)(pos - this.buffer_offset);
 		if(!(buffer_pos >= 0 && buffer_pos < PageSize)) {
-			this.buffer_offset = buffer_alignment(n);
+			this.buffer_offset = buffer_alignment(pos);
 			this.readMainBuffer(this.buffer_offset);
-			buffer_pos = (int)(n - this.buffer_offset);
+			buffer_pos = (int)(pos - this.buffer_offset);
 		}
 		return this.buffer[buffer_pos] & 0xff;
 	}
@@ -316,7 +321,7 @@ class FileSource extends ParsingSource {
 			return true;
 		}
 		for(int i = 0; i < text.length; i++) {
-			if((text[i] & 0xff) != this.charAt(pos + i)) {
+			if((text[i] & 0xff) != this.byteAt(pos + i)) {
 				return false;
 			}
 		}
@@ -334,12 +339,12 @@ class FileSource extends ParsingSource {
 						this.buffer_offset = off_s;
 						this.readMainBuffer(this.buffer_offset);
 					}
-					return new String(this.buffer, (int)(startIndex - this.buffer_offset), (int)(endIndex - startIndex), UCharset.DefaultEncoding);
+					return new String(this.buffer, (int)(startIndex - this.buffer_offset), (int)(endIndex - startIndex), ParsingCharset.DefaultEncoding);
 				}
 				else {
 					byte[] b = new byte[(int)(endIndex - startIndex)];
 					this.readStringBuffer(startIndex, b);
-					return new String(b, UCharset.DefaultEncoding);
+					return new String(b, ParsingCharset.DefaultEncoding);
 				}
 			} catch (UnsupportedEncodingException e) {
 				e.printStackTrace();
@@ -360,7 +365,7 @@ class FileSource extends ParsingSource {
 	@Override
 	public final long linenum(long pos) {
 		long count = startLineNum(pos);
-		charAt(pos); // restore buffer at pos
+		byteAt(pos); // restore buffer at pos
 		int offset = (int)(pos - this.buffer_offset);
 		for(int i = 0; i < offset; i++) {
 			if(this.buffer[i] == '\n') {
@@ -475,8 +480,8 @@ class FileSource extends ParsingSource {
 }
 
 class InputStreamSource extends ParsingSource {
-	public InputStreamSource(Grammar peg, String fileName, long linenum) {
-		super(peg, fileName, linenum);
+	public InputStreamSource(Grammar peg, String fileName, InputStream inStream) {
+		super(peg, fileName, 1);
 	}
 
 	@Override
@@ -486,7 +491,7 @@ class InputStreamSource extends ParsingSource {
 	}
 
 	@Override
-	public int charAt(long n) {
+	public int byteAt(long n) {
 		// TODO Auto-generated method stub
 		return 0;
 	}

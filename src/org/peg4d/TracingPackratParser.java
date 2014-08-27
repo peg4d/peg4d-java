@@ -4,11 +4,11 @@ package org.peg4d;
 public class TracingPackratParser extends ParserContext {
 	int memo = 0;
 	public TracingPackratParser(Grammar peg, ParsingSource source) {
-		super(peg, source, 0, source.length());
+		super(peg, source);
 		this.memo = Main.MemoFactor;
 	}
 	public TracingPackratParser(Grammar peg, ParsingSource source, int memo) {
-		super(peg, source, 0, source.length());
+		super(peg, source);
 		this.memo = memo;
 	}
 	

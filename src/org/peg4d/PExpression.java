@@ -50,7 +50,7 @@ public abstract class PExpression {
 	}
 	public abstract ParsingObject simpleMatch(ParsingObject left, ParserContext context);
 
-	boolean checkFirstCharcter(int ch) {
+	boolean checkFirstByte(int ch) {
 		return true;
 	}
 
@@ -136,9 +136,9 @@ class PNonTerminal extends PTerm {
 	protected void visit(PegVisitor probe) {
 		probe.visitNonTerminal(this);
 	}
-	@Override boolean checkFirstCharcter(int ch) {
+	@Override boolean checkFirstByte(int ch) {
 		if(this.jumpExpression != null) {
-			return this.jumpExpression.checkFirstCharcter(ch);
+			return this.jumpExpression.checkFirstByte(ch);
 		}
 		return true;
 	}
@@ -167,7 +167,7 @@ class PLazyNonTerminal extends PTerm {
 	protected void visit(PegVisitor probe) {
 		probe.visitLazyNonTerminal(this);
 	}
-	@Override boolean checkFirstCharcter(int ch) {
+	@Override boolean checkFirstByte(int ch) {
 		return true;
 	}
 	@Override
@@ -187,44 +187,45 @@ class PString extends PTerm {
 		super(base, PExpression.HasString | PExpression.NoMemo | flag);
 		this.text = text;
 		if(text != null) {
-			utf8 = UCharset.toUtf8(text);
+			utf8 = ParsingCharset.toUtf8(text);
 		}
 	}
 	@Override
 	protected void visit(PegVisitor probe) {
 		probe.visitString(this);
 	}
-	@Override boolean checkFirstCharcter(int ch) {
+	@Override boolean checkFirstByte(int ch) {
 		if(this.text.length() == 0) {
 			return true;
 		}
-		return UCharset.getFirstChar(this.utf8) == ch;
+		return ParsingCharset.getFirstChar(this.utf8) == ch;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		if(context.match(this.utf8)) {
+		long pos = context.getPosition();
+		if(context.source.match(pos, this.utf8)) {
+			context.consume(this.utf8.length);
 			return left;
 		}
 		return context.foundFailure(this);
 	}
 }
 
-class PString1 extends PString {
-	int symbol1;
-	PString1(Grammar base, int flag, String token) {
+class PByteChar extends PString {
+	int byteChar;
+	PByteChar(Grammar base, int flag, String token) {
 		super(base, flag, token);
-		this.symbol1 = this.utf8[0] & 0xff;
+		this.byteChar = this.utf8[0] & 0xff;
 	}
-	PString1(Grammar base, int flag, int ch, String text) {
+	PByteChar(Grammar base, int flag, int ch, String text) {
 		super(base, flag, null);
 		this.utf8 = new byte[1];
 		this.utf8[0] = (byte)ch;
-		this.symbol1 = ch & 0xff;
+		this.byteChar = ch & 0xff;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		long pos = context.getPosition();
-		if(context.charAt(pos) == this.symbol1) {
+		if(context.byteAt(context.getPosition()) == this.byteChar) {
 			context.consume(1);
 			return left;
 		}
@@ -236,7 +237,7 @@ class PAny extends PTerm {
 	PAny(Grammar base, int flag) {
 		super(base, PExpression.HasAny | PExpression.NoMemo | flag);
 	}
-	@Override boolean checkFirstCharcter(int ch) {
+	@Override boolean checkFirstByte(int ch) {
 		return true;
 	}
 	@Override
@@ -245,7 +246,7 @@ class PAny extends PTerm {
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		if(context.hasChar()) {
+		if(context.hasUnconsumedCharacter()) {
 			context.consume(1);
 			return left;
 		}
@@ -253,36 +254,36 @@ class PAny extends PTerm {
 	}
 }
 
-class PUtf8Any extends PAny {
-	PUtf8Any(Grammar base, int flag) {
-		super(base, flag);
-	}
-	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		int len = UCharset.lengthOfUtf8(context.getChar());
-		if(context.hasChar(len)) {
-			context.consume(len);
-			return left;
-		}
-		return context.foundFailure(this);
-	}
-}
-
-class PSkip extends PAny {
-	int skip;
-	public PSkip(Grammar base, int flag, int skip) {
-		super(base, flag);
-		this.skip = skip;
-	}
-	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		if(context.hasChar(skip)) {
-			context.consume(skip);
-			return left;
-		}
-		return context.foundFailure(this);
-	}
-}
+//class PUtf8Any extends PAny {
+//	PUtf8Any(Grammar base, int flag) {
+//		super(base, flag);
+//	}
+//	@Override
+//	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+//		int len = ParsingCharset.lengthOfUtf8(context.getByte());
+//		if(context.hasChar(len)) {
+//			context.consume(len);
+//			return left;
+//		}
+//		return context.foundFailure(this);
+//	}
+//}
+//
+//class PSkip extends PAny {
+//	int skip;
+//	public PSkip(Grammar base, int flag, int skip) {
+//		super(base, flag);
+//		this.skip = skip;
+//	}
+//	@Override
+//	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+//		if(context.hasChar(skip)) {
+//			context.consume(skip);
+//			return left;
+//		}
+//		return context.foundFailure(this);
+//	}
+//}
 
 class PNotAny extends PTerm {
 	PNot not;
@@ -298,8 +299,8 @@ class PNotAny extends PTerm {
 	protected void visit(PegVisitor probe) {
 		probe.visitNotAny(this);
 	}
-	@Override boolean checkFirstCharcter(int ch) {
-		return this.not.checkFirstCharcter(ch) && this.orig.checkFirstCharcter(ch);
+	@Override boolean checkFirstByte(int ch) {
+		return this.not.checkFirstByte(ch) && this.orig.checkFirstByte(ch);
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
@@ -307,7 +308,7 @@ class PNotAny extends PTerm {
 		ParsingObject right = this.exclude.simpleMatch(left, context);
 		if(right.isFailure()) {
 			assert(pos == context.getPosition());
-			if(context.hasChar()) {
+			if(context.hasUnconsumedCharacter()) {
 				context.consume(1);
 				return left;
 			}
@@ -320,8 +321,8 @@ class PNotAny extends PTerm {
 }
 
 class PCharacter extends PTerm {
-	UCharset charset;
-	public PCharacter(Grammar base, int flag, UCharset charset) {
+	ParsingCharset charset;
+	public PCharacter(Grammar base, int flag, ParsingCharset charset) {
 		super(base, PExpression.HasCharacter | PExpression.NoMemo | flag);
 		this.charset = charset;
 	}
@@ -329,16 +330,16 @@ class PCharacter extends PTerm {
 	protected void visit(PegVisitor probe) {
 		probe.visitCharacter(this);
 	}
-	@Override boolean checkFirstCharcter(int ch) {
-		return this.charset.match(ch);
+	@Override boolean checkFirstByte(int ch) {
+		return this.charset.hasByte(ch);
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		int ch = context.getChar();
-		if(!this.charset.match(ch)) {
+		int consumed = this.charset.consume(context.source, context.getPosition());
+		if(consumed == 0) {
 			return context.foundFailure(this);
 		}
-		context.consume(1);
+		context.consume(consumed);
 		return left;
 	}
 }
@@ -391,16 +392,14 @@ class POptional extends PUnary {
 	protected void visit(PegVisitor probe) {
 		probe.visitOptional(this);
 	}
-	@Override boolean checkFirstCharcter(int ch) {
+	@Override boolean checkFirstByte(int ch) {
 		return true;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-//		long pos = context.getPosition();
 		long f = context.rememberFailure();
 		ParsingObject right = this.inner.simpleMatch(left, context);
 		if(right.isFailure()) {
-//			assert(pos == context.getPosition());
 			context.forgetFailure(f);
 			return left;
 		}
@@ -416,33 +415,38 @@ class POptionalString extends POptional {
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		context.match(this.utf8);
+		if(context.source.match(context.getPosition(), this.utf8)) {
+			context.consume(this.utf8.length);
+		}
 		return left;
 	}
 }
 
 class POptionalString1 extends POptional {
 	int symbol1;
-	public POptionalString1(Grammar base, int flag, PString1 e) {
+	public POptionalString1(Grammar base, int flag, PByteChar e) {
 		super(base, flag | PExpression.NoMemo, e);
-		this.symbol1 = e.symbol1;
+		this.symbol1 = e.byteChar;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		context.match(this.symbol1);
+		if(context.getByteChar() == this.symbol1) {
+			context.consume(1);
+		}
 		return left;
 	}
 }
 
 class POptionalCharacter extends POptional {
-	UCharset charset;
+	ParsingCharset charset;
 	public POptionalCharacter(Grammar base, int flag, PCharacter e) {
 		super(base, flag | PExpression.NoMemo, e);
 		this.charset = e.charset;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		context.match(this.charset);
+		int consumed = this.charset.consume(context.source, context.getPosition());
+		context.consume(consumed);
 		return left;
 	}
 }
@@ -457,9 +461,9 @@ class PRepetition extends PUnary {
 	protected void visit(PegVisitor probe) {
 		probe.visitRepetition(this);
 	}
-	@Override boolean checkFirstCharcter(int ch) {
+	@Override boolean checkFirstByte(int ch) {
 		if(this.atleast > 0) {
-			return this.inner.checkFirstCharcter(ch);
+			return this.inner.checkFirstByte(ch);
 		}
 		return true;
 	}
@@ -488,7 +492,7 @@ class PRepetition extends PUnary {
 }
 
 class POneMoreCharacter extends PRepetition {
-	UCharset charset;
+	ParsingCharset charset;
 	public POneMoreCharacter(Grammar base, int flag, PCharacter e) {
 		super(base, flag, e, 1);
 		charset = e.charset;
@@ -496,24 +500,23 @@ class POneMoreCharacter extends PRepetition {
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
-		int ch = context.charAt(pos);
-		if(!this.charset.match(ch)) {
+		int consumed = this.charset.consume(context.source, pos);
+		if(consumed == 0) {
 			return context.foundFailure(this);
 		}
-		pos++;
-		for(;context.hasChar();pos++) {
-			ch = context.charAt(pos);
-			if(!this.charset.match(ch)) {
-				break;
-			}
+		pos += consumed;
+		do {
+			consumed = this.charset.consume(context.source, pos);
+			pos += consumed;
 		}
+		while(consumed > 0);
 		context.setPosition(pos);
 		return left;
 	}
 }
 
 class PZeroMoreCharacter extends PRepetition {
-	UCharset charset;
+	ParsingCharset charset;
 	public PZeroMoreCharacter(Grammar base, int flag, PCharacter e) {
 		super(base, flag, e, 0);
 		this.charset = e.charset;
@@ -521,12 +524,12 @@ class PZeroMoreCharacter extends PRepetition {
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
-		for(;context.hasChar();pos++) {
-			int ch = context.charAt(pos);
-			if(!this.charset.match(ch)) {
-				break;
-			}
+		int consumed = 0;
+		do {
+			consumed = this.charset.consume(context.source, pos);
+			pos += consumed;
 		}
+		while(consumed > 0);
 		context.setPosition(pos);
 		return left;
 	}
@@ -548,8 +551,8 @@ class PAnd extends PUnary {
 		return right;
 	}
 	@Override
-	boolean checkFirstCharcter(int ch) {
-		return this.inner.checkFirstCharcter(ch);
+	boolean checkFirstByte(int ch) {
+		return this.inner.checkFirstByte(ch);
 	}
 }
 
@@ -562,8 +565,8 @@ class PNot extends PUnary {
 		probe.visitNot(this);
 	}
 	@Override
-	boolean checkFirstCharcter(int ch) {
-		return !this.inner.checkFirstCharcter(ch);
+	boolean checkFirstByte(int ch) {
+		return !this.inner.checkFirstByte(ch);
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
@@ -588,8 +591,7 @@ class PNotString extends PNot {
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
-		if(context.match(this.utf8)) {
-			//context.setPosition(pos);
+		if(context.source.match(pos, this.utf8)) {
 			return context.foundFailure(this);
 		}
 		return left;
@@ -597,14 +599,14 @@ class PNotString extends PNot {
 }
 
 class PNotString1 extends PNotString {
-	int symbol;
-	PNotString1(Grammar peg, int flag, PString1 e) {
+	int byteChar;
+	PNotString1(Grammar peg, int flag, PByteChar e) {
 		super(peg, flag, e);
-		this.symbol = e.symbol1;
+		this.byteChar = e.byteChar;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		if(this.symbol == context.getChar()) {
+		if(this.byteChar == context.getByteChar()) {
 			return context.foundFailure(this);
 		}
 		return left;
@@ -612,7 +614,7 @@ class PNotString1 extends PNotString {
 }	
 
 class PNotCharacter extends PNot {
-	UCharset charset;
+	ParsingCharset charset;
 	PNotCharacter(Grammar base, int flag, PCharacter e) {
 		super(base, flag | PExpression.NoMemo, e);
 		this.charset = e.charset;
@@ -620,8 +622,7 @@ class PNotCharacter extends PNot {
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
 		long pos = context.getPosition();
-		if(context.match(this.charset)) {
-			context.setPosition(pos);
+		if(this.charset.consume(context.source, pos) > 0) {
 			return context.foundFailure(this);
 		}
 		return left;
@@ -697,25 +698,25 @@ abstract class PList extends PExpression {
 	}
 		
 	@Override
-	boolean checkFirstCharcter(int ch) {
+	boolean checkFirstByte(int ch) {
 		for(int start = 0; start < this.size(); start++) {
 			PExpression e = this.get(start);
 			if(e instanceof PTagging || e instanceof PMessage) {
 				continue;
 			}
 			if(this.isOptional(e)) {
-				if(((PUnary)e).inner.checkFirstCharcter(ch)) {
+				if(((PUnary)e).inner.checkFirstByte(ch)) {
 					return true;
 				}
 				continue;  // unconsumed
 			}
 			if(this.isUnconsumed(e)) {
-				if(!e.checkFirstCharcter(ch)) {
+				if(!e.checkFirstByte(ch)) {
 					return false;
 				}
 				continue;
 			}
-			return e.checkFirstCharcter(ch);
+			return e.checkFirstByte(ch);
 		}
 		return true;
 	}
@@ -789,9 +790,9 @@ class PChoice extends PList {
 		probe.visitChoice(this);
 	}
 	@Override
-	boolean checkFirstCharcter(int ch) {
+	boolean checkFirstByte(int ch) {
 		for(int i = 0; i < this.size(); i++) {
-			if(this.get(i).checkFirstCharcter(ch)) {
+			if(this.get(i).checkFirstByte(ch)) {
 				return true;
 			}
 		}
@@ -817,7 +818,7 @@ class PMappedChoice extends PChoice {
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		int ch = context.getChar();
+		int ch = context.getByteChar();
 		if(this.caseOf == null) {
 			tryPrediction();
 		}
@@ -825,9 +826,9 @@ class PMappedChoice extends PChoice {
 	}
 	void tryPrediction() {
 		if(this.caseOf == null) {
-			this.caseOf = new PExpression[UCharset.MAX];
+			this.caseOf = new PExpression[ParsingCharset.MAX];
 			PExpression failed = new PAlwaysFailure(this);
-			for(int ch = 0; ch < UCharset.MAX; ch++) {
+			for(int ch = 0; ch < ParsingCharset.MAX; ch++) {
 				this.caseOf[ch] = selectC1(ch, failed);
 			}
 			this.base.PredictionOptimization += 1;
@@ -837,7 +838,7 @@ class PMappedChoice extends PChoice {
 		PExpression e = null;
 		UList<PExpression> l = null; // new UList<Peg>(new Peg[2]);
 		for(int i = 0; i < this.size(); i++) {
-			if(this.get(i).checkFirstCharcter(ch)) {
+			if(this.get(i).checkFirstByte(ch)) {
 				if(e == null) {
 					e = this.get(i);
 				}
@@ -864,47 +865,47 @@ class PMappedChoice extends PChoice {
 	}
 }
 
-class PegWordChoice extends PChoice {
-	UCharset charset = null;
-	UList<byte[]> wordList = null;
-	PegWordChoice(Grammar base, int flag, UList<PExpression> list) {
-		super(base, flag | PExpression.HasChoice, list);
-		this.wordList = new UList<byte[]>(new byte[list.size()][]);
-		for(int i = 0; i < list.size(); i++) {
-			PExpression se = list.ArrayValues[i];
-			if(se instanceof PString1) {
-				if(charset == null) {
-					charset = new UCharset("");
-				}
-				charset.append(((PString1)se).symbol1);
-			}
-			if(se instanceof PCharacter) {
-				if(charset == null) {
-					charset = new UCharset("");
-				}
-				charset.append(((PCharacter)se).charset);
-			}
-			if(se instanceof PString) {
-				wordList.add(((PString)se).utf8);
-			}
-		}
-	}
-	
-	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		if(this.charset != null) {
-			if(context.match(this.charset)) {
-				return left;
-			}
-		}
-		for(int i = 0; i < this.wordList.size(); i++) {
-			if(context.match(this.wordList.ArrayValues[i])) {
-				return left;
-			}
-		}
-		return context.foundFailure(this);
-	}
-}
+//class PegWordChoice extends PChoice {
+//	ParsingCharset charset = null;
+//	UList<byte[]> wordList = null;
+//	PegWordChoice(Grammar base, int flag, UList<PExpression> list) {
+//		super(base, flag | PExpression.HasChoice, list);
+//		this.wordList = new UList<byte[]>(new byte[list.size()][]);
+//		for(int i = 0; i < list.size(); i++) {
+//			PExpression se = list.ArrayValues[i];
+//			if(se instanceof PString1) {
+//				if(charset == null) {
+//					charset = new ParsingCharset("");
+//				}
+//				charset.append(((PString1)se).symbol1);
+//			}
+//			if(se instanceof PCharacter) {
+//				if(charset == null) {
+//					charset = new ParsingCharset("");
+//				}
+//				charset.append(((PCharacter)se).charset);
+//			}
+//			if(se instanceof PString) {
+//				wordList.add(((PString)se).utf8);
+//			}
+//		}
+//	}
+//	
+//	@Override
+//	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
+//		if(this.charset != null) {
+//			if(context.match(this.charset)) {
+//				return left;
+//			}
+//		}
+//		for(int i = 0; i < this.wordList.size(); i++) {
+//			if(context.match(this.wordList.ArrayValues[i])) {
+//				return left;
+//			}
+//		}
+//		return context.foundFailure(this);
+//	}
+//}
 
 class PAlwaysFailure extends PString {
 	public PAlwaysFailure(PExpression orig) {
@@ -927,8 +928,8 @@ class PConnector extends PUnary {
 		probe.visitConnector(this);
 	}
 	@Override
-	boolean checkFirstCharcter(int ch) {
-		return this.inner.checkFirstCharcter(ch);
+	boolean checkFirstByte(int ch) {
+		return this.inner.checkFirstByte(ch);
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
@@ -1069,13 +1070,13 @@ class PIndent extends PTerm {
 		probe.visitIndent(this);
 	}
 	@Override
-	boolean checkFirstCharcter(int ch) {
+	boolean checkFirstByte(int ch) {
 		return (ch == '\t' || ch == ' ');
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-		String indent = left.getSource().getIndentText(left.getSourcePosition());
-		if(context.match(indent.getBytes())) {  // very slow
+		byte[] indent = context.getIndentSequence(left.getSourcePosition());
+		if(context.source.match(context.getPosition(), indent)) {
 			return left;
 		}
 		return context.foundFailure(this);
@@ -1091,8 +1092,8 @@ class PExport extends PUnary {
 		probe.visitExport(this);
 	}
 	@Override
-	boolean checkFirstCharcter(int ch) {
-		return this.inner.checkFirstCharcter(ch);
+	boolean checkFirstByte(int ch) {
+		return this.inner.checkFirstByte(ch);
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
@@ -1111,8 +1112,8 @@ abstract class POperator extends PExpression {
 		probe.visitOperation(this);
 	}
 	@Override
-	boolean checkFirstCharcter(int ch) {
-		return this.inner.checkFirstCharcter(ch);
+	boolean checkFirstByte(int ch) {
+		return this.inner.checkFirstByte(ch);
 	}
 	@Override
 	public PExpression getExpression() {
