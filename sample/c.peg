@@ -1,6 +1,9 @@
 TopLevel
 	= TranslationUnit
 	;
+File
+	= TranslationUnit
+	;
 TranslationUnit
 	= Spacing ExternalDeclaration+ EOT
 	;
