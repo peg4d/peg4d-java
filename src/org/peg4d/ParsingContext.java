@@ -6,18 +6,22 @@ public class ParsingContext {
 	public    Grammar       peg = null;
 	public    ParsingSource source;
 	protected long          pos = 0;
+	private ParsingTag emptyTag ;
+	
 	protected Stat          stat   = null;
 	
 	ParsingContext(Grammar peg, ParsingSource source) {
 		this.peg = peg;
 		this.source = source;
 		this.pos = 0;
+		this.emptyTag = this.peg.getModelTag("#empty");
 	}
 	
 	public void resetSource(ParsingSource source) {
 		this.peg = source.peg;
 		this.source = source;
 		this.pos = 0;
+		this.emptyTag = this.peg.getModelTag("#empty");
 	}
 
 	protected final long getPosition() {
@@ -123,7 +127,7 @@ public class ParsingContext {
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
-		return start.simpleMatch(ParsingObject.newSource("#toplevel", this.source, 0), this);
+		return start.simpleMatch(new ParsingObject(this.emptyTag, this.source, 0), this);
 	}
 
 	
@@ -143,8 +147,13 @@ public class ParsingContext {
 		this.memoMap = new NoMemo();
 	}
 	
+	protected ParsingObject newAst(ParsingObject pego, int size) {
+		pego.expandAstToSize(size);
+		return pego;
+	}
+	
 	private boolean isMatchingOnly = false;
-	protected ParsingObject successResult = ParsingObject.newSource("#success", this.source, 0);
+	protected ParsingObject successResult = new ParsingObject(this.emptyTag, this.source, 0);
 	
 	public final boolean isRecognitionMode() {
 		return this.isMatchingOnly;
@@ -162,15 +171,16 @@ public class ParsingContext {
 			return this.successResult;
 		}
 		else {
-			return ParsingObject.newSource(tagName, this.source, pos, created);
+			return new ParsingObject(this.emptyTag, this.source, pos, created);
 		}
 	}
 	
 	private long  failurePosition = 0;
-	private final ParsingObject failureResult = ParsingObject.newSource(null, this.source, 0);
+	private final ParsingObject failureResult = new ParsingObject(null, this.source, 0);
 
 	public final ParsingObject newErrorObject() {
-		return ParsingObject.newErrorSource(this.source, this.failurePosition);
+		ParsingObject pego = new ParsingObject(this.peg.getModelTag("#error"), this.source, failurePosition);
+		return pego;
 	}
 	
 	public final ParsingObject foundFailure(PExpression e) {
@@ -262,7 +272,7 @@ public class ParsingContext {
 			}
 		}
 		if(objectSize > 0) {
-			newnode = ParsingObject.newAst(newnode, objectSize);
+			newnode = this.newAst(newnode, objectSize);
 			for(int i = 0; i < objectSize; i++) {
 				LinkLog cur = first;
 				first = first.next;
@@ -272,10 +282,20 @@ public class ParsingContext {
 				newnode.set(cur.index, cur.childNode);
 				this.disposeLog(cur);
 			}
-			newnode.checkNullEntry();
+			checkNullEntry(newnode);
 		}
 		newnode.setLength((int)(this.getPosition() - startIndex));
 	}
+	
+	private final void checkNullEntry(ParsingObject o) {
+		for(int i = 0; i < o.size(); i++) {
+			if(o.get(i) == null) {
+				o.set(i, new ParsingObject(emptyTag, this.source, 0));
+			}
+		}
+	}
+
+	
 	
 //	long statExportCount = 0;
 //	long statExportSize  = 0;

@@ -2,6 +2,8 @@ package org.peg4d;
 
 import java.io.File;
 
+import org.peg4d.model.ParsingModel;
+
 public class Grammar {
 	public final static PEG4dGrammar PEG4d = new PEG4dGrammar();
 	
@@ -62,11 +64,10 @@ public class Grammar {
 		return this.foundError;
 	}
 	
-//	public final static Grammar load(GrammarFactory factory, String fileName) {
-//		Grammar peg = new Grammar(factory);
-//		peg.loadGrammarFile(fileName);
-//		return peg;
-//	}
+	private ParsingModel model = new ParsingModel();
+	public final ParsingTag getModelTag(String tagName) {
+		return model.get(tagName);
+	}
 	
 	public final PExpression getDefinedExpression(long oid) {
 		return this.getDefinedExpression(oid);
@@ -434,9 +435,33 @@ class PegRule {
 }
 
 class PEG4dGrammar extends Grammar {
+	static final int PRule        = ParsingTag.tagId("#PRule");
+	static final int PImport      = ParsingTag.tagId("#PImport");
+	static final int PAnnotation  = ParsingTag.tagId("#PAnnotation");
+	static final int PString      = ParsingTag.tagId("#PString");
+	static final int PByte        = ParsingTag.tagId("#PByte");
+	static final int PCharacter   = ParsingTag.tagId("#PCharacter");
+	static final int PAny         = ParsingTag.tagId("#PAny");
+	static final int PNonTerminal = ParsingTag.tagId("#PNonTerminal");
+	static final int PAnd         = ParsingTag.tagId("#PAnd");
+	static final int PNot         = ParsingTag.tagId("#PNot");
+	static final int POptional    = ParsingTag.tagId("#POptional");
+	static final int POneMore     = ParsingTag.tagId("#POneMore");
+	static final int PZeroMore    = ParsingTag.tagId("#PZeroMore");
+	static final int PTimes       = ParsingTag.tagId("#PTimes");
+	static final int PMatch       = ParsingTag.tagId("#PMatch");
+	static final int PSequence    = ParsingTag.tagId("#PSequence");
+	static final int PChoice      = ParsingTag.tagId("#PChoice");
+	static final int PConstructor = ParsingTag.tagId("#PConstructor");
+	static final int PConnector   = ParsingTag.tagId("#PConnector");
+	static final int PLeftJoin    = ParsingTag.tagId("#PLeftJoin");
+	static final int PTagging     = ParsingTag.tagId("#PTagging");
+	static final int PMessage     = ParsingTag.tagId("#PMessage");
+	static final int CommonError  = ParsingTag.tagId("#error");
+	
 	static boolean performExpressionConstruction(Grammar loading, ParsingContext context, ParsingObject pego) {
 		//System.out.println("DEBUG? parsed: " + pego);		
-		if(pego.is("#PRule")) {
+		if(pego.is(PEG4dGrammar.PRule)) {
 			if(pego.size() > 3) {
 				System.out.println("DEBUG? parsed: " + pego);		
 			}
@@ -449,13 +474,13 @@ class PEG4dGrammar extends Grammar {
 			}
 			return true;
 		}
-		if(pego.is("#PImport")) {
+		if(pego.is(PEG4dGrammar.PImport)) {
 			String filePath = searchPegFilePath(context, pego.textAt(0, ""));
 			String ns = pego.textAt(1, "");
 			loading.importGrammar(ns, filePath);
 			return true;
 		}
-		if(pego.is("#error")) {
+		if(pego.is(PEG4dGrammar.CommonError)) {
 			int c = pego.getSource().byteAt(pego.getSourcePosition());
 			System.out.println(pego.formatSourceMessage("error", "syntax error: ascii=" + c));
 			return false;
@@ -467,7 +492,7 @@ class PEG4dGrammar extends Grammar {
 	private static void readAnnotations(PegRule rule, ParsingObject pego) {
 		for(int i = 0; i < pego.size(); i++) {
 			ParsingObject p = pego.get(i);
-			if(p.is("#PAnnotation")) {
+			if(p.is(PEG4dGrammar.PAnnotation)) {
 				String key = p.textAt(0, "");
 				String value = p.textAt(1, "");
 				rule.addAnotation(key, value);
@@ -494,7 +519,7 @@ class PEG4dGrammar extends Grammar {
 	}	
 	
 	private static PExpression toParsingExpressionImpl(Grammar loading, String ruleName, ParsingObject pego) {
-		if(pego.is("#PNonTerminal")) {
+		if(pego.is(PEG4dGrammar.PNonTerminal)) {
 			String nonTerminalSymbol = pego.getText();
 			if(ruleName.equals(nonTerminalSymbol)) {
 				PExpression e = loading.getExpression(ruleName);
@@ -512,26 +537,26 @@ class PEG4dGrammar extends Grammar {
 			if(nonTerminalSymbol.equals("COMMENT") && !loading.hasRule("COMMENT")) { // comment
 				loading.setRule("COMMENT", Grammar.PEG4d.getRule("COMMENT"));
 			}
-			if(nonTerminalSymbol.equals("idchar") && !loading.hasRule("idchar")) { // comment
-				loading.setRule("idchar", Grammar.PEG4d.getRule("idchar"));
+			if(nonTerminalSymbol.equals("W") && !loading.hasRule("W")) { // W
+				loading.setRule("W", Grammar.PEG4d.getRule("W"));
 			}
 			return new PNonTerminal(loading, 0, nonTerminalSymbol);
 		}
-		if(pego.is("#PString")) {
+		if(pego.is(PEG4dGrammar.PString)) {
 			return loading.newString(ParsingCharset.unquoteString(pego.getText()));
 		}
-		if(pego.is("#PCharacter")) {
+		if(pego.is(PEG4dGrammar.PCharacter)) {
 			return loading.newCharacter(pego.getText());
 		}
-		if(pego.is("#PByte")) {
+		if(pego.is(PEG4dGrammar.PByte)) {
 			String t = pego.getText();
 			int ch = ParsingCharset.parseHex2(t);
 			return loading.newByte(ch, t);
 		}
-		if(pego.is("#PAny")) {
+		if(pego.is(PEG4dGrammar.PAny)) {
 			return loading.newAny(pego.getText());
 		}
-		if(pego.is("#PChoice")) {
+		if(pego.is(PEG4dGrammar.PChoice)) {
 			UList<PExpression> l = new UList<PExpression>(new PExpression[pego.size()]);
 			for(int i = 0; i < pego.size(); i++) {
 				PExpression e = toParsingExpression(loading, ruleName, pego.get(i));
@@ -539,7 +564,7 @@ class PEG4dGrammar extends Grammar {
 			}
 			return loading.newChoice(l);
 		}
-		if(pego.is("#PSequence")) {
+		if(pego.is(PEG4dGrammar.PSequence)) {
 			UList<PExpression> l = new UList<PExpression>(new PExpression[pego.size()]);
 			for(int i = 0; i < pego.size(); i++) {
 				PExpression e = toParsingExpression(loading, ruleName, pego.get(i));
@@ -547,22 +572,22 @@ class PEG4dGrammar extends Grammar {
 			}
 			return loading.newSequence(l);
 		}
-		if(pego.is("#PNot")) {
+		if(pego.is(PEG4dGrammar.PNot)) {
 			return loading.newNot(toParsingExpression(loading, ruleName, pego.get(0)));
 		}
-		if(pego.is("#PAnd")) {
+		if(pego.is(PEG4dGrammar.PAnd)) {
 			return loading.newAnd(toParsingExpression(loading, ruleName, pego.get(0)));
 		}
-		if(pego.is("#POneMore")) {
+		if(pego.is(PEG4dGrammar.POneMore)) {
 			return loading.newOneMore(toParsingExpression(loading, ruleName, pego.get(0)));
 		}
-		if(pego.is("#PZeroMore")) {
+		if(pego.is(PEG4dGrammar.PZeroMore)) {
 			return loading.newZeroMore(toParsingExpression(loading, ruleName, pego.get(0)));
 		}
-		if(pego.is("#POptional")) {
+		if(pego.is(PEG4dGrammar.POptional)) {
 			return loading.newOptional(toParsingExpression(loading, ruleName, pego.get(0)));
 		}
-		if(pego.is("#PTimes")) {
+		if(pego.is(PEG4dGrammar.PTimes)) {
 			int n = ParsingCharset.parseInt(pego.textAt(0, ""), 1);
 			PExpression e = toParsingExpression(loading, ruleName, pego.get(0));
 			UList<PExpression> l = new UList<PExpression>(new PExpression[n]);
@@ -571,28 +596,28 @@ class PEG4dGrammar extends Grammar {
 			}
 			return loading.newSequence(l);
 		}
-		if(pego.is("#PTagging")) {
+		if(pego.is(PEG4dGrammar.PTagging)) {
 			return loading.newTagging(pego.getText());
 		}
-		if(pego.is("#PMessage")) {
+		if(pego.is(PEG4dGrammar.PMessage)) {
 			return loading.newMessage(pego.getText());
 		}
-		if(pego.is("#PLeftJoin")) {
+		if(pego.is(PEG4dGrammar.PLeftJoin)) {
 			PExpression seq = toParsingExpression(loading, ruleName, pego.get(0));
 			return loading.newJoinConstructor(ruleName, seq);
 		}
-		if(pego.is("#PConstructor")) {
+		if(pego.is(PEG4dGrammar.PConstructor)) {
 			PExpression seq = toParsingExpression(loading, ruleName, pego.get(0));
 			return loading.newConstructor(ruleName, seq);
 		}
-		if(pego.is("#PConnector")) {
+		if(pego.is(PEG4dGrammar.PConnector)) {
 			int index = -1;
 			if(pego.size() == 2) {
 				index = ParsingCharset.parseInt(pego.textAt(1, ""), -1);
 			}
 			return loading.newConnector(toParsingExpression(loading, ruleName, pego.get(0)), index);
 		}
-		if(pego.is("#PMatch")) {
+		if(pego.is(PEG4dGrammar.PMatch)) {
 			return loading.newMatch(toParsingExpression(loading, ruleName, pego.get(0)));
 		}
 //		if(pego.is("#PExport")) {

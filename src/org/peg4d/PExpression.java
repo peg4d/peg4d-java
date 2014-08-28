@@ -949,10 +949,10 @@ class PConnector extends PUnary {
 }
 
 class PTagging extends PTerm {
-	String symbol;
-	public PTagging(Grammar base, int flag, String tagName) {
+	ParsingTag tag;
+	PTagging(Grammar base, int flag, ParsingTag tag) {
 		super(base, PExpression.HasTagging | PExpression.NoMemo | flag);
-		this.symbol = tagName;
+		this.tag = tag;
 	}
 	@Override
 	protected void visit(ParsingVisitor probe) {
@@ -960,14 +960,16 @@ class PTagging extends PTerm {
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
-		left.setTag(this.symbol);
+		if(!context.isRecognitionMode()) {
+			left.setTag(this.tag.tagging());
+		}
 		return left;
 	}
 }
 
 class PMessage extends PTerm {
 	String symbol;
-	public PMessage(Grammar base, int flag, String message) {
+	PMessage(Grammar base, int flag, String message) {
 		super(base, flag | PExpression.NoMemo | PExpression.HasMessage);
 		this.symbol = message;
 	}
@@ -977,7 +979,9 @@ class PMessage extends PTerm {
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
-		left.setMessage(this.symbol);
+		if(!context.isRecognitionMode()) {
+			left.setMessage(this.symbol);
+		}
 		return left;
 	}
 }

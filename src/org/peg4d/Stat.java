@@ -148,7 +148,7 @@ class Stat {
 				this.statObjectImpl(pego.get(i), depth+1, m);
 			}
 		}
-		String tag = pego.getTag();
+		String tag = pego.getTag().toString();
 		ObjectCounter c = m.get(tag);
 		if(c == null) {
 			c = new ObjectCounter();

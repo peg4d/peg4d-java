@@ -158,7 +158,8 @@ class Formatter extends ParsingVisitor {
 	}
 	@Override
 	public void visitTagging(PTagging e) {
-		sb.append(e.symbol);
+		sb.append("#");
+		sb.append(e.tag.toString());
 	}
 	@Override
 	public void visitMessage(PMessage e) {

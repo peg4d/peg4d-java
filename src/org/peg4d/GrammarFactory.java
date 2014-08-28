@@ -411,7 +411,7 @@ public class GrammarFactory {
 		String key = prefixTagging + tag;
 		PExpression e = getsem(key);
 		if(e == null) {
-			e = new PTagging(peg, 0, tag);
+			e = new PTagging(peg, 0, peg.getModelTag(tag));
 			e = putsem(key, e);
 		}
 		return e;

@@ -258,7 +258,7 @@ public class Generator {
 		UMap<Counter> schema =  new UMap<Counter>();
 		for(int i = 0; i < pego.size(); i++) {
 			ParsingObject p = pego.get(i);
-			String tag = p.getTag();
+			String tag = p.getTag().toString();
 			Counter c = schema.get(tag);
 			if(c != null) { // found duplicated
 				return true;

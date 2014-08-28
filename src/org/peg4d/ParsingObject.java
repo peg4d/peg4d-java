@@ -4,19 +4,20 @@ public class ParsingObject {
 	private ParsingSource    source = null;
 	private long             pospeg = 0;
 	private int              length = 0;
-	String                   tag = null;
+//	String                   tag = null;
+	private ParsingTag       tag;
 	private String           message = null;
 	ParsingObject            parent = null;
 	private ParsingObject    AST[] = null;
 
-	ParsingObject(String tag, ParsingSource source, long pos) {
+	ParsingObject(ParsingTag tag, ParsingSource source, long pospeg) {
 		this.tag        = tag;
 		this.source     = source;
-		this.pospeg     = ParsingUtils.objectId(pos, (short)0);
+		this.pospeg     = pospeg;
 		this.length     = 0;
 	}
 
-	ParsingObject(String tag, ParsingSource source, long pos, PExpression e) {
+	ParsingObject(ParsingTag tag, ParsingSource source, long pos, PExpression e) {
 		this.tag        = tag;
 		this.source     = source;
 		this.pospeg     = ParsingUtils.objectId(pos, e);
@@ -53,7 +54,7 @@ public class ParsingObject {
 		this.length = length;
 	}
 	
-	void setTag(String tag) {
+	void setTag(ParsingTag tag) {
 		this.tag = tag;
 	}
 
@@ -65,9 +66,12 @@ public class ParsingObject {
 		return (this.tag == null);
 	}
 
-	public final boolean is(String tag) {
-		return this.tag.equals(tag);
+	public final boolean is(int tagId) {
+		return this.tag.tagId == tagId;
 	}
+//	public final boolean is(String tagName) {
+//		return this.tag.equalsTagName(tagName);
+//	}
 
 	public final boolean equals2(ParsingObject o) {
 		if(this != o) {
@@ -197,14 +201,6 @@ public class ParsingObject {
 		}
 	}
 
-	public final void checkNullEntry() {
-		for(int i = 0; i < this.size(); i++) {
-			if(this.get(i) == null) {
-				this.set(i, new ParsingObject("#empty", this.source, ParsingUtils.getpos(this.pospeg)));
-			}
-		}
-	}
-
 	public final String textAt(int index, String defaultValue) {
 		if(index < this.size()) {
 			return this.get(index).getText();
@@ -292,10 +288,10 @@ public class ParsingObject {
 		}
 	}
 
-	public final ParsingObject findParentNode(String name) {
+	public final ParsingObject findParentNode(int tagName) {
 		ParsingObject node = this;
 		while(node != null) {
-			if(node.is(name)) {
+			if(node.is(tagName)) {
 				return node;
 			}
 			node = node.parent;
@@ -364,7 +360,7 @@ public class ParsingObject {
 //		return pego;
 //	}
 
-	public String getTag() {
+	public ParsingTag getTag() {
 		return this.tag;
 	}
 
@@ -380,35 +376,15 @@ public class ParsingObject {
 		}
 	}
 	
-	private final ParsingObject getPathByTag(String tag) {
+	private final ParsingObject getPathByTag(String tagName) {
+		int tagId = ParsingTag.tagId(tagName);
 		for(int i = 0; i < this.size(); i++) {
 			ParsingObject p = this.get(i);
-			if(p.is(tag)) {
+			if(p.is(tagId)) {
 				return p;
 			}
 		}
 		return null;
-	}
-
-	public static ParsingObject newSource(String tag, ParsingSource source, long pos, PConstructor created) {
-		ParsingObject pego = new ParsingObject(tag, source, pos, created);
-		return pego;
-	}
-
-	public static ParsingObject newSource(String tag, ParsingSource source, long pos) {
-		ParsingObject pego = new ParsingObject(tag, source, pos);
-		return pego;
-	}
-	
-	public static ParsingObject newErrorSource(ParsingSource source, long pospeg) {
-		ParsingObject pego = new ParsingObject("#error", source, 0);
-		pego.pospeg = pospeg;
-		return pego;
-	}
-
-	public static ParsingObject newAst(ParsingObject pego, int size) {
-		pego.expandAstToSize(size);
-		return pego;
 	}
 }
 
