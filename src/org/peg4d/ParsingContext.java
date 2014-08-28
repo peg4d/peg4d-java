@@ -135,8 +135,6 @@ public class ParsingContext {
 		ParsingObject pego = this.match(startPoint);
 		if(pego.isFailure()) {
 			pego = this.newErrorObject();
-			String msg = this.source.formatErrorMessage("syntax error", pego.getSourcePosition(), "");
-			pego.setMessage(msg);
 			//this.pos = this.endPosition;
 		}
 		return pego;
@@ -180,6 +178,8 @@ public class ParsingContext {
 
 	public final ParsingObject newErrorObject() {
 		ParsingObject pego = new ParsingObject(this.peg.getModelTag("#error"), this.source, failurePosition);
+		String msg = this.source.formatErrorMessage("syntax error", pego.getSourcePosition(), "");
+		pego.setMessage(msg);
 		return pego;
 	}
 	

@@ -86,6 +86,7 @@ public abstract class PExpression {
 	}
 
 	private final static Formatter DefaultFormatter = new Formatter();
+	
 	@Override public String toString() {
 		UStringBuilder sb = new UStringBuilder();
 		DefaultFormatter.format(this, sb);
@@ -800,13 +801,16 @@ class PChoice extends PList {
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
+		long f = context.rememberFailure();
+		ParsingObject right = left;
 		for(int i = 0; i < this.size(); i++) {
-			ParsingObject right = this.get(i).simpleMatch(left, context);
+			right = this.get(i).simpleMatch(left, context);
 			if(!right.isFailure()) {
+				context.forgetFailure(f);
 				return right;
 			}
 		}
-		return context.foundFailure(this);
+		return right;
 	}
 }
 
