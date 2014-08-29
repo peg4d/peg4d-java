@@ -125,7 +125,7 @@ class Formatter extends ParsingVisitor {
 		return "=";
 	}
 	public String getSemiColon() {
-		return ";";
+		return "";
 	}
 	public void formatRuleName(String ruleName, PExpression e) {
 		sb.append(ruleName);
@@ -283,7 +283,6 @@ class Formatter extends ParsingVisitor {
 			e.inner.visit(this);
 		}
 	}
-
 }
 
 class ListMaker extends ParsingVisitor {
