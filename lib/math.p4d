@@ -1,0 +1,22 @@
+//
+// PEG4d sample for basic mathmatical operators
+//
+
+File
+	= Expr .*
+export
+	= Expr
+TopLevel
+	= Expr
+Expr
+	[example: 1+2*3]
+	[example: (1+2)*3]
+	= Sum
+Sum
+	= Product {@ ( '+' #add / '-' #sub )  @Product }*
+Product
+	= Value {@ ( '*' #mul / '/' #div / '%' #mod ) @Value }*
+Value
+	= { [0-9]+ #Integer }
+	/ '(' Expr ')'
+

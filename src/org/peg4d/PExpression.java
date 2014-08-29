@@ -85,21 +85,21 @@ public abstract class PExpression {
 		return null;
 	}
 
-	private final static Formatter DefaultFormatter = new Formatter();
+	private final static GrammarFormatter DefaultFormatter = new GrammarFormatter();
 	
 	@Override public String toString() {
-		UStringBuilder sb = new UStringBuilder();
+		StringBuilder sb = new StringBuilder();
 		DefaultFormatter.format(this, sb);
 		return sb.toString();
 	}
 
-	public final String format(String name, Formatter fmt) {
-		UStringBuilder sb = new UStringBuilder();
+	public final String format(String name, GrammarFormatter fmt) {
+		StringBuilder sb = new StringBuilder();
 		fmt.formatRule(name, this, sb);
 		return sb.toString();
 	}
 	public final String format(String name) {
-		return this.format(name, new Formatter());
+		return this.format(name, new GrammarFormatter());
 	}
 	protected void warning(String msg) {
 		if(Main.VerbosePeg && Main.StatLevel == 0) {

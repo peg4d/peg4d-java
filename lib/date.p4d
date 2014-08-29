@@ -1,0 +1,110 @@
+TopLevel
+	= { export #Value }
+	;
+
+export
+	= Date
+	/ CDate
+	;
+
+DATE
+	[format: ISO8601 W3CDTF]
+	[example: 2014-12-25]
+	= YEAR '-' MONTH '-' DAY 
+	     ('T' HH ':' MM (':' SS ('.' UINT)?)? TZD)?
+	;
+
+Date
+	= {
+		@[0]{ YEAR      #Year  } '-'
+		@[1]{ MONTH     #Month } '-'
+		@[2]{ DAY       #Day   }
+		('+'
+			@[3]{ HH #Hour    } ':' 
+			@[4]{ MM #Minute }
+			(':'
+				@[5]{ SS ('.' UINT)? #Second }
+			)?
+			@[6]{ TZD #TMZ }
+		)?
+	}
+	;
+
+CDATE
+	= WEEK3 ' ' <match MONTH3> ' ' DAY 
+	  ' ' HH ':' MM ':' SS ' ' TMZ3 ' ' YEAR
+	;
+
+CDate
+	[example: Wed Aug 20 22:31:01 JST 2014]
+	= {
+		WEEK3 ' '
+		@[1]{ MONTH3    #Month } ' '
+		@[2]{ DAY       #Day   } ' '
+		@[3]{ HH        #Hour  } ':'
+		@[4]{ MM        #Minute } ':'
+		@[5]{ SS        #Second } ' '
+		@[6]{ TMZ3      #TMZ    }  ' '
+		@[0]{ YEAR      #Year   }  #Date
+	}
+	;
+
+// Fri, 
+DateRFC2822
+	= {
+		WEEK3 ','
+		@[2]{ DAY   #Day }   ' '
+		@[1]{ MONTH3 #Month} ' '
+		@[0]{ YEAR  #Year}   ' '
+		@[3]{ HH        #Hour  } ':'
+		@[4]{ MM        #Minute } ':'
+		@[5]{ SS        #Second } ' '
+		@[6]{ TZD       #TMZ }
+		#Date
+	};
+
+WEEK3
+	= 'Mon' / 'Thu' / 'Wed' / 'Thr' / 'Fri' / 'Sat' / 'Sun'
+	;
+
+MONTH3
+	= 'Jan' `01` / 'Feb' `02` / 'Mar' `03` 
+	/ 'Apr' `04` / 'May' `05` / 'Jun' `06`
+	/ 'Jul' `07` / 'Aug' `08` / 'Sep' `09` 
+	/ 'Oct' `10` / 'Nov' `11` / 'Dec' `12`
+	;
+
+YEAR
+	= [0-2] DIGIT DIGIT DIGIT
+	;
+
+MONTH
+	= '1' [0-2] / '0' [1-9]
+	;
+DAY
+	= [0-3] [0-9]
+	;
+HH
+	= [0-1] [0-9] / '2' [0-3]
+	;
+MM
+	= [0-5] [0-9]
+	;
+SS
+	= [0-5] [0-9]
+	;
+TZD
+	= 'z' / (('+'/'-') ('1' [0-1] / '0' [0-9]) ':' MM)
+	;
+TMZ3
+	= . . .
+	;
+	
+UINT
+	= '0' !DIGIT
+	/ [1-9] DIGIT*
+	;
+DIGIT
+	= [0-9]
+	;
+

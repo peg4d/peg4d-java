@@ -1,0 +1,76 @@
+TopLevel
+	= { export #Value }
+	;
+
+export
+	= Integer
+	/ INT
+	/ UINT
+	/ DIGIT
+	/ Real
+	/ Float
+	/ HexaDecimal
+	/ HEXADIGIT
+	/ Octal
+	/ OCTAL
+	/ BIT
+	/ BitDecimal
+	;
+
+Integer
+	= { INT #Integer }
+	;
+
+INT
+	= '-'? UINT
+	;
+
+UINT
+	= '0' !DIGIT
+	/ [1-9] DIGIT*
+	;
+
+DIGIT
+	= [0-9]
+	;
+
+Real
+	= { INT FRAC #Float }
+	;
+
+REAL
+	= INT FRAC
+	;
+
+FRAC
+	= '.' DIGIT+
+	;
+
+Float
+	= { INT FRAC ([eE] INT)? #Float }
+	;
+
+HexaDecimal
+	= { '0x' HEXADIGIT #Integer }
+	;
+
+HEXADIGIT
+	= [0-9A-Fa-f]
+	;
+
+Octal
+	= { OCTAL #Integer }
+	;
+
+OCTAL
+	= '0' [0-7]+
+	;
+
+BIT
+	= [01]+
+	;
+
+BitDecimal
+	= { '0b' BIT #Integer }
+	;
+

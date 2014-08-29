@@ -281,11 +281,11 @@ public class Grammar {
 	}
 
 	public final void show(String startPoint) {
-		this.show(startPoint, new Formatter());
+		this.show(startPoint, new GrammarFormatter());
 	}
 
-	public final void show(String startPoint, Formatter fmt) {
-		UStringBuilder sb = new UStringBuilder();
+	public final void show(String startPoint, GrammarFormatter fmt) {
+		StringBuilder sb = new StringBuilder();
 		UList<String> list = makeList(startPoint);
 		for(int i = 0; i < list.size(); i++) {
 			String name = list.ArrayValues[i];
