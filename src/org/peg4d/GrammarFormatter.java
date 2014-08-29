@@ -1,5 +1,10 @@
 package org.peg4d;
 
+import java.util.HashMap;
+
+import org.peg4d.vm.MachineInstruction;
+import org.peg4d.vm.Opcode;
+
 class GrammarFormatter extends ParsingVisitor {
 	protected StringBuilder sb = null;
 	public GrammarFormatter() {
@@ -21,9 +26,9 @@ class GrammarFormatter extends ParsingVisitor {
 		e.visit(this);
 		this.sb = null;
 	}
-	public void formatHeader() {
+	public void formatHeader(StringBuilder sb) {
 	}
-	public void formatFooter() {
+	public void formatFooter(StringBuilder sb) {
 	}
 	public void formatRule(String ruleName, PExpression e, StringBuilder sb) {
 		this.sb = sb;
@@ -215,24 +220,74 @@ class GrammarFormatter extends ParsingVisitor {
 
 class CodeGenerator extends GrammarFormatter {
 
+	UList<Opcode> opList = new UList<Opcode>(new Opcode[256]);
+	HashMap<Integer,Integer> labelMap = new HashMap<Integer,Integer>();
+
+//	public CodeGenerator() {
+//		super();
+//	}
+	
 	int labelId = 0;
-	private String newLabel() {
+	private int newLabel() {
+		int l = labelId;
 		labelId++;
-		return " L" + labelId;
+		return l;
 	}
 	private void writeLabel(String label) {
 		sb.append(label + ":\n");
 	}
-	private void writeCode(String code) {
-		sb.append("\t" + code + "\n");
+	private void writeLabel(int label) {
+		sb.append(" L" + label + ":\n");
+		labelMap.put(label, opList.size());
 	}
+//	private void writeCode(String code) {
+//		sb.append("\t" + code + "\n");
+//	}
+	
+	private void writeCode(MachineInstruction mi) {
+		sb.append("\t" + mi + "\n");
+		opList.add(new Opcode(mi));
+	}
+
+	private void writeJumpCode(MachineInstruction mi, int labelId) {
+		sb.append("\t" + mi + " L" + labelId + "\n");
+		opList.add(new Opcode(mi, labelId));
+	}
+
+	private void writeCode(MachineInstruction mi, String op) {
+		sb.append("\t" + mi + " " + op + "\n");
+		opList.add(new Opcode(mi));
+	}
+
+	@Override
+	public void formatHeader(StringBuilder sb) {
+		this.sb = sb;
+		opList =  new UList<Opcode>(new Opcode[256]);
+		labelMap = new HashMap<Integer,Integer>();
+		this.writeCode(MachineInstruction.EXIT);
+		this.sb = null;
+	}
+
 	@Override
 	public void formatRule(String ruleName, PExpression e, StringBuilder sb) {
 		this.sb = sb;
 		this.formatRule(ruleName, e);
-		this.writeCode("RET");
+		this.writeCode(MachineInstruction.RET);
 		this.sb = null;
 	}
+	
+	@Override
+	public void formatFooter(StringBuilder sb) {
+		for(int i = 0; i < opList.size(); i++) {
+			Opcode op = opList.ArrayValues[i];
+			if(op.isJumpCode()) {
+				op.ndata = labelMap.get(op.ndata) - 1;
+			}
+			sb.append("["+i+"] " + op + "\n");
+		}
+	}
+
+	
 	private void formatRule(String ruleName, PExpression e) {
 		sb.append(ruleName + ":\n");
 		e.visit(this);
@@ -240,145 +295,148 @@ class CodeGenerator extends GrammarFormatter {
 	
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
-		this.writeCode("INVOKE " + e.symbol);
+		this.writeCode(MachineInstruction.CALL, e.symbol);
 	}
+	
 	@Override
 	public void visitLazyNonTerminal(PLazyNonTerminal e) {
 
 	}
 	@Override
 	public void visitString(PString e) {
-		this.writeCode("TMATCH " + ParsingCharset.quoteString('\'', e.text, '\''));
+		this.writeCode(MachineInstruction.TMATCH, ParsingCharset.quoteString('\'', e.text, '\''));
 	}
 	@Override
 	public void visitCharacter(PCharacter e) {
-		this.writeCode("AMATCH " + e.charset);
+		this.writeCode(MachineInstruction.AMATCH, e.charset.toString());
 	}
 	@Override
 	public void visitAny(PAny e) {
-		this.writeCode("UMATCH");
+		this.writeCode(MachineInstruction.UMATCH);
 	}
 	@Override
 	public void visitTagging(PTagging e) {
-		this.writeCode("TAG " + e.tag.toString());
+		this.writeCode(MachineInstruction.TAG, e.tag.toString());
 	}
 	@Override
 	public void visitMessage(PMessage e) {
-		this.writeCode("REPLACE " + ParsingCharset.quoteString('\'', e.symbol, '\''));
+		this.writeCode(MachineInstruction.REPLACE, ParsingCharset.quoteString('\'', e.symbol, '\''));
 	}
 	@Override
 	public void visitIndent(PIndent e) {
-		this.writeCode("INDENT");
+		this.writeCode(MachineInstruction.INDENT);
 	}
 	@Override
 	public void visitOptional(POptional e) {
-		writeCode("PUSH_FAIL");
-		writeCode("PUSH_LEFT");
+		writeCode(MachineInstruction.PUSH_FPOS);
+		writeCode(MachineInstruction.PUSH_LEFT);
 		e.inner.visit(this);
-		writeCode("POP_LEFT_IFFAIL");
-		writeCode("POP_FAIL_AND_FORGET");
+		writeCode(MachineInstruction.POP_LEFT_IFFAIL);
+		writeCode(MachineInstruction.POP_FPOS_FORGET);
 	}
 	@Override
 	public void visitRepetition(PRepetition e) {
-		String labelL = newLabel();
-		String labelE = newLabel();
-		String labelE2 = newLabel();
+		int labelL = newLabel();
+		int labelE = newLabel();
+		int labelE2 = newLabel();
 		if(e.atleast == 1) {
 			e.inner.visit(this);
-			writeCode("IFFAIL" + labelE2);
+			writeJumpCode(MachineInstruction.IFFAIL,labelE2);
 		}
-		writeCode("PUSH_FAIL");
+		writeCode(MachineInstruction.PUSH_FPOS);
 		writeLabel(labelL);
 		e.inner.visit(this);
-		writeCode("IFFAIL" + labelE);
-		writeCode("JUMP" + labelL);
+		writeJumpCode(MachineInstruction.IFFAIL, labelE);
+		writeJumpCode(MachineInstruction.JUMP, labelL);
 		writeLabel(labelE);
-		writeCode("POP_FAIL_AND_FORGET");
+		writeCode(MachineInstruction.POP_FPOS_FORGET);
 		writeLabel(labelE2);
 	}
 	
 	@Override
 	public void visitAnd(PAnd e) {
-		writeCode("PUSH_POS");
+		writeCode(MachineInstruction.PUSH_POS);
 		e.inner.visit(this);
-		writeCode("POP_POS");		
+		writeCode(MachineInstruction.POP_POS);		
 	}
 
 	@Override
 	public void visitNot(PNot e) {
-		writeCode("PUSH_POS");
-		writeCode("PUSH_LEFT");
+		writeCode(MachineInstruction.PUSH_POS);
+		writeCode(MachineInstruction.PUSH_LEFT);
 		e.inner.visit(this);
-		writeCode("POP_LEFT_AND_NOT");
-		writeCode("POP_POS");		
+		writeCode(MachineInstruction.POP_LEFT_NOT);
+		writeCode(MachineInstruction.POP_POS);		
 	}
 
 	@Override
 	public void visitConnector(PConnector e) {
-		writeCode("PUSH_LEFT");
+		writeCode(MachineInstruction.PUSH_LEFT);
 		e.inner.visit(this);
-		writeCode("POP_LEFT_AND_CONNECT " + e.index);
+		writeCode(MachineInstruction.POP_LEFT_CONNECT, ""+e.index);
 	}
 
 	@Override
 	public void visitSequence(PSequence e) {
-		String labelF = newLabel();
-		String labelE = newLabel();
-		writeCode("PUSH_POS");
+		int labelF = newLabel();
+		int labelE = newLabel();
+		writeCode(MachineInstruction.PUSH_POS);
+		writeCode(MachineInstruction.PUSH_BUFPOS);
 		for(int i = 0; i < e.size(); i++) {
 			PExpression se = e.get(i);
 			se.visit(this);
-			writeCode("IFFAIL" + labelF);
+			writeJumpCode(MachineInstruction.IFFAIL, labelF);
 		}
-		writeCode("POP_POS");
-		writeCode("JUMP" + labelE);
+		writeCode(MachineInstruction.POP_BUFPOS);
+		writeCode(MachineInstruction.POP_POS);
+		writeJumpCode(MachineInstruction.JUMP, labelE);
 		writeLabel(labelF);
-		writeCode("POP_POS_AND_ROLLBACK");
+		writeCode(MachineInstruction.POP_BUFPOS_BACK);
+		writeCode(MachineInstruction.POP_POS_BACK);
 		writeLabel(labelE);
 	}
 
 	@Override
 	public void visitChoice(PChoice e) {
-		String labelS = newLabel();
-		String labelE = newLabel();
-		writeCode("PUSH_FAIL");
+		int labelS = newLabel();
+		int labelE = newLabel();
+		writeCode(MachineInstruction.PUSH_FPOS);
 		for(int i = 0; i < e.size(); i++) {
 			e.get(i).visit(this);
-			writeCode("IFSUCC" + labelS);
-
+			writeJumpCode(MachineInstruction.IFSUCC, labelS);
 		}
-		writeCode("POP_FAIL");
-		writeCode("JUMP" + labelE);
+		writeCode(MachineInstruction.POP_FPOS);
+		writeJumpCode(MachineInstruction.JUMP, labelE);
 		writeLabel(labelS);
-		writeCode("POP_FAIL_AND_FORGET");
+		writeCode(MachineInstruction.POP_FPOS_FORGET);
 		writeLabel(labelE);
 	}
 
 	@Override
 	public void visitConstructor(PConstructor e) {
-		String labelF = newLabel();
-		String labelF2 = newLabel();
-		String labelE = newLabel();
-		writeCode("PUSH_POS");
+		int labelF = newLabel();
+		int labelF2 = newLabel();
+		int labelE = newLabel();
+		writeCode(MachineInstruction.PUSH_POS);
 		for(int i = 0; i < e.prefetchIndex; i++) {
 			PExpression se = e.get(i);
 			se.visit(this);
-			writeCode("IFFAIL" + labelF);
+			writeJumpCode(MachineInstruction.IFFAIL, labelF);
 		}
-		writeCode("PUSH_STACK");
-		writeCode("NEW");
+		writeCode(MachineInstruction.PUSH_BUFPOS);
+		writeCode(MachineInstruction.NEW);
 		for(int i = e.prefetchIndex; i < e.size(); i++) {
 			PExpression se = e.get(i);
 			se.visit(this);
-			writeCode("IFFAIL" + labelF2);
+			writeJumpCode(MachineInstruction.IFFAIL, labelF2);
 		}
-		writeCode("POP_STACK_LINK");
-		writeCode("POP_POS");
-		writeCode("JUMP" + labelE);
+		writeCode(MachineInstruction.POP_BUFPOS);
+		writeCode(MachineInstruction.POP_POS);
+		writeJumpCode(MachineInstruction.JUMP, labelE);
 		writeLabel(labelF2);
-		writeCode("POP_STACK");
+		writeCode(MachineInstruction.POP_BUFPOS);
 		writeLabel(labelF);
-		writeCode("POP_POS_AND_ROLLBACK");
+		writeCode(MachineInstruction.POP_POS_BACK);
 		writeLabel(labelE);
 	}
 

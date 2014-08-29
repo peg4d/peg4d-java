@@ -286,12 +286,14 @@ public class Grammar {
 
 	public final void show(String startPoint, GrammarFormatter fmt) {
 		StringBuilder sb = new StringBuilder();
+		fmt.formatHeader(sb);
 		UList<String> list = makeList(startPoint);
 		for(int i = 0; i < list.size(); i++) {
 			String name = list.ArrayValues[i];
 			PExpression e = this.getExpression(name);
 			fmt.formatRule(name, e, sb);
 		}
+		fmt.formatFooter(sb);
 		System.out.println(sb.toString());
 	}
 	
