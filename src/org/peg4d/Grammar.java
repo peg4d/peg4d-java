@@ -44,7 +44,7 @@ public class Grammar {
 
 	final boolean loadGrammarFile(String fileName) {
 		PEG4dGrammar peg4d = Grammar.PEG4d;
-		ParsingContext p = peg4d.newParserContext(Main.loadSource(peg4d, fileName));
+		ParsingContext2 p = peg4d.newParserContext(Main.loadSource(peg4d, fileName));
 		this.name = fileName;
 		if(fileName.indexOf('/') > 0) {
 			this.name = fileName.substring(fileName.lastIndexOf('/')+1);
@@ -191,7 +191,7 @@ public class Grammar {
 			Main._Exit(1, "PegError found");
 		}
 		this.memoRemover = new MemoRemover(this);
-		ParsingContext c = this.newParserContext();
+		ParsingContext2 c = this.newParserContext();
 		for(int i = 0; i < nameList.size(); i++) {
 			PegRule rule = this.getRule(nameList.ArrayValues[i]);
 			if(rule.getGrammar() == this) {
@@ -264,12 +264,12 @@ public class Grammar {
 //		}
 	}
 
-	public ParsingContext newParserContext() {
+	public ParsingContext2 newParserContext() {
 		return new TracingPackratParser(this, new StringSource(this, ""), 0);
 	}
 
-	public ParsingContext newParserContext(ParsingSource source) {
-		ParsingContext p = new TracingPackratParser(this, source);
+	public ParsingContext2 newParserContext(ParsingSource source) {
+		ParsingContext2 p = new TracingPackratParser(this, source);
 		if(Main.RecognitionOnlyMode) {
 			p.setRecognitionMode(true);
 		}
@@ -417,7 +417,7 @@ class PegRule {
 		this.annotation = new PegRuleAnnotation(key,value, this.annotation);
 	}
 	
-	public void testExample(ParsingContext context) {
+	public void testExample(ParsingContext2 context) {
 		PegRuleAnnotation a = this.annotation;
 		while(a != null) {
 			if(a.key.equals("ex") || a.key.equals("eg") || a.key.equals("example")) {
@@ -461,7 +461,7 @@ class PEG4dGrammar extends Grammar {
 	static final int PMessage     = ParsingTag.tagId("#PMessage");
 	static final int CommonError  = ParsingTag.tagId("#error");
 	
-	static boolean performExpressionConstruction(Grammar loading, ParsingContext context, ParsingObject pego) {
+	static boolean performExpressionConstruction(Grammar loading, ParsingContext2 context, ParsingObject pego) {
 		//System.out.println("DEBUG? parsed: " + pego);		
 		if(pego.is(PEG4dGrammar.PRule)) {
 			if(pego.size() > 3) {
@@ -503,7 +503,7 @@ class PEG4dGrammar extends Grammar {
 		
 	}
 
-	private static String searchPegFilePath(ParsingContext context, String filePath) {
+	private static String searchPegFilePath(ParsingContext2 context, String filePath) {
 		String f = context.source.getFilePath(filePath);
 		if(new File(f).exists()) {
 			return f;
@@ -653,7 +653,7 @@ class PEG4dGrammar extends Grammar {
 	}
 	
 	@Override
-	public ParsingContext newParserContext(ParsingSource source) {
+	public ParsingContext2 newParserContext(ParsingSource source) {
 		return new TracingPackratParser(this, source, 0);  // best parser
 	}
 

@@ -215,10 +215,10 @@ public class GrammarFactory {
 
 	private PExpression newOneMoreImpl(Grammar peg, PExpression p) {
 		if(peg.optimizationLevel > 0) {
-			if(p instanceof PCharacter) {
-				peg.LexicalOptimization += 1;
-				return new POneMoreCharacter(peg, 0, (PCharacter)p);
-			}
+//			if(p instanceof PCharacter) {
+//				peg.LexicalOptimization += 1;
+//				return new POneMoreCharacter(peg, 0, (PCharacter)p);
+//			}
 		}
 		return new PRepetition(peg, 0, newCommit(peg, p), 1);
 	}
@@ -391,9 +391,9 @@ public class GrammarFactory {
 	}
 	
 	private PExpression newNotAnyImpl(Grammar peg, PExpression orig, UList<PExpression> l, int nsize) {
-		if(nsize == 1) {
-			return new PNotAny(peg, 0, (PNot)l.ArrayValues[0], orig);
-		}
+//		if(nsize == 1) {
+//			return new PNotAny(peg, 0, (PNot)l.ArrayValues[0], orig);
+//		}
 		return orig;
 	}
 	

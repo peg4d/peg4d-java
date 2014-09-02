@@ -1,7 +1,7 @@
 package org.peg4d;
 
 
-public class TracingPackratParser extends ParsingContext {
+public class TracingPackratParser extends ParsingContext2 {
 	int memo = 0;
 	public TracingPackratParser(Grammar peg, ParsingSource source) {
 		super(peg, source);

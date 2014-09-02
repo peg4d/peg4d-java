@@ -1,169 +1,107 @@
 package org.peg4d;
 
-import java.util.concurrent.BlockingQueue;
-
 public class ParsingContext {
-	public    Grammar       peg = null;
-	public    ParsingSource source;
-	protected long          pos = 0;
-	private ParsingTag emptyTag ;
-	
+	ParsingObject left;
+	ParsingSource source;
+
+	private ParsingTag emptyTag ;	
 	protected Stat          stat   = null;
-	
-	ParsingContext(Grammar peg, ParsingSource source) {
-		this.peg = peg;
-		this.source = source;
-		this.pos = 0;
-		this.emptyTag = this.peg.getModelTag("#empty");
-	}
-	
-	public void resetSource(ParsingSource source) {
-		this.peg = source.peg;
-		this.source = source;
-		this.pos = 0;
-		this.emptyTag = this.peg.getModelTag("#empty");
+
+	public ParsingContext(ParsingObject left, ParsingSource s, long pos) {
+		this.left = left;
+		this.source = s;
+		this.pos  = pos;
+		this.fpos = 0;
+		this.lstack = new long[4096*8];
+		this.lstack[0] = -1;
+		this.lstacktop = 1;
+		this.ostack = new ParsingObject[4096];
+		this.ostacktop = 0;
 	}
 
-	protected final long getPosition() {
+	long[]   lstack;
+	int      lstacktop;
+	
+	public final void lpush(long v) {
+		this.lstack[lstacktop] = v;
+		lstacktop++;
+	}
+
+	public final void lpop() {
+		lstacktop--;
+	}
+
+	public final int lpop2i() {
+		lstacktop--;
+		return (int)this.lstack[this.lstacktop];
+	}
+
+	
+	ParsingObject[] ostack;
+	int      ostacktop;
+
+	public final void opush(ParsingObject left) {
+		this.ostack[ostacktop] = left;
+		ostacktop++;
+	}
+
+	public final ParsingObject opop() {
+		ostacktop--;
+		return this.ostack[ostacktop];
+	}
+
+	long pos;
+	
+	final long getPosition() {
 		return this.pos;
 	}
 	
-	protected final void setPosition(long pos) {
+	final void setPosition(long pos) {
 		this.pos = pos;
 	}
 	
-	protected final void rollback(long pos) {
+	final void consume(int length) {
+		this.pos += length;
+	}
+
+	final void rollback(long pos) {
 		if(stat != null && this.pos > pos) {
 			stat.statBacktrack1(pos, this.pos);
 		}
 		this.pos = pos;
 	}
+
+	public long fpos = 0;
 	
-	@Override
-	public final String toString() {
-//		if(this.endPosition > this.pos) {
-//			return this.source.substring(this.pos, this.endPosition);
+	public final boolean isFailure() {
+		return this.left == null;
+	}
+
+//	public final void failure(PExpression e) {
+//		if(this.pos >= ParsingUtils.getpos(this.fpos)) {  // adding error location
+//			this.fpos = ParsingUtils.failure(this.pos, e);
 //		}
-		return "";
-	}
-	
-	public final boolean hasUnconsumedCharacter() {
-		return this.source.byteAt(this.pos) != ParsingSource.EOF;
-	}
-
-//	public final boolean hasChar(int len) {
-//		return this.pos + len <= this.endPosition;
+//		this.left = null;
 //	}
-
-	protected final int byteAt(long pos) {
-		return this.source.byteAt(pos);
-	}
-
-	protected final int getByteChar() {
-		return this.byteAt(this.pos);
-	}
-
-	protected final int getUChar() {
-		return this.source.charAt(this.pos);
-	}
-
-	public String substring(long startIndex, long endIndex) {
-		return this.source.substring(startIndex, endIndex);
-	}
-
-	protected final void consume(int plus) {
-		this.pos = this.pos + plus;
-	}
-//
-//	protected final boolean match(int ch) {
-//		if(ch == this.byteAt(this.pos)) {
-//			this.consume(1);
-//			return true;
-//		}
-//		return false;
-//	}
-//
-//	protected final boolean match(byte[] utf8) {
-//		long pos = this.pos;
-//		if(pos + utf8.length <= this.endPosition && this.source.match(pos, utf8)) {
-//			this.consume(utf8.length);
-//			return true;
-//		}
-//		return false;
-//	}
-//	
-//	protected final boolean match(ParsingCharset charset) {
-//		if(charset.match(this.getByte())) {
-//			this.consume(1);
-//			return true;
-//		}
-//		return false;
-//	}
+		
+	boolean isMatchingOnly = false;
+	ParsingObject successResult = new ParsingObject(this.emptyTag, this.source, 0);
 	
-	public final String formatErrorMessage(String msg1, String msg2) {
-		return this.source.formatErrorMessage(msg1, this.pos, msg2);
-	}
-
-	public final void showPosition(String msg) {
-		showPosition(msg, this.getPosition());
-	}
-
-	public final void showPosition(String msg, long pos) {
-		System.out.println(this.source.formatErrorMessage("debug", pos, msg));
-	}
-
-	public final void showErrorMessage(String msg) {
-		System.out.println(this.source.formatErrorMessage("error", this.pos, msg));
-		Main._Exit(1, msg);
-	}
-	
-	public boolean hasNode() {
-		return this.hasUnconsumedCharacter();
-	}
-
-	public ParsingObject match(String startPoint) {
-		this.initMemo();
-		PExpression start = this.peg.getExpression(startPoint);
-		if(start == null) {
-			Main._Exit(1, "undefined start rule: " + startPoint );
-		}
-		return start.simpleMatch(new ParsingObject(this.emptyTag, this.source, 0), this);
-	}
-
-	
-	public ParsingObject parseNode(String startPoint) {
-		ParsingObject pego = this.match(startPoint);
-		if(pego.isFailure()) {
-			pego = this.newErrorObject();
-			//this.pos = this.endPosition;
-		}
-		return pego;
-	}
-	
-	protected MemoMap memoMap = null;
-	public void initMemo() {
-		this.memoMap = new NoMemo();
-	}
-	
-	protected ParsingObject newAst(ParsingObject pego, int size) {
-		pego.expandAstToSize(size);
-		return pego;
-	}
-	
-	private boolean isMatchingOnly = false;
-	protected ParsingObject successResult = new ParsingObject(this.emptyTag, this.source, 0);
-	
-	public final boolean isRecognitionMode() {
+	final boolean isRecognitionMode() {
 		return this.isMatchingOnly;
 	}
 
-	public final boolean setRecognitionMode(boolean recognitionMode) {
+	final boolean canTransCapture() {
+		return !this.isMatchingOnly;
+	}
+	
+	final boolean setRecognitionMode(boolean recognitionMode) {
 		boolean b = this.isMatchingOnly;
 		this.isMatchingOnly = recognitionMode;
 		return b;
 	}
 	
-	public final ParsingObject newParsingObject(String tagName, long pos, PConstructor created) {
+	final ParsingObject newParsingObject(String tagName, long pos, PConstructor created) {
 		if(this.isRecognitionMode()) {
 			this.successResult.setSourcePosition(pos);
 			return this.successResult;
@@ -172,37 +110,7 @@ public class ParsingContext {
 			return new ParsingObject(this.emptyTag, this.source, pos, created);
 		}
 	}
-	
-	private long  failurePosition = 0;
-	private final ParsingObject failureResult = new ParsingObject(null, this.source, 0);
 
-	public final ParsingObject newErrorObject() {
-		ParsingObject pego = new ParsingObject(this.peg.getModelTag("#error"), this.source, failurePosition);
-		String msg = this.source.formatErrorMessage("syntax error", pego.getSourcePosition(), "");
-		pego.setMessage(msg);
-		return pego;
-	}
-	
-	public final ParsingObject foundFailure(PExpression e) {
-		if(this.pos >= ParsingUtils.getpos(this.failurePosition)) {  // adding error location
-			this.failurePosition = ParsingUtils.failure(this.pos, e);
-		}
-		return this.failureResult;
-	}
-
-	public final ParsingObject refoundFailure(PExpression e, long pos) {
-		this.failurePosition = ParsingUtils.failure(pos, e);
-		return this.failureResult;
-	}
-
-	final long rememberFailure() {
-		return this.failurePosition;
-	}
-	
-	final void forgetFailure(long f) {
-		this.failurePosition = f;
-	}
-	
 	private class LinkLog {
 		LinkLog next;
 		int  index;
@@ -229,11 +137,11 @@ public class ParsingContext {
 		this.unusedLog = log;
 	}
 	
-	protected int markObjectStack() {
+	int markObjectStack() {
 		return stackSize;
 	}
 
-	protected void rollbackObjectStack(int mark) {
+	void abortLinkLog(int mark) {
 		while(mark < this.stackSize) {
 			LinkLog l = this.logStack;
 			this.logStack = this.logStack.next;
@@ -243,7 +151,7 @@ public class ParsingContext {
 		assert(mark == this.stackSize);
 	}
 	
-	final void pushConnection(ParsingObject parentNode, int index, ParsingObject childNode) {
+	final void logLink(ParsingObject parentNode, int index, ParsingObject childNode) {
 		assert(!this.isRecognitionMode());
 		LinkLog l = this.newLog();
 		l.childNode  = childNode;
@@ -254,7 +162,7 @@ public class ParsingContext {
 		this.stackSize += 1;
 	}
 
-	final void popConnection(ParsingObject newnode, long startIndex, int mark) {
+	final void comitLinkLog(ParsingObject newnode, long startIndex, int mark) {
 		assert(!this.isRecognitionMode());
 		LinkLog first = null;
 		int objectSize = 0;
@@ -287,6 +195,11 @@ public class ParsingContext {
 		newnode.setLength((int)(this.getPosition() - startIndex));
 	}
 	
+	private final ParsingObject newAst(ParsingObject pego, int size) {
+		pego.expandAstToSize(size);
+		return pego;
+	}
+
 	private final void checkNullEntry(ParsingObject o) {
 		for(int i = 0; i < o.size(); i++) {
 			if(o.get(i) == null) {
@@ -294,60 +207,240 @@ public class ParsingContext {
 			}
 		}
 	}
-
 	
 	
-//	long statExportCount = 0;
-//	long statExportSize  = 0;
-//	long statExportFailure  = 0;
+	
+	
+	public final void opFailure() {
+		if(this.pos >= fpos) {  // adding error location
+			this.fpos = this.pos;
+		}
+		this.left = null;
+	}
 
-	public ParsingObject matchExport(ParsingObject left, PExport e) {
-		ParsingObject pego = e.inner.simpleMatch(left, this);
-		if(!pego.isFailure()) {
-//			this.statExportCount += 1;
-//			this.statExportSize += pego.getLength();
-			this.pushBlockingQueue(pego);
+	public final void opMatchText(byte[] t) {
+		if(this.source.match(this.pos, t)) {
+			this.consume(t.length);
 		}
 		else {
-//			this.statExportFailure += 1;
+			this.opFailure();
 		}
-		return left;
 	}
 
-	private BlockingQueue<ParsingObject> queue = null; 
-	protected void pushBlockingQueue(ParsingObject pego) {
-		if(this.queue != null) {
-			try {
-				this.queue.put(pego);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+	public final void opMatchByteChar(int c) {
+		if(this.source.byteAt(this.pos) == c) {
+			this.consume(1);
+		}
+		else {
+			this.opFailure();
+		}
+	}
+
+	public final void opMatchCharset(ParsingCharset u) {
+		int consume = u.consume(this.source, pos);
+		if(consume > 0) {
+			this.consume(consume);
+		}
+		else {
+			this.opFailure();
+		}
+	}
+
+	public final void opMatchAnyChar() {
+		if(this.source.charAt(this.pos) == -1) {
+			this.consume(this.source.charLength(this.pos));
+		}
+		else {
+			this.opFailure();
+		}
+	}
+
+	public final void opMatchTextNot(byte[] t) {
+		if(this.source.match(this.pos, t)) {
+			this.opFailure();
+		}
+	}
+
+	public final void opMatchByteCharNot(int c) {
+		if(this.source.byteAt(this.pos) == c) {
+			this.opFailure();
+		}
+	}
+
+	public final void opMatchCharsetNot(ParsingCharset u) {
+		int consume = u.consume(this.source, pos);
+		if(consume > 0) {
+			this.opFailure();
+		}
+	}
+
+	public final void opMatchOptionalText(byte[] t) {
+		if(this.source.match(this.pos, t)) {
+			this.consume(t.length);
+		}
+	}
+
+	public final void opMatchOptionalByteChar(int c) {
+		if(this.source.byteAt(this.pos) == c) {
+			this.consume(1);
+		}
+	}
+
+	public final void opMatchOptionalCharset(ParsingCharset u) {
+		int consume = u.consume(this.source, pos);
+		this.consume(consume);
+	}
+
+	public final void opRememberPosition() {
+		lpush(this.pos);
+	}
+
+	public final void opCommitPosition() {
+		lpop();
+	}
+
+	public final void opBacktrackPosition() {
+		lpop();
+		rollback(this.lstack[this.lstacktop]);
+	}
+
+	public final void opRememberSequencePosition() {
+		lpush(this.pos);
+		lpush(this.markObjectStack());
+		opush(this.left);
+	}
+
+	public final void opComitSequencePosition() {
+		opop();
+		lpop();
+		lpop();
+	}
+
+	public final void opBackTrackSequencePosition() {
+		this.left = opop();
+		lpop();
+		this.abortLinkLog((int)this.lstack[this.lstacktop]);
+		lpop();
+		this.rollback(this.lstack[this.lstacktop]);
+	}
+
+	public final void opRememberFailurePosition() {
+		lpush(this.fpos);
+	}
+
+	public final void opUpdateFailurePosition() {
+		lpop();
+	}
+
+	public final void opForgetFailurePosition() {
+		lpop();
+		this.fpos = this.lstack[this.lstacktop];
+	}
+
+	public final void opStoreObject() {
+		this.opush(this.left);
+	}
+
+	public final void opDropStoredObject() {
+		this.opop();
+	}
+
+	public final void opRestoreObject() {
+		this.left = this.opop();
+	}
+
+	public final void opRestoreObjectIfFailure() {
+		if(this.isFailure()) {
+			this.left = opop();
+		}
+		else {
+			this.opop();
+		}
+	}
+
+	public final void opRestoreNegativeObject() {
+		if(this.isFailure()) {
+			this.left = this.opop();
+		}
+		else {
+			this.opop();
+			this.opFailure();
+		}
+	}
+
+	public void opConnectObject(int index) {
+		ParsingObject parent = this.opop();
+		if(!this.isFailure()) {
+			if(this.canTransCapture() && parent != this.left) {
+				this.logLink(parent, index, this.left);
+			}
+			this.left = parent;
+		}
+	}
+
+	public final void opDisableTransCapture() {
+		this.opStoreObject();
+		lpush(this.isRecognitionMode() ? 1 : 0);
+		this.setRecognitionMode(true);
+	}
+
+	public final void opEnableTransCapture() {
+		lpop();
+		this.setRecognitionMode((this.lstack[lstacktop] == 1));
+		this.opRestoreObjectIfFailure();
+	}
+
+	public void opNewObject(PConstructor e) {
+		if(this.canTransCapture()) {
+			lpush(this.markObjectStack());
+			this.left = new ParsingObject(this.emptyTag, this.source, this.pos, e);
+		}
+		opush(this.left);
+	}
+
+	public void opLeftJoinObject(PConstructor e) {
+		if(this.canTransCapture()) {
+			lpush(this.markObjectStack());
+			ParsingObject left = new ParsingObject(this.emptyTag, this.source, this.pos, e);
+			this.logLink(left, 0, this.left);
+			this.left = left;
+		}
+		opush(this.left);
+	}
+
+	public void opCommitObject() {
+		ParsingObject left = this.opop();
+		if(!this.isFailure()) {
+			this.left = left;
+			if(this.canTransCapture()) {
+				this.lpop();
+				int mark = (int)this.lstack[this.lstacktop];
+				this.comitLinkLog(this.left, this.left.getSourcePosition(), mark);
 			}
 		}
 	}
 
-	public void beginPeformStat() {
-		if(Main.StatLevel >= 0) {
-			this.stat = new Stat(this.peg, this.source);
-			if(Main.StatLevel == 2) {
-				this.stat.initRepeatCounter();
-			}
-			this.stat.start();
+	public final void opRefreshStoredObject() {
+		ostack[ostacktop-1] = this.left;
+	}
+
+	public final void opTagging(ParsingTag tag) {
+		if(this.canTransCapture()) {
+			this.left.setTag(tag.tagging());
+		}
+		
+	}
+
+	public final void opValue(String symbol) {
+		if(this.canTransCapture()) {
+			this.left.setMessage(symbol);
 		}
 	}
 
-	public void endPerformStat(ParsingObject pego) {
-		if(stat != null) {
-			stat.end(pego, this);
-		}
+	public final ParsingObject getResult() {
+		return this.left;
 	}
 
-	public String getName() {
-		return this.getClass().getSimpleName();
-	}
 
-	public byte[] getIndentSequence(long pos) {
-		return this.source.getIndentText(pos).getBytes();
-	}
-
+	
 }
-

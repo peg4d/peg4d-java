@@ -273,7 +273,7 @@ public class Main {
 		Main.printVerbose("FileName", fileName);
 		Main.printVerbose("Grammar", peg.getName());
 		Main.printVerbose("StartingPoint", StartingPoint);
-		ParsingContext p = peg.newParserContext(Main.loadSource(peg, fileName));
+		ParsingContext2 p = peg.newParserContext(Main.loadSource(peg, fileName));
 		if(Main.StatLevel == 0) {
 			long t = System.currentTimeMillis();
 			p.setRecognitionMode(true);
@@ -331,7 +331,7 @@ public class Main {
 				continue;
 			}
 			ParsingSource source = new StringSource(peg, "(stdin)", linenum, line);
-			ParsingContext p = peg.newParserContext(source);
+			ParsingContext2 p = peg.newParserContext(source);
 			ParsingObject pego = p.parseNode(startPoint);
 			System.out.println("Parsed: " + pego);
 			linenum = linenum + 1;
@@ -360,7 +360,7 @@ public class Main {
 		int linenum = 1;
 		String line = null;
 		while ((line = readMultiLine("?>>> ", "    ")) != null) {
-			ParsingContext p = peg.newParserContext();
+			ParsingContext2 p = peg.newParserContext();
 			ParsingSource source = new StringSource(peg, "(stdin)", linenum, line);
 			for(int i = 0; i < ruleList.size(); i++) {
 				PegRule rule = ruleList.ArrayValues[i];
@@ -380,7 +380,7 @@ public class Main {
 		System.out.println("");
 	}
 	
-	static void infer(UList<PegRule> ruleList, ParsingContext p, UList<String> seq) {
+	static void infer(UList<PegRule> ruleList, ParsingContext2 p, UList<String> seq) {
 		if(!p.hasUnconsumedCharacter()) {
 			printSequence(seq);
 			return;

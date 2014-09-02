@@ -30,9 +30,9 @@ class ParsingVisitor {
 	}
 	public void visitAny(PAny e) {
 	}
-	public void visitNotAny(PNotAny e) {
-		e.orig.visit(this);
-	}
+//	public void visitNotAny(PNotAny e) {
+//		e.orig.visit(this);
+//	}
 	public void visitTagging(PTagging e) {
 	}
 	public void visitMessage(PMessage e) {
@@ -357,15 +357,15 @@ class Optimizer extends ParsingVisitor {
 			}
 			//System.out.println("unremoved: " + e);
 		}
-		if(e instanceof PCommit) {
-			PExpression inner = ((PCommit) e).inner;
-			if(!inner.is(PExpression.HasConnector)) {
-				this.peg.InterTerminalOptimization += 1;
-				//System.out.println("removed: " + e);
-				return inner;
-			}
-			//System.out.println("unremoved: " + e);
-		}
+//		if(e instanceof PCommit) {
+//			PExpression inner = ((PCommit) e).inner;
+//			if(!inner.is(PExpression.HasConnector)) {
+//				this.peg.InterTerminalOptimization += 1;
+//				//System.out.println("removed: " + e);
+//				return inner;
+//			}
+//			//System.out.println("unremoved: " + e);
+//		}
 		return e;
 	}
 
@@ -523,16 +523,16 @@ class ObjectRemover extends ParsingVisitor {
 			this.returnPeg = e.base.newNonTerminal(e.symbol + "'");
 		}
 	}
-	@Override
-	public void visitNotAny(PNotAny e) {
-		PExpression ne = this.removeObjectOperation(e.not);
-		if(ne == null) {
-			this.returnPeg = e.base.newAny(".");
-			return ;
-		}
-		e.not = (PNot)ne;
-		this.returnPeg = e;
-	}
+//	@Override
+//	public void visitNotAny(PNotAny e) {
+//		PExpression ne = this.removeObjectOperation(e.not);
+//		if(ne == null) {
+//			this.returnPeg = e.base.newAny(".");
+//			return ;
+//		}
+//		e.not = (PNot)ne;
+//		this.returnPeg = e;
+//	}
 	@Override
 	public void visitTagging(PTagging e) {
 		this.returnPeg = null;

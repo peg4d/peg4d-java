@@ -201,11 +201,11 @@ class GrammarFormatter extends ParsingVisitor {
 			e.inner.visit(this);
 			sb.append(">");
 		}
-		else if(e instanceof PCommit) {
-			sb.append("<commit ");
-			e.inner.visit(this);
-			sb.append(">");
-		}
+//		else if(e instanceof PCommit) {
+//			sb.append("<commit ");
+//			e.inner.visit(this);
+//			sb.append(">");
+//		}
 		else {
 			e.inner.visit(this);
 		}
@@ -227,16 +227,10 @@ class CodeGenerator extends GrammarFormatter {
 		labelId++;
 		return l;
 	}
-	private void writeLabel(String label) {
-		sb.append(label + ":\n");
-	}
 	private void writeLabel(int label) {
 		sb.append(" L" + label + ":\n");
 		labelMap.put(label, opList.size());
 	}
-//	private void writeCode(String code) {
-//		sb.append("\t" + code + "\n");
-//	}
 	
 	private void writeCode(MachineInstruction mi) {
 		sb.append("\t" + mi + "\n");
@@ -281,7 +275,6 @@ class CodeGenerator extends GrammarFormatter {
 		}
 	}
 
-	
 	private void formatRule(String ruleName, PExpression e) {
 		sb.append(ruleName + ":\n");
 		e.visit(this);
@@ -293,35 +286,35 @@ class CodeGenerator extends GrammarFormatter {
 	}
 	@Override
 	public void visitString(PString e) {
-		this.writeCode(MachineInstruction.TMATCH, ParsingCharset.quoteString('\'', e.text, '\''));
+		this.writeCode(MachineInstruction.opMatchText, ParsingCharset.quoteString('\'', e.text, '\''));
 	}
 	@Override
 	public void visitCharacter(PCharacter e) {
-		this.writeCode(MachineInstruction.AMATCH, e.charset.toString());
+		this.writeCode(MachineInstruction.opMatchCharset, e.charset.toString());
 	}
 	@Override
 	public void visitAny(PAny e) {
-		this.writeCode(MachineInstruction.UMATCH);
+		this.writeCode(MachineInstruction.opMatchAnyChar);
 	}
 	@Override
 	public void visitTagging(PTagging e) {
-		this.writeCode(MachineInstruction.TAG, e.tag.toString());
+		this.writeCode(MachineInstruction.opTagging, e.tag.toString());
 	}
 	@Override
 	public void visitMessage(PMessage e) {
-		this.writeCode(MachineInstruction.REPLACE, ParsingCharset.quoteString('\'', e.symbol, '\''));
+		this.writeCode(MachineInstruction.opValue, ParsingCharset.quoteString('\'', e.symbol, '\''));
 	}
 	@Override
 	public void visitIndent(PIndent e) {
-		this.writeCode(MachineInstruction.INDENT);
+		this.writeCode(MachineInstruction.opIndent);
 	}
 	@Override
 	public void visitOptional(POptional e) {
-		writeCode(MachineInstruction.PUSH_FPOS);
-		writeCode(MachineInstruction.PUSH_LEFT);
+		writeCode(MachineInstruction.opRememberFailurePosition);
+		writeCode(MachineInstruction.opStoreObject);
 		e.inner.visit(this);
-		writeCode(MachineInstruction.POP_LEFT_IFFAIL);
-		writeCode(MachineInstruction.POP_FPOS_FORGET);
+		writeCode(MachineInstruction.opRestoreObjectIfFailure);
+		writeCode(MachineInstruction.opForgetFailurePosition);
 	}
 	@Override
 	public void visitRepetition(PRepetition e) {
@@ -332,56 +325,55 @@ class CodeGenerator extends GrammarFormatter {
 			e.inner.visit(this);
 			writeJumpCode(MachineInstruction.IFFAIL,labelE2);
 		}
-		writeCode(MachineInstruction.PUSH_FPOS);
+		writeCode(MachineInstruction.opRememberFailurePosition);
 		writeLabel(labelL);
 		e.inner.visit(this);
 		writeJumpCode(MachineInstruction.IFFAIL, labelE);
 		writeJumpCode(MachineInstruction.JUMP, labelL);
 		writeLabel(labelE);
-		writeCode(MachineInstruction.POP_FPOS_FORGET);
+		writeCode(MachineInstruction.opForgetFailurePosition);
 		writeLabel(labelE2);
 	}
 	
 	@Override
 	public void visitAnd(PAnd e) {
-		writeCode(MachineInstruction.PUSH_POS);
+		writeCode(MachineInstruction.opRememberPosition);
 		e.inner.visit(this);
-		writeCode(MachineInstruction.POP_POS);		
+		writeCode(MachineInstruction.opBacktrackPosition);
 	}
 
 	@Override
 	public void visitNot(PNot e) {
-		writeCode(MachineInstruction.PUSH_POS);
-		writeCode(MachineInstruction.PUSH_LEFT);
+		writeCode(MachineInstruction.opRememberPosition);
+		writeCode(MachineInstruction.opRememberFailurePosition);
+		writeCode(MachineInstruction.opStoreObject);
 		e.inner.visit(this);
-		writeCode(MachineInstruction.POP_LEFT_NOT);
-		writeCode(MachineInstruction.POP_POS);		
+		writeCode(MachineInstruction.opRestoreNegativeObject);
+		writeCode(MachineInstruction.opForgetFailurePosition);
+		writeCode(MachineInstruction.opBacktrackPosition);		
 	}
 
 	@Override
 	public void visitConnector(PConnector e) {
-		writeCode(MachineInstruction.PUSH_LEFT);
+		writeCode(MachineInstruction.opStoreObject);
 		e.inner.visit(this);
-		writeCode(MachineInstruction.POP_LEFT_CONNECT, ""+e.index);
+		writeCode(MachineInstruction.opConnectObject, ""+e.index);
 	}
 
 	@Override
 	public void visitSequence(PSequence e) {
 		int labelF = newLabel();
 		int labelE = newLabel();
-		writeCode(MachineInstruction.PUSH_POS);
-		writeCode(MachineInstruction.PUSH_BUFPOS);
+		writeCode(MachineInstruction.opRememberSequencePosition);
 		for(int i = 0; i < e.size(); i++) {
 			PExpression se = e.get(i);
 			se.visit(this);
 			writeJumpCode(MachineInstruction.IFFAIL, labelF);
 		}
-		writeCode(MachineInstruction.POP_BUFPOS);
-		writeCode(MachineInstruction.POP_POS);
+		writeCode(MachineInstruction.opComitSequencePosition);
 		writeJumpCode(MachineInstruction.JUMP, labelE);
 		writeLabel(labelF);
-		writeCode(MachineInstruction.POP_BUFPOS_BACK);
-		writeCode(MachineInstruction.POP_POS_BACK);
+		writeCode(MachineInstruction.opBackTrackSequencePosition);
 		writeLabel(labelE);
 	}
 
@@ -389,55 +381,46 @@ class CodeGenerator extends GrammarFormatter {
 	public void visitChoice(PChoice e) {
 		int labelS = newLabel();
 		int labelE = newLabel();
-		writeCode(MachineInstruction.PUSH_FPOS);
+		writeCode(MachineInstruction.opRememberFailurePosition);
 		for(int i = 0; i < e.size(); i++) {
 			e.get(i).visit(this);
 			writeJumpCode(MachineInstruction.IFSUCC, labelS);
 		}
-		writeCode(MachineInstruction.POP_FPOS);
+		writeCode(MachineInstruction.opUpdateFailurePosition);
 		writeJumpCode(MachineInstruction.JUMP, labelE);
 		writeLabel(labelS);
-		writeCode(MachineInstruction.POP_FPOS_FORGET);
+		writeCode(MachineInstruction.opForgetFailurePosition);
 		writeLabel(labelE);
 	}
 
 	@Override
 	public void visitConstructor(PConstructor e) {
 		int labelF = newLabel();
-		int labelF2 = newLabel();
 		int labelE = newLabel();
-		writeCode(MachineInstruction.PUSH_POS);
-		for(int i = 0; i < e.prefetchIndex; i++) {
+		if(e.leftJoin) {
+			writeCode(MachineInstruction.opLeftJoinObject);
+		}
+		else {
+			writeCode(MachineInstruction.opNewObject);
+		}
+		writeCode(MachineInstruction.opRememberSequencePosition);
+		for(int i = 0; i < e.size(); i++) {
 			PExpression se = e.get(i);
 			se.visit(this);
 			writeJumpCode(MachineInstruction.IFFAIL, labelF);
 		}
-		writeCode(MachineInstruction.PUSH_BUFPOS);
-		writeCode(MachineInstruction.NEW);
-		for(int i = e.prefetchIndex; i < e.size(); i++) {
-			PExpression se = e.get(i);
-			se.visit(this);
-			writeJumpCode(MachineInstruction.IFFAIL, labelF2);
-		}
-		writeCode(MachineInstruction.POP_BUFPOS);
-		writeCode(MachineInstruction.POP_POS);
+		writeCode(MachineInstruction.opComitSequencePosition);
 		writeJumpCode(MachineInstruction.JUMP, labelE);
-		writeLabel(labelF2);
-		writeCode(MachineInstruction.POP_BUFPOS);
 		writeLabel(labelF);
-		writeCode(MachineInstruction.POP_POS_BACK);
+		writeCode(MachineInstruction.opBackTrackSequencePosition);
 		writeLabel(labelE);
+		writeCode(MachineInstruction.opCommitObject);
 	}
 
 	@Override
 	public void visitOperation(POperator e) {
 		if(e instanceof PMatch) {
 			sb.append("<match ");
-			e.inner.visit(this);
-			sb.append(">");
-		}
-		else if(e instanceof PCommit) {
-			sb.append("<commit ");
 			e.inner.visit(this);
 			sb.append(">");
 		}

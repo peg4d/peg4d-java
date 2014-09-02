@@ -1,9 +1,13 @@
 package org.peg4d.vm;
 
+import org.peg4d.PExpression;
+
 public final class Opcode {
 	public MachineInstruction opcode;
-    public int ndata = 0;
+    public int ndata = 0;          
     public byte[] bdata = null;
+    public PExpression generated; // this is 
+    
     public Opcode(MachineInstruction mi) {
     	this.opcode = mi;
     }
