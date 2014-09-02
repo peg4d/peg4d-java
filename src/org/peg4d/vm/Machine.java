@@ -97,7 +97,6 @@ public class Machine {
 	    }
 	}
 
-	
 	public final static void TMATCH(MachineContext c, Opcode op)
 	{
 		if(c.source.match(c.pos, op.bdata)) {
@@ -107,7 +106,12 @@ public class Machine {
 			c.left = failure(c);
 		}
 	}
-		
+
+	
+	
+	
+	
+	
 	ParsingObject run(ParsingObject left, ParsingSource s, long pos, int pc, Opcode[] code) {
 		Opcode op = code[pc];
 		MachineContext c = new MachineContext(left, s, pos);
@@ -164,6 +168,7 @@ public class Machine {
 			case POP_FPOS_FORGET:
 				POP_FPOS_FORGET(c);
 				break;
+
 			case PUSH_LEFT:
 				PUSH_LEFT(c);
 				break;
@@ -179,6 +184,7 @@ public class Machine {
 			case POP_LEFT_CONNECT:
 				POP_LEFT_CONNECT(c, op);
 				break;
+				
 			case TMATCH:
 				TMATCH(c, op);
 				break;

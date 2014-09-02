@@ -790,7 +790,6 @@ class PChoice extends PList {
 	}
 }
 
-
 class PMappedChoice extends PChoice {
 	PExpression[] caseOf = null;
 	PMappedChoice(Grammar base, int flag, UList<PExpression> list) {
