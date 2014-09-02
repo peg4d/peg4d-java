@@ -675,7 +675,7 @@ abstract class PList extends PExpression {
 				return;
 			}
 		}
-		context.opComitSequencePosition();
+		context.opCommitSequencePosition();
 	}
 
 	
@@ -776,7 +776,7 @@ class PSequence extends PList {
 		for(int i = 0; i < this.size(); i++) {
 			ParsingObject right = this.get(i).simpleMatch(left, context);
 			if(right.isFailure()) {
-				context.rollbackObjectStack(mark);
+				context.abortLinkLog(mark);
 				context.rollback(pos);
 				return right;
 			}
@@ -979,7 +979,7 @@ class PConnector extends PUnary {
 			left.setSourcePosition(pos);
 		}
 		else {
-			context.pushConnection(left, this.index, node);
+			context.logLink(left, this.index, node);
 		}
 		return left;
 	}
@@ -1090,12 +1090,12 @@ class PConstructor extends PList {
 			int mark = context.markObjectStack();
 			ParsingObject newnode = context.newParsingObject(this.tagName, startIndex, this);
 			if(this.leftJoin) {
-				context.pushConnection(newnode, -1, leftNode);
+				context.logLink(newnode, -1, leftNode);
 			}
 			for(int i = this.prefetchIndex; i < this.size(); i++) {
 				ParsingObject node = this.get(i).simpleMatch(newnode, context);
 				if(node.isFailure()) {
-					context.rollbackObjectStack(mark);
+					context.abortLinkLog(mark);
 					context.rollback(startIndex);
 					return node;
 				}
@@ -1103,7 +1103,7 @@ class PConstructor extends PList {
 				//				e.warning("dropping @" + newnode.name + " " + node);
 				//			}
 			}
-			context.popConnection(newnode, startIndex, mark);
+			context.commitLinkLog(newnode, startIndex, mark);
 			if(context.stat != null) {
 				context.stat.countObjectCreation();
 			}
@@ -1119,7 +1119,7 @@ class PConstructor extends PList {
 				break;  // this not happens
 			}
 		}
-		context.popConnection(newnode, pos, mark);
+		context.commitLinkLog(newnode, pos, mark);
 	}
 }
 
@@ -1338,7 +1338,7 @@ class PMatch extends POperator {
 //		int mark = context.markObjectStack();
 //		left = this.inner.simpleMatch(left, context);
 //		if(left.isFailure()) {
-//			context.rollbackObjectStack(mark);
+//			context.abortLinkLog(mark);
 //		}
 //		return left;
 //	}

@@ -370,7 +370,7 @@ class CodeGenerator extends GrammarFormatter {
 			se.visit(this);
 			writeJumpCode(MachineInstruction.IFFAIL, labelF);
 		}
-		writeCode(MachineInstruction.opComitSequencePosition);
+		writeCode(MachineInstruction.opCommitSequencePosition);
 		writeJumpCode(MachineInstruction.JUMP, labelE);
 		writeLabel(labelF);
 		writeCode(MachineInstruction.opBackTrackSequencePosition);
@@ -409,7 +409,7 @@ class CodeGenerator extends GrammarFormatter {
 			se.visit(this);
 			writeJumpCode(MachineInstruction.IFFAIL, labelF);
 		}
-		writeCode(MachineInstruction.opComitSequencePosition);
+		writeCode(MachineInstruction.opCommitSequencePosition);
 		writeJumpCode(MachineInstruction.JUMP, labelE);
 		writeLabel(labelF);
 		writeCode(MachineInstruction.opBackTrackSequencePosition);

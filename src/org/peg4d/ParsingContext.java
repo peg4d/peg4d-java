@@ -4,7 +4,7 @@ public class ParsingContext {
 	ParsingObject left;
 	ParsingSource source;
 
-	private ParsingTag emptyTag ;	
+	protected ParsingTag emptyTag;	
 	protected Stat          stat   = null;
 
 	public ParsingContext(ParsingObject left, ParsingSource s, long pos) {
@@ -151,18 +151,18 @@ public class ParsingContext {
 		assert(mark == this.stackSize);
 	}
 	
-	final void logLink(ParsingObject parentNode, int index, ParsingObject childNode) {
+	final void logLink(ParsingObject parent, int index, ParsingObject child) {
 		assert(!this.isRecognitionMode());
 		LinkLog l = this.newLog();
-		l.childNode  = childNode;
-		childNode.parent = parentNode;
+		l.childNode  = child;
+		child.parent = parent;
 		l.index = index;
 		l.next = this.logStack;
 		this.logStack = l;
 		this.stackSize += 1;
 	}
 
-	final void comitLinkLog(ParsingObject newnode, long startIndex, int mark) {
+	final void commitLinkLog(ParsingObject newnode, long startIndex, int mark) {
 		assert(!this.isRecognitionMode());
 		LinkLog first = null;
 		int objectSize = 0;
@@ -310,7 +310,7 @@ public class ParsingContext {
 		opush(this.left);
 	}
 
-	public final void opComitSequencePosition() {
+	public final void opCommitSequencePosition() {
 		opop();
 		lpop();
 		lpop();
@@ -415,7 +415,7 @@ public class ParsingContext {
 			if(this.canTransCapture()) {
 				this.lpop();
 				int mark = (int)this.lstack[this.lstacktop];
-				this.comitLinkLog(this.left, this.left.getSourcePosition(), mark);
+				this.commitLinkLog(this.left, this.left.getSourcePosition(), mark);
 			}
 		}
 	}

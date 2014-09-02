@@ -73,8 +73,8 @@ public class VirtualMachine {
 			case opRememberSequencePosition:
 				c.opRememberSequencePosition();
 				break;
-			case opComitSequencePosition:
-				c.opComitSequencePosition();
+			case opCommitSequencePosition:
+				c.opCommitSequencePosition();
 				break;
 			case opBackTrackSequencePosition:
 				c.opBackTrackSequencePosition();

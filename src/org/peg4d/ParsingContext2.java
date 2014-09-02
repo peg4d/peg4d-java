@@ -2,18 +2,17 @@ package org.peg4d;
 
 import java.util.concurrent.BlockingQueue;
 
-public class ParsingContext2 {
+public class ParsingContext2 extends ParsingContext {
 	public    Grammar       peg = null;
-	public    ParsingSource source;
-	protected long          pos = 0;
-	private ParsingTag emptyTag ;
-	
-	protected Stat          stat   = null;
+//	public    ParsingSource source;
+//	protected long          pos = 0;
+//	private ParsingTag emptyTag ;
+//	
+//	protected Stat          stat   = null;
 	
 	ParsingContext2(Grammar peg, ParsingSource source) {
+		super(null, source, 0);
 		this.peg = peg;
-		this.source = source;
-		this.pos = 0;
 		this.emptyTag = this.peg.getModelTag("#empty");
 	}
 	
@@ -24,20 +23,23 @@ public class ParsingContext2 {
 		this.emptyTag = this.peg.getModelTag("#empty");
 	}
 
-	protected final long getPosition() {
-		return this.pos;
-	}
-	
-	protected final void setPosition(long pos) {
-		this.pos = pos;
-	}
-	
-	protected final void rollback(long pos) {
-		if(stat != null && this.pos > pos) {
-			stat.statBacktrack1(pos, this.pos);
-		}
-		this.pos = pos;
-	}
+//	@Override
+//	protected final long getPosition() {
+//		return this.pos;
+//	}
+//	
+//	@Override
+//	protected final void setPosition(long pos) {
+//		this.pos = pos;
+//	}
+//	
+//	@Override
+//	protected final void rollback(long pos) {
+//		if(stat != null && this.pos > pos) {
+//			stat.statBacktrack1(pos, this.pos);
+//		}
+//		this.pos = pos;
+//	}
 	
 	@Override
 	public final String toString() {
@@ -71,33 +73,9 @@ public class ParsingContext2 {
 		return this.source.substring(startIndex, endIndex);
 	}
 
-	protected final void consume(int plus) {
-		this.pos = this.pos + plus;
-	}
-//
-//	protected final boolean match(int ch) {
-//		if(ch == this.byteAt(this.pos)) {
-//			this.consume(1);
-//			return true;
-//		}
-//		return false;
-//	}
-//
-//	protected final boolean match(byte[] utf8) {
-//		long pos = this.pos;
-//		if(pos + utf8.length <= this.endPosition && this.source.match(pos, utf8)) {
-//			this.consume(utf8.length);
-//			return true;
-//		}
-//		return false;
-//	}
-//	
-//	protected final boolean match(ParsingCharset charset) {
-//		if(charset.match(this.getByte())) {
-//			this.consume(1);
-//			return true;
-//		}
-//		return false;
+//	@Override
+//	protected final void consume(int plus) {
+//		this.pos = this.pos + plus;
 //	}
 	
 	public final String formatErrorMessage(String msg1, String msg2) {
@@ -129,7 +107,6 @@ public class ParsingContext2 {
 		}
 		return start.simpleMatch(new ParsingObject(this.emptyTag, this.source, 0), this);
 	}
-
 	
 	public ParsingObject parseNode(String startPoint) {
 		ParsingObject pego = this.match(startPoint);
@@ -150,28 +127,31 @@ public class ParsingContext2 {
 		return pego;
 	}
 	
-	private boolean isMatchingOnly = false;
-	protected ParsingObject successResult = new ParsingObject(this.emptyTag, this.source, 0);
+//	private boolean isMatchingOnly = false;
+//	protected ParsingObject successResult = new ParsingObject(this.emptyTag, this.source, 0);
+//	
+//	@Override
+//	public final boolean isRecognitionMode() {
+//		return this.isMatchingOnly;
+//	}
+//
+//	@Override
+//	public final boolean setRecognitionMode(boolean recognitionMode) {
+//		boolean b = this.isMatchingOnly;
+//		this.isMatchingOnly = recognitionMode;
+//		return b;
+//	}
 	
-	public final boolean isRecognitionMode() {
-		return this.isMatchingOnly;
-	}
-
-	public final boolean setRecognitionMode(boolean recognitionMode) {
-		boolean b = this.isMatchingOnly;
-		this.isMatchingOnly = recognitionMode;
-		return b;
-	}
-	
-	public final ParsingObject newParsingObject(String tagName, long pos, PConstructor created) {
-		if(this.isRecognitionMode()) {
-			this.successResult.setSourcePosition(pos);
-			return this.successResult;
-		}
-		else {
-			return new ParsingObject(this.emptyTag, this.source, pos, created);
-		}
-	}
+//	@Override
+//	public final ParsingObject newParsingObject(String tagName, long pos, PConstructor created) {
+//		if(this.isRecognitionMode()) {
+//			this.successResult.setSourcePosition(pos);
+//			return this.successResult;
+//		}
+//		else {
+//			return new ParsingObject(this.emptyTag, this.source, pos, created);
+//		}
+//	}
 	
 	private long  failurePosition = 0;
 	private final ParsingObject failureResult = new ParsingObject(null, this.source, 0);
@@ -203,100 +183,99 @@ public class ParsingContext2 {
 		this.failurePosition = f;
 	}
 	
-	private class LinkLog {
-		LinkLog next;
-		int  index;
-		ParsingObject childNode;
-	}
+//	private class LinkLog {
+//		LinkLog next;
+//		int  index;
+//		ParsingObject childNode;
+//	}
+//
+//	LinkLog logStack = null;
+//	LinkLog unusedLog = null;
+//	int stackSize = 0;
+//	
+//	private LinkLog newLog() {
+//		if(this.unusedLog == null) {
+//			return new LinkLog();
+//		}
+//		LinkLog l = this.unusedLog;
+//		this.unusedLog = l.next;
+//		l.next = null;
+//		return l;
+//	}
+//
+//	private void disposeLog(LinkLog log) {
+//		log.childNode = null;
+//		log.next = this.unusedLog;
+//		this.unusedLog = log;
+//	}
+//	
+//	@Override
+//	protected int markObjectStack() {
+//		return stackSize;
+//	}
+//
+//	protected void rollbackObjectStack(int mark) {
+//		while(mark < this.stackSize) {
+//			LinkLog l = this.logStack;
+//			this.logStack = this.logStack.next;
+//			this.stackSize--;
+//			disposeLog(l);
+//		}
+//		assert(mark == this.stackSize);
+//	}
+//	
+//	final void pushConnection(ParsingObject parentNode, int index, ParsingObject childNode) {
+//		assert(!this.isRecognitionMode());
+//		LinkLog l = this.newLog();
+//		l.childNode  = childNode;
+//		childNode.parent = parentNode;
+//		l.index = index;
+//		l.next = this.logStack;
+//		this.logStack = l;
+//		this.stackSize += 1;
+//	}
+//
+//	final void popConnection(ParsingObject newnode, long startIndex, int mark) {
+//		assert(!this.isRecognitionMode());
+//		LinkLog first = null;
+//		int objectSize = 0;
+//		while(mark < this.stackSize) {
+//			LinkLog cur = this.logStack;
+//			this.logStack = this.logStack.next;
+//			this.stackSize--;
+//			if(cur.childNode.parent == newnode) {
+//				cur.next = first;
+//				first = cur;
+//				objectSize += 1;
+//			}
+//			else {
+//				disposeLog(cur);
+//			}
+//		}
+//		if(objectSize > 0) {
+//			newnode = this.newAst(newnode, objectSize);
+//			for(int i = 0; i < objectSize; i++) {
+//				LinkLog cur = first;
+//				first = first.next;
+//				if(cur.index == -1) {
+//					cur.index = i;
+//				}
+//				newnode.set(cur.index, cur.childNode);
+//				this.disposeLog(cur);
+//			}
+//			checkNullEntry(newnode);
+//		}
+//		newnode.setLength((int)(this.getPosition() - startIndex));
+//	}
+//	
+//	private final void checkNullEntry(ParsingObject o) {
+//		for(int i = 0; i < o.size(); i++) {
+//			if(o.get(i) == null) {
+//				o.set(i, new ParsingObject(emptyTag, this.source, 0));
+//			}
+//		}
+//	}
 
-	LinkLog logStack = null;
-	LinkLog unusedLog = null;
-	int stackSize = 0;
-	
-	private LinkLog newLog() {
-		if(this.unusedLog == null) {
-			return new LinkLog();
-		}
-		LinkLog l = this.unusedLog;
-		this.unusedLog = l.next;
-		l.next = null;
-		return l;
-	}
-
-	private void disposeLog(LinkLog log) {
-		log.childNode = null;
-		log.next = this.unusedLog;
-		this.unusedLog = log;
-	}
-	
-	protected int markObjectStack() {
-		return stackSize;
-	}
-
-	protected void rollbackObjectStack(int mark) {
-		while(mark < this.stackSize) {
-			LinkLog l = this.logStack;
-			this.logStack = this.logStack.next;
-			this.stackSize--;
-			disposeLog(l);
-		}
-		assert(mark == this.stackSize);
-	}
-	
-	final void pushConnection(ParsingObject parentNode, int index, ParsingObject childNode) {
-		assert(!this.isRecognitionMode());
-		LinkLog l = this.newLog();
-		l.childNode  = childNode;
-		childNode.parent = parentNode;
-		l.index = index;
-		l.next = this.logStack;
-		this.logStack = l;
-		this.stackSize += 1;
-	}
-
-	final void popConnection(ParsingObject newnode, long startIndex, int mark) {
-		assert(!this.isRecognitionMode());
-		LinkLog first = null;
-		int objectSize = 0;
-		while(mark < this.stackSize) {
-			LinkLog cur = this.logStack;
-			this.logStack = this.logStack.next;
-			this.stackSize--;
-			if(cur.childNode.parent == newnode) {
-				cur.next = first;
-				first = cur;
-				objectSize += 1;
-			}
-			else {
-				disposeLog(cur);
-			}
-		}
-		if(objectSize > 0) {
-			newnode = this.newAst(newnode, objectSize);
-			for(int i = 0; i < objectSize; i++) {
-				LinkLog cur = first;
-				first = first.next;
-				if(cur.index == -1) {
-					cur.index = i;
-				}
-				newnode.set(cur.index, cur.childNode);
-				this.disposeLog(cur);
-			}
-			checkNullEntry(newnode);
-		}
-		newnode.setLength((int)(this.getPosition() - startIndex));
-	}
-	
-	private final void checkNullEntry(ParsingObject o) {
-		for(int i = 0; i < o.size(); i++) {
-			if(o.get(i) == null) {
-				o.set(i, new ParsingObject(emptyTag, this.source, 0));
-			}
-		}
-	}
-
-	
-	
 //	long statExportCount = 0;
 //	long statExportSize  = 0;
 //	long statExportFailure  = 0;

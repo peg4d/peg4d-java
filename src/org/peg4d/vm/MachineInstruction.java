@@ -23,7 +23,7 @@ public enum MachineInstruction {
 	opCommitPosition,
 	opBacktrackPosition,
 	opRememberSequencePosition,
-	opComitSequencePosition,
+	opCommitSequencePosition,
 	opBackTrackSequencePosition,
 	opRememberFailurePosition,
 	opUpdateFailurePosition,
