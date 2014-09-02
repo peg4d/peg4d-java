@@ -68,12 +68,6 @@ class GrammarFormatter extends ParsingVisitor {
 		this.formatRuleName(e.symbol, e);
 	}
 	@Override
-	public void visitLazyNonTerminal(PLazyNonTerminal e) {
-		sb.append("<lazy ");
-		sb.append(e.symbol);
-		sb.append(">");
-	}
-	@Override
 	public void visitString(PString e) {
 		char quote = '\'';
 		if(e.text.indexOf("'") != -1) {
@@ -296,11 +290,6 @@ class CodeGenerator extends GrammarFormatter {
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
 		this.writeCode(MachineInstruction.CALL, e.symbol);
-	}
-	
-	@Override
-	public void visitLazyNonTerminal(PLazyNonTerminal e) {
-
 	}
 	@Override
 	public void visitString(PString e) {

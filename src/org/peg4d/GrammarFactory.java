@@ -171,7 +171,7 @@ public class GrammarFactory {
 	private PExpression newOptionalImpl(Grammar peg, PExpression p) {
 		if(p instanceof PByteChar) {
 			peg.LexicalOptimization += 1;
-			return new POptionalString1(peg, 0, (PByteChar)p);
+			return new POptionalByteChar(peg, 0, (PByteChar)p);
 		}
 		if(p instanceof PString) {
 			peg.LexicalOptimization += 1;
@@ -270,7 +270,7 @@ public class GrammarFactory {
 			if(p instanceof PString) {
 				peg.LexicalOptimization += 1;
 				if(p instanceof PByteChar) {
-					return new PNotString1(peg, 0, (PByteChar)p);
+					return new PNotByteChar(peg, 0, (PByteChar)p);
 				}
 				return new PNotString(peg, 0, (PString)p);
 			}

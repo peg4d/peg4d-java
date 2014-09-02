@@ -24,9 +24,6 @@ class ParsingVisitor {
 			e.base.getExpression(e.symbol).visit(this);
 		}
 	}
-	public void visitLazyNonTerminal(PLazyNonTerminal e) {
-
-	}
 	public void visitString(PString e) {
 	}
 	public void visitCharacter(PCharacter e) {
@@ -138,7 +135,7 @@ class NonTerminalChecker extends ParsingVisitor {
 			e.base.foundError = true;
 			return;
 		}
-		e.jumpExpression = next.expr;
+		e.resolvedExpression = next.expr;
 		if(next == checking) {
 			if(this.consumedMinimumLength == 0) {
 				checking.reportError("left recursion: " + e.symbol);
@@ -284,7 +281,7 @@ class Inliner extends ParsingVisitor {
 			PNonTerminal n = (PNonTerminal)e;
 			n.derived(n.getNext());
 			if(peg.optimizationLevel > 3) {
-				return ! n.jumpExpression.is(PExpression.CyclicRule);
+				return ! n.resolvedExpression.is(PExpression.CyclicRule);
 			}
 		}
 		return false;
@@ -293,7 +290,7 @@ class Inliner extends ParsingVisitor {
 	final PExpression doInline(PExpression parent, PNonTerminal r) {
 //		System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " e=" + r.jumpExpression);
 		this.peg.InliningCount += 1;
-		return r.jumpExpression;
+		return r.resolvedExpression;
 	}
 
 	@Override
@@ -470,8 +467,8 @@ class MemoRemover extends ParsingVisitor {
 	
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
-		if(e.jumpExpression != null) {
-			e.jumpExpression = this.removeMemo(e.jumpExpression);
+		if(e.resolvedExpression != null) {
+			e.resolvedExpression = this.removeMemo(e.resolvedExpression);
 		}
 	}
 
@@ -522,7 +519,7 @@ class ObjectRemover extends ParsingVisitor {
 	
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
-		if(e.jumpExpression.hasObjectOperation()) {
+		if(e.resolvedExpression.hasObjectOperation()) {
 			this.returnPeg = e.base.newNonTerminal(e.symbol + "'");
 		}
 	}

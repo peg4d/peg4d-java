@@ -125,10 +125,9 @@ abstract class PTerm extends PExpression {
 	}
 }
 
-class PNonTerminal extends PTerm {
+class PNonTerminal extends PExpression {
 	String symbol;
-	PExpression    jumpExpression = null;
-	
+	PExpression    resolvedExpression = null;
 	PNonTerminal(Grammar base, int flag, String ruleName) {
 		super(base, flag | PExpression.HasNonTerminal | PExpression.NoMemo);
 		this.symbol = ruleName;
@@ -138,48 +137,48 @@ class PNonTerminal extends PTerm {
 		probe.visitNonTerminal(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
-		if(this.jumpExpression != null) {
-			return this.jumpExpression.checkFirstByte(ch);
+		if(this.resolvedExpression != null) {
+			return this.resolvedExpression.checkFirstByte(ch);
 		}
 		return true;
 	}
 	final PExpression getNext() {
-		if(this.jumpExpression == null) {
+		if(this.resolvedExpression == null) {
 			return this.base.getExpression(this.symbol);
 		}
-		return this.jumpExpression;
+		return this.resolvedExpression;
 	}
 	public boolean isForeignNonTerminal() {
-		return this.jumpExpression.base != this.base;
+		return this.resolvedExpression.base != this.base;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
-		return this.jumpExpression.simpleMatch(left, context);
+		return this.resolvedExpression.simpleMatch(left, context);
 	}
 }
 
-class PLazyNonTerminal extends PTerm {
-	String symbol;
-	PLazyNonTerminal(Grammar base, int flag, String ruleName) {
-		super(base, flag| PExpression.HasLazyNonTerminal | PExpression.NoMemo);
-		this.symbol = ruleName;
-	}
-	@Override
-	protected void visit(ParsingVisitor probe) {
-		probe.visitLazyNonTerminal(this);
-	}
-	@Override boolean checkFirstByte(int ch) {
-		return true;
-	}
-	@Override
-	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
-		PExpression next = context.peg.getExpression(this.symbol);
-		if(next != null) {
-			return next.simpleMatch(left, context);
-		}
-		return left;
-	}
-}
+//class PLazyNonTerminal extends PTerm {
+//	String symbol;
+//	PLazyNonTerminal(Grammar base, int flag, String ruleName) {
+//		super(base, flag| PExpression.HasLazyNonTerminal | PExpression.NoMemo);
+//		this.symbol = ruleName;
+//	}
+//	@Override
+//	protected void visit(ParsingVisitor probe) {
+//		probe.visitLazyNonTerminal(this);
+//	}
+//	@Override boolean checkFirstByte(int ch) {
+//		return true;
+//	}
+//	@Override
+//	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
+//		PExpression next = context.peg.getExpression(this.symbol);
+//		if(next != null) {
+//			return next.simpleMatch(left, context);
+//		}
+//		return left;
+//	}
+//}
 
 class PString extends PTerm {
 	String text;
@@ -345,29 +344,6 @@ class PCharacter extends PTerm {
 	}
 }
 
-//class PegUtf8Range extends PegCharacter {
-//	int fromChar;
-//	int toChar;
-//	public PegUtf8Range(Grammar base, int flag, char fromChar, char toChar) {
-//		super(base, flag, new UCharset(fromChar, toChar));
-//		this.fromChar = UCharset.getFirstChar("" +fromChar);
-//		this.toChar   = UCharset.getFirstChar("" +toChar);
-//	}
-//	@Override boolean acceptC1(int ch) {
-//		return (this.fromChar <= ch && ch <= this.toChar);
-//	}
-//	@Override
-//	public ParsingObject simpleMatch(ParsingObject left, ParserContext context) {
-//		int len = UCharset.lengthOfUtf8(context.getChar());
-//		int uchar = context.getUChar();
-//		if(this.fromChar <= uchar && uchar <= this.toChar ) {
-//			context.consume(len);
-//			return left;
-//		}
-//		return context.foundFailure(this);
-//	}
-//}
-
 abstract class PUnary extends PExpression {
 	PExpression inner;
 	public PUnary(Grammar base, int flag, PExpression e) {
@@ -410,7 +386,7 @@ class POptional extends PUnary {
 
 class POptionalString extends POptional {
 	byte[] utf8;
-	public POptionalString(Grammar base, int flag, PString e) {
+	POptionalString(Grammar base, int flag, PString e) {
 		super(base, flag | PExpression.NoMemo, e);
 		this.utf8 = e.utf8;
 	}
@@ -423,15 +399,15 @@ class POptionalString extends POptional {
 	}
 }
 
-class POptionalString1 extends POptional {
-	int symbol1;
-	public POptionalString1(Grammar base, int flag, PByteChar e) {
+class POptionalByteChar extends POptional {
+	int byteChar;
+	POptionalByteChar(Grammar base, int flag, PByteChar e) {
 		super(base, flag | PExpression.NoMemo, e);
-		this.symbol1 = e.byteChar;
+		this.byteChar = e.byteChar;
 	}
 	@Override
 	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
-		if(context.getByteChar() == this.symbol1) {
+		if(context.getByteChar() == this.byteChar) {
 			context.consume(1);
 		}
 		return left;
@@ -599,9 +575,9 @@ class PNotString extends PNot {
 	}
 }
 
-class PNotString1 extends PNotString {
+class PNotByteChar extends PNotString {
 	int byteChar;
-	PNotString1(Grammar peg, int flag, PByteChar e) {
+	PNotByteChar(Grammar peg, int flag, PByteChar e) {
 		super(peg, flag, e);
 		this.byteChar = e.byteChar;
 	}
