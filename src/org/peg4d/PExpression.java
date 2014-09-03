@@ -474,6 +474,44 @@ class PRepetition extends PUnary {
 	}
 }
 
+class PRepetitionNtoM extends PRepetition {
+	public int atMost;
+	protected PRepetitionNtoM(Grammar base, int flag, PExpression e, int atLeast, int atMost) {
+		super(base, flag, e, atLeast);
+		this.atMost = atMost;
+	}
+
+	@Override
+	public ParsingObject simpleMatch(ParsingObject left, ParsingContext context) {
+		long ppos = -1;
+		long pos = context.getPosition();
+		long f = context.rememberFailure();
+		int count = 0;
+		while(ppos < pos) {
+			ParsingObject right = this.inner.simpleMatch(left, context);
+			if(right.isFailure()) {
+				break;
+			}
+			left = right;
+			ppos = pos;
+			pos = context.getPosition();
+			++count;
+			if(atMost > 0 && count >= atMost) {
+				break;
+			}
+			if(atMost <= 0 && count == atleast) {
+				break;
+			}
+		}
+		if(count < this.atleast) {
+			return context.foundFailure(this);
+		}
+		context.forgetFailure(f);
+		return left;
+	}
+
+}
+
 //class POneMoreCharacter extends PRepetition {
 //	ParsingCharset charset;
 //	public POneMoreCharacter(Grammar base, int flag, PCharacter e) {

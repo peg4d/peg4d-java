@@ -70,6 +70,7 @@ public class GrammarFactory {
 	private static String prefixAnd = "&\b";
 	private static String prefixOneMore = "+\b";
 	private static String prefixZeroMore = "*\b";
+	private static String prefixNtoM = "<\b";
 	private static String prefixOptional = "?\b";
 	private static String prefixSequence = " \b";
 	private static String prefixChoice = "/\b";
@@ -238,6 +239,19 @@ public class GrammarFactory {
 			return new PZeroMoreCharacter(peg, 0, (PCharacter)p);
 		}
 		return new PRepetition(peg, 0, newCommit(peg, p), 0);
+	}
+
+	public final PExpression newNtoM(Grammar peg, PExpression p, int atLeast, int atMost) {
+		String key = prefixNtoM + p.key();
+		PExpression e = getsem(key);
+		if(e == null) {
+			e = putsem(key, newNtoMImpl(peg, p, atLeast, atMost));
+		}
+		return e;
+	}
+
+	private PExpression newNtoMImpl(Grammar peg, PExpression p, int atMost, int atLeast) {
+		return new PRepetitionNtoM(peg, 0, newCommit(peg, p), atMost, atLeast);
 	}
 
 	public final PExpression newAnd(Grammar peg, PExpression p) {

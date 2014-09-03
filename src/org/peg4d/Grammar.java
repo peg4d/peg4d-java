@@ -322,6 +322,9 @@ public class Grammar {
 	final PExpression newZeroMore(PExpression p) {
 		return this.factory.newZeroMore(this, p);
 	}
+	final PExpression newNtoM(PExpression p, int atLeast, int atMost) {
+		return this.factory.newNtoM(this, p, atLeast, atMost);
+	}
 	final PExpression newAnd(PExpression p) {
 		return this.factory.newAnd(this, p);
 	}
@@ -450,6 +453,7 @@ class PEG4dGrammar extends Grammar {
 	static final int POptional    = ParsingTag.tagId("#POptional");
 	static final int POneMore     = ParsingTag.tagId("#POneMore");
 	static final int PZeroMore    = ParsingTag.tagId("#PZeroMore");
+	static final int PNtoM        = ParsingTag.tagId("#PNtoM");
 	static final int PTimes       = ParsingTag.tagId("#PTimes");
 	static final int PMatch       = ParsingTag.tagId("#PMatch");
 	static final int PSequence    = ParsingTag.tagId("#PSequence");
@@ -585,6 +589,13 @@ class PEG4dGrammar extends Grammar {
 		}
 		if(pego.is(PEG4dGrammar.PZeroMore)) {
 			return loading.newZeroMore(toParsingExpression(loading, ruleName, pego.get(0)));
+		}
+		if(pego.is(PEG4dGrammar.PNtoM)) {
+			int atLeast = Integer.valueOf(pego.get(1).getText());
+			if(pego.size() < 3) {
+				return loading.newNtoM(toParsingExpression(loading, ruleName, pego.get(0)), atLeast, -1);
+			}
+			return loading.newNtoM(toParsingExpression(loading, ruleName, pego.get(0)), atLeast, Integer.valueOf(pego.get(2).getText()));
 		}
 		if(pego.is(PEG4dGrammar.POptional)) {
 			return loading.newOptional(toParsingExpression(loading, ruleName, pego.get(0)));
@@ -835,7 +846,8 @@ class PEG4dGrammar extends Grammar {
 						seq(t("*"), Tag("#PZeroMore")), 
 						seq(t("+"), Tag("#POneMore")), 
 						seq(t("?"), Tag("#POptional")),
-						seq(Connector, Optional(set(1, n("Number"))), Tag("#PConnector"))
+						seq(Connector, Optional(set(1, n("Number"))), Tag("#PConnector")),
+						seq(t("<"), Spacing, set(n("Number")), Spacing, Optional(seq(t(","), Spacing, set(n("Number")), Spacing)), t(">"), Tag("#PNtoM"))
 					)
 				)
 			)
