@@ -174,14 +174,6 @@ public class ParsingStream extends ParsingContext {
 		this.failurePosition = ParsingUtils.failure(pos, e);
 		return this.failureResult;
 	}
-
-	final long rememberFailure() {
-		return this.failurePosition;
-	}
-	
-	final void forgetFailure(long f) {
-		this.failurePosition = f;
-	}
 	
 //	private class LinkLog {
 //		LinkLog next;

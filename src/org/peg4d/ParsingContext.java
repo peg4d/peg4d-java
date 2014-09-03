@@ -1,5 +1,7 @@
 package org.peg4d;
 
+import org.peg4d.MemoMap.ObjectMemo;
+
 public class ParsingContext {
 	ParsingObject left;
 	ParsingSource source;
@@ -36,7 +38,6 @@ public class ParsingContext {
 		return (int)this.lstack[this.lstacktop];
 	}
 
-	
 	ParsingObject[] ostack;
 	int      ostacktop;
 
@@ -77,12 +78,18 @@ public class ParsingContext {
 		return this.left == null;
 	}
 
-//	public final void failure(PExpression e) {
-//		if(this.pos >= ParsingUtils.getpos(this.fpos)) {  // adding error location
-//			this.fpos = ParsingUtils.failure(this.pos, e);
-//		}
-//		this.left = null;
+//	final ParsingObject foundFailure(PExpression e) {
+//		this.opFailure();
+//		return this.left;
 //	}
+	
+	final long rememberFailure() {
+		return this.fpos;
+	}
+	
+	final void forgetFailure(long f) {
+		this.fpos = f;
+	}
 		
 	boolean isMatchingOnly = false;
 	ParsingObject successResult = new ParsingObject(this.emptyTag, this.source, 0);
@@ -207,10 +214,15 @@ public class ParsingContext {
 			}
 		}
 	}
-	
-	
-	
-	
+
+	final ObjectMemo getMemo(PMemo pMemo, long pos2) {
+		return null;
+	}
+
+	final void setMemo(long pos2, PMemo pMemo, Object object, int length) {
+		
+	}
+
 	public final void opFailure() {
 		if(this.pos >= fpos) {  // adding error location
 			this.fpos = this.pos;
@@ -437,6 +449,11 @@ public class ParsingContext {
 		}
 	}
 
+	public final void opIndent() {
+		byte[] indent = this.source.getIndentText(pos).getBytes();
+		this.opMatchText(indent);
+	}
+	
 	public final ParsingObject getResult() {
 		return this.left;
 	}
