@@ -192,14 +192,7 @@ class PString extends PTerminal {
 	}
 	@Override
 	public void simpleMatch(ParsingStream context) {
-		long pos = context.getPosition();
-		if(context.source.match(pos, this.utf8)) {
-			context.consume(this.utf8.length);
-			//System.out.println("pos=" + context.pos + " matched '" + this.text + "'");
-			return;
-		}
-		//System.out.println("pos=" + context.pos + " failed '" + this.text + "'");
-		context.foundFailure(this);
+		context.opMatchText(this.utf8);
 	}
 }
 
@@ -221,11 +214,7 @@ class PByteChar extends PString {
 	}
 	@Override
 	public void simpleMatch(ParsingStream context) {
-		if(context.byteAt(context.getPosition()) == this.byteChar) {
-			context.consume(1);
-			return;
-		}
-		context.foundFailure(this);
+		context.opMatchByteChar(this.byteChar);
 	}
 }
 
@@ -273,12 +262,7 @@ class PCharacter extends PTerminal {
 	}
 	@Override
 	public void simpleMatch(ParsingStream context) {
-		int consumed = this.charset.consume(context.source, context.getPosition());
-		if(consumed > 0) {
-			context.consume(consumed);
-			return;
-		}
-		context.foundFailure(this);
+		context.opMatchCharset(this.charset);
 	}
 }
 
@@ -379,9 +363,7 @@ class POptionalString extends POptional {
 	}
 	@Override
 	public void simpleMatch(ParsingStream context) {
-		if(context.source.match(context.getPosition(), this.utf8)) {
-			context.consume(this.utf8.length);
-		}
+		context.opMatchOptionalText(this.utf8);
 	}
 }
 
@@ -397,9 +379,7 @@ class POptionalByteChar extends POptional {
 	}
 	@Override
 	public void simpleMatch(ParsingStream context) {
-		if(context.getByteChar() == this.byteChar) {
-			context.consume(1);
-		}
+		context.opMatchOptionalByteChar(this.byteChar);
 	}
 }
 
@@ -415,8 +395,7 @@ class POptionalCharacter extends POptional {
 	}
 	@Override
 	public void simpleMatch(ParsingStream context) {
-		int consumed = this.charset.consume(context.source, context.getPosition());
-		context.consume(consumed);
+		context.opMatchOptionalCharset(this.charset);
 	}
 }
 
@@ -598,9 +577,7 @@ class PNotString extends PNot {
 	}
 	@Override
 	public void simpleMatch(ParsingStream context) {
-		if(context.source.match(context.getPosition(), this.utf8)) {
-			context.foundFailure(this);
-		}
+		context.opMatchTextNot(utf8);
 	}
 }
 
@@ -616,9 +593,7 @@ class PNotByteChar extends PNotString {
 	}
 	@Override
 	public void simpleMatch(ParsingStream context) {
-		if(this.byteChar == context.getByteChar()) {
-			context.foundFailure(this);
-		}
+		context.opMatchByteCharNot(this.byteChar);
 	}
 }	
 
@@ -634,10 +609,7 @@ class PNotCharacter extends PNot {
 	}
 	@Override
 	public void simpleMatch(ParsingStream context) {
-		long pos = context.getPosition();
-		if(this.charset.consume(context.source, pos) > 0) {
-			context.foundFailure(this);
-		}
+		context.opMatchCharsetNot(this.charset);
 	}
 }
 
