@@ -1,6 +1,5 @@
 package org.peg4d;
 
-import java.util.concurrent.BlockingQueue;
 
 public class ParsingStream extends ParsingContext {
 	public    Grammar       peg = null;
@@ -105,12 +104,14 @@ public class ParsingStream extends ParsingContext {
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
-		return start.simpleMatch(new ParsingObject(this.emptyTag, this.source, 0), this);
+		this.left = new ParsingObject(this.emptyTag, this.source, 0);
+		start.simpleMatch(this);
+		return this.left;
 	}
 	
 	public ParsingObject parseNode(String startPoint) {
 		ParsingObject pego = this.match(startPoint);
-		if(pego.isFailure()) {
+		if(this.isFailure()) {
 			pego = this.newErrorObject();
 			//this.pos = this.endPosition;
 		}
@@ -126,35 +127,9 @@ public class ParsingStream extends ParsingContext {
 		pego.expandAstToSize(size);
 		return pego;
 	}
-	
-//	private boolean isMatchingOnly = false;
-//	protected ParsingObject successResult = new ParsingObject(this.emptyTag, this.source, 0);
-//	
-//	@Override
-//	public final boolean isRecognitionMode() {
-//		return this.isMatchingOnly;
-//	}
-//
-//	@Override
-//	public final boolean setRecognitionMode(boolean recognitionMode) {
-//		boolean b = this.isMatchingOnly;
-//		this.isMatchingOnly = recognitionMode;
-//		return b;
-//	}
-	
-//	@Override
-//	public final ParsingObject newParsingObject(String tagName, long pos, PConstructor created) {
-//		if(this.isRecognitionMode()) {
-//			this.successResult.setSourcePosition(pos);
-//			return this.successResult;
-//		}
-//		else {
-//			return new ParsingObject(this.emptyTag, this.source, pos, created);
-//		}
-//	}
-	
+		
 	private long  failurePosition = 0;
-	private final ParsingObject failureResult = new ParsingObject(null, this.source, 0);
+	private final ParsingObject failureResult = null; //new ParsingObject(null, this.source, 0);
 
 	public final ParsingObject newErrorObject() {
 		ParsingObject pego = new ParsingObject(this.peg.getModelTag("#error"), this.source, failurePosition);
@@ -163,11 +138,11 @@ public class ParsingStream extends ParsingContext {
 		return pego;
 	}
 	
-	public final ParsingObject foundFailure(PExpression e) {
+	public final void foundFailure(PExpression e) {
 		if(this.pos >= ParsingUtils.getpos(this.failurePosition)) {  // adding error location
 			this.failurePosition = ParsingUtils.failure(this.pos, e);
 		}
-		return this.failureResult;
+		this.left = this.failureResult;
 	}
 
 	public final ParsingObject refoundFailure(PExpression e, long pos) {
@@ -272,29 +247,29 @@ public class ParsingStream extends ParsingContext {
 //	long statExportSize  = 0;
 //	long statExportFailure  = 0;
 
-	public ParsingObject matchExport(ParsingObject left, PExport e) {
-		ParsingObject pego = e.inner.simpleMatch(left, this);
-		if(!pego.isFailure()) {
-//			this.statExportCount += 1;
-//			this.statExportSize += pego.getLength();
-			this.pushBlockingQueue(pego);
-		}
-		else {
-//			this.statExportFailure += 1;
-		}
-		return left;
-	}
-
-	private BlockingQueue<ParsingObject> queue = null; 
-	protected void pushBlockingQueue(ParsingObject pego) {
-		if(this.queue != null) {
-			try {
-				this.queue.put(pego);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
-	}
+//	public ParsingObject matchExport(ParsingObject left, PExport e) {
+//		ParsingObject pego = e.inner.simpleMatch(left, this);
+//		if(!this.isFailure()) {
+////			this.statExportCount += 1;
+////			this.statExportSize += pego.getLength();
+//			this.pushBlockingQueue(pego);
+//		}
+//		else {
+////			this.statExportFailure += 1;
+//		}
+//		return left;
+//	}
+//
+//	private BlockingQueue<ParsingObject> queue = null; 
+//	protected void pushBlockingQueue(ParsingObject pego) {
+//		if(this.queue != null) {
+//			try {
+//				this.queue.put(pego);
+//			} catch (InterruptedException e) {
+//				e.printStackTrace();
+//			}
+//		}
+//	}
 
 	public void beginPeformStat() {
 		if(Main.StatLevel >= 0) {

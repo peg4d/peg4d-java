@@ -62,9 +62,9 @@ public class ParsingObject {
 		this.message = message;
 	}
 	
-	public final boolean isFailure() {
-		return (this.tag == null);
-	}
+//	public final boolean isFailure() {
+//		return (this.tag == null);
+//	}
 
 	public final boolean is(int tagId) {
 		return this.tag.tagId == tagId;

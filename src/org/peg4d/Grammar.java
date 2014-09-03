@@ -52,7 +52,7 @@ public class Grammar {
 		p.setRecognitionMode(false);
 		while(p.hasNode()) {
 			ParsingObject pego = p.parseNode("TopLevel");
-			if(pego.isFailure()) {
+			if(p.isFailure()) {
 				Main._Exit(1, "FAILED: " + pego);
 				break;
 			}
@@ -174,16 +174,12 @@ public class Grammar {
 		}
 		this.getExportRuleList();
 //		ObjectRemover objectRemover = new ObjectRemover();
-//		for(int i = 0; i < nameList.size(); i++) {
-//			String ruleName = nameList.ArrayValues[i];
-//			PegRule rule = this.getRule(ruleName);
-//			if(rule.expr.hasObjectOperation()) {
-//				String name = ruleName + "'";
-//				Peg e = objectRemover.removeObjectOperation(rule.expr);
-//				this.setRule(name, e);
-//				System.out.println(name + " = " + e);
-//			}
-//		}
+		for(int i = 0; i < nameList.size(); i++) {
+			String ruleName = nameList.ArrayValues[i];
+			PegRule rule = this.getRule(ruleName);
+			String name = ruleName + "'";
+			System.out.println("DEBUG: " + name + " = " + rule.expr);
+		}
 
 		new Inliner(this).performInlining();
 		new Optimizer(this).optimize();
@@ -425,7 +421,7 @@ class PegRule {
 				ParsingSource s = new StringSource(this.getGrammar(), "string", 1, a.value);
 				context.resetSource(s);
 				ParsingObject p = context.match(this.ruleName);
-				if(p.isFailure() || context.hasUnconsumedCharacter()) {
+				if(context.isFailure() || context.hasUnconsumedCharacter()) {
 					System.out.println("FAILED: " + this.ruleName + " " + a.value);
 				}
 			}
@@ -461,33 +457,33 @@ class PEG4dGrammar extends Grammar {
 	static final int PMessage     = ParsingTag.tagId("#PMessage");
 	static final int CommonError  = ParsingTag.tagId("#error");
 	
-	static boolean performExpressionConstruction(Grammar loading, ParsingStream context, ParsingObject pego) {
-		//System.out.println("DEBUG? parsed: " + pego);		
-		if(pego.is(PEG4dGrammar.PRule)) {
-			if(pego.size() > 3) {
-				System.out.println("DEBUG? parsed: " + pego);		
+	static boolean performExpressionConstruction(Grammar loading, ParsingStream context, ParsingObject po) {
+		System.out.println("DEBUG? parsed: " + po);		
+		if(po.is(PEG4dGrammar.PRule)) {
+			if(po.size() > 3) {
+				System.out.println("DEBUG? parsed: " + po);		
 			}
-			String ruleName = pego.textAt(0, "");
-			PExpression e = toParsingExpression(loading, ruleName, pego.get(1));
-			PegRule rule = new PegRule(pego.getSource(), pego.getSourcePosition(), ruleName, e);
+			String ruleName = po.textAt(0, "");
+			PExpression e = toParsingExpression(loading, ruleName, po.get(1));
+			PegRule rule = new PegRule(po.getSource(), po.getSourcePosition(), ruleName, e);
 			loading.setRule(ruleName, rule);
-			if(pego.size() >= 3) {
-				readAnnotations(rule, pego.get(2));
+			if(po.size() >= 3) {
+				readAnnotations(rule, po.get(2));
 			}
 			return true;
 		}
-		if(pego.is(PEG4dGrammar.PImport)) {
-			String filePath = searchPegFilePath(context, pego.textAt(0, ""));
-			String ns = pego.textAt(1, "");
+		if(po.is(PEG4dGrammar.PImport)) {
+			String filePath = searchPegFilePath(context, po.textAt(0, ""));
+			String ns = po.textAt(1, "");
 			loading.importGrammar(ns, filePath);
 			return true;
 		}
-		if(pego.is(PEG4dGrammar.CommonError)) {
-			int c = pego.getSource().byteAt(pego.getSourcePosition());
-			System.out.println(pego.formatSourceMessage("error", "syntax error: ascii=" + c));
+		if(po.is(PEG4dGrammar.CommonError)) {
+			int c = po.getSource().byteAt(po.getSourcePosition());
+			System.out.println(po.formatSourceMessage("error", "syntax error: ascii=" + c));
 			return false;
 		}
-		System.out.println("Unknown peg node: " + pego);
+		System.out.println("Unknown peg node: " + po);
 		return false;
 	}
 	

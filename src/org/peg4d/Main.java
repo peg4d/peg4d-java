@@ -367,7 +367,7 @@ public class Main {
 				if(rule.objectType) {
 					p.resetSource(source);
 					ParsingObject pego = p.match(rule.ruleName);
-					if(pego.isFailure()) {
+					if(p.isFailure()) {
 						continue;
 					}
 					seq.add(rule.ruleName);
@@ -392,7 +392,7 @@ public class Main {
 			//if(rule.objectType) {
 				p.setPosition(pos);
 				ParsingObject pego = p.match(rule.ruleName);
-				if(pego.isFailure()) {
+				if(p.isFailure()) {
 					continue;
 				}
 				seq.add(rule.ruleName);
