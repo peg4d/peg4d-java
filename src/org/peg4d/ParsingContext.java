@@ -445,7 +445,7 @@ public class ParsingContext {
 
 	public final void opValue(String symbol) {
 		if(this.canTransCapture()) {
-			this.left.setMessage(symbol);
+			this.left.setValue(symbol);
 		}
 	}
 

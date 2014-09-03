@@ -1011,7 +1011,7 @@ class PMessage extends PTerminal {
 	@Override
 	public void simpleMatch(ParsingStream context) {
 		if(!context.isRecognitionMode()) {
-			context.left.setMessage(this.symbol);
+			context.left.setValue(this.symbol);
 		}
 	}
 }

@@ -5,7 +5,7 @@ public class ParsingObject {
 	private long             pospeg = 0;
 	private int              length = 0;
 	private ParsingTag       tag;
-	private String           message = null;
+	private Object           value  = null;
 	ParsingObject            parent = null;
 	private ParsingObject    AST[] = null;
 
@@ -57,8 +57,8 @@ public class ParsingObject {
 		this.tag = tag;
 	}
 
-	void setMessage(String message) {
-		this.message = message;
+	void setValue(Object value) {
+		this.value = value;
 	}
 	
 	public final boolean is(int tagId) {
@@ -74,8 +74,8 @@ public class ParsingObject {
 	}
 	
 	public final String getText() {
-		if(this.message != null) {
-			return this.message;
+		if(this.value != null) {
+			return this.value.toString();
 		}
 		if(this.source != null) {
 			return this.source.substring(this.getSourcePosition(), this.getSourcePosition() + this.getLength());

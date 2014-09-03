@@ -129,7 +129,7 @@ public class ParsingStream extends ParsingContext {
 	public final ParsingObject newErrorObject() {
 		ParsingObject pego = new ParsingObject(this.peg.getModelTag("#error"), this.source, this.fpos); // FIXME
 		String msg = this.source.formatErrorMessage("syntax error", pego.getSourcePosition(), "");
-		pego.setMessage(msg);
+		pego.setValue(msg);
 		return pego;
 	}
 	
