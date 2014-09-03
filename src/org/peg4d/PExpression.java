@@ -112,20 +112,6 @@ public abstract class PExpression {
 	}
 }
 
-abstract class PTerm extends PExpression {
-	PTerm (Grammar base, int flag) {
-		super(base, flag);
-	}
-	@Override
-	public final int size() {
-		return 0;
-	}
-	@Override
-	public final PExpression get(int index) {
-		return this;  // just avoid NullPointerException
-	}
-}
-
 class PNonTerminal extends PExpression {
 	String symbol;
 	PExpression    resolvedExpression = null;
@@ -162,8 +148,23 @@ class PNonTerminal extends PExpression {
 	}
 }
 
+abstract class PTerminal extends PExpression {
+	PTerminal (Grammar base, int flag) {
+		super(base, flag);
+	}
+	@Override
+	public final int size() {
+		return 0;
+	}
+	@Override
+	public final PExpression get(int index) {
+		return this;  // just avoid NullPointerException
+	}
+}
 
-class PString extends PTerm {
+
+
+class PString extends PTerminal {
 	String text;
 	byte[] utf8;
 	public PString(Grammar base, int flag, String text) {
@@ -224,7 +225,7 @@ class PByteChar extends PString {
 	}
 }
 
-class PAny extends PTerm {
+class PAny extends PTerminal {
 	PAny(Grammar base, int flag) {
 		super(base, PExpression.HasAny | PExpression.NoMemo | flag);
 	}
@@ -249,7 +250,7 @@ class PAny extends PTerm {
 	}
 }
 
-class PCharacter extends PTerm {
+class PCharacter extends PTerminal {
 	ParsingCharset charset;
 	PCharacter(Grammar base, int flag, ParsingCharset charset) {
 		super(base, PExpression.HasCharacter | PExpression.NoMemo | flag);
@@ -985,7 +986,7 @@ class PConnector extends PUnary {
 	}
 }
 
-class PTagging extends PTerm {
+class PTagging extends PTerminal {
 	ParsingTag tag;
 	PTagging(Grammar base, int flag, ParsingTag tag) {
 		super(base, PExpression.HasTagging | PExpression.NoMemo | flag);
@@ -1008,7 +1009,7 @@ class PTagging extends PTerm {
 	}
 }
 
-class PMessage extends PTerm {
+class PMessage extends PTerminal {
 	String symbol;
 	PMessage(Grammar base, int flag, String message) {
 		super(base, flag | PExpression.NoMemo | PExpression.HasMessage);
@@ -1123,7 +1124,7 @@ class PConstructor extends PList {
 	}
 }
 
-class PIndent extends PTerm {
+class PIndent extends PTerminal {
 	PIndent(Grammar base, int flag) {
 		super(base, flag | PExpression.HasContext);
 	}
