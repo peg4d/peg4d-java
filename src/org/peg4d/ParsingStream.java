@@ -2,7 +2,7 @@ package org.peg4d;
 
 import java.util.concurrent.BlockingQueue;
 
-public class ParsingContext2 extends ParsingContext {
+public class ParsingStream extends ParsingContext {
 	public    Grammar       peg = null;
 //	public    ParsingSource source;
 //	protected long          pos = 0;
@@ -10,7 +10,7 @@ public class ParsingContext2 extends ParsingContext {
 //	
 //	protected Stat          stat   = null;
 	
-	ParsingContext2(Grammar peg, ParsingSource source) {
+	ParsingStream(Grammar peg, ParsingSource source) {
 		super(null, source, 0);
 		this.peg = peg;
 		this.emptyTag = this.peg.getModelTag("#empty");

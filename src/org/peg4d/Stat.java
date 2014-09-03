@@ -246,7 +246,7 @@ class Stat {
 		this.ErapsedTime = System.currentTimeMillis();
 	}
 	
-	public void end(ParsingObject pego, ParsingContext2 p) {
+	public void end(ParsingObject pego, ParsingStream p) {
 		this.ErapsedTime = (System.currentTimeMillis() - ErapsedTime);
 
 		System.gc(); // meaningless ?
