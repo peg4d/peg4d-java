@@ -9,6 +9,7 @@ public class Grammar {
 	
 	GrammarFactory      factory;
 	String              name;
+	UList<PegRule>      ruleList;
 	UMap<PegRule>       ruleMap;
 
 	UList<PegRule>      exportedRuleList;
@@ -31,6 +32,7 @@ public class Grammar {
 		this.name = name;
 		this.factory = factory == null ? PEG4d.factory : factory;
 		this.ruleMap  = new UMap<PegRule>();
+		this.ruleList  = new UList<PegRule>(new PegRule[16]);
 		this.optimizationLevel = Main.OptimizationLevel;
 		this.memoFactor = Main.MemoFactor;
 		if(this.memoFactor < 0) {
@@ -98,27 +100,12 @@ public class Grammar {
 			}
 		}
 	}
-
-
-	
 	
 	public final boolean hasRule(String ruleName) {
-//		if(this.nsRuleMap != null) {
-//			int loc = ruleName.indexOf(NameSpaceSeparator);
-//			if(loc != -1) {
-//				return this.nsRuleMap.get(ruleName) != null;
-//			}
-//		}
 		return this.ruleMap.get(ruleName) != null;
 	}
 
 	public final PegRule getRule(String ruleName) {
-//		if(this.nsRuleMap != null) {
-//			int loc = ruleName.indexOf(NameSpaceSeparator);
-//			if(loc != -1) {
-//				return this.nsRuleMap.get(ruleName);
-//			}
-//		}
 		return this.ruleMap.get(ruleName);
 	}
 
@@ -135,17 +122,22 @@ public class Grammar {
 	}
 
 	public final void setRule(String ruleName, PegRule rule) {
+		if(!this.hasRule(ruleName)) {
+			this.ruleList.add(rule);
+		}
+		else {
+			for(int i = 0; i  < this.ruleList.size(); i++) {
+				if(ruleName.equals(this.ruleList.ArrayValues[i].ruleName)) {
+					this.ruleList.ArrayValues[i] = rule;
+					break;
+				}
+			}
+		}
 		this.ruleMap.put(ruleName, rule);
 	}
 	
 	public final UList<PegRule> getRuleList() {
-		UList<String> nameList = this.ruleMap.keys();
-		UList<PegRule> pegList = new UList<PegRule>(new PegRule[nameList.size()]);
-		for(int i = 0; i < nameList.size(); i++) {
-			String ruleName = nameList.ArrayValues[i];
-			pegList.add(this.getRule(ruleName));
-		}
-		return pegList;
+		return this.ruleList;
 	}
 
 	public final UList<PExpression> getExpressionList() {
@@ -292,7 +284,19 @@ public class Grammar {
 		fmt.formatFooter(sb);
 		System.out.println(sb.toString());
 	}
-	
+
+	public final void formatAll(GrammarFormatter fmt) {
+		StringBuilder sb = new StringBuilder();
+		fmt.formatHeader(sb);
+		UList<PegRule> list = this.getRuleList();
+		for(int i = 0; i < list.size(); i++) {
+			PegRule r = list.ArrayValues[i];
+			fmt.formatRule(r.ruleName, r.expr, sb);
+		}
+		fmt.formatFooter(sb);
+		System.out.println(sb.toString());
+	}
+
 	
 	final PExpression newNonTerminal(String text) {
 		return this.factory.newNonTerminal(this, text);

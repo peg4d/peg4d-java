@@ -31,7 +31,7 @@ public class Main {
 	private static String OutputType = "pego";  // default
 
 	// -f format
-	private static String PegFormat = null;  // default
+	private static String PEGFormatter = null;  // default
 
 	// -i
 	private static boolean ShellMode = false;
@@ -88,8 +88,8 @@ public class Main {
 			return;
 		}
 		Grammar peg = GrammarFile == null ? Grammar.PEG4d : new GrammarFactory().newGrammar("main", GrammarFile);
-		if(PegFormat != null) {
-			GrammarFormatter fmt = loadFormatter(PegFormat);
+		if(PEGFormatter != null) {
+			GrammarFormatter fmt = loadFormatter(PEGFormatter);
 			peg.show(StartingPoint, fmt);
 			return;
 		}
@@ -125,7 +125,7 @@ public class Main {
 				index = index + 1;
 			}
 			else if ((argument.equals("-f") || argument.equals("--format")) && (index < args.length)) {
-				PegFormat = args[index];
+				PEGFormatter = args[index];
 				index = index + 1;
 			}
 			else if(argument.startsWith("-M")) {
