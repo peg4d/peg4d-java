@@ -122,31 +122,27 @@ public class ParsingStream extends ParsingContext {
 	public void initMemo() {
 		this.memoMap = new NoMemo();
 	}
-	
-	protected ParsingObject newAst(ParsingObject pego, int size) {
-		pego.expandAstToSize(size);
-		return pego;
-	}
-		
-	private long  failurePosition = 0;
+			
+//	private long  failurePosition = 0;
 	private final ParsingObject failureResult = null; //new ParsingObject(null, this.source, 0);
 
 	public final ParsingObject newErrorObject() {
-		ParsingObject pego = new ParsingObject(this.peg.getModelTag("#error"), this.source, failurePosition);
+		ParsingObject pego = new ParsingObject(this.peg.getModelTag("#error"), this.source, this.fpos); // FIXME
 		String msg = this.source.formatErrorMessage("syntax error", pego.getSourcePosition(), "");
 		pego.setMessage(msg);
 		return pego;
 	}
 	
 	public final void foundFailure(PExpression e) {
-		if(this.pos >= ParsingUtils.getpos(this.failurePosition)) {  // adding error location
-			this.failurePosition = ParsingUtils.failure(this.pos, e);
-		}
+//		if(this.pos >= ParsingUtils.getpos(this.failurePosition)) {  // adding error location
+//			this.failurePosition = ParsingUtils.failure(this.pos, e);
+//		}
+		this.opFailure();
 		this.left = this.failureResult;
 	}
 
 	public final ParsingObject refoundFailure(PExpression e, long pos) {
-		this.failurePosition = ParsingUtils.failure(pos, e);
+//		this.failurePosition = ParsingUtils.failure(pos, e);
 		return this.failureResult;
 	}
 	
