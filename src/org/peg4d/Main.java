@@ -90,7 +90,7 @@ public class Main {
 		Grammar peg = GrammarFile == null ? Grammar.PEG4d : new GrammarFactory().newGrammar("main", GrammarFile);
 		if(PEGFormatter != null) {
 			GrammarFormatter fmt = loadFormatter(PEGFormatter);
-			peg.show(StartingPoint, fmt);
+			peg.formatAll(fmt);
 			return;
 		}
 		if(InputFileName != null) {

@@ -52,8 +52,13 @@ public abstract class ParsingCharset {
 	}
 
 	public final static String quoteString(char OpenChar, String Text, char CloseChar) {
-		char SlashChar = '\\';
 		StringBuilder sb = new StringBuilder();
+		formatQuoteString(sb, OpenChar, Text, CloseChar);
+		return sb.toString();
+	}
+
+	public final static void formatQuoteString(StringBuilder sb, char OpenChar, String Text, char CloseChar) {
+		char SlashChar = '\\';
 		sb.append(OpenChar);
 		int i = 0;
 		for(; i < Text.length(); i = i + 1) {
@@ -79,9 +84,8 @@ public abstract class ParsingCharset {
 			}
 		}
 		sb.append(CloseChar);
-		return sb.toString();
 	}
-
+	
 //	final static String _QuoteString(String OpenQuote, String Text, String CloseQuote) {
 //		StringBuilder sb = new StringBuilder();
 //		sb.append(OpenQuote);

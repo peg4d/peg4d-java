@@ -418,15 +418,25 @@ class PRepetition extends PUnary {
 	
 	@Override
 	public void vmMatch(ParsingContext context) {
+		if(this.atleast == 1) {
+			this.inner.vmMatch(context);
+			if(context.isFailure()) {
+				return;
+			}
+		}
+		long ppos = -1;
+		long pos = context.getPosition();
 		context.opRememberFailurePosition();
 		context.opStoreObject();
-		while(true) {
+		while(ppos < pos) {
 			context.opRefreshStoredObject();
 			this.inner.vmMatch(context);
 			if(context.isFailure()) {
 				context.opRestoreObject();
 				break;
 			}
+			ppos = pos;
+			pos = context.getPosition();
 		}
 		context.opForgetFailurePosition();
 	}

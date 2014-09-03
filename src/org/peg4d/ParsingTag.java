@@ -20,8 +20,8 @@ public class ParsingTag {
 	}
 
 	static {
-		tagId("#error");
-		tagId("#empty");
+		tagId("empty");
+		tagId("error");
 	}
 	
 	protected int tagId;

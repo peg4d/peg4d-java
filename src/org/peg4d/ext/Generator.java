@@ -89,14 +89,14 @@ public class Generator {
 		if(pego.size() == 0) {
 			this.write(LF);
 			this.write(indent);
-			this.write("{" + pego.getTag()+ " "); 
+			this.write("{#" + pego.getTag()+ " "); 
 			this.write(ParsingCharset.quoteString('\'', pego.getText(), '\''));
 			this.write("}");
 		}
 		else {
 			this.write(LF);
 			this.write(indent);
-			this.write("{" + pego.getTag());
+			this.write("{#" + pego.getTag().toString());
 			String nindent = TAB + indent;
 			for(int i = 0; i < pego.size(); i++) {
 				this.writePego(pego.get(i), nindent);

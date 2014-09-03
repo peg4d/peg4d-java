@@ -4,7 +4,6 @@ public class ParsingObject {
 	private ParsingSource    source = null;
 	private long             pospeg = 0;
 	private int              length = 0;
-//	String                   tag = null;
 	private ParsingTag       tag;
 	private String           message = null;
 	ParsingObject            parent = null;
@@ -62,37 +61,8 @@ public class ParsingObject {
 		this.message = message;
 	}
 	
-//	public final boolean isFailure() {
-//		return (this.tag == null);
-//	}
-
 	public final boolean is(int tagId) {
 		return this.tag.tagId == tagId;
-	}
-//	public final boolean is(String tagName) {
-//		return this.tag.equalsTagName(tagName);
-//	}
-
-	public final boolean equals2(ParsingObject o) {
-		if(this != o) {
-			if(this.pospeg == o.pospeg && this.length == o.length) {
-				if(this.tag == null) {
-					if(o.tag == null) {
-						return true;
-					}
-				}
-				else {
-					if(o.tag != null && this.tag.equals(o.tag)) {
-						return true;
-					}
-				}
-			}
-//			if(Main.VerbosePeg) {
-				System.out.println("@@diff: " + this.getSourcePosition() + "+" + this.length + this.tag + "  " + o.getSourcePosition() + "+" + o.length + o.tag);
-//			}
-			return false;
-		}
-		return true;
 	}
 	
 	public final String formatSourceMessage(String type, String msg) {
@@ -264,27 +234,36 @@ public class ParsingObject {
 
 	@Override
 	public String toString() {
-		UStringBuilder sb = new UStringBuilder();
-		this.stringfy(sb);
+		StringBuilder sb = new StringBuilder();
+		this.stringfy("", sb);
 		return sb.toString();
 	}
 
-	final void stringfy(UStringBuilder sb) {
+	final void stringfy(String indent, StringBuilder sb) {
+		sb.append("\n");
+		sb.append(indent);
+		sb.append("{#");
+		sb.append(this.tag.toString());
 		if(this.AST == null) {
-			sb.appendNewLine("{"+ this.tag+ " ", ParsingCharset.quoteString('\'', this.getText(), '\''), "}");
+			sb.append(" ");
+			ParsingCharset.formatQuoteString(sb, '\'', this.getText(), '\'');
+			sb.append("}");
 		}
 		else {
-			sb.appendNewLine("");
-			sb.openIndent("{" + this.tag);
+			String nindent = "   " + indent;
 			for(int i = 0; i < this.size(); i++) {
 				if(this.AST[i] == null) {
-					sb.appendNewLine("null");
+					sb.append("\n");
+					sb.append(nindent);
+					sb.append("null");
 				}
 				else {
-					this.AST[i].stringfy(sb);
+					this.AST[i].stringfy(nindent, sb);
 				}
 			}
-			sb.closeIndent("}");
+			sb.append("\n");
+			sb.append(indent);
+			sb.append("}");
 		}
 	}
 
