@@ -330,7 +330,7 @@ class Stat {
 	
 	private void set (vData data) {
 		if(Main.VerboseMode) {
-			UStringBuilder sb = new UStringBuilder();
+			StringBuilder sb = new StringBuilder();
 			data.stringfy(sb, false);
 			System.out.println(sb.toString());
 		}
@@ -342,7 +342,7 @@ class Stat {
 		vData(String key) {
 			this.key = key;
 		}
-		abstract void stringfy(UStringBuilder sb, boolean raw);
+		abstract void stringfy(StringBuilder sb, boolean raw);
 	}
 	
 	private class vText extends vData {
@@ -352,9 +352,10 @@ class Stat {
 			this.value = value;
 		}
 		@Override
-		void stringfy(UStringBuilder sb, boolean raw) {
+		void stringfy(StringBuilder sb, boolean raw) {
 			if(!raw) {
-				sb.append(this.key, ": ");
+				sb.append(this.key);
+				sb.append(": ");
 			}
 			sb.append(this.value);
 		}
@@ -367,9 +368,10 @@ class Stat {
 			this.value = value;
 		}
 		@Override
-		void stringfy(UStringBuilder sb, boolean raw) {
+		void stringfy(StringBuilder sb, boolean raw) {
 			if(!raw) {
-				sb.append(this.key, ": ");
+				sb.append(this.key);
+				sb.append(": ");
 			}
 			sb.append(""+this.value);
 		}
@@ -382,9 +384,10 @@ class Stat {
 			this.value = (double)v1 / v2;
 		}
 		@Override
-		void stringfy(UStringBuilder sb, boolean raw) {
+		void stringfy(StringBuilder sb, boolean raw) {
 			if(!raw) {
-				sb.append(this.key, ": ");
+				sb.append(this.key);
+				sb.append(": ");
 				sb.append(String.format("%.4f", this.value));
 			}
 			else {
@@ -426,7 +429,7 @@ class Stat {
 		System.out.print(text);
 	}
 	
-	private final void CSV(UStringBuilder sb, String key) {
+	private final void CSV(StringBuilder sb, String key) {
 		vData d = this.csvMap.get(key);
 		if(d != null) {
 			d.stringfy(sb, true);
@@ -438,7 +441,7 @@ class Stat {
 	}
 
 	public final void writeCSV() {
-		UStringBuilder sb = new UStringBuilder();
+		StringBuilder sb = new StringBuilder();
 		sb.append("v3,");
 		this.CSV(sb, "StatId");
 //		this.CSV(sb, "MemoFactor");

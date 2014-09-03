@@ -1,10 +1,8 @@
 package org.peg4d;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -592,43 +590,6 @@ public class Main {
 
 	public final static String _CharToString(int ch) {
 			return String.format("%c", ch);
-	}
-
-	public static String _SourceBuilderToString(UStringBuilder sb) {
-		return Main._SourceBuilderToString(sb, 0, sb.slist.size());
-	}
-
-	public static String _SourceBuilderToString(UStringBuilder sb, int beginIndex, int endIndex) {
-		StringBuilder jsb = new StringBuilder();
-		for(int i = beginIndex; i < endIndex; i = i + 1) {
-			jsb.append(sb.slist.ArrayValues[i]);
-		}
-		return jsb.toString();
-	}
-
-	public final static void _WriteFile(String fileName, UList<UStringBuilder> list) {
-		if(fileName == null) {
-			for(int i = 0; i < list.size(); i++) {
-				UStringBuilder sb = list.ArrayValues[i];
-				System.out.println(sb.toString());
-				sb.clear();
-			}
-		}
-		else {
-			try {
-				BufferedWriter w = new BufferedWriter(new FileWriter(fileName));
-				for(int i = 0; i < list.size(); i++) {
-					UStringBuilder sb = list.ArrayValues[i];
-					w.write(sb.toString());
-					w.write("\n\n");
-					sb.clear();
-				}
-				w.close();
-			}
-			catch(IOException e) {
-				_Exit(1, "cannot to write: " + e);
-			}
-		}
 	}
 
 }
