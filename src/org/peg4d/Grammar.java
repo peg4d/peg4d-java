@@ -174,12 +174,12 @@ public class Grammar {
 		}
 		this.getExportRuleList();
 //		ObjectRemover objectRemover = new ObjectRemover();
-		for(int i = 0; i < nameList.size(); i++) {
-			String ruleName = nameList.ArrayValues[i];
-			PegRule rule = this.getRule(ruleName);
-			String name = ruleName + "'";
-			System.out.println("DEBUG: " + name + " = " + rule.expr);
-		}
+//		for(int i = 0; i < nameList.size(); i++) {
+//			String ruleName = nameList.ArrayValues[i];
+//			PegRule rule = this.getRule(ruleName);
+//			String name = ruleName + "'";
+//			System.out.println("DEBUG: " + name + " = " + rule.expr);
+//		}
 
 		new Inliner(this).performInlining();
 		new Optimizer(this).optimize();
@@ -458,7 +458,7 @@ class PEG4dGrammar extends Grammar {
 	static final int CommonError  = ParsingTag.tagId("#error");
 	
 	static boolean performExpressionConstruction(Grammar loading, ParsingStream context, ParsingObject po) {
-		System.out.println("DEBUG? parsed: " + po);		
+		//System.out.println("DEBUG? parsed: " + po);		
 		if(po.is(PEG4dGrammar.PRule)) {
 			if(po.size() > 3) {
 				System.out.println("DEBUG? parsed: " + po);		

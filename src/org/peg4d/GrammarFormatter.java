@@ -100,7 +100,7 @@ class GrammarFormatter extends ParsingVisitor {
 		if(prefix != null) {
 			sb.append(prefix);
 		}
-		if(e.inner instanceof PTerminal || e.inner instanceof PConstructor) {
+		if(e.inner instanceof PTerminal || e.inner instanceof PNonTerminal || e.inner instanceof PConstructor) {
 			e.inner.visit(this);
 		}
 		else {
