@@ -440,7 +440,6 @@ public class ParsingContext {
 		if(this.canTransCapture()) {
 			this.left.setTag(tag.tagging());
 		}
-		
 	}
 
 	public final void opValue(String symbol) {
@@ -453,10 +452,15 @@ public class ParsingContext {
 		byte[] indent = this.source.getIndentText(pos).getBytes();
 		this.opMatchText(indent);
 	}
+
+	public void opDeprecated(String message) {
+		System.out.println(source.formatErrorMessage("deprecated", this.pos, message));
+	}
 	
 	public final ParsingObject getResult() {
 		return this.left;
 	}
+
 
 
 	

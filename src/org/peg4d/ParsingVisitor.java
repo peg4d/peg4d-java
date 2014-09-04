@@ -77,6 +77,8 @@ class ParsingVisitor {
 	public void visitOperation(POperator e) {
 		e.inner.visit(this);
 	}
+	public void visitDeprecated(PDeprecated e) {
+	}
 }
 
 class ListMaker extends ParsingVisitor {

@@ -360,6 +360,10 @@ public class Grammar {
 		this.factory.addSequence(l, e);
 	}
 
+	public PExpression newDeprecated(String message, PExpression e) {
+		return new PDeprecated(message, e);
+	}
+
 }
 
 class PegRule {
@@ -459,6 +463,7 @@ class PEG4dGrammar extends Grammar {
 	static final int PLeftJoin    = ParsingTag.tagId("PLeftJoin");
 	static final int PTagging     = ParsingTag.tagId("PTagging");
 	static final int PMessage     = ParsingTag.tagId("PMessage");
+	static final int PDeprecated  = ParsingTag.tagId("PDeprecated");
 	static final int Name         = ParsingTag.tagId("Name");
 	static final int List         = ParsingTag.tagId("List");
 	static final int Integer      = ParsingTag.tagId("Integer");
@@ -626,6 +631,10 @@ class PEG4dGrammar extends Grammar {
 		if(pego.is(PEG4dGrammar.PMatch)) {
 			return loading.newMatch(toParsingExpression(loading, ruleName, pego.get(0)));
 		}
+		if(pego.is(PEG4dGrammar.PDeprecated)) {
+			return loading.newDeprecated(ParsingCharset.unquoteString(pego.textAt(0, "")),
+					toParsingExpression(loading, ruleName, pego.get(1)));
+		}
 //		if(pego.is("PExport")) {
 //		Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));
 //		Peg o = loadingGrammar.newConstructor(ruleName, seq);
@@ -726,7 +735,9 @@ class PEG4dGrammar extends Grammar {
 	private PExpression set(int index, PExpression e) {
 		return new PConnector(this, 0, e, index);
 	}
-
+	private PExpression Deprecated(String msg, PExpression e) {
+		return this.newDeprecated(msg, e);
+	}
 	public Grammar loadPEG4dGrammar() {
 		PExpression Any = newAny(".");
 		PExpression _NEWLINE = c("\\r\\n");
@@ -765,7 +776,6 @@ class PEG4dGrammar extends Grammar {
 				)
 			)
 		);
-		
 		PExpression StringContent  = zero(Choice(
 			t("\\'"), t("\\\\"), seq(Not(t("'")), Any)
 		));
@@ -775,7 +785,7 @@ class PEG4dGrammar extends Grammar {
 		this.setRule("String", 
 			Choice(
 				seq(t("'"),  Constructor(StringContent, Tag(PString)), t("'")),
-				seq(t("\""), Constructor(StringContent2, Tag(PString)), t("\""))
+				Deprecated("'", seq(t("\""), Constructor(StringContent2, Tag(PString)), t("\"")))
 			)
 		);
 		PExpression _Message = seq(t("`"), Constructor(zero(Not(t("`")), Any), Tag(PMessage)), t("`"));
@@ -813,18 +823,17 @@ class PEG4dGrammar extends Grammar {
 			set(n("Expr")), Spacing, t(">"),
 			Tag(PMatch)
 		);
-//		PExpression _TimesFunc = Constructor(
-//			t("<times"), _WS,
-//			set(n("Number")), _WS, 
-//			set(n("Expr")), Spacing, t(">"),
-//			Tag("PTimes")
-//		);
+		PExpression _DeprecatedFunc = Constructor(
+			t("<deprecated"), _WS, set(n("String")), _WS,
+			set(n("Expr")), Spacing, t(">"),
+			Tag(PDeprecated)
+		);
 		setRule("Term", 
 			Choice(
 				n("String"), _Character, _Any, _Message, _Tagging, _Byte, 
 				seq(t("("), Spacing, n("Expr"), Spacing, t(")")),
 				n("Constructor"), n("NonTerminal"), 
-				/*_LazyFunc,*/ _MatchFunc/*, _TimesFunc*/
+				/*_LazyFunc,*/ _MatchFunc, _DeprecatedFunc
 			)
 		);
 		this.setRule("SuffixTerm", seq(

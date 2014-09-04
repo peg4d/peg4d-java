@@ -1248,40 +1248,6 @@ class PMemo extends POperator {
 			System.out.println(this.inner.getClass().getSimpleName() + " #h/m=" + this.memoHit + "," + this.memoMiss + ", f=" + f + " " + this.inner);
 		}
 	}
-//	public ParsingObject simpleMatch1(ParsingObject left, ParsingStream context) {
-//		if(!this.enableMemo) {
-//			return this.inner.simpleMatch(context);
-//		}
-//		long pos = context.getPosition();
-//		ObjectMemo m = context.memoMap.getMemo(this, pos);
-//		if(m != null) {
-//			this.memoHit += 1;
-//			assert(m.keypeg == this);
-//			if(m.generated == null) {
-//				return context.refoundFailure(this.inner, pos+m.consumed);
-//			}
-////			if(m.consumed > 0) {
-////				//System.out.println("HIT : " + this.semanticId + ":" + pos + "," + m.consumed+ " :" + m.generated);
-////				context.setPosition(pos + m.consumed);
-////				return m.generated;
-////			}
-//			return m.generated;
-//		}
-//		ParsingObject result = this.inner.simpleMatch(context);
-//		if(context.isFailure()) {
-//			context.memoMap.setMemo(pos, this, null, /*(int)(result.getSourcePosition() - pos*/0);
-//		}
-//		else {
-//			int length = (int)(context.getPosition() - pos);
-////			if(length > 0) {
-//				context.memoMap.setMemo(pos, this, result, length);
-//				//System.out.println("MEMO: " + this.semanticId + ":" + pos + "," + length+ " :&" + result.id);
-////			}
-//		}
-//		this.memoMiss += 1;
-//		this.tryTracing();
-//		return result;
-//	}
 }
 
 class PMatch extends POperator {
@@ -1306,20 +1272,24 @@ class PMatch extends POperator {
 	}
 }
 
-//class PCommit extends POperator {
-//	protected PCommit(PExpression inner) {
-//		super(inner);
-//	}
-//	
-//	@Override
-//	public ParsingObject simpleMatch(ParsingObject left, ParsingContext2 context) {
-//		int mark = context.markObjectStack();
-//		left = this.inner.simpleMatch(left, context);
-//		if(left.isFailure()) {
-//			context.abortLinkLog(mark);
-//		}
-//		return left;
-//	}
-//}
-
-
+class PDeprecated extends POperator {
+	String message;
+	protected PDeprecated(String message, PExpression inner) {
+		super(inner);
+		this.message = message;
+	}
+	@Override
+	public void vmMatch(ParsingContext context) {
+		this.inner.vmMatch(context);
+		context.opDeprecated(this.message);
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+		this.inner.vmMatch(context);
+		context.opDeprecated(this.message);
+	}
+	@Override
+	protected void visit(ParsingVisitor probe) {
+		probe.visitDeprecated(this);
+	}
+}
