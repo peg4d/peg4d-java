@@ -132,7 +132,7 @@ public abstract class ParsingSource {
 			pos -= 1;
 		}
 		long startIndex = pos;
-		while(startIndex >= 0) {
+		while(startIndex > 0) {
 			ch = byteAt(startIndex);
 			if(ch == '\n' && pos - startIndex > 0) {
 				startIndex = startIndex + 1;

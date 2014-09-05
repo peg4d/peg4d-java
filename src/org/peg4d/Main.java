@@ -328,8 +328,13 @@ public class Main {
 			}
 			ParsingSource source = new StringSource(peg, "(stdin)", linenum, line);
 			ParsingStream p = peg.newParserContext(source);
-			ParsingObject pego = p.parseChunk(startPoint);
-			System.out.println("Parsed: " + pego);
+			ParsingObject pego = p.parse(startPoint);
+			if(p.isFailure()) {
+				p.showErrorMessage("syntax error");
+			}
+			else {
+				System.out.println("Parsed: " + pego);
+			}
 			linenum = linenum + 1;
 		}
 		System.out.println("");

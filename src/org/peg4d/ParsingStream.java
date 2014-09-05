@@ -43,7 +43,7 @@ public class ParsingStream extends ParsingContext {
 	}
 
 	public final void showErrorMessage(String msg) {
-		System.out.println(this.source.formatErrorMessage("error", this.pos, msg));
+		System.out.println(this.source.formatErrorMessage("error", this.fpos, msg));
 		Main._Exit(1, msg);
 	}
 	
