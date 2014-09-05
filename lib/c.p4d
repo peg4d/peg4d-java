@@ -305,14 +305,12 @@ Statement
 	/ { CONTINUE #Continue } SEMI 
 	/ { BREAK #Break } SEMI 
 	/ { RETURN (@Expression)? #Return } SEMI 
+	/ { CASE @ConstantExpression COLON @Statement #SwitchCase }
+	/ { DEFAULT COLON @Statement #SwitchDefault }
 	/ { @Name COLON @Statement #LabelBlock }
 	/ Expression SEMI
 	/ { #Empty } SEMI
 
-LabeledStatement
-	= { CASE @ConstantExpression COLON @Statement #SwitchCase }
-	/ { DEFAULT COLON @Statement #SwitchDefault }
-	;
 
 //Expression
 //==========
