@@ -148,7 +148,9 @@ class PNonTerminal extends PExpression {
 	@Override
 	public void simpleMatch(ParsingStream context) {
 		this.resolvedExpression.simpleMatch(context);
-		//System.out.println("pos=" + context.pos + " called " + this.symbol + " isFailure: " + context.isFailure() + " " + this.resolvedExpression);
+//		if(this.base != Grammar.PEG4d) {
+//			System.out.println("pos=" + context.pos + " called " + this.symbol + " isFailure: " + context.isFailure() + " " + this.resolvedExpression);
+//		}
 	}
 }
 

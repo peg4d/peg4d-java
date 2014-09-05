@@ -330,7 +330,7 @@ public class Main {
 			ParsingStream p = peg.newParserContext(source);
 			ParsingObject pego = p.parse(startPoint);
 			if(p.isFailure()) {
-				p.showErrorMessage("syntax error");
+				System.out.println(p.source.formatErrorMessage("error", p.fpos, "syntax error"));
 			}
 			else {
 				System.out.println("Parsed: " + pego);

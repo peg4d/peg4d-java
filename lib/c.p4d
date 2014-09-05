@@ -35,10 +35,11 @@ File
 	= _ { @ExternalDeclaration #Source } EOT
 	
 Chunk
-	= Expression
+	= TopLevel
+	/ Expression
 	/ Statement
 	/ Type
-	
+
 _
 	= (S / LONGCOMMENT / LINECOMMENT / PRAGMA)*
 	
@@ -56,6 +57,9 @@ PRAGMA
 
 ATTRIBUTE
 	= '__attribute__' !WCHAR _ '((' (!'))' .)* '))' _
+
+EOL
+	= ('\r'? '\n' / !.)
 
 DIGIT
 	= [0-9]
@@ -128,7 +132,7 @@ OR	= '|' ![=] _
 ANDAND	= '&&' _
 OROR	= '||' _
 QUERY	= '?' _
-SEMI	= ';' _
+SEMI	= (';' _ / EOL)
 RWING	= '}' _
 PTR	= '->' _
 ENUM	= 'enum' !WCHAR _
@@ -180,6 +184,7 @@ ISHII_VERSION = ''
 TopLevel
 	= FunctionDefinition
 	/ Declaration
+	/ TypeDef
 
 FunctionDefinition
 	= { @AnnotationList @Type @Name LPAR @FunctionParamList RPAR @Block #Function }
@@ -198,20 +203,22 @@ Annotation
 	/ STDCALL  { #KeyValue @{`stdcall` #Key } @{`true` #Value } } _
 
 FunctionParamList
-	= { ( Param (COMMA_ Param)+ )? #List } 
+	= { ( Param (COMMA_ Param)+ )? (COMMA_ ELLIPSIS)? #List } 
 
 Param
 	= { @Type _ @Name #Param} _
 	
 // Declaration
-==============
+//==============
+
+TypeDef
+	= { 'typedef' !WCHAR _ @Type @Name #TypeDeclaration } _ SEMI
 
 Declaration
-	= { @Annotation @Type @InitDecl (COMMA_ @InitDecl)* #Declaration } ATTRIBUTE? SEMI
-	/ ISHII_VERSION DeclarationNoAttribute^ ((Assembler)^)? SEMI
+	= { @AnnotationList @Type @InitDecl (COMMA_ @InitDecl)* #Declaration } ATTRIBUTE? SEMI
 
 InitDecl
-	= { VarName (EQU @Initializer)? #Init } _
+	= { @VarName (EQU @Initializer)? #VarDecl } _
 
 VarName
 	= { STAR @VarName #Pointer } _
@@ -229,7 +236,7 @@ Designation
 	
 Designator
 	= LBRK ConstantExpression RBRK
-	/ DOT Name
+	/ DOT Name _
 
 
 //Type
@@ -248,21 +255,21 @@ AddFuncType
 	= LPAR STAR @Name RPAR LPAR (@Type (_ NAME _)? (COMMA_ @Type (_ NAME _)? )* )? RPAR #Tfunc
 	
 PrimaryType
-	= { STRUCT _ @Name #TStruct } _
-	/ { UNION _ @Name  #TUnion } _
+	= { STRUCT _ @Name AddStructMember?  #TStruct } _
+	/ { UNION _  @Name  AddStructMember?  #TUnion } _
 	/ { VOID #Tvoid } _
 	/ { SIGNED_PREFIX? CHAR          #Tint } _
 	/ { SIGNED_PREFIX? SHORT         #Tint } _
 	/ { SIGNED_PREFIX? INT           #Tint } _
-	/ { FLOAT         #Tfloat } _
-	/ { DOUBLE        #Tfloat } _
+	/ { FLOAT           #Tfloat } _
+	/ { DOUBLE          #Tfloat } _
 	/ { LONG _ DOUBLE   #Tfloat } _
-	/ { SIGNED_PREFIX?　LONG (_ LONG)? (_ INT)? #Tint } _
+	/ { SIGNED_PREFIX? LONG (_ LONG)? (_ INT)? #Tint } _
 	/ { SIGNED `signed int` #Tint } _
 	/ { UNSIGNED `unsigned int` #Tint } _
 	/ { BOOL #Tbool } _
 	/ { COMPLEX #Tcomplex } _
-	/ { NAME_T #Ttype } _
+	/ { NAME_T #TName } _
 	/ { NAME   #Name } _
 
 SIGNED_PREFIX
@@ -270,11 +277,18 @@ SIGNED_PREFIX
 
 NAME_T
 	= !DIGIT (!('_t' !WCHAR)  WCHAR )+ '_t' !WCHAR
+	
+AddStructMember
+	= LWING (@StructDeclaration)+ RWING
 
+StructDeclaration
+	= { @AnnotationList @Type StructMemberName  (COMMA_ @StructMemberName )* } _ SEMI
 
+StructMemberName
+	= VarName {@ COLON @ConstantExpression #Bit}
 
 // Block, Statement
-===================
+//===================
 
 Block
 	= { LWING (@(Declaration / Statement))* RWING #Block }
@@ -359,26 +373,25 @@ AdditiveExpression
 MultiplicativeExpression
 	= CastExpression {@ ( STAR #Mul / DIV #Div / MOD #Mod ) @CastExpression }*
 
-
 UnaryExpression
 	= PostfixExpression
-	/ { INC    UnaryExpression #PrefixInc }
-	/ { DEC    UnaryExpression #PrefixDec }
-	/ { AND    CastExpression #Address }
-	/ { STAR   CastExpression #Star }
-	/ { PLUS   CastExpression #Plus }
-	/ { MINUS  CastExpression #Minus }
-	/ { TILDA  CastExpression #Compl }
-	/ { BANG   CastExpression #Not }
-	/ { SIZEOF  ( @UnaryExpression / LPAR @TypeName RPAR ) #SizeOf }
+	/ { INC    @UnaryExpression #PrefixInc }
+	/ { DEC    @UnaryExpression #PrefixDec }
+	/ { AND    @CastExpression #Address }
+	/ { STAR   @CastExpression #Star }
+	/ { PLUS   @CastExpression #Plus }
+	/ { MINUS  @CastExpression #Minus }
+	/ { TILDA  @CastExpression #Compl }
+	/ { BANG   @CastExpression #Not }
+	/ { SIZEOF  ( @UnaryExpression / LPAR @Type RPAR ) #SizeOf }
 
 CastExpression
-	= { LPAR @TypeName RPAR @CastExpression #Cast }
+	= { LPAR @Type RPAR @CastExpression #Cast }
 	/ UnaryExpression
 	
 
 PostfixExpression
-	= ( PrimaryExpression / ISHII_VERSION LPAR TypeName RPAR LWING { (AddInitializerList)* COMMA_? #Initializer } RWING ) 
+	= ( PrimaryExpression / { LPAR @Type RPAR LWING @{ (AddInitializerList)* COMMA_? #Initializer } RWING } ) 
 	{@ (AddFunctionCall / AddIndex  / DOT @Name #Field / PTR @Name #PointerField / INC #Inc / DEC #Dec) }*
 
 AddFunctionCall

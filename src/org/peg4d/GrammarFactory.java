@@ -81,8 +81,9 @@ public class GrammarFactory {
 	private PExpression getsem(String t) {
 		PExpression e = semMap.get(t);
 		if(e != null) {
+			
 		}
-		return e;
+		return null;
 	}
 
 	private PExpression putsem(String t, PExpression e) {

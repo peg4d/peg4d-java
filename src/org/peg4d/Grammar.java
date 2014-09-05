@@ -169,8 +169,10 @@ public class Grammar {
 //		for(int i = 0; i < nameList.size(); i++) {
 //			String ruleName = nameList.ArrayValues[i];
 //			PegRule rule = this.getRule(ruleName);
-//			String name = ruleName + "'";
-//			System.out.println("DEBUG: " + name + " = " + rule.expr);
+//			String name = ruleName;
+//			if(name.equals("PrimaryType")) {
+//				System.out.println("DEBUG: " + name + " = " + rule.expr);
+//			}
 //		}
 
 		new Inliner(this).performInlining();
@@ -473,12 +475,16 @@ class PEG4dGrammar extends Grammar {
 	static boolean performExpressionConstruction1(Grammar loading, ParsingStream context, ParsingObject po) {
 		//System.out.println("DEBUG? parsed: " + po);		
 		if(po.is(PEG4dGrammar.PRule)) {
+
 			if(po.size() > 3) {
 				System.out.println("DEBUG? parsed: " + po);		
 			}
 			String ruleName = po.textAt(0, "");
 			PExpression e = toParsingExpression(loading, ruleName, po.get(1));
 			PegRule rule = new PegRule(po.getSource(), po.getSourcePosition(), ruleName, e);
+//			if(ruleName.equals("PrimaryType")) {
+//				System.out.println("DEBUG: " + po + "\n" + rule);
+//			}
 			loading.setRule(ruleName, rule);
 			if(po.size() >= 3) {
 				readAnnotations(rule, po.get(2));
