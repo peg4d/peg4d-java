@@ -75,7 +75,7 @@ Name
 	= { NAME #Name } _ 
 
 NAME
-	= !DIGIT !KEYWORD WCHAR+
+	= !DIGIT !(KEYWORD !WCHAR) WCHAR+
 
 KEYWORD
 	= 'auto' / 'break' / 'case' / 'char' / 'const' / 'continue' / 'default' 
