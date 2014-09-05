@@ -436,12 +436,12 @@ FLOAT_SUFFIX
 	= [flFL]
 
 CInteger
-	= { ( DECIMAL / HexConstant / OCTAL ) #Integer } INT_SUFFIX? _
+	= { ( DECIMAL / HEXICAL / OCTAL ) #Integer } INT_SUFFIX? _
 
 DECIMAL
 	= [1-9] DIGIT*
 
-HexConstant
+HEXICAL
 	= HEX_PREFIX HEX+
 
 OCTAL

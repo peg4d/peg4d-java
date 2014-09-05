@@ -148,7 +148,7 @@ class PNonTerminal extends PExpression {
 	@Override
 	public void simpleMatch(ParsingStream context) {
 		this.resolvedExpression.simpleMatch(context);
-		//System.out.println("pos=" + context.pos + " called " + this.symbol + " isFailure: " + context.isFailure() + " " + this.resolvedExpression);
+		System.out.println("pos=" + context.pos + " called " + this.symbol + " isFailure: " + context.isFailure() + " " + this.resolvedExpression);
 	}
 }
 
@@ -1168,7 +1168,7 @@ abstract class POperator extends PExpression {
 
 class PMemo extends POperator {
 	PExpression parent = null;
-	boolean enableMemo = true;
+	boolean enableMemo = false;
 	int memoHit = 0;
 	int memoMiss = 0;
 
