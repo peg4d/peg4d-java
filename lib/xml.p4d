@@ -1,43 +1,50 @@
-//
-// XML1.0 PEG4d file
-// 
+// PEG4d file
 // Nested CDATA Section
 
+export
+        = Xml
 File
 	= PROLOG? SPC* DTD? SPC* Xml SPC*
-PROLOG
-	= '<?xml' (!'?>' .)* '?>'
-SPC
-	= [\t\n\r ]
-DTD
-	= '<!' (!'>' .)* '>'
-TopLevel
-	= Xml
 Chunk
 	= Xml
-export
-	= Xml
+
+PROLOG
+	= '<?xml' (!'?>' .)* '?>'
+
+DTD
+	= '<!' (!'>' .)* '>'
+
 Xml
 	[example: <x><y z="z"/></x>]
-	= { '<' @Name (SPC+ @Attribute)* SPC* ( '/>' / '>' SPC* Content '</' NAME '>' ) #Element } SPC*
+	= { '<' @Name (S+ @Attribute)* S* ( '/>' / '>' S* (@Content / COMMENT)* '</' NAME '>' ) #Element } S*
+
 Name
 	= { NAME #Name }
+
 NAME
 	= [A-Za-z:] ('-' / [.0-9:A-Z_a-z])*
+
 Attribute
-	= { @Name SPC* '=' SPC* @String #Attr }
+	= { @Name S* '=' S* @String #Attr }
+
 String
 	= '"' { (!'"' .)* #Value } '"'
+
 Content
-	= (@Xml / @CDataSec / COMMENT / @Text)*
+	= Xml 
+	/ CDataSec 
+	/ Text
+
 CDataSec
 	[example: <![CDATA[ .. <![CDATA[ .. ]]> .. ]]>]
-	= '<![CDATA[' { CDATA #cdata } ']]>' SPC*
+	= '<![CDATA[' { CDATA #CDATA } ']]>' S*
 CDATA
 	= (!']]>' !'<![CDATA[' .)*
 	  ('<![CDATA[' CDATA ']]>' CDATA)?
+
 COMMENT
-	= '<!--' (!'-->' .)* '-->' SPC*
+	= '<!--' (!'-->' .)* '-->' S*
+
 Text
-	= { (!'<' .)+ #Text } / ''
+	= { (!'<' .)+ #Text }
 

@@ -453,8 +453,10 @@ public class ParsingContext {
 		this.opMatchText(indent);
 	}
 
-	public void opDeprecated(String message) {
-		System.out.println(source.formatErrorMessage("deprecated", this.pos, message));
+	public final void opDeprecated(String message) {
+		if(!this.isFailure()) {
+			System.out.println(source.formatErrorMessage("deprecated", this.pos, message));
+		}
 	}
 	
 	public final ParsingObject getResult() {

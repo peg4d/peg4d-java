@@ -277,7 +277,7 @@ public class Main {
 			p.setRecognitionMode(true);
 			while(System.currentTimeMillis()-t < 4000) {
 				System.out.print(".");System.out.flush();
-				p.parseNode(startPoint);
+				p.parseChunk(startPoint);
 				p.pos = 0;
 			}
 			p.setRecognitionMode(false);
@@ -289,17 +289,15 @@ public class Main {
 			}
 			System.out.println(" GO!!");
 		}
-		//while(p.hasNode()) {
 		p.beginPeformStat();
-		ParsingObject pego = p.parseNode(startPoint);
+		ParsingObject pego = p.parse(startPoint);
+		if(p.isFailure()) {
+			p.showPosition("syntax error", p.fpos);
+			return;
+		}
 		p.endPerformStat(pego);
-		//}
-		if(p.hasUnconsumedCharacter()) {
-			long pos = p.getPosition();
-			if(pos > 0) {
-				p.showPosition("consumed", pos-1);
-			}
-			p.showPosition("unconsumed", pos);
+		if(p.hasByteChar()) {
+			p.showPosition("unconsumed", p.pos);
 		}
 		if(OutputType.equalsIgnoreCase("pego")) {
 			new Generator(OutputFileName).writePego(pego);
@@ -322,7 +320,7 @@ public class Main {
 		Main._PrintLine("Tips: \\Name to switch the starting point to Name");
 		int linenum = 1;
 		String line = null;
-		String startPoint = "TopLevel";
+		String startPoint = "Chunk";
 		while ((line = readMultiLine(startPoint + ">>> ", "    ")) != null) {
 			if(line.startsWith("\\")) {
 				startPoint = switchStaringPoint(peg, line.substring(1), startPoint);
@@ -330,7 +328,7 @@ public class Main {
 			}
 			ParsingSource source = new StringSource(peg, "(stdin)", linenum, line);
 			ParsingStream p = peg.newParserContext(source);
-			ParsingObject pego = p.parseNode(startPoint);
+			ParsingObject pego = p.parseChunk(startPoint);
 			System.out.println("Parsed: " + pego);
 			linenum = linenum + 1;
 		}
@@ -364,7 +362,7 @@ public class Main {
 				PegRule rule = ruleList.ArrayValues[i];
 				if(rule.objectType) {
 					p.resetSource(source);
-					ParsingObject pego = p.match(rule.ruleName);
+					ParsingObject pego = p.parse(rule.ruleName);
 					if(p.isFailure()) {
 						continue;
 					}
@@ -379,7 +377,7 @@ public class Main {
 	}
 	
 	static void infer(UList<PegRule> ruleList, ParsingStream p, UList<String> seq) {
-		if(!p.hasUnconsumedCharacter()) {
+		if(!p.hasByteChar()) {
 			printSequence(seq);
 			return;
 		}
@@ -389,7 +387,7 @@ public class Main {
 			PegRule rule = ruleList.ArrayValues[i];
 			//if(rule.objectType) {
 				p.setPosition(pos);
-				ParsingObject pego = p.match(rule.ruleName);
+				ParsingObject pego = p.parse(rule.ruleName);
 				if(p.isFailure()) {
 					continue;
 				}

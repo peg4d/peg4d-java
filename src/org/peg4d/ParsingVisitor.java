@@ -140,9 +140,9 @@ class NonTerminalChecker extends ParsingVisitor {
 		e.resolvedExpression = next.expr;
 		if(next == checking) {
 			if(this.consumedMinimumLength == 0) {
-				checking.reportError("left recursion: " + e.symbol);
-				e.base.foundError = true;
-				return;				
+//				checking.reportError("left recursion: " + e.symbol);
+//				e.base.foundError = true;
+//				return;				
 			}
 			if(next.length < this.consumedMinimumLength) {
 				next.length = this.consumedMinimumLength;

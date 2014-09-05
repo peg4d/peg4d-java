@@ -52,18 +52,6 @@ public abstract class ParsingSource {
 	public final String getResourceName() {
 		return fileName;
 	}
-
-//	public long skipNot(long pos, long end, ParsingCharset cset) {
-//		while(pos < end) {
-//			int ch = byteAt(pos);
-//			if(cset.match(ch)) {
-//				return pos;
-//			}
-//		}
-//		return this.length();
-//	}
-	
-	
 	
 	public final long getLineStartPosition(long fromPostion) {
 		long startIndex = fromPostion;
@@ -108,6 +96,7 @@ public abstract class ParsingSource {
 		}
 		return this.substring(startIndex, endIndex);
 	}
+	
 
 	public final String getMarker(long pos) {
 		long startIndex = this.getLineStartPosition(pos);
@@ -134,16 +123,68 @@ public abstract class ParsingSource {
 	}
 
 	public final String formatErrorMessage(String errorType, long pos, String msg) {
-		String line = this.getLineTextAt(pos);
-		String delim = "\n\t";
-		if(line.startsWith("\t") || line.startsWith(" ")) {
-			delim = "\n";
-		}
-		String header = this.formatErrorHeader(errorType, pos, msg);
-		String marker = this.getMarker(pos);
-		msg = header + delim + line + delim + marker;
-		return msg;
+		return this.formatErrorHeader(errorType, pos, msg) + this.getTextAround(pos, "\n ");
 	}
+	
+	public final String getTextAround(long pos, String delim) {
+		int ch = 0;
+		while(this.byteAt(pos) == ParsingSource.EOF && pos > 0) {
+			pos -= 1;
+		}
+		long startIndex = pos;
+		while(startIndex >= 0) {
+			ch = byteAt(startIndex);
+			if(ch == '\n' && pos - startIndex > 0) {
+				startIndex = startIndex + 1;
+				break;
+			}
+			if(pos - startIndex > 60 && ch < 128) {
+				break;
+			}
+			startIndex = startIndex - 1;
+		}
+		long endIndex = pos + 1;
+		while((ch = byteAt(endIndex)) != ParsingSource.EOF) {
+			if(ch == '\n' || endIndex - startIndex > 78 && ch < 128) {
+				break;
+			}
+			endIndex = endIndex + 1;
+		}
+		StringBuilder source = new StringBuilder();
+		StringBuilder marker = new StringBuilder();
+		for(long i = startIndex; i < endIndex; i++) {
+			ch = byteAt(i);
+			if(ch == '\n') {
+				source.append("\\N");
+				if(i == pos) {
+					marker.append("^^");
+				}
+				else {
+					marker.append("\\N");
+				}
+			}
+			else if(ch == '\t') {
+				source.append("    ");
+				if(i == pos) {
+					marker.append("^^^^");
+				}
+				else {
+					marker.append("    ");
+				}
+			}
+			else {
+				source.append((char)ch);
+				if(i == pos) {
+					marker.append("^");
+				}
+				else {
+					marker.append(" ");
+				}
+			}
+		}
+		return delim + source.toString() + delim + marker.toString();
+	}
+
 
 	public final String getFilePath(String fileName) {
 		int loc = this.getResourceName().lastIndexOf("/");
@@ -209,7 +250,11 @@ class StringSource extends ParsingSource {
 	@Override
 	public final long linenum(long pos) {
 		long count = this.startLineNum;
-		for(int i = 0; i <= (int)pos; i++) {
+		int end = (int)pos;
+		if(end >= this.utf8.length) {
+			end = this.utf8.length;
+		}
+		for(int i = 0; i < end; i++) {
 			if(this.utf8[i] == '\n') {
 				count++;
 			}

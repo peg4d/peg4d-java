@@ -21,24 +21,6 @@ public class ParsingStream extends ParsingContext {
 		this.pos = 0;
 		this.emptyTag = this.peg.getModelTag("#empty");
 	}
-
-//	@Override
-//	protected final long getPosition() {
-//		return this.pos;
-//	}
-//	
-//	@Override
-//	protected final void setPosition(long pos) {
-//		this.pos = pos;
-//	}
-//	
-//	@Override
-//	protected final void rollback(long pos) {
-//		if(stat != null && this.pos > pos) {
-//			stat.statBacktrack1(pos, this.pos);
-//		}
-//		this.pos = pos;
-//	}
 	
 	@Override
 	public final String toString() {
@@ -47,36 +29,7 @@ public class ParsingStream extends ParsingContext {
 //		}
 		return "";
 	}
-	
-	public final boolean hasUnconsumedCharacter() {
-		return this.source.byteAt(this.pos) != ParsingSource.EOF;
-	}
 
-//	public final boolean hasChar(int len) {
-//		return this.pos + len <= this.endPosition;
-//	}
-
-	protected final int byteAt(long pos) {
-		return this.source.byteAt(pos);
-	}
-
-	protected final int getByteChar() {
-		return this.byteAt(this.pos);
-	}
-
-	protected final int getUChar() {
-		return this.source.charAt(this.pos);
-	}
-
-	public String substring(long startIndex, long endIndex) {
-		return this.source.substring(startIndex, endIndex);
-	}
-
-//	@Override
-//	protected final void consume(int plus) {
-//		this.pos = this.pos + plus;
-//	}
-	
 	public final String formatErrorMessage(String msg1, String msg2) {
 		return this.source.formatErrorMessage(msg1, this.pos, msg2);
 	}
@@ -94,29 +47,51 @@ public class ParsingStream extends ParsingContext {
 		Main._Exit(1, msg);
 	}
 	
-	public boolean hasNode() {
-		return this.hasUnconsumedCharacter();
+	public final boolean hasByteChar() {
+		return this.source.byteAt(this.pos) != ParsingSource.EOF;
 	}
 
-	public ParsingObject match(String startPoint) {
+	public final int getByteChar() {
+		return this.source.byteAt(pos);
+	}
+	
+	public final ParsingObject parseChunk(String startPoint) {
 		this.initMemo();
 		PExpression start = this.peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
-		this.left = new ParsingObject(this.emptyTag, this.source, 0);
+		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
+		while(hasByteChar()) {
+			long ppos = this.getPosition();
+			po.setSourcePosition(this.pos);
+			this.left = po;
+			start.simpleMatch(this);
+			if(this.isFailure() || ppos == this.getPosition()) {
+				this.consume(1);
+				continue;
+			}
+			return this.left;
+		}
+		return null;
+	}
+
+	public final ParsingObject parseChunk() {
+		return this.parseChunk("Chunk");
+	}
+
+	public final ParsingObject parse(String startPoint) {
+		this.initMemo();
+		PExpression start = this.peg.getExpression(startPoint);
+		if(start == null) {
+			Main._Exit(1, "undefined start rule: " + startPoint );
+		}
+		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
+		this.left = po;
 		start.simpleMatch(this);
 		return this.left;
 	}
-	
-	public ParsingObject parseNode(String startPoint) {
-		ParsingObject pego = this.match(startPoint);
-		if(this.isFailure()) {
-			pego = this.newErrorObject();
-			//this.pos = this.endPosition;
-		}
-		return pego;
-	}
+
 	
 	protected MemoMap memoMap = null;
 	public void initMemo() {

@@ -1,0 +1,34 @@
+// PEG4d sample 
+// Kimio Kuramitsu
+
+export
+	= Email
+	/ IPv4
+File
+	= { ((!EMAIL .)* (@Email)?)* #List }
+Chunk
+	= Email
+Email
+	[example: user.name@example.com]
+	[bad-example: user..name@example.com]
+	= { EMAIL #Email }
+EMAIL
+	= LOCAL '@' DOMAIN
+LOCAL
+	= ([0-9A-Za-z!#$%&'*+/=?^_`{|}~] / '-')+ ('.' LOCAL)?
+DOMAIN
+	= '[' IPADDR ']' 
+	/ SUBDOMAIN ('.' SUBDOMAIN)+
+SUBDOMAIN
+	= ([0-9A-Za-z] / '-')+
+
+IPv4
+	= { IPADDR #IPv4 }
+IPADDR
+	= UINT8 '.' UINT8 '.' UINT8 '.' UINT8
+UINT8
+	= [12] [0-9] [0-9]
+	/ [1-9] [0-9]
+	/ [0-9] 
+	
+

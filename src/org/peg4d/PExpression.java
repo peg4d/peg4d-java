@@ -235,7 +235,7 @@ class PAny extends PTerminal {
 	}
 	@Override
 	public void simpleMatch(ParsingStream context) {
-		if(context.hasUnconsumedCharacter()) {
+		if(context.hasByteChar()) {
 			context.consume(1);
 			return;
 		}
@@ -290,7 +290,7 @@ class PCharacter extends PTerminal {
 //		ParsingObject right = this.exclude.simpleMatch(left, context);
 //		if(context.isFailure()) {
 //			assert(pos == context.getPosition());
-//			if(context.hasUnconsumedCharacter()) {
+//			if(context.hasByteChar()) {
 //				context.consume(1);
 //				return left;
 //			}
