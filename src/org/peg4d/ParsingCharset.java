@@ -143,6 +143,7 @@ public abstract class ParsingCharset {
 		return defval;
 	}
 
+	private final static int E = 1;
 	private final static int[] utf8len = {
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -152,14 +153,14 @@ public abstract class ParsingCharset {
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E,
+        E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E,
+        E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E,
+        E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E,
+        E, E, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
         2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-        4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 0, 0,
+        4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, E, E,
         0 /* EOF */
 	};
 
@@ -565,6 +566,10 @@ class CharacterReader {
 					ch = this.readUtf(this.read(this.pos+2), this.read(this.pos+3), this.read(this.pos+4), this.read(this.pos+5));
 					this.pos = this.pos + 5;
 				}
+				else if(ch1 == 'x' || ch1 == 'X') {
+					ch = this.readAscii(this.read(this.pos+2), this.read(this.pos+3));
+					this.pos = this.pos + 3;
+				}
 				else {
 					ch = this.readEsc(ch1);
 					this.pos = this.pos + 1;
@@ -604,6 +609,14 @@ class CharacterReader {
 		c = (c * 16) + ParsingCharset.hex(ch4);
 		return (char)c;
 	}
+
+	private char readAscii(char ch1, char ch2) {
+		int c = ParsingCharset.hex(ch1);
+		c = (c * 16) + ParsingCharset.hex(ch2);
+		return (char)c;
+	}
+
+
 }
 
 

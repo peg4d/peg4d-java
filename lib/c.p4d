@@ -1,9 +1,7 @@
 // PEG4d C Grammar
 // ===============
 //
-// Based on grammar from ECMA-262, 5.1 Edition [1]. Generated parser builds a
-// syntax tree compatible with Mozilla SpiderMonkey Parser API [2]. Properties
-// and node types reflecting features not present in ECMA-262 are not included.
+// Based on grammar from ISO/IEC 9899:2011 [1]. 
 //
 // Limitations:
 //
@@ -17,11 +15,7 @@
 // problems (such as automatic semicolon insertion) and also served to double
 // check that I converted the original grammar correctly.
 //
-// [1] http://www.ecma-international.org/publications/standards/Ecma-262.htm
-// [2] https://developer.mozilla.org/en-US/docs/SpiderMonkey/Parser_API
-// [3] http://inimino.org/~inimino/blog/
-// [4] http://boshi.inimino.org/3box/asof/1270029991384/PEG/ECMAScript_unified.peg
-//
+// [1] ISO/IEC 9899:2011
 
 export
 	= Statement
@@ -32,14 +26,13 @@ export
 	/ CChar
 
 File
-	= _ { @ExternalDeclaration #Source } EOT
+	= _ { (@ExternalDeclaration)* #Source } EOT
 	
 Chunk
 	= TopLevel
 	/ Expression
 	/ Statement
 	/ Type
-
 _
 	= (S / LONGCOMMENT / LINECOMMENT / PRAGMA)*
 	
@@ -56,15 +49,15 @@ PRAGMA
 	= '#' (!'\n' .)*
 
 ATTRIBUTE
-	= '__attribute__' !WCHAR _ '((' (!'))' .)* '))' _
-
+	= '__attribute__' !W _ '((' (!'))' .)* '))' _
+	
 EOL
 	= ('\r'? '\n' / !.)
 
 DIGIT
 	= [0-9]
 
-WCHAR
+W
 	= [a-zA-Z0-9_]
 	/ UCHAR
 
@@ -79,7 +72,7 @@ Name
 	= { NAME #Name } _ 
 
 NAME
-	= !DIGIT !(KEYWORD !WCHAR) WCHAR+
+	= !DIGIT !(KEYWORD !W) W+
 
 KEYWORD
 	= 'auto' / 'break' / 'case' / 'char' / 'const' / 'continue' / 'default' 
@@ -98,19 +91,19 @@ PLUS    = '+' ![+=] _
 MINUS   = '-' !('-' / [=>]) _
 TILDA   = '~' _
 BANG    = '!' !'=' _
-VOID      = 'void'     !WCHAR
-CHAR      = 'char'     !WCHAR
-SHORT     = 'short'    !WCHAR
-INT       = 'int'      !WCHAR
-LONG      = 'long'     !WCHAR
-FLOAT     = 'float'    !WCHAR
-DOUBLE    = 'double'   !WCHAR
-SIGNED    = 'signed'   !WCHAR
-UNSIGNED  = 'unsigned' !WCHAR
-BOOL      = '_Bool'    !WCHAR
-COMPLEX   = '_Complex' !WCHAR
-STRUCT    = 'struct'   !WCHAR
-UNION     = 'union'    !WCHAR
+VOID      = 'void'     !W
+CHAR      = 'char'     !W
+SHORT     = 'short'    !W
+INT       = 'int'      !W
+LONG      = 'long'     !W
+FLOAT     = 'float'    !W
+DOUBLE    = 'double'   !W
+SIGNED    = 'signed'   !W
+UNSIGNED  = 'unsigned' !W
+BOOL      = '_Bool'    !W
+COMPLEX   = '_Complex' !W
+STRUCT    = 'struct'   !W
+UNION     = 'union'    !W
 LWING     = '{' _ ;
 LBRK      = '[' _ ;
 RBRK      = ']' _ ;
@@ -132,23 +125,23 @@ OR	= '|' ![=] _
 ANDAND	= '&&' _
 OROR	= '||' _
 QUERY	= '?' _
-SEMI	= (';' _ / EOL)
+SEMI	= (';' _ / EOL)  /* this is for debug */
 RWING	= '}' _
 PTR	= '->' _
-ENUM	= 'enum' !WCHAR _
-ASM	= '__asm' !WCHAR _
-CASE	= 'case' !WCHAR _
-DEFAULT	= 'default' !WCHAR _
-IF	= 'if' !WCHAR _
-ELSE	= 'else' !WCHAR _
-SWITCH	= 'switch' !WCHAR _
-WHILE	= 'while' !WCHAR _
-DO	= 'do' !WCHAR _
-FOR	= 'for' !WCHAR _
-GOTO	= 'goto' !WCHAR _
-CONTINUE	= 'continue' !WCHAR _
-BREAK	= 'break' !WCHAR _
-RETURN	= 'return' !WCHAR _
+ENUM	= 'enum' !W _
+ASM	= '__asm' !W _
+CASE	= 'case' !W _
+DEFAULT	= 'default' !W _
+IF	= 'if' !W _
+ELSE	= 'else' !W _
+SWITCH	= 'switch' !W _
+WHILE	= 'while' !W _
+DO	= 'do' !W _
+FOR	= 'for' !W _
+GOTO	= 'goto' !W _
+CONTINUE	= 'continue' !W _
+BREAK	= 'break' !W _
+RETURN	= 'return' !W _
 STAREQU	= '*=' _
 DIVEQU	= '/=' _
 MODEQU	= '%=' _
@@ -161,25 +154,23 @@ HATEQU	= '^=' _
 OREQU	= '|=' _
 EQU	= '=' !'=' _
 DOT	= '.' _
-SIZEOF	= 'sizeof' !WCHAR _
-TYPEDEF	= 'typedef' !WCHAR _
-EXTERN	= 'extern' !WCHAR _
-STATIC	= 'static' !WCHAR _
-AUTO	= 'auto' !WCHAR _
-REGISTER	= 'register' !WCHAR _
-CONST	= 'const' !WCHAR _
-RESTRICT	= 'restrict' !WCHAR _
-VOLATILE	= 'volatile' !WCHAR _
-DECLSPEC	= '__declspec' !WCHAR _
+SIZEOF	= 'sizeof' !W _
+TYPEDEF	= 'typedef' !W _
+EXTERN	= 'extern' !W _
+STATIC	= 'static' !W _
+AUTO	= 'auto' !W _
+REGISTER	= 'register' !W _
+CONST	= 'const' !W _
+RESTRICT	= 'restrict' !W _
+VOLATILE	= 'volatile' !W _
+DECLSPEC	= '__declspec' !W _
+INLINE	= 'inline' !W _
+STDCALL	= '_stdcall' !W _
+
 LPAR	= '(' _
 RPAR	= ')' _
-INLINE	= 'inline' !WCHAR _
-STDCALL	= '_stdcall' !WCHAR _
 
 EOT	= !.
-
-
-ISHII_VERSION = ''
 
 TopLevel
 	= FunctionDefinition
@@ -193,26 +184,26 @@ AnnotationList
 	= { (@Annotation)*  #List } _
 
 Annotation
-	= EXTERN   { #KeyValue @{`extern` #Key } @{`true` #Value } } _
-	/ STATIC   { #KeyValue @{`static` #Key } @{`true` #Value } } _
-	/ AUTO     { #KeyValue @{`auto` #Key } @{`true` #Value } } _
-	/ REGISTER { #KeyValue @{`register` #Key } @{`true` #Value } } _
-	/ VOLATILE { #KeyValue @{`volatile` #Key } @{`true` #Value } } _
-	/ DECLSPEC _ LPAR { #KeyValue @{`volatile` #Key } @(Name #Value) } _ RPAR _
-	/ INLINE   { #KeyValue @{`inline` #Key } @{`true` #Value } } _
-	/ STDCALL  { #KeyValue @{`stdcall` #Key } @{`true` #Value } } _
+	= 'extern'    !W _   { #KeyValue @{`extern` #Key } @{`true` #Value } } _
+	/ 'static'    !W _   { #KeyValue @{`static` #Key } @{`true` #Value } } _
+	/ 'auto'      !W _   { #KeyValue @{`auto` #Key } @{`true` #Value } } _
+	/ 'register'  !W _   { #KeyValue @{`register` #Key } @{`true` #Value } } _
+	/ 'volatile'  !W _   { #KeyValue @{`volatile` #Key } @{`true` #Value } } _
+	/ '__declspec'  !W _ LPAR { #KeyValue @{`volatile` #Key } @(Name #Value) } _ RPAR _
+	/ ('inline' / '__inline')  !W _  { #KeyValue @{`inline` #Key } @{`true` #Value } } _
+	/ '_stdcall' !W _  { #KeyValue @{`stdcall` #Key } @{`true` #Value } } _
 
 FunctionParamList
-	= { ( Param (COMMA_ Param)+ )? (COMMA_ ELLIPSIS)? #List } 
+	= { ( FunctionParam (COMMA_ FunctionParam)+ )? (COMMA_ ELLIPSIS)? #List } 
 
-Param
+FunctionParam
 	= { @Type _ @Name #Param} _
 	
 // Declaration
 //==============
 
 TypeDef
-	= { 'typedef' !WCHAR _ @Type @Name #TypeDeclaration } _ SEMI
+	= { 'typedef' !W _ @Type @Name #TypeDeclaration } _ SEMI
 
 Declaration
 	= { @AnnotationList @Type @InitDecl (COMMA_ @InitDecl)* #Declaration } ATTRIBUTE? SEMI
@@ -221,8 +212,8 @@ InitDecl
 	= { @VarName (EQU @Initializer)? #VarDecl } _
 
 VarName
-	= { STAR @VarName #Pointer } _
-	/ Name
+	= { STAR @VarName #PointerName } _
+	/ Name {@ LBRK @ConstantExpression RBRK #ArrayName}*
 
 Initializer
 	= AssignmentExpression
@@ -252,23 +243,24 @@ POINTER_QUALIFIER
 	= CONST / RESTRICT
 
 AddFuncType
-	= LPAR STAR @Name RPAR LPAR (@Type (_ NAME _)? (COMMA_ @Type (_ NAME _)? )* )? RPAR #Tfunc
+	= LPAR STAR @Name RPAR LPAR (@Type (_ NAME _)? (COMMA_ @Type (_ NAME _)? )* )? RPAR #TFunc
 	
 PrimaryType
 	= { STRUCT _ @Name AddStructMember?  #TStruct } _
 	/ { UNION _  @Name  AddStructMember?  #TUnion } _
-	/ { VOID #Tvoid } _
-	/ { SIGNED_PREFIX? CHAR          #Tint } _
-	/ { SIGNED_PREFIX? SHORT         #Tint } _
-	/ { SIGNED_PREFIX? INT           #Tint } _
-	/ { FLOAT           #Tfloat } _
-	/ { DOUBLE          #Tfloat } _
-	/ { LONG _ DOUBLE   #Tfloat } _
-	/ { SIGNED_PREFIX? LONG (_ LONG)? (_ INT)? #Tint } _
-	/ { SIGNED `signed int` #Tint } _
-	/ { UNSIGNED `unsigned int` #Tint } _
-	/ { BOOL #Tbool } _
-	/ { COMPLEX #Tcomplex } _
+	/ { 'enum' !W _ @Name LWING @EnumeratorList COMMA_? RWING #TEnum } _
+	/ { VOID #TVoid } _
+	/ { SIGNED_PREFIX? CHAR          #TInt } _
+	/ { SIGNED_PREFIX? SHORT         #TInt } _
+	/ { SIGNED_PREFIX? INT           #TInt } _
+	/ { FLOAT           #TFloat } _
+	/ { DOUBLE          #TFloat } _
+	/ { LONG _ DOUBLE   #TFloat } _
+	/ { SIGNED_PREFIX? LONG (_ LONG)? (_ INT)? #TInt } _
+	/ { SIGNED `signed int` #TInt } _
+	/ { UNSIGNED `unsigned int` #TInt } _
+	/ { BOOL #TBoolean } _
+	/ { COMPLEX #TComplex } _
 	/ { NAME_T #TName } _
 	/ { NAME   #Name } _
 
@@ -276,7 +268,7 @@ SIGNED_PREFIX
 	= (SIGNED _ / UNSIGNED _ )
 
 NAME_T
-	= !DIGIT (!('_t' !WCHAR)  WCHAR )+ '_t' !WCHAR
+	= !DIGIT (!('_t' !W)  W )+ '_t' !W
 	
 AddStructMember
 	= LWING (@StructDeclaration)+ RWING
@@ -286,6 +278,13 @@ StructDeclaration
 
 StructMemberName
 	= VarName {@ COLON @ConstantExpression #Bit}
+
+EnumeratorList
+	= { @Enumerator (COMMA_ @Enumerator)* COMMA_? #List }
+
+Enumerator
+	= Name {@ EQU @ConstantExpression}?
+
 
 // Block, Statement
 //===================
@@ -381,12 +380,11 @@ UnaryExpression
 	/ { MINUS  @CastExpression #Minus }
 	/ { TILDA  @CastExpression #Compl }
 	/ { BANG   @CastExpression #Not }
-	/ { SIZEOF  ( @UnaryExpression / LPAR @Type RPAR ) #SizeOf }
+	/ { 'sizeof' !W _  ( @UnaryExpression / LPAR @Type RPAR ) #SizeOf }
 
 CastExpression
 	= { LPAR @Type RPAR @CastExpression #Cast }
 	/ UnaryExpression
-	
 
 PostfixExpression
 	= ( PrimaryExpression / { LPAR @Type RPAR LWING @{ (AddInitializerList)* COMMA_? #Initializer } RWING } ) 
@@ -467,8 +465,6 @@ LONG_SUFFIX
 	/ 'LL'
 	/ [lL]
 
-
-	
 CString
 	=  'L'? ('"' { STRING_CONTENT* #String } '"' _)+
 
@@ -489,7 +485,6 @@ ESCAPE
 	/ OCTAL_ESCAPE
 	/ HEX_ESCAPE
 	/ UCHAR
-	;
 
 SIMPLE_ESCAPE
 	= '\\' ['\"?\\abfnrtv]
@@ -573,7 +568,6 @@ TypeSpecifier
 	/ { BOOL #Tbool }
 	/ { COMPLEX #Tcomplex }
 	/ { StructOrUnionSpecifier #Tstructorunion }
-	/ { EnumSpecifier #Tenum }
 
 StructOrUnionSpecifier
 	= StructOrUnion^ ( (Name^)? LWING (StructDeclaration^)+ RWING / Name^ )
@@ -623,20 +617,5 @@ NameList
 	= { Name^ (COMMA_ Name^)* #c.identifierlist }
 	;
 
-EnumSpecifier
-	= ENUM ( (Name^)? LWING EnumeratorList^ COMMA_? RWING / Name^ )
-	;
-EnumeratorList
-	= Enumerator {@ (COMMA_ Enumerator^)* #c.enumeratorlist }
-	;
-Enumerator
-	= EnumerationConstant (EQU ConstantExpression)?
-	;
-
-EnumerationConstant
-	= Name
-	;
-	
-	
 
 	

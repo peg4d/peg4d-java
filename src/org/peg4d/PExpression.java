@@ -237,11 +237,12 @@ class PAny extends PTerminal {
 	}
 	@Override
 	public void simpleMatch(ParsingStream context) {
-		if(context.hasByteChar()) {
-			context.consume(1);
-			return;
-		}
-		context.foundFailure(this);
+		context.opMatchAnyChar();
+//		if(context.hasByteChar()) {
+//			context.consume(1);
+//			return;
+//		}
+//		context.foundFailure(this);
 	}
 }
 

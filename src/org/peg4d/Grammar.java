@@ -687,15 +687,15 @@ class PEG4dGrammar extends Grammar {
 		return new PRepetition(this, 0, e, 0);
 	}
 	private final PExpression zero(PExpression ... elist) {
-		return new PRepetition(this, 0, seq(elist), 0);
+		return new PRepetition(this, 0, Sequence(elist), 0);
 	}
 	private final PExpression one(PExpression e) {
 		return new PRepetition(this, 0, e, 1);
 	}
 	private final PExpression one(PExpression ... elist) {
-		return new PRepetition(this, 0, seq(elist), 1);
+		return new PRepetition(this, 0, Sequence(elist), 1);
 	}
-	private final PExpression seq(PExpression ... elist) {
+	private final PExpression Sequence(PExpression ... elist) {
 		UList<PExpression> l = new UList<PExpression>(new PExpression[8]);
 		for(PExpression e : elist) {
 			this.addSequence(l, e);
@@ -729,10 +729,10 @@ class PEG4dGrammar extends Grammar {
 		}
 		return new PConstructor(this, 0, true, null, l);
 	}
-	private PExpression set(PExpression e) {
+	private PExpression Link(PExpression e) {
 		return new PConnector(this, 0, e, -1);
 	}
-	private PExpression set(int index, PExpression e) {
+	private PExpression Link(int index, PExpression e) {
 		return new PConnector(this, 0, e, index);
 	}
 	
@@ -747,14 +747,14 @@ class PEG4dGrammar extends Grammar {
 		this.setRule("DIGIT", c("0-9"));
 		this.setRule("S", _S);
 		this.setRule("W", c("A-Za-z0-9_"));
-		this.setRule("NAME", seq(c("A-Za-z_"), zero(P("W"))));
+		this.setRule("NAME", Sequence(c("A-Za-z_"), zero(P("W"))));
 		this.setRule("HEX", c("0-9A-Fa-f"));
 
 		PExpression _NUMBER = one(c("0-9"));
 		this.setRule("COMMENT", 
 			Choice(
-				seq(t("/*"), zero(Not(t("*/")), Any), t("*/")),
-				seq(t("//"), zero(Not(_NEWLINE), Any), _NEWLINE)
+				Sequence(t("/*"), zero(Not(t("*/")), Any), t("*/")),
+				Sequence(t("//"), zero(Not(_NEWLINE), Any), _NEWLINE)
 			)
 		);
 		this.setRule("_", zero(Choice(one(_S), P("COMMENT"))));
@@ -773,7 +773,7 @@ class PEG4dGrammar extends Grammar {
 			)
 		);
 		this.setRule("NonTerminal", 
-			seq(
+			Sequence(
 				P("NonTerminalName"),
 				Optional(
 					LeftJoin(
@@ -784,23 +784,41 @@ class PEG4dGrammar extends Grammar {
 			)
 		);
 		PExpression StringContent  = zero(Choice(
-			t("\\'"), t("\\\\"), seq(Not(t("'")), Any)
+			t("\\'"), t("\\\\"), Sequence(Not(t("'")), Any)
 		));
 		PExpression StringContent2 = zero(Choice(
-				t("\\\""), t("\\\\"), seq(Not(t("\"")), Any)
+				t("\\\""), t("\\\\"), Sequence(Not(t("\"")), Any)
 		));
-		this.setRule("String", 
+		this.setRule("_String", 
 			Choice(
-				seq(t("'"),  Constructor(StringContent, Tag(PString)), t("'")),
-				seq(t("\""), Constructor(StringContent2, Tag(PString)), t("\""))
+				Sequence(t("'"),  Constructor(StringContent, Tag(PString)), t("'")),
+				Sequence(t("\""), Constructor(StringContent2, Tag(PString)), t("\""))
 			)
 		);
-		PExpression _Message = seq(t("`"), Constructor(zero(Not(t("`")), Any), Tag(PMessage)), t("`"));
-		PExpression CharacterContent = zero(Not(t("]")), Any);
-		PExpression _Character = seq(t("["), Constructor(CharacterContent, Tag(PCharacter)), t("]"));
+		PExpression ValueContent = zero(Choice(
+			t("\\`"), t("\\\\"), Sequence(Not(t("`")), Any)
+		));
+		PExpression _Message = Sequence(t("`"), Constructor(ValueContent, Tag(PMessage)), t("`"));
+//		PExpression CharacterContent = zero(Not(t("]")), Any);
+//		PExpression _Character = seq(t("["), Constructor(CharacterContent, Tag(PCharacter)), t("]"));
+		PExpression _Char2 = Choice( 
+			Sequence(t("\\u"), P("HEX"), P("HEX"), P("HEX"), P("HEX")),
+			Sequence(t("\\x"), P("HEX"), P("HEX")),
+			t("\\n"), t("\\t"), t("\\\\"), t("\\r"), t("\\-"), t("\\]"), 
+			Sequence(Not(t("]")), Any)
+		);
+		PExpression _CharChunk = Sequence(
+			Constructor (_Char2, Tag(PCharacter)), 
+			Optional(
+				LeftJoin(t("-"), Link(Constructor(_Char2, Tag(PCharacter))))
+			)
+		);
+		this.setRule("_Character", Sequence(t("["), Constructor(zero(Link(_CharChunk)), Tag(PCharacter)), t("]")));
+
 		PExpression _Any = Constructor(t("."), Tag(PAny));
-		PExpression _Tagging = seq(t("#"), Constructor(one(c("A-Za-z0-9_."), Tag(PTagging))));
+		PExpression _Tagging = Sequence(t("#"), Constructor(one(c("A-Za-z0-9_."), Tag(PTagging))));
 		PExpression _Byte = Constructor(t("0x"), P("HEX"), P("HEX"), Tag(PByte));
+		PExpression _Unicode = Constructor(t("U+"), P("HEX"), P("HEX"), P("HEX"), P("HEX"), Tag(PByte));
 		PExpression ConstructorBegin = Choice(t("{"), t("<{"), t("<<"), t("8<"));
 		PExpression Connector  = Choice(t("@"), t("^"));
 		PExpression ConstructorEnd   = Choice(t("}>"), t("}"), t(">>"), t(">8"));
@@ -808,11 +826,11 @@ class PEG4dGrammar extends Grammar {
 		this.setRule("Constructor", Constructor(
 			ConstructorBegin, 
 			Choice(
-				seq(Connector, _S, Tag(PLeftJoin)), 
+				Sequence(Connector, _S, Tag(PLeftJoin)), 
 				Tag(PConstructor)
 			), 
 			Spacing, 
-			set(P("Expr")), 
+			Link(P("_Expr")), 
 			Spacing,
 			ConstructorEnd
 		));
@@ -826,31 +844,31 @@ class PEG4dGrammar extends Grammar {
 //		);
 		PExpression _MatchFunc = Constructor(
 			t("<match"), _S,
-			set(P("Expr")), Spacing, t(">"),
+			Link(P("_Expr")), Spacing, t(">"),
 			Tag(PMatch)
 		);
 		PExpression _DeprecatedFunc = Constructor(
-			t("<deprecated"), _S, set(P("String")), _S,
-			set(P("Expr")), Spacing, t(">"),
+			t("<deprecated"), _S, Link(P("_String")), _S,
+			Link(P("_Expr")), Spacing, t(">"),
 			Tag(PDeprecated)
 		);
 		setRule("Term", 
 			Choice(
-				P("String"), _Character, _Any, _Message, _Tagging, _Byte, 
-				seq(t("("), Spacing, P("Expr"), Spacing, t(")")),
+				P("_String"), P("_Character"), _Any, _Message, _Tagging, _Byte, _Unicode,
+				Sequence(t("("), Spacing, P("_Expr"), Spacing, t(")")),
 				P("Constructor"), P("NonTerminal"), 
 				/*_LazyFunc,*/ _MatchFunc, _DeprecatedFunc
 			)
 		);
-		this.setRule("SuffixTerm", seq(
+		this.setRule("SuffixTerm", Sequence(
 			P("Term"), 
 			Optional(
 				LeftJoin(
 					Choice(
-						seq(t("*"), Tag(PZeroMore)), 
-						seq(t("+"), Tag(POneMore)), 
-						seq(t("?"), Tag(POptional)),
-						seq(Connector, Optional(set(1, P("Integer"))), Tag(PConnector))
+						Sequence(t("*"), Tag(PZeroMore)), 
+						Sequence(t("+"), Tag(POneMore)), 
+						Sequence(t("?"), Tag(POptional)),
+						Sequence(Connector, Optional(Link(1, P("Integer"))), Tag(PConnector))
 					)
 				)
 			)
@@ -859,12 +877,12 @@ class PEG4dGrammar extends Grammar {
 		this.setRule("Predicate", Choice(
 				Constructor(
 						Choice(
-								seq(t("&"), Tag(PAnd)),
-								seq(t("!"), Tag(PNot)),
-								seq(t("@["), Spacing, set(1, P("Integer")), Spacing, t("]"), Tag(PConnector)),							
-								seq(t("@"), Tag(PConnector))
+								Sequence(t("&"), Tag(PAnd)),
+								Sequence(t("!"), Tag(PNot)),
+								Sequence(t("@["), Spacing, Link(1, P("Integer")), Spacing, t("]"), Tag(PConnector)),							
+								Sequence(t("@"), Tag(PConnector))
 						), 
-						set(0, P("SuffixTerm"))
+						Link(0, P("SuffixTerm"))
 				), 
 				P("SuffixTerm")
 		));
@@ -872,27 +890,27 @@ class PEG4dGrammar extends Grammar {
 				P("Rule"), 
 				P("Import")
 		));
-		this.setRule("Sequence", seq(
+		this.setRule("Sequence", Sequence(
 				P("Predicate"), 
 				Optional(
 					LeftJoin(
 						one(
 							Spacing, 
 							_notRule,
-							set(P("Predicate"))
+							Link(P("Predicate"))
 						),
 						Tag(PSequence) 
 					)
 				)
 		));
-		this.setRule("Expr", 
-			seq(
+		this.setRule("_Expr", 
+			Sequence(
 				P("Sequence"), 
 				Optional(
 					LeftJoin(
 						one(
 							Spacing, t("/"), Spacing, 
-							set(P("Sequence"))
+							Link(P("Sequence"))
 						),
 						Tag(PChoice) 
 					)
@@ -900,32 +918,32 @@ class PEG4dGrammar extends Grammar {
 			)
 		);
 		this.setRule("Param",
-			seq(
+			Sequence(
 				t("["),
 				Constructor(
-					set(P("Name")),
+					Link(P("Name")),
 					zero(
 						Spacing,
-						set(P("Name"))
+						Link(P("Name"))
 					),
 					Tag(List) 
 				),
 				t("]")
 			)
 		);
-		this.setRule("DOC", seq(
+		this.setRule("DOC", Sequence(
 			zero(Not(t("]")), Not(t("[")), Any),
-			Optional(seq(t("["), P("DOC"), t("]"), P("DOC") ))
+			Optional(Sequence(t("["), P("DOC"), t("]"), P("DOC") ))
 		));
 		
 		this.setRule("Annotation",
-			seq(
+			Sequence(
 				t("["),
 				Constructor(
-					set(P("HyphenName")),
+					Link(P("HyphenName")),
 					t(":"), 
 					Spacing, 
-					set(
+					Link(
 						Constructor(
 							P("DOC"),
 							Tag(Text) 
@@ -939,17 +957,17 @@ class PEG4dGrammar extends Grammar {
 		);
 		this.setRule("Annotations",
 				Constructor(
-					one(set(P("Annotation"))),
+					one(Link(P("Annotation"))),
 					Tag(List) 
 				)
 		);
 		this.setRule("Rule", 
 			Constructor(
-				set(0, P("Name")), Spacing, 
-				Optional(seq(set(3, P("Param")), Spacing)),
-				Optional(seq(set(2, P("Annotations")), Spacing)),
+				Link(0, P("Name")), Spacing, 
+				Optional(Sequence(Link(3, P("Param")), Spacing)),
+				Optional(Sequence(Link(2, P("Annotations")), Spacing)),
 				t("="), Spacing, 
-				set(1, P("Expr")),
+				Link(1, P("_Expr")),
 				Tag(PRule) 
 			)
 		);
@@ -957,28 +975,28 @@ class PEG4dGrammar extends Grammar {
 			t("import"), 
 			Tag(PImport), 
 			_S, 
-			Choice(set(P("String")), P("DotName")), 
+			Choice(Link(P("_String")), P("DotName")), 
 			Optional(
-				seq(_S, t("as"), _S, set(P("Name")))
+				Sequence(_S, t("as"), _S, Link(P("Name")))
 			)
 		));
-		this.setRule("Chunk", seq(
+		this.setRule("Chunk", Sequence(
 			Spacing, 
 			Choice(
 				P("Rule"), 
 				P("Import")
 			), 
 			Spacing, 
-			Optional(seq(t(";"), Spacing))
+			Optional(Sequence(t(";"), Spacing))
 		));
-		this.setRule("File", seq(
+		this.setRule("File", Sequence(
 			Spacing, 
 			Choice(
 				P("Rule"), 
 				P("Import")
 			), 
 			Spacing, 
-			Optional(seq(t(";"), Spacing)) 
+			Optional(Sequence(t(";"), Spacing)) 
 		));
 		this.verify(/*null*/);
 		return this;

@@ -259,8 +259,9 @@ public class ParsingContext {
 	}
 
 	public final void opMatchAnyChar() {
-		if(this.source.charAt(this.pos) == -1) {
-			this.consume(this.source.charLength(this.pos));
+		if(this.source.charAt(this.pos) != -1) {
+			int len = this.source.charLength(this.pos);
+			this.consume(len);
 		}
 		else {
 			this.opFailure();
