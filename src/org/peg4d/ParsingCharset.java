@@ -12,7 +12,6 @@ public abstract class ParsingCharset {
 	public abstract ParsingCharset appendChar(int c, int c2);
 	public abstract ParsingCharset merge(ParsingCharset u);
 
-	
 	final static ParsingCharset newParsingCharset(String text) {
 		ParsingCharset u = null;
 		CharacterReader r = new CharacterReader(text);
@@ -50,7 +49,64 @@ public abstract class ParsingCharset {
 		}
 		return u.appendChar(c, c2);
 	}
+		
+	static ParsingCharset addText(ParsingCharset u, String t, String t2) {
+		int c = parseAscii(t);
+		int c2 = parseAscii(t2);
+		if(c != -1 && c2 != -1) {
+			if(u == null) {
+				return new ByteCharset(c, c2);			
+			}
+			return u.appendByte(c, c2);
+		}
+		c = parseUnicode(t);
+		c2 = parseUnicode(t);
+		if(u == null) {
+			if(c < 128 && c2 < 128) {
+				return new ByteCharset(c, c2);
+			}
+			else {
+				return new RangeCharset(c, c2);
+			}
+		}
+		return u.appendChar(c, c2);
+	}
 
+	static int parseAscii(String t) {
+		if(t.startsWith("\\x")) {
+			int c = ParsingCharset.hex(t.charAt(2));
+			c = (c * 16) + ParsingCharset.hex(t.charAt(3));
+			return c;
+		}
+		if(t.startsWith("\\")) {
+			int c = t.charAt(1);
+			switch (c) {
+			case 'a':  return '\007'; /* bel */
+			case 'b':  return '\b';  /* bs */
+			case 'e':  return '\033'; /* esc */
+			case 'f':  return '\f';   /* ff */
+			case 'n':  return '\n';   /* nl */
+			case 'r':  return '\r';   /* cr */
+			case 't':  return '\t';   /* ht */
+			case 'v':  return '\013'; /* vt */
+			}
+			return c;
+		}
+		return -1;
+	}
+
+	static int parseUnicode(String t) {
+		if(t.startsWith("\\u")) {
+			int c = ParsingCharset.hex(t.charAt(2));
+			c = (c * 16) + ParsingCharset.hex(t.charAt(3));
+			c = (c * 16) + ParsingCharset.hex(t.charAt(4));
+			c = (c * 16) + ParsingCharset.hex(t.charAt(5));
+			return c;
+		}
+		return t.charAt(0);
+	}
+
+	
 	public final static String quoteString(char OpenChar, String Text, char CloseChar) {
 		StringBuilder sb = new StringBuilder();
 		formatQuoteString(sb, OpenChar, Text, CloseChar);

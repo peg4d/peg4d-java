@@ -312,8 +312,8 @@ public class Grammar {
 	public PExpression newByte(int ch, String t) {
 		return this.factory.newByte(this, ch, t);
 	}
-	final PExpression newCharacter(String text) {
-		return this.factory.newCharacter(this, text);
+	final PExpression newCharacter(ParsingCharset u) {
+		return this.factory.newCharacter(this, u);
 	}
 	final PExpression newOptional(PExpression p) {
 		return this.factory.newOptional(this, p);
@@ -557,7 +557,19 @@ class PEG4dGrammar extends Grammar {
 			return loading.newString(ParsingCharset.unquoteString(pego.getText()));
 		}
 		if(pego.is(PEG4dGrammar.PCharacter)) {
-			return loading.newCharacter(pego.getText());
+			ParsingCharset u = null;
+			if(pego.size() > 0) {
+				for(int i = 0; i < pego.size(); i++) {
+					ParsingObject o = pego.get(i);
+					if(o.is(PEG4dGrammar.List)) {
+						u = ParsingCharset.addText(u, o.textAt(0, ""), o.textAt(1, ""));
+					}
+					if(o.is(PEG4dGrammar.PCharacter)) {
+						u = ParsingCharset.addText(u, o.textAt(0, ""), o.textAt(0, ""));
+					}
+				}
+			}
+			return loading.newCharacter(u);
 		}
 		if(pego.is(PEG4dGrammar.PByte)) {
 			String t = pego.getText();
@@ -810,7 +822,7 @@ class PEG4dGrammar extends Grammar {
 		PExpression _CharChunk = Sequence(
 			Constructor (_Char2, Tag(PCharacter)), 
 			Optional(
-				LeftJoin(t("-"), Link(Constructor(_Char2, Tag(PCharacter))))
+				LeftJoin(t("-"), Link(Constructor(_Char2, Tag(PCharacter))), Tag(List))
 			)
 		);
 		this.setRule("_Character", Sequence(t("["), Constructor(zero(Link(_CharChunk)), Tag(PCharacter)), t("]")));

@@ -149,15 +149,16 @@ public class GrammarFactory {
 		return e;
 	}
 	
-	public final PExpression newCharacter(Grammar peg, String text) {
-		ParsingCharset u = ParsingCharset.newParsingCharset(text);
-		String key = prefixCharacter + u.toString();
-		PExpression e = getsem(key);
-		if(e == null) {
-			e = new PCharacter(peg, 0, u);
-			e = putsem(key, e);
-		}
-		return e;
+	public final PExpression newCharacter(Grammar peg, ParsingCharset u) {
+//		ParsingCharset u = ParsingCharset.newParsingCharset(text);
+//		String key = prefixCharacter + u.toString();
+//		PExpression e = getsem(key);
+//		if(e == null) {
+//			e = new PCharacter(peg, 0, u);
+//			e = putsem(key, e);
+//		}
+//		return e;
+		return new PCharacter(peg, 0, u);
 	}
 
 	public final PExpression newOptional(Grammar peg, PExpression p) {
