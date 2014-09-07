@@ -12,6 +12,16 @@ public abstract class ParsingCharset {
 	public abstract ParsingCharset appendChar(int c, int c2);
 	public abstract ParsingCharset merge(ParsingCharset u);
 
+	@Override
+	public final String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("[");
+		this.toString(sb);
+		sb.append("]");
+		return sb.toString();
+	}
+	abstract void toString(StringBuilder sb);
+
 	final static ParsingCharset newParsingCharset(String text) {
 		ParsingCharset u = null;
 		CharacterReader r = new CharacterReader(text);
@@ -60,7 +70,7 @@ public abstract class ParsingCharset {
 			return u.appendByte(c, c2);
 		}
 		c = parseUnicode(t);
-		c2 = parseUnicode(t);
+		c2 = parseUnicode(t2);
 		if(u == null) {
 			if(c < 128 && c2 < 128) {
 				return new ByteCharset(c, c2);
@@ -78,7 +88,10 @@ public abstract class ParsingCharset {
 			c = (c * 16) + ParsingCharset.hex(t.charAt(3));
 			return c;
 		}
-		if(t.startsWith("\\")) {
+		if(t.startsWith("\\u")) {
+			return -1;
+		}
+		if(t.startsWith("\\") && t.length() > 1) {
 			int c = t.charAt(1);
 			switch (c) {
 			case 'a':  return '\007'; /* bel */
@@ -106,7 +119,6 @@ public abstract class ParsingCharset {
 		return t.charAt(0);
 	}
 
-	
 	public final static String quoteString(char OpenChar, String Text, char CloseChar) {
 		StringBuilder sb = new StringBuilder();
 		formatQuoteString(sb, OpenChar, Text, CloseChar);
@@ -250,9 +262,6 @@ public abstract class ParsingCharset {
 		return getFirstChar(toUtf8(text));
 	}
 
-	public static int parseHex2(String t) {
-		return hex(t.charAt(t.length()-2)) * 16 + hex(t.charAt(t.length()-1)); 
-	}
 
 	static int hex(int c) {
 		if('0' <= c && c <= '9') {
@@ -299,24 +308,22 @@ class ChoiceCharset extends ParsingCharset {
 		return false;
 	}
 	
-	private void append(ParsingCharset b) {
-		this.choice.add(b);
-	}
-	
 	@Override
 	public final ParsingCharset appendByte(int c, int c2) {
+		//System.out.println("choice.byte c=" + c + "," + c2);
 		for(int i = 0; i < choice.size(); i++) {
 			if(choice.ArrayValues[i] instanceof ByteCharset) {
 				choice.ArrayValues[i].appendByte(c, c2);
 				return this;
 			}
 		}
-		this.append(new ByteCharset(c, c2));
+		this.choice.add(new ByteCharset(c, c2));
 		return this;
 	}
 		
 	@Override
 	public final ParsingCharset appendChar(int c, int c2) {
+		//System.out.println("choice.byte c=" + c + "," + c2);
 		if(c < 128 && c2 < 128) {
 			return this.appendByte(c, c2);
 		}
@@ -325,7 +332,7 @@ class ChoiceCharset extends ParsingCharset {
 				return this;
 			}
 		}
-		this.append(new RangeCharset(c, c2));
+		this.choice.add(new RangeCharset(c, c2));
 		return this;
 	}
 
@@ -338,16 +345,12 @@ class ChoiceCharset extends ParsingCharset {
 		}
 		return false;
 	}
+
 	@Override
-	public final String toString() {
-		StringBuilder sb = new StringBuilder();
+	void toString(StringBuilder sb) {
 		for(int i = 0; i < choice.size(); i++) {
-			if(i > 0) {
-				sb.append(" / ");
-			}
-			sb.append(choice.ArrayValues[i].toString());
+			choice.ArrayValues[i].toString(sb);
 		}
-		return sb.toString();
 	}
 
 	@Override
@@ -355,20 +358,19 @@ class ChoiceCharset extends ParsingCharset {
 		// TODO Auto-generated method stub
 		return null;
 	}
-
 }
 
 class RangeCharset extends ParsingCharset {
-	int begin;
-	int end;
+	int beginChar;
+	int endChar;
 	RangeCharset(int c, int c2) {
-		this.begin = c;
-		this.end = c2;
+		this.beginChar = c;
+		this.endChar = c2;
 	}
 	@Override
 	public final int consume(ParsingSource s, long pos) {
 		int c = s.charAt(pos);
-		if(this.begin <= c && c <= this.end) {
+		if(this.beginChar <= c && c <= this.endChar) {
 			return s.charLength(pos);
 		}
 		return 0;
@@ -379,48 +381,46 @@ class RangeCharset extends ParsingCharset {
 	}
 	@Override
 	public ParsingCharset appendByte(int c, int c2) {
+		//System.out.println("char.byte c=" + c + "," + c2);
 		return new ChoiceCharset(new ByteCharset(c, c2), this);	
 	}
 	@Override
-	public boolean mergeChar(int c, int c2) {
+	public boolean mergeChar(int begin1, int end1) {
 		boolean res = false;
-		if(begin <= c2 + 1) {
-			if(c < begin) {
-				begin = c;
-			}
+		//System.out.println("merge.char begin=" + beginChar + "," + endChar);
+		if(end1 + 1 >= beginChar && begin1 < endChar) {
+			//System.out.println("end1="+end1+" > , begin="+ beginChar);
+			this.beginChar = Math.min(beginChar, begin1);
+			this.endChar = Math.max(endChar, end1);
 			res = true;
 		}
-		if(c + 1 <= end) {
-			if(end < c2) {
-				end = c2;
-			}
+		else if(endChar + 1 >= begin1 && beginChar < end1) {
+			//System.out.println("end="+endChar+" > , begin1="+ begin1);
+			this.beginChar = Math.min(beginChar, begin1);
+			this.endChar = Math.max(endChar, end1);
 			res = true;
 		}
+		//System.out.println("merge.char c=" + begin1 + "," + end1 + " res=" + res);
 		return res;
 	}
 	@Override
 	public ParsingCharset appendChar(int c, int c2) {
+		//System.out.println("char.char c=" + c + "," + c2);
 		if(this.mergeChar(c, c2)) {
 			return this;
 		}
 		return new ChoiceCharset(this, new RangeCharset(c, c2));	
 	}
 	@Override
-	public final String toString() {
-		StringBuilder sb = new StringBuilder();
-		if(this.begin == this.end) {
-			sb.append("'");
-			sb.append((char)this.begin);
-			sb.append("'");
+	void toString(StringBuilder sb) {
+		if(this.beginChar == this.endChar) {
+			sb.append(String.format("\\u%04x", this.beginChar));
 		}
 		else {
-			sb.append("[");
-			sb.append((char)this.begin);
+			sb.append(String.format("\\u%04x", this.beginChar));
 			sb.append("-");
-			sb.append((char)this.end);
-			sb.append("]");
+			sb.append(String.format("\\u%04x", this.endChar));
 		}
-		return sb.toString();
 	}
 	@Override
 	public ParsingCharset merge(ParsingCharset u) {
@@ -451,6 +451,7 @@ class ByteCharset extends ParsingCharset {
 
 	@Override
 	public final ParsingCharset appendByte(int c, int c2) {
+		//System.out.println("byte.byte c=" + c + "," + c2);
 		for(int i = c; i <= c2; i++) {
 			this.asciiBitMap[i] = true;
 		}
@@ -464,6 +465,7 @@ class ByteCharset extends ParsingCharset {
 
 	@Override
 	public final ParsingCharset appendChar(int c, int c2) {
+		//System.out.println("byte.char c=" + c + "," + c2);
 		if(c < 128 && c2 < 128) {
 			return this.appendByte(c, c2);
 		}
@@ -471,9 +473,7 @@ class ByteCharset extends ParsingCharset {
 	}
 
 	@Override
-	public final String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("[");
+	void toString(StringBuilder sb) {
 		for(int ch = 0; ch < this.asciiBitMap.length; ch++) {
 			if(!this.asciiBitMap[ch]) {
 				continue;
@@ -486,8 +486,6 @@ class ByteCharset extends ParsingCharset {
 				ch = ch2;
 			}
 		}
-		sb.append("]");
-		return sb.toString();
 	}
 
 	private int findRange(int start) {
@@ -506,6 +504,8 @@ class ByteCharset extends ParsingCharset {
 		case '\t' : return "\\t";
 		case '\r' : return "\\r";
 		case '\\' : return "\\\\";
+		case '-' : return "\\-";
+		case ']' : return "\\]";
 		}
 		if(Character.isISOControl(ch)) {
 			return String.format("\\x%x", c);

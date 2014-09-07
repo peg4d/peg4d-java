@@ -62,6 +62,7 @@ public class ParsingStream extends ParsingContext {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
 		long spos = this.getPosition();
+		long fpos = -1;
 		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
 		while(hasByteChar()) {
 			long ppos = this.getPosition();
@@ -69,10 +70,14 @@ public class ParsingStream extends ParsingContext {
 			this.left = po;
 			start.simpleMatch(this);
 			if(this.isFailure() || ppos == this.getPosition()) {
+				if(fpos == -1) {
+					fpos = this.fpos;
+				}
 				this.consume(1);
 				continue;
 			}
 			if(spos < ppos) {
+				System.out.println(source.formatErrorMessage("error", fpos, "syntax error"));
 				System.out.println("skipped[" + spos + "]: " + this.source.substring(spos, ppos));
 			}
 			return this.left;

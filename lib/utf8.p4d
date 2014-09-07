@@ -2,6 +2,17 @@
 // ==========
 // Based on The Unicode Standard, Version 5.2 and RFC 3629
 
+export
+	= ASCII
+	/ UTF8
+	/ BOM
+	/ SPACE
+
+File
+	= { UTF8* #Text }
+
+Chunk
+	= { UTF8* #Text }
 
 ASCII
 	= [\x00-\x7F]
@@ -23,17 +34,17 @@ BOM
 SPACE
 	= U+0020   // SPACE
 	/ U+0009   // CHARACTER TABULATION
- 	/ U+00A0   // NO-BREAK SPACE
- 	/ U+2002   // EN SPACE
- 	/ U+2003   // EM SPACE
- 	/ U+2004   // THREE-PER-EM SPACE
- 	/ U+2005   // FOUR-PER-EM SPACE
- 	/ U+2006   // SIX-PER-EM SPACE
+	/ U+00A0   // NO-BREAK SPACE
+	/ U+2002   // EN SPACE
+	/ U+2003   // EM SPACE
+	/ U+2004   // THREE-PER-EM SPACE
+	/ U+2005   // FOUR-PER-EM SPACE
+	/ U+2006   // SIX-PER-EM SPACE
 	/ U+2007   // FIGURE SPACE
 	/ U+2008   // PUNCTUATION SPACE
 	/ U+2009   // THIN SPACE
- 	/ U+200A   // HAIR SPACE
-	/ U+200B   //ZERO WIDTH SPACE
+	/ U+200A   // HAIR SPACE
+	/ U+200B   // ZERO WIDTH SPACE
 	/ U+3000   // IDEOGRAPHIC SPACE
 	/ U+FEFF   // ZERO WIDTH NO-BREAK SPACE
-
+	

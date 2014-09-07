@@ -154,6 +154,29 @@ class PNonTerminal extends PExpression {
 	}
 }
 
+class PUndefinedNonTerminal extends PNonTerminal {
+	PUndefinedNonTerminal(Grammar base, int flag, String ruleName) {
+		super(base, flag, ruleName);
+		this.symbol = ruleName;
+	}
+	@Override
+	protected void visit(ParsingVisitor probe) {
+		probe.visitNonTerminal(this);
+	}
+	@Override
+	public void vmMatch(ParsingContext context) {
+		this.resolvedExpression.vmMatch(context);
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+		this.resolvedExpression.simpleMatch(context);
+//		if(this.base != Grammar.PEG4d) {
+//			System.out.println("pos=" + context.pos + " called " + this.symbol + " isFailure: " + context.isFailure() + " " + this.resolvedExpression);
+//		}
+	}
+}
+
+
 abstract class PTerminal extends PExpression {
 	PTerminal (Grammar base, int flag) {
 		super(base, flag);

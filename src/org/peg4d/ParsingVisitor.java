@@ -134,8 +134,10 @@ class NonTerminalChecker extends ParsingVisitor {
 		PegRule next = e.base.getRule(e.symbol);
 		if(next == null) {
 			checking.reportError("undefined label: " + e.symbol);
-			e.base.foundError = true;
-			return;
+			e.base.setRule(e.symbol, new PUndefinedNonTerminal(e.base, 0, e.symbol));
+			next = e.base.getRule(e.symbol);
+//			e.base.foundError = true;
+//			return;
 		}
 		e.resolvedExpression = next.expr;
 		if(next == checking) {
@@ -180,7 +182,9 @@ class NonTerminalChecker extends ParsingVisitor {
 	
 	@Override
 	public void visitString(PString e) {
-		this.consumedMinimumLength += e.text.length();
+		if(e.utf8 != null) {
+			this.consumedMinimumLength += e.utf8.length;			
+		}
 	}
 	
 	@Override
