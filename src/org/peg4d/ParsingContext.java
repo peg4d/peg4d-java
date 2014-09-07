@@ -217,8 +217,8 @@ public class ParsingContext {
 
 	protected MemoMap memoMap = null;
 	public void initMemo() {
-		this.memoMap = new DebugMemo(new PackratMemo(4096), new OpenFifoMemo(100));
-//		this.memoMap = new NoMemo();
+//		this.memoMap = new DebugMemo(new PackratMemo(4096), new OpenFifoMemo(100));
+		this.memoMap = new NoMemo();
 	}
 
 	final ObjectMemo getMemo(PExpression e, long keypos) {
