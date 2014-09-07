@@ -94,9 +94,9 @@ public abstract class ParsingCharset {
 		if(t.startsWith("\\") && t.length() > 1) {
 			int c = t.charAt(1);
 			switch (c) {
-			case 'a':  return '\007'; /* bel */
-			case 'b':  return '\b';  /* bs */
-			case 'e':  return '\033'; /* esc */
+//			case 'a':  return '\007'; /* bel */
+//			case 'b':  return '\b';  /* bs */
+//			case 'e':  return '\033'; /* esc */
 			case 'f':  return '\f';   /* ff */
 			case 'n':  return '\n';   /* nl */
 			case 'r':  return '\r';   /* cr */
@@ -154,35 +154,6 @@ public abstract class ParsingCharset {
 		sb.append(CloseChar);
 	}
 	
-//	final static String _QuoteString(String OpenQuote, String Text, String CloseQuote) {
-//		StringBuilder sb = new StringBuilder();
-//		sb.append(OpenQuote);
-//		int i = 0;
-//		for(; i < Text.length(); i = i + 1) {
-//			char ch = Main._GetChar(Text, i);
-//			if(ch == '\n') {
-//				sb.append("\\n");
-//			}
-//			else if(ch == '\t') {
-//				sb.append("\\t");
-//			}
-//			else if(ch == '"') {
-//				sb.append("\\\"");
-//			}
-//			else if(ch == '\'') {
-//				sb.append("\\'");
-//			}
-//			else if(ch == '\\') {
-//				sb.append("\\\\");
-//			}
-//			else {
-//				sb.append(ch);
-//			}
-//		}
-//		sb.append(CloseQuote);
-//		return sb.toString();
-//	}
-
 	final static String unquoteString(String text) {
 		if(text.indexOf("\\") == -1) {
 			return text;
@@ -534,72 +505,7 @@ class ByteCharset extends ParsingCharset {
 		}
 		return new ChoiceCharset(this, u);
 	}
-	
 }
-
-//class ByteCharset2 extends ParsingCharset {
-//	String    text;
-//	boolean[] asciiBitMap;
-//	int size = 0;
-//
-//	public ByteCharset2(String charSet) {
-//		this.text = charSet;
-//		this.asciiBitMap = new boolean[MAX];
-//		if(charSet.length() > 0) {
-//			this.parse(charSet);
-//		}
-//		//System.out.println("U: " + text);
-//	}
-//
-//
-//
-//	public final boolean hasChar(int ch) {
-//		if(ch < MAX) {
-//			return this.asciiBitMap[ch];
-//		}
-//		return false;
-//	}
-//	
-//	public final String key() {
-//		return text;  // fixme
-//	}
-//
-//	public final boolean match(int ch) {
-//		return this.asciiBitMap[ch];
-//	}
-//
-//	final void set(int ch) {
-//		assert(ch < 127);
-//		if(this.asciiBitMap[ch] == false) {
-//			this.size += 1;
-//			this.asciiBitMap[ch] = true;
-//		}
-//	}
-//	
-//	private void setRange(int ch, int ch2) {
-//		for(;ch <= ch2; ch++) {
-//			this.set(ch);
-//		}
-//	}
-//
-//
-//	public final void append(ParsingCharset charset) {
-//		for(int i = 0; i < MAX; i++) {
-//			if(charset.asciiBitMap[i]) {
-//				this.set(i);
-//			}
-//		}
-//		this.text += charset.text;
-//	}
-//
-//	public final void append(int ch) {
-//		this.set(ch);
-//		this.text += (char)ch;
-//		//System.out.println("aU: " + text);
-//	}
-//
-//
-//}
 
 class CharacterReader {
 	String text;
@@ -622,10 +528,6 @@ class CharacterReader {
 					ch = this.readUtf(this.read(this.pos+2), this.read(this.pos+3), this.read(this.pos+4), this.read(this.pos+5));
 					this.pos = this.pos + 5;
 				}
-				else if(ch1 == 'x' || ch1 == 'X') {
-					ch = this.readAscii(this.read(this.pos+2), this.read(this.pos+3));
-					this.pos = this.pos + 3;
-				}
 				else {
 					ch = this.readEsc(ch1);
 					this.pos = this.pos + 1;
@@ -647,7 +549,7 @@ class CharacterReader {
 	private char readEsc(char ch1) {
 		switch (ch1) {
 		case 'a':  return '\007'; /* bel */
-		case 'b':  return '\b';  /* bs */
+		case 'b':  return '\b';   /* bs */
 		case 'e':  return '\033'; /* esc */
 		case 'f':  return '\f';   /* ff */
 		case 'n':  return '\n';   /* nl */
@@ -665,13 +567,6 @@ class CharacterReader {
 		c = (c * 16) + ParsingCharset.hex(ch4);
 		return (char)c;
 	}
-
-	private char readAscii(char ch1, char ch2) {
-		int c = ParsingCharset.hex(ch1);
-		c = (c * 16) + ParsingCharset.hex(ch2);
-		return (char)c;
-	}
-
 
 }
 
