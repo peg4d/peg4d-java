@@ -215,12 +215,18 @@ public class ParsingContext {
 		}
 	}
 
-	final ObjectMemo getMemo(PMemo pMemo, long pos2) {
-		return null;
+	protected MemoMap memoMap = null;
+	public void initMemo() {
+		this.memoMap = new DebugMemo(new PackratMemo(4096), new OpenFifoMemo(100));
+//		this.memoMap = new NoMemo();
 	}
 
-	final void setMemo(long pos2, PMemo pMemo, Object object, int length) {
-		
+	final ObjectMemo getMemo(PExpression e, long keypos) {
+		return this.memoMap.getMemo(e, keypos);
+	}
+
+	final void setMemo(long keypos, PExpression e, ParsingObject po, int length) {
+		this.memoMap.setMemo(keypos, e, po, length);
 	}
 
 	public final void opFailure() {

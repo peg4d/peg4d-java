@@ -165,14 +165,11 @@ class PUndefinedNonTerminal extends PNonTerminal {
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
-		this.resolvedExpression.vmMatch(context);
+		context.opFailure();
 	}
 	@Override
 	public void simpleMatch(ParsingStream context) {
-		this.resolvedExpression.simpleMatch(context);
-//		if(this.base != Grammar.PEG4d) {
-//			System.out.println("pos=" + context.pos + " called " + this.symbol + " isFailure: " + context.isFailure() + " " + this.resolvedExpression);
-//		}
+		context.opFailure();
 	}
 }
 
@@ -1193,8 +1190,9 @@ abstract class POperator extends PExpression {
 }
 
 class PMemo extends POperator {
+	static ParsingObject NonTransition = new ParsingObject(null, null, 0);
 	PExpression parent = null;
-	boolean enableMemo = false;
+	boolean enableMemo = true;
 	int memoHit = 0;
 	int memoMiss = 0;
 
@@ -1216,31 +1214,22 @@ class PMemo extends POperator {
 		}
 		long pos = context.getPosition();
 		ParsingObject left = context.left;
-		ObjectMemo m = context.memoMap.getMemo(this, pos);
+		ObjectMemo m = context.getMemo(this, pos);
 		if(m != null) {
 			this.memoHit += 1;
 			context.setPosition(pos + m.consumed);
-			if(m.generated == null) {
-				context.left = left;
-				return;
+			if(m.generated != NonTransition) {
+				context.left = m.generated;
 			}
-			context.left = m.generated;
 			return;
 		}
 		this.inner.simpleMatch(context);
 		int length = (int)(context.getPosition() - pos);
-//		if(length > 0) {
-			if(context.left == left) {
-				context.memoMap.setMemo(pos, this, null, length);
-			}
-			else {
-				context.memoMap.setMemo(pos, this, context.left, length);
-			}
-//		}
+		context.setMemo(pos, this, (context.left == left) ? NonTransition : context.left, length);
 		this.memoMiss += 1;
 		this.tryTracing();
 	}
-	
+
 	private void tryTracing() {
 		if(Main.TracingMemo) {
 			if(this.memoMiss == 32) {

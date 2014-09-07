@@ -100,12 +100,6 @@ public class ParsingStream extends ParsingContext {
 		start.simpleMatch(this);
 		return this.left;
 	}
-
-	
-	protected MemoMap memoMap = null;
-	public void initMemo() {
-		this.memoMap = new NoMemo();
-	}
 			
 //	private long  failurePosition = 0;
 	private final ParsingObject failureResult = null; //new ParsingObject(null, this.source, 0);

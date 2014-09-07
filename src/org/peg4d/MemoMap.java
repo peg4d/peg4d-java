@@ -154,42 +154,6 @@ class PackratMemo extends MemoMap {
 	}
 }
 
-class DebugMemo extends MemoMap {
-	MemoMap m1;
-	MemoMap m2;
-	protected DebugMemo(MemoMap m1, MemoMap m2) {
-		this.m1 = m1;
-		this.m2 = m2;
-	}
-	@Override
-	protected final void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
-		this.m1.setMemo(keypos, keypeg, generated, consumed);
-		this.m2.setMemo(keypos, keypeg, generated, consumed);
-	}
-	@Override
-	protected final ObjectMemo getMemo(PExpression keypeg, long keypos) {
-		ObjectMemo o1 = this.m1.getMemo(keypeg, keypos);
-		ObjectMemo o2 = this.m2.getMemo(keypeg, keypos);
-		if(o1 == null && o2 == null) {
-			return null;
-		}
-		if(o1 != null && o2 == null) {
-			System.out.println("diff: 1 null " + "pos2=" + keypos + ", p2=" + keypeg.uniqueId);
-		}
-		if(o1 == null && o2 != null) {
-			System.out.println("diff: 2 null " + "pos1=" + keypos + ", p1=" + keypeg.uniqueId);
-		}
-		if(o1 != null && o2 != null) {
-			if(o1.generated != o2.generated) {
-				System.out.println("diff: generaetd " + "pos1=" + keypos + ", p1=" + keypeg.uniqueId);
-			}
-			if(o1.consumed != o2.consumed) {
-				System.out.println("diff: consumed " + "pos1=" + keypos + ", p1=" + keypeg.uniqueId);
-			}
-		}
-		return o2;
-	}
-}
 
 class FifoMemo extends MemoMap {
 	protected Map<Long, ObjectMemo> memoMap;
@@ -266,8 +230,6 @@ class OpenFifoMemo extends MemoMap {
 		m.keypeg = keypeg;
 		m.generated = generated;
 		m.consumed = consumed;
-//		this.statSetCount += 1;
-//		//System.out.println("SET " + key + "/"+ hash + " kp: " + keypeg.uniqueId);
 	}
 
 	@Override
@@ -290,6 +252,42 @@ class OpenFifoMemo extends MemoMap {
 		stat.setCount("MemoSize", this.memoArray.length);
 		stat.setRatio("MemoCollision80", this.statExpireCount, this.statSetCount);
 	}
+}
 
+class DebugMemo extends MemoMap {
+	MemoMap m1;
+	MemoMap m2;
+	protected DebugMemo(MemoMap m1, MemoMap m2) {
+		this.m1 = m1;
+		this.m2 = m2;
+	}
+	@Override
+	protected final void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
+		this.m1.setMemo(keypos, keypeg, generated, consumed);
+		this.m2.setMemo(keypos, keypeg, generated, consumed);
+	}
+	@Override
+	protected final ObjectMemo getMemo(PExpression keypeg, long keypos) {
+		ObjectMemo o1 = this.m1.getMemo(keypeg, keypos);
+		ObjectMemo o2 = this.m2.getMemo(keypeg, keypos);
+		if(o1 == null && o2 == null) {
+			return null;
+		}
+		if(o1 != null && o2 == null) {
+			System.out.println("diff: 1 null " + "pos=" + keypos + ", e=" + keypeg);
+		}
+		if(o1 == null && o2 != null) {
+			System.out.println("diff: 2 null " + "pos=" + keypos + ", e=" + keypeg);
+		}
+		if(o1 != null && o2 != null) {
+			if(o1.generated != o2.generated) {
+				System.out.println("diff: generaetd " + "pos1=" + keypos + ", p1=" + keypeg.uniqueId);
+			}
+			if(o1.consumed != o2.consumed) {
+				System.out.println("diff: consumed " + "pos1=" + keypos + ", p1=" + keypeg.uniqueId);
+			}
+		}
+		return o1;
+	}
 }
 

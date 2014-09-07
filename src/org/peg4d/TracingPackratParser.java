@@ -12,8 +12,8 @@ public class TracingPackratParser extends ParsingStream {
 		this.memo = memo;
 	}
 	
-	@Override
-	public void initMemo() {
+//	@Override
+	public void initMemo2() {
 		if(memo < 0) {
 			int initSize = 512 * 1024;
 			if(source.length() < 512 * 1024) {
