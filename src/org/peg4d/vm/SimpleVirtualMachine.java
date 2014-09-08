@@ -37,6 +37,9 @@ public class SimpleVirtualMachine {
 			case opMatchCharset:
 				c.opMatchCharset(op.bdata);
 				break;
+			case opMatchAnyChar:
+				c.opMatchAnyChar();
+				break;
 			case opRememberPosition:
 				c.opRememberPosition();
 				break;
