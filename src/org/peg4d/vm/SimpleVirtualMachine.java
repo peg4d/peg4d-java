@@ -67,6 +67,9 @@ public class SimpleVirtualMachine {
 			case opRestoreObject:
 				c.opRestoreObject();
 				break;
+			case opRestoreNegativeObject:
+				c.opRestoreNegativeObject();
+				break;
 			case opConnectObject:
 				c.opConnectObject(op.ndata);
 				break;			
