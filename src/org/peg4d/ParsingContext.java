@@ -491,9 +491,39 @@ public class ParsingContext {
 		}
 	}
 
+	// <indent Expr>  <indent>
+	
+	private class IndentStack {
+		String indent;
+		byte[] utf8;
+		IndentStack prev;
+		IndentStack(String indent, IndentStack prev) {
+			this.indent = indent;
+			this.utf8 = indent.getBytes();
+			this.prev = prev;
+		}
+		IndentStack pop() {
+			return this.prev;
+		}
+	}
+	
+	private IndentStack indentStack = null;
+	
+	public final void opPushIndent() {
+		String s = this.source.getIndentText(this.pos);
+		//System.out.println("Push indent: '"+s+"'");
+		this.indentStack = new IndentStack(s, this.indentStack);
+	}
+
+	public final void opPopIndent() {
+		this.indentStack = this.indentStack.pop();
+	}
+	
 	public final void opIndent() {
-		byte[] indent = this.source.getIndentText(pos).getBytes();
-		this.opMatchText(indent);
+		if(indentStack != null) {
+			this.opMatchText(indentStack.utf8);
+			//System.out.println("indent isFailure? " + this.isFailure() + " indent=" + indentStack.utf8.length + " '" + "'" + " left=" + this.left);
+		}
 	}
 
 	public final void opDeprecated(String message) {

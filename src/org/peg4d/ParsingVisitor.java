@@ -37,7 +37,7 @@ class ParsingVisitor {
 	}
 	public void visitMessage(PMessage e) {
 	}
-	public void visitIndent(PIndent e) {
+	public void visitIndent(ParsingIndent e) {
 	}
 	public void visitUnary(PUnary e) {
 		e.inner.visit(this);
@@ -558,7 +558,7 @@ class ObjectRemover extends ParsingVisitor {
 		this.returnPeg = null;
 	}
 	@Override
-	public void visitIndent(PIndent e) {
+	public void visitIndent(ParsingIndent e) {
 		this.returnPeg = null;
 	}
 	@Override

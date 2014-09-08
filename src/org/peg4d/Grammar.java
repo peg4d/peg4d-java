@@ -378,6 +378,12 @@ public class Grammar {
 		return new ParsingDisableFlag(flagName, e);
 	}
 
+	public PExpression newIndent(PExpression e) {
+		if(e == null) {
+			return new ParsingIndent(this, 0);
+		}
+		return new ParsingStackIndent(e);
+	}
 
 }
 
@@ -469,11 +475,10 @@ class PegRule {
 			a = a.next;
 		}
 	}
-	
-	
 }
 
 class PEG4dGrammar extends Grammar {
+	
 	static final int PRule        = ParsingTag.tagId("PRule");
 	static final int PImport      = ParsingTag.tagId("PImport");
 	static final int PAnnotation  = ParsingTag.tagId("PAnnotation");
@@ -494,6 +499,7 @@ class PEG4dGrammar extends Grammar {
 	static final int PFlag      = ParsingTag.tagId("PFlag");
 	static final int PEnable      = ParsingTag.tagId("PEnable");
 	static final int PDisable     = ParsingTag.tagId("PDisable");
+	static final int PIndent      = ParsingTag.tagId("PIndent");
 	
 	static final int PSequence    = ParsingTag.tagId("PSequence");
 	static final int PChoice      = ParsingTag.tagId("PChoice");
@@ -587,9 +593,6 @@ class PEG4dGrammar extends Grammar {
 					// self-redefinition
 					return e;  // FIXME
 				}
-			}
-			if(symbol.equals("indent") && !loading.hasRule("indent")) {
-				loading.setRule("indent", new PIndent(loading, 0));
 			}
 			if(symbol.length() > 0 && !symbol.endsWith("_") && !loading.hasRule(symbol) && Grammar.PEG4d.hasRule(symbol)) { // comment
 				Main.printVerbose("implicit importing", symbol);
@@ -715,6 +718,12 @@ class PEG4dGrammar extends Grammar {
 		}
 		if(pego.is(PEG4dGrammar.PFlag)) {
 			return loading.newFlag(pego.getText());
+		}
+		if(pego.is(PEG4dGrammar.PIndent)) {
+			if(pego.size() == 0) {
+				return loading.newIndent(null);
+			}
+			return loading.newIndent(toParsingExpression(loading, ruleName, pego.get(0)));
 		}
 		
 		if(pego.is(PEG4dGrammar.PDeprecated)) {
@@ -927,10 +936,10 @@ class PEG4dGrammar extends Grammar {
 			Link(P("Expr_")), Spacing, t(">"),
 			Tag(PMatch)
 		);
-		PExpression _DeprecatedFunc = Constructor(
-			t("<deprecated"), _S, Link(P("SingleQuotedString")), _S,
-			Link(P("Expr_")), Spacing, t(">"),
-			Tag(PDeprecated)
+		PExpression _IndentFunc = Constructor(
+			t("<indent"), 
+			Optional(Sequence(_S, Link(P("Expr_")), Spacing)), t(">"),
+			Tag(PIndent)
 		);
 		setRule(
 			"Flag_", 
@@ -957,7 +966,7 @@ class PEG4dGrammar extends Grammar {
 				Sequence(t("("), Spacing, P("Expr_"), Spacing, t(")")),
 				P("Constructor_"), P("NonTerminal_"), 
 				P("String"), 
-				_MatchFunc, _EnableFlagFunc, _DisableFlagFunc, _DeprecatedFunc
+				_MatchFunc, _EnableFlagFunc, _DisableFlagFunc, _IndentFunc
 			)
 		);
 		this.setRule("SuffixTerm_", Sequence(

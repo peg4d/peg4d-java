@@ -88,7 +88,9 @@ public abstract class ParsingSource {
 				break;
 			}
 		}
-		return this.substring(startPosition, i);
+		String indent = this.substring(startPosition, i);
+		System.out.println(this.formatErrorMessage("debug", fromPosition, "'"+indent+"'"));
+		return indent;
 	}
 
 	public final String getLineTextAt(long pos) {

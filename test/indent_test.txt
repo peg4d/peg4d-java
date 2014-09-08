@@ -1,0 +1,12 @@
+
+label:
+	if:
+		some
+		thing
+	else:
+		wrong
+	or
+
+label2:
+	show
+

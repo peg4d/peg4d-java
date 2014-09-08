@@ -1,0 +1,25 @@
+// PEG4d Indent
+
+
+File
+	= { (_ NL / @Statement)* #File}
+
+Block
+	= { <indent ':' _ NL (_ NL / @IndentStatement)+ > #Block}
+
+IndentStatement
+	= <indent> S+ Statement
+
+Statement
+	= { @{W+ #Name} @Block #Label }
+	/ { (!NL .)+ #Line } NL?
+
+NL
+	= '\r'? '\n'
+
+S
+	= [ \t]
+_
+	= [ \t]*
+
+

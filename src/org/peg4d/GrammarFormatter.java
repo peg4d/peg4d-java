@@ -93,7 +93,7 @@ class GrammarFormatter extends ParsingVisitor {
 		sb.append("`" + e.symbol + "`");
 	}
 	@Override
-	public void visitIndent(PIndent e) {
+	public void visitIndent(ParsingIndent e) {
 		sb.append("indent");
 	}
 	protected void format(String prefix, PUnary e, String suffix) {
@@ -332,7 +332,7 @@ class CodeGenerator extends GrammarFormatter {
 		this.writeCode(MachineInstruction.opValue, ParsingCharset.quoteString('\'', e.symbol, '\''));
 	}
 	@Override
-	public void visitIndent(PIndent e) {
+	public void visitIndent(ParsingIndent e) {
 		this.writeCode(MachineInstruction.opIndent);
 	}
 	@Override

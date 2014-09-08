@@ -682,7 +682,7 @@ abstract class PList extends PExpression {
 		if(e instanceof PString && ((PString)e).utf8.length == 0) {
 			return true;
 		}
-		if(e instanceof PIndent) {
+		if(e instanceof ParsingIndent) {
 			return true;
 		}
 		return false;
@@ -1106,27 +1106,7 @@ class PConstructor extends PList {
 //	}
 }
 
-class PIndent extends PTerminal {
-	PIndent(Grammar base, int flag) {
-		super(base, flag | PExpression.HasContext);
-	}
-	@Override
-	protected void visit(ParsingVisitor probe) {
-		probe.visitIndent(this);
-	}
-	@Override
-	boolean checkFirstByte(int ch) {
-		return (ch == '\t' || ch == ' ');
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opIndent();
-	}
-	@Override
-	public void simpleMatch(ParsingStream context) {
-		context.opIndent();
-	}
-}
+
 
 class PExport extends PUnary {
 	public PExport(Grammar base, int flag, PExpression e) {
@@ -1272,10 +1252,50 @@ class PMatch extends POperator {
 	}
 }
 
+class ParsingIndent extends PTerminal {
+	ParsingIndent(Grammar base, int flag) {
+		super(base, flag | PExpression.HasContext);
+	}
+	@Override
+	protected void visit(ParsingVisitor probe) {
+		probe.visitIndent(this);
+	}
+	@Override
+	boolean checkFirstByte(int ch) {
+		return (ch == '\t' || ch == ' ');
+	}
+	@Override
+	public void vmMatch(ParsingContext context) {
+		context.opIndent();
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+		context.opIndent();
+	}
+}
+
+class ParsingStackIndent extends POperator {
+	ParsingStackIndent(PExpression e) {
+		super(e);
+	}
+	@Override
+	public void vmMatch(ParsingContext context) {
+		context.opPushIndent();
+		this.inner.vmMatch(context);
+		context.opPopIndent();
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+		context.opPushIndent();
+		this.inner.simpleMatch(context);
+		context.opPopIndent();
+	}
+}
+
 class ParsingFlag extends PExpression {
 	String flagName;
 	protected ParsingFlag(Grammar peg, int flag, String flagName) {
-		super(peg, flag);
+		super(peg, flag | PExpression.HasContext);
 		this.flagName = flagName;
 	}
 	@Override
