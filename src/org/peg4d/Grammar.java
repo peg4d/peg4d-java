@@ -366,6 +366,19 @@ public class Grammar {
 		return new PDeprecated(message, e);
 	}
 
+	public PExpression newFlag(String flagName) {
+		return new ParsingFlag(this, 0, flagName);
+	}
+
+	public PExpression newEnableFlag(String flagName, PExpression e) {
+		return new ParsingEnableFlag(flagName, e);
+	}
+
+	public PExpression newDisableFlag(String flagName, PExpression e) {
+		return new ParsingDisableFlag(flagName, e);
+	}
+
+
 }
 
 class PegRule {
@@ -475,7 +488,13 @@ class PEG4dGrammar extends Grammar {
 	static final int POneMore     = ParsingTag.tagId("POneMore");
 	static final int PZeroMore    = ParsingTag.tagId("PZeroMore");
 	static final int PTimes       = ParsingTag.tagId("PTimes");
+	
 	static final int PMatch       = ParsingTag.tagId("PMatch");
+
+	static final int PFlag      = ParsingTag.tagId("PFlag");
+	static final int PEnable      = ParsingTag.tagId("PEnable");
+	static final int PDisable     = ParsingTag.tagId("PDisable");
+	
 	static final int PSequence    = ParsingTag.tagId("PSequence");
 	static final int PChoice      = ParsingTag.tagId("PChoice");
 	static final int PConstructor = ParsingTag.tagId("PConstructor");
@@ -688,6 +707,16 @@ class PEG4dGrammar extends Grammar {
 		if(pego.is(PEG4dGrammar.PMatch)) {
 			return loading.newMatch(toParsingExpression(loading, ruleName, pego.get(0)));
 		}
+		if(pego.is(PEG4dGrammar.PEnable)) {
+			return loading.newEnableFlag(pego.textAt(0, ""), toParsingExpression(loading, ruleName, pego.get(1)));
+		}
+		if(pego.is(PEG4dGrammar.PDisable)) {
+			return loading.newDisableFlag(pego.textAt(0, ""), toParsingExpression(loading, ruleName, pego.get(1)));
+		}
+		if(pego.is(PEG4dGrammar.PFlag)) {
+			return loading.newFlag(pego.getText());
+		}
+		
 		if(pego.is(PEG4dGrammar.PDeprecated)) {
 			return loading.newDeprecated(ParsingCharset.unquoteString(pego.textAt(0, "")),
 					toParsingExpression(loading, ruleName, pego.get(1)));
@@ -903,13 +932,32 @@ class PEG4dGrammar extends Grammar {
 			Link(P("Expr_")), Spacing, t(">"),
 			Tag(PDeprecated)
 		);
+		setRule(
+			"Flag_", 
+			Sequence(t("."), 
+				Constructor(one(_W), Tag(PFlag)) 
+			)
+		);
+		PExpression _EnableFlagFunc = Constructor(
+			t("<enable"), _S,
+			Link(P("Flag_")), _S,
+			Link(P("Expr_")), Spacing, t(">"),
+			Tag(PEnable)
+		);
+		PExpression _DisableFlagFunc = Constructor(
+			t("<disable"), _S,
+			Link(P("Flag_")), _S,
+			Link(P("Expr_")), Spacing, t(">"),
+			Tag(PDisable)
+		);
 		setRule("Term_", 
 			Choice(
-				P("SingleQuotedString"), P("Charcter_"), _Any, _Message, _Tagging, _Byte, _Unicode,
+				P("SingleQuotedString"), P("Charcter_"), P("Flag_"), 
+				_Any, _Message, _Tagging, _Byte, _Unicode,
 				Sequence(t("("), Spacing, P("Expr_"), Spacing, t(")")),
 				P("Constructor_"), P("NonTerminal_"), 
 				P("String"), 
-				/*_LazyFunc,*/ _MatchFunc, _DeprecatedFunc
+				_MatchFunc, _EnableFlagFunc, _DisableFlagFunc, _DeprecatedFunc
 			)
 		);
 		this.setRule("SuffixTerm_", Sequence(
@@ -938,7 +986,7 @@ class PEG4dGrammar extends Grammar {
 				), 
 				P("SuffixTerm_")
 		));
-		PExpression _notRule = Not(Choice(
+		PExpression _NotRule = Not(Choice(
 				P("Rule_"), 
 				P("Import_")
 		));
@@ -948,7 +996,7 @@ class PEG4dGrammar extends Grammar {
 					LeftJoin(
 						one(
 							Spacing, 
-							_notRule,
+							_NotRule,
 							Link(P("Predicate_"))
 						),
 						Tag(PSequence) 

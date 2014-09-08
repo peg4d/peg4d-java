@@ -79,6 +79,18 @@ class ParsingVisitor {
 	}
 	public void visitDeprecated(PDeprecated e) {
 	}
+
+	public void visitParsingFlag(ParsingFlag e) {
+
+	}
+	
+	public void visitParsingEnableFlag(ParsingEnableFlag e) {
+		e.inner.visit(this);
+	}
+	
+	public void visitParsingDisableFlag(ParsingDisableFlag e) {
+		e.inner.visit(this);
+	}
 }
 
 class ListMaker extends ParsingVisitor {
@@ -134,10 +146,8 @@ class NonTerminalChecker extends ParsingVisitor {
 		PegRule next = e.base.getRule(e.symbol);
 		if(next == null) {
 			checking.reportError("undefined label: " + e.symbol);
-			e.base.setRule(e.symbol, new PUndefinedNonTerminal(e.base, 0, e.symbol));
+			e.base.setRule(e.symbol, new ParsingFlag(e.base, 0, e.symbol));
 			next = e.base.getRule(e.symbol);
-//			e.base.foundError = true;
-//			return;
 		}
 		e.resolvedExpression = next.expr;
 		if(next == checking) {

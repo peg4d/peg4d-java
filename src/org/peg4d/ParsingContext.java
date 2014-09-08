@@ -1,5 +1,7 @@
 package org.peg4d;
 
+import java.util.HashMap;
+
 import org.peg4d.MemoMap.ObjectMemo;
 
 public class ParsingContext {
@@ -409,6 +411,40 @@ public class ParsingContext {
 		this.opRestoreObjectIfFailure();
 	}
 
+	private HashMap<String,Boolean> flagMap = new HashMap<String,Boolean>();
+	
+	public final void setFlag(String flagName, boolean flag) {
+		this.flagMap.put(flagName, flag);
+	}
+	
+	private final boolean isFlag(Boolean f) {
+		return f == null || f.booleanValue();
+	}
+	
+	public final void opEnableFlag(String flag) {
+		Boolean f = this.flagMap.get(flag);
+		lpush(isFlag(f) ? 1 : 0);
+		this.flagMap.put(flag, true);
+	}
+
+	public final void opDisableFlag(String flag) {
+		Boolean f = this.flagMap.get(flag);
+		lpush(isFlag(f) ? 1 : 0);
+		this.flagMap.put(flag, false);
+	}
+
+	public final void opPopFlag(String flag) {
+		lpop();
+		this.flagMap.put(flag, (this.lstack[lstacktop] == 1) ? true : false);
+	}
+
+	public final void opCheckFlag(String flag) {
+		Boolean f = this.flagMap.get(flag);
+		if(!isFlag(f)) {
+			this.opFailure();
+		}
+	}
+	
 	public void opNewObject(PConstructor e) {
 		if(this.canTransCapture()) {
 			lpush(this.markObjectStack());

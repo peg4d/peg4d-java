@@ -1,0 +1,10 @@
+// PEG4d ParsingFlag
+// .C11 : default true
+
+Chunk
+	= { &(@<enable .C11 Char>)
+	      @<disable .C11 Char> #Version }
+
+Char
+	= .C11 { . #C11 } 
+	/ { . #C99 }

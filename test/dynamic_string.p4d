@@ -1,0 +1,11 @@
+// PEG4d dynamic string
+
+// ""
+
+"if"	= 'if' !W
+Chunk
+	[example: if]
+	[example: else]
+	[bad-example: ifa]
+	= { "if" / "else" #Keyword }
+

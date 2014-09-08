@@ -210,6 +210,33 @@ class GrammarFormatter extends ParsingVisitor {
 			e.inner.visit(this);
 		}
 	}
+	
+	@Override
+	public void visitParsingFlag(ParsingFlag e) {
+		sb.append(".");
+		sb.append(e.flagName);
+	}
+	
+	@Override
+	public void visitParsingEnableFlag(ParsingEnableFlag e) {
+		sb.append("<enable ");
+		sb.append(".");
+		sb.append(e.flagName);
+		sb.append(" ");
+		e.inner.visit(this);
+		sb.append(">");
+	}
+	
+	@Override
+	public void visitParsingDisableFlag(ParsingDisableFlag e) {
+		sb.append("<disable ");
+		sb.append(".");
+		sb.append(e.flagName);
+		sb.append(" ");
+		e.inner.visit(this);
+		sb.append(">");
+	}
+
 }
 
 class CodeGenerator extends GrammarFormatter {

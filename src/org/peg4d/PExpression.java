@@ -154,26 +154,6 @@ class PNonTerminal extends PExpression {
 	}
 }
 
-class PUndefinedNonTerminal extends PNonTerminal {
-	PUndefinedNonTerminal(Grammar base, int flag, String ruleName) {
-		super(base, flag, ruleName);
-		this.symbol = ruleName;
-	}
-	@Override
-	protected void visit(ParsingVisitor probe) {
-		probe.visitNonTerminal(this);
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opFailure();
-	}
-	@Override
-	public void simpleMatch(ParsingStream context) {
-		context.opFailure();
-	}
-}
-
-
 abstract class PTerminal extends PExpression {
 	PTerminal (Grammar base, int flag) {
 		super(base, flag);
@@ -835,6 +815,7 @@ class PChoice extends PList {
 		for(int i = 0; i < this.size(); i++) {
 			context.left = left;
 			this.get(i).simpleMatch(context);
+			//System.out.println("[" + i+ "]: isFailure?: " + context.isFailure() + " e=" + this.get(i));
 			if(!context.isFailure()) {
 				context.forgetFailure(f);
 				return;
@@ -1288,6 +1269,74 @@ class PMatch extends POperator {
 		if(!context.isFailure()) {
 			context.left = left;
 		}
+	}
+}
+
+class ParsingFlag extends PExpression {
+	String flagName;
+	protected ParsingFlag(Grammar peg, int flag, String flagName) {
+		super(peg, flag);
+		this.flagName = flagName;
+	}
+	@Override
+	public void vmMatch(ParsingContext context) {
+		context.opCheckFlag(this.flagName);
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+		context.opCheckFlag(this.flagName);
+	}
+	@Override
+	protected void visit(ParsingVisitor probe) {
+		probe.visitParsingFlag(this);
+	}
+}
+
+class ParsingEnableFlag extends POperator {
+	String flagName;
+	protected ParsingEnableFlag(String flagName, PExpression inner) {
+		super(inner);
+		this.flagName = flagName;
+	}
+	@Override
+	protected void visit(ParsingVisitor probe) {
+		probe.visitParsingEnableFlag(this);
+	}
+	@Override
+	public void vmMatch(ParsingContext context) {
+		context.opEnableFlag(this.flagName);
+		this.inner.vmMatch(context);
+		context.opPopFlag(this.flagName);
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+		context.opEnableFlag(this.flagName);
+		this.inner.simpleMatch(context);
+		context.opPopFlag(this.flagName);
+	}
+}
+
+class ParsingDisableFlag extends POperator {
+	String flagName;
+	protected ParsingDisableFlag(String flagName, PExpression inner) {
+		super(inner);
+		this.flagName = flagName;
+	}
+	@Override
+	protected void visit(ParsingVisitor probe) {
+		probe.visitParsingDisableFlag(this);
+	}
+	@Override
+	public void vmMatch(ParsingContext context) {
+		context.opDisableFlag(this.flagName);
+		this.inner.vmMatch(context);
+		context.opPopFlag(this.flagName);
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+		context.opDisableFlag(this.flagName);
+		this.inner.simpleMatch(context);
+		context.opPopFlag(this.flagName);
 	}
 }
 
