@@ -1239,6 +1239,10 @@ class PMemo extends POperator {
 				}
 			}
 			if(this.memoMiss % 64 == 0) {
+				if(this.memoHit == 0) {
+					disabledMemo();
+					return;
+				}
 				if(this.memoMiss / this.memoHit > 10) {
 					disabledMemo();
 					return;

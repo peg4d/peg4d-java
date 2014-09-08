@@ -31,12 +31,12 @@ Chunk
 	/ Statement
 	/ Type
 _
-	= (S / LONGCOMMENT / LINECOMMENT / PRAGMA)*
+	= (S / BLOCKCOMMENT / LINECOMMENT / PRAGMA)*
 	
 S
 	= [ \n\r\t\u000B\u000C]
 	
-LONGCOMMENT
+BLOCKCOMMENT
 	= '/*' (!'*/' .)* '*/'
 	
 LINECOMMENT

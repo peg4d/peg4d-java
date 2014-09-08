@@ -1,313 +1,9 @@
-
+// PEG4d Java6 Grammar
 
 File
-	= { _ PackageDeclaration? (@ImportDeclaration)* (@TypeDeclaration)* #Source } EOT
+	=  _ { PackageDeclaration? (@ImportDeclaration)* (@TypeDeclaration)* #Source } EOT
 
-Annotation
-	= { AT @{ QUALIFIED_ID } (LPAR (@ElementValue / AddElementValuePairs)? RPAR)? }
-
-AddElementValuePairs
-	= @ElementValuePair (COMMA @ElementValuePair)*
-
-ElementValuePair
-	= { @IDENTIFIER EQU @ElementValue #keyValue }
-
-ElementValueArrayInitializer
-	= { LWING AddElementValues? COMMA? RWING #Array }
-
-AddElementValues
-	= @ElementValue (COMMA @ElementValue)*
-
-ElementValue
-	= ConditionalExpression / Annotation / ElementValueArrayInitializer
-
-PackageDeclaration
-	= Annotation* { PACKAGE @{ QUALIFIED_ID #Name } #Package } SEMI
-	
-ImportDeclaration
-	= { IMPORT (STATIC #StaticImport / #Import ) @{ QUALIFIED_ID (DOT STAR)? #Name } } SEMI
-	
-TypeDeclaration
-	= Modifier* ( ClassDeclaration / EnumDeclaration / InterfaceDeclaration / AnnotationTypeDeclaration ) / SEMI
-
-ClassDeclaration
-	= { CLASS @IDENTIFIER (@TypeParameters)? (EXTENDS @ClassType )? (IMPLEMENTS ClassTypeList)? @ClassBody }
-
-ClassBody
-	= { LWING (SEMI / @ClassBodyDeclaration)* RWING }
-
-ClassBodyDeclaration
-	= STATIC? Block / Modifier* MemberDecl
-
-MemberDecl
-	= TypeParameters GenericMethodOrConstructorRest 
-	/ Type IDENTIFIER MethodDeclaratorRest 
-	/ Type VariableDeclarators SEMI 
-	/ VOID IDENTIFIER VoidMethodDeclaratorRest 
-	/ IDENTIFIER ConstructorDeclaratorRest 
-	/ InterfaceDeclaration 
-	/ ClassDeclaration 
-	/ EnumDeclaration 
-	/ AnnotationTypeDeclaration
-
-GenericMethodOrConstructorRest
-	= ( Type / VOID ) IDENTIFIER MethodDeclaratorRest 
-	/ IDENTIFIER ConstructorDeclaratorRest
-
-MethodDeclaratorRest
-	= FormalParameters Dim* (THROWS ClassTypeList)? ( MethodBody / SEMI )
-
-VoidMethodDeclaratorRest
-	= FormalParameters (THROWS ClassTypeList)? ( MethodBody / SEMI )
-
-ConstructorDeclaratorRest
-	= FormalParameters (THROWS ClassTypeList)? MethodBody
-
-MethodBody
-	= Block
-
-InterfaceDeclaration
-	= INTERFACE IDENTIFIER TypeParameters? (EXTENDS ClassTypeList)? InterfaceBody
-
-InterfaceBody
-	= LWING InterfaceBodyDeclaration* RWING
-
-InterfaceBodyDeclaration
-	= Modifier* InterfaceMemberDecl / SEMI
-
-InterfaceMemberDecl
-	= InterfaceMethodOrFieldDecl 
-	/ InterfaceGenericMethodDecl 
-	/ VOID IDENTIFIER VoidInterfaceMethodDeclaratorRest 
-	/ InterfaceDeclaration 
-	/ AnnotationTypeDeclaration 
-	/ ClassDeclaration 
-	/ EnumDeclaration
-
-InterfaceMethodOrFieldDecl
-	= Type IDENTIFIER InterfaceMethodOrFieldRest
-
-InterfaceMethodOrFieldRest
-	= ConstantDeclaratorsRest SEMI 
-	/ InterfaceMethodDeclaratorRest
-
-InterfaceMethodDeclaratorRest
-	= FormalParameters Dim* (THROWS ClassTypeList)? SEMI
-
-InterfaceGenericMethodDecl
-	= TypeParameters ( Type / VOID ) IDENTIFIER InterfaceMethodDeclaratorRest
-
-VoidInterfaceMethodDeclaratorRest
-	= FormalParameters (THROWS ClassTypeList)? SEMI
-
-ConstantDeclaratorsRest
-	= ConstantDeclaratorRest (COMMA ConstantDeclarator)*
-
-ConstantDeclarator
-	= IDENTIFIER ConstantDeclaratorRest
-
-ConstantDeclaratorRest
-	= Dim* EQU VariableInitializer
-
-EnumDeclaration
-	= ENUM IDENTIFIER (IMPLEMENTS ClassTypeList)? EnumBody
-
-EnumBody
-	= LWING EnumConstants? COMMA? EnumBodyDeclarations? RWING
-
-EnumConstants
-	= EnumConstant (COMMA EnumConstant)*
-
-EnumConstant
-	= Annotation* IDENTIFIER Arguments? ClassBody?
-
-EnumBodyDeclarations
-	= SEMI ClassBodyDeclaration*
-LocalVariableDeclarationStatement
-	= (FINAL / Annotation)* Type VariableDeclarators SEMI
-VariableDeclarators
-	= VariableDeclarator (COMMA VariableDeclarator)*
-VariableDeclarator
-	= IDENTIFIER Dim* (EQU VariableInitializer)?
-FormalParameters
-	= LPAR FormalParameterList? RPAR
-FormalParameter
-	= (FINAL / Annotation)* Type VariableDeclaratorId
-LastFormalParameter
-	= (FINAL / Annotation)* Type ELLIPSIS VariableDeclaratorId
-FormalParameterList
-	= FormalParameter (COMMA FormalParameter)* (COMMA LastFormalParameter)? / LastFormalParameter
-VariableDeclaratorId
-	= IDENTIFIER Dim*
-
-
-
-Block
-	= LWING BlockStatements RWING
-BlockStatements
-	= BlockStatement*
-BlockStatement
-	= LocalVariableDeclarationStatement 
-	/ Modifier* ( ClassDeclaration / EnumDeclaration ) 
-	/ Statement
-
-Statement
-	= Block 
-	/ { ASSERT @Expression (COLON @Expression)? #Assert } SEMI 
-	/ {IF ParExpression @Statement (ELSE @Statement)? #If }
-	/ {FOR LPAR ForInit? SEMI Expression? SEMI ForUpdate? RPAR Statement #For }
-	/ {FOR LPAR FormalParameter COLON Expression RPAR Statement #ForEach }
-	/ {WHILE ParExpression Statement #While }
-	/ {DO Statement WHILE ParExpression #DoWhile } SEMI  
-	/ {TRY Block ( Catch+ Finally? / Finally ) #Try }
-	/ {SWITCH ParExpression LWING SwitchBlockStatementGroups RWING #Switch }
-	/ {SYNCHRONIZED ParExpression Block #Sync }  
-	/ {RETURN Expression? #Return } SEMI 
-	/ {THROW Expression #Throw } SEMI 
-	/ {BREAK IDENTIFIER? #Break } SEMI 
-	/ {CONTINUE IDENTIFIER? #Continue} SEMI 
-	/ {SEMI #empty } 
-	/ StatementExpression  SEMI 
-	/ {IDENTIFIER COLON Statement }
-
-Catch
-	= { CATCH LPAR FormalParameter RPAR @Block #Catch }
-
-Finally
-	= { FINALLY @Block #Finally }
-	
-SwitchBlockStatementGroups
-	= SwitchBlockStatementGroup*
-SwitchBlockStatementGroup
-	= SwitchLabel BlockStatements
-SwitchLabel
-	= CASE ConstantExpression COLON / CASE EnumConstantName COLON / DEFAULT COLON
-
-ForInit
-	= (FINAL / Annotation)* Type VariableDeclarators / StatementExpression (COMMA StatementExpression)*
-
-ForUpdate
-	= StatementExpression (COMMA StatementExpression)*
-
-EnumConstantName
-	= IDENTIFIER
-StatementExpression
-	= Expression
-ConstantExpression
-	= Expression
-Expression
-	= ConditionalExpression (AssignmentOperator ConditionalExpression)*
-AssignmentOperator
-	= EQU #assign / PLUSEQU #selfassign / MINUSEQU / STAREQU / DIVEQU / ANDEQU / OREQU / HATEQU / MODEQU / SLEQU / SREQU / BSREQU
-ConditionalExpression
-	= ConditionalOrExpression {@ QUERY @Expression COLON @ConditionalOrExpression #trinary }*
-ConditionalOrExpression
-	= ConditionalAndExpression {@ OROR @ConditionalAndExpression #or }*
-ConditionalAndExpression
-	= InclusiveOrExpression {@ ANDAND @InclusiveOrExpression #and }*
-InclusiveOrExpression
-	= ExclusiveOrExpression {@ OR @ExclusiveOrExpression #bitor }*
-ExclusiveOrExpression
-	= AndExpression {@ HAT @AndExpression }*
-AndExpression
-	= EqualityExpression {@ AND @EqualityExpression }*
-EqualityExpression
-	= RelationalExpression {@ ( EQUAL #eq / NOTEQUAL #neq ) @RelationalExpression }*
-RelationalExpression
-	= ShiftExpression {@ ( ( LE #lte / GE #gte / LT #lt / GT #gt ) @ShiftExpression / INSTANCEOF #instanceof @ReferenceType ) }*
-ShiftExpression
-	= AdditiveExpression {@ ( SL / SR / BSR ) @AdditiveExpression }*
-AdditiveExpression
-	= MultiplicativeExpression {@ ( PLUS #add / MINUS #sub ) MultiplicativeExpression }*
-MultiplicativeExpression
-	= UnaryExpression {@ ( STAR #mul / DIV #div / MOD #mod ) UnaryExpression }*
-UnaryExpression
-	= { PrefixOp @UnaryExpression } / { LPAR @Type RPAR @UnaryExpression #cast } / Primary {@ Selector }* {@ PostfixOp }*
-Primary
-	= ParExpression / NonWildcardTypeArguments ( ExplicitGenericInvocationSuffix / THIS Arguments ) / THIS Arguments? / SUPER SuperSuffix / Literal / NEW Creator / QUALIFIED_ID IDENTIFIERSuffix? / BasicType Dim* DOT CLASS / VOID DOT CLASS
-IDENTIFIERSuffix
-	= LBRK ( RBRK Dim* DOT CLASS / Expression RBRK ) / Arguments / DOT ( CLASS / ExplicitGenericInvocation / THIS / SUPER Arguments / NEW NonWildcardTypeArguments? InnerCreator )
-ExplicitGenericInvocation
-	= NonWildcardTypeArguments ExplicitGenericInvocationSuffix
-NonWildcardTypeArguments
-	= LPOINT ReferenceType (COMMA ReferenceType)* RPOINT
-ExplicitGenericInvocationSuffix
-	= SUPER SuperSuffix / IDENTIFIER Arguments
-PrefixOp
-	= INC #inc / DEC #dec / BANG #not / TILDA #compl / PLUS #plus / MINUS #minus
-PostfixOp
-	= INC #postinc / DEC #postdec
-Selector
-	= DOT IDENTIFIER Arguments? / DOT ExplicitGenericInvocation / DOT THIS / DOT SUPER SuperSuffix / DOT NEW NonWildcardTypeArguments? InnerCreator / DimExpr
-SuperSuffix
-	= Arguments / DOT NonWildcardTypeArguments? IDENTIFIER Arguments?
-BasicType
-	= ( 'byte' / 'short' / 'char' / 'int' / 'long' / 'float' / 'double' / 'boolean' ) !W _
-Arguments
-	= LPAR (@Expression (COMMA @Expression)*)? RPAR
-Creator
-	= NonWildcardTypeArguments? CreatedName ClassCreatorRest / NonWildcardTypeArguments? ( ClassType / BasicType ) ArrayCreatorRest
-CreatedName
-	= IDENTIFIER NonWildcardTypeArguments? (DOT IDENTIFIER NonWildcardTypeArguments?)*
-InnerCreator
-	= IDENTIFIER ClassCreatorRest
-ArrayCreatorRest
-	= LBRK ( RBRK Dim* ArrayInitializer / Expression RBRK DimExpr* Dim* )
-ClassCreatorRest
-	= Arguments ClassBody?
-ArrayInitializer
-	= LWING (VariableInitializer (COMMA VariableInitializer)*)? COMMA? RWING
-VariableInitializer
-	= ArrayInitializer / Expression
-ParExpression
-	= LPAR Expression RPAR
-QUALIFIED_ID
-	= IDENTIFIER (DOT IDENTIFIER)*
-Dim
-	= LBRK RBRK
-DimExpr
-	= LBRK Expression RBRK
-Type
-	= ( BasicType / ClassType ) Dim*
-ReferenceType
-	= BasicType Dim+ / ClassType Dim*
-ClassType
-	= IDENTIFIER TypeArguments? (DOT IDENTIFIER TypeArguments?)*
-ClassTypeList
-	= ClassType (COMMA ClassType)*
-TypeArguments
-	= LPOINT TypeArgument (COMMA TypeArgument)* RPOINT
-TypeArgument
-	= ReferenceType / QUERY (( EXTENDS / SUPER ) ReferenceType)?
-TypeParameters
-	= LPOINT TypeParameter (COMMA TypeParameter)* RPOINT
-TypeParameter
-	= IDENTIFIER (EXTENDS Bound)?
-Bound
-	= ClassType (AND ClassType)*
-
-Modifier
-	= Annotation / ( 'public' / 'protected' / 'private' / 'static' / 'abstract' / 'final' / 'native' / 'synchronized' / 'transient' / 'volatile' / 'strictfp' ) !W _
-
-AnnotationTypeDeclaration
-	= AT INTERFACE IDENTIFIER AnnotationTypeBody
-AnnotationTypeBody
-	= LWING AnnotationTypeElementDeclaration* RWING
-AnnotationTypeElementDeclaration
-	= Modifier* AnnotationTypeElementRest / SEMI
-AnnotationTypeElementRest
-	= Type AnnotationMethodOrConstantRest SEMI / ClassDeclaration / EnumDeclaration / InterfaceDeclaration / AnnotationTypeDeclaration
-AnnotationMethodOrConstantRest
-	= AnnotationMethodRest / AnnotationConstantRest
-AnnotationMethodRest
-	= IDENTIFIER LPAR RPAR DefaultValue?
-AnnotationConstantRest
-	= VariableDeclarators
-DefaultValue
-	= DEFAULT ElementValue
-
-
-IDENTIFIER
+NAME
 	= !KEYWORD LETTER W* _
 
 LETTER
@@ -318,70 +14,397 @@ W
 KEYWORD
 	= ( 'abstract' / 'assert' / 'boolean' / 'break' / 'byte' / 'case' / 'catch' / 'char' / 'class' / 'const' / 'continue' / 'default' / 'double' / 'do' / 'else' / 'enum' / 'extends' / 'false' / 'finally' / 'final' / 'float' / 'for' / 'goto' / 'if' / 'implements' / 'import' / 'interface' / 'int' / 'instanceof' / 'long' / 'native' / 'new' / 'null' / 'package' / 'private' / 'protected' / 'public' / 'return' / 'short' / 'static' / 'strictfp' / 'super' / 'switch' / 'synchronized' / 'this' / 'throws' / 'throw' / 'transient' / 'true' / 'try' / 'void' / 'volatile' / 'while' ) !W
 
-ASSERT
-	= 'assert' !W _
-BREAK
-	= 'break' !W _
-CASE
-	= 'case' !W _
-CATCH
-	= 'catch' !W _
-CLASS
-	= 'class' !W _
-CONTINUE
-	= 'continue' !W _
-DEFAULT
-	= 'default' !W _
-DO
-	= 'do' !W _
-ELSE
-	= 'else' !W _
-ENUM
-	= 'enum' !W _
-EXTENDS
-	= 'extends' !W _
-FINALLY
-	= 'finally' !W _
-FINAL
-	= 'final' !W _
-FOR
-	= 'for' !W _
-IF
-	= 'if' !W _
-IMPLEMENTS
-	= 'implements' !W _
-IMPORT
-	= 'import' !W _
-INTERFACE
-	= 'interface' !W _
-INSTANCEOF
-	= 'instanceof' !W _
-NEW
-	= 'new' !W _
-PACKAGE
-	= 'package' !W _
-RETURN
-	= 'return' !W _
-STATIC
-	= 'static' !W _
-SUPER
-	= 'super' !W _
-SWITCH
-	= 'switch' !W _
-SYNCHRONIZED
-	= 'synchronized' !W _
-THIS
-	= 'this' !W _
-THROWS
-	= 'throws' !W _
-THROW
-	= 'throw' !W _
-TRY
-	= 'try' !W _
-VOID
-	= 'void' !W _
-WHILE
-	= 'while' !W _
+"assert"       = 'assert' !W _
+"break"        = 'break' !W _
+"case"         = 'case' !W _
+"catch"        = 'catch' !W _
+"class"        = 'class' !W _
+"continue"     = 'continue' !W _
+"default"      = 'default' !W _
+"do"           = 'do' !W _
+"else"         = 'else' !W _
+"enum"         = 'enum' !W _
+"extends"      = 'extends' !W _
+"finally"      = 'finally' !W _
+"final"        = 'final' !W _
+"for"          = 'for' !W _
+"if"           = 'if' !W _
+"implements"   = 'implements' !W _
+"import"       = 'import' !W _
+"interface"    = 'interface' !W _
+"instanceof"   = 'instanceof' !W _
+"new"          = 'new' !W _
+"package"      = 'package' !W _
+"return"       = 'return' !W _
+"static"       = 'static' !W _
+"super"        = 'super' !W _
+"switch"       = 'switch' !W _
+"synchronized" = 'synchronized' !W _
+"this"         = 'this' !W _
+"throws"       = 'throws' !W _
+"throw"        = 'throw' !W _
+"try"          = 'try' !W _
+"void"         = 'void' !W _
+"while"        = 'while' !W _
+
+"@"     = '@' _
+"&"     = '&' ![&=] _
+"&&"    = '&&' _
+"&="    = '&=' _
+"!"     = '!' !'=' _
+">>>"   = '>>>' !'=' _
+">>>="  = '>>>=' _
+":"     = ':' _
+","     = ',' _
+"--"    = '--' _
+"/"     = '/' !'=' _
+"/="    = '/=' _
+"."     = '.' _
+"..."   = '...' _
+"="     = '=' !'=' _
+"=="    = '==' _
+">="    = '>=' _
+">"     = '>' ![=->] _
+"^"     = '^' !'=' _
+"^="    = '^=' _
+"++"    = '++' _
+"["     = '[' _
+"<="    = '<=' _
+"("     = '(' _
+"<"     = '<' ![<-=] _
+"{"     = '{' _
+"-"     = '-' !'-' _
+"-="    = '-=' _
+"%"     = '%' !'=' _
+"%="    = '%=' _
+"!="    = '!=' _
+"|"     = '|' ![=|] _
+"|="    = '|=' _
+"||"    = '||' _
+"+"     = '+' ![+=] _
+"+="    = '+=' _
+"?"     = '?' _
+"]"     = ']' _
+")"     = ')' _
+"}"     = '}' _
+";"     = ';' _
+"<<"    = '<<' !'=' _
+"<<="   = '<<=' _
+">>"    = '>>' ![=->] _
+">>="   = '>>=' _
+"*"     = '*' !'=' _
+"*="    = '*=' _
+"~"     = '~' _
+
+EOT
+	= !.
+
+
+
+
+Annotation
+	= { "@" @{ QNAME } ("(" (@ElementValue / AddElementValuePairs)? ")")? }
+
+AddElementValuePairs
+	= @ElementValuePair ("," @ElementValuePair)*
+
+ElementValuePair
+	= { @NAME "=" @ElementValue #keyValue }
+
+ElementValueArrayInitializer
+	= { "{" AddElementValues? ","? "}" #Array }
+
+AddElementValues
+	= @ElementValue ("," @ElementValue)*
+
+ElementValue
+	= ConditionalExpression / Annotation / ElementValueArrayInitializer
+
+PackageDeclaration
+	= Annotation* { "package" @{ QNAME #Name } #Package } ";"
+	
+ImportDeclaration
+	= { "import" ("static" #StaticImport / #Import ) @{ QNAME ("." "*")? #Name } } ";"
+	
+TypeDeclaration
+	= Modifier* ( ClassDeclaration / EnumDeclaration / InterfaceDeclaration / AnnotationTypeDeclaration ) / ";"
+
+ClassDeclaration
+	= { "class" @NAME (@TypeParameters)? ("extends" @ClassType )? ("implements" ClassTypeList)? @ClassBody }
+
+ClassBody
+	= { "{" (";" / @ClassBodyDeclaration)* "}" }
+
+ClassBodyDeclaration
+	= "static"? Block / Modifier* MemberDecl
+
+MemberDecl
+	= TypeParameters GenericMethodOrConstructorRest 
+	/ Type NAME MethodDeclaratorRest 
+	/ Type VariableDeclarators ";" 
+	/ "void" NAME VoidMethodDeclaratorRest 
+	/ NAME ConstructorDeclaratorRest 
+	/ InterfaceDeclaration 
+	/ ClassDeclaration 
+	/ EnumDeclaration 
+	/ AnnotationTypeDeclaration
+
+GenericMethodOrConstructorRest
+	= ( Type / "void" ) NAME MethodDeclaratorRest 
+	/ NAME ConstructorDeclaratorRest
+
+MethodDeclaratorRest
+	= FormalParameters Dim* ("throws" ClassTypeList)? ( MethodBody / ";" )
+
+VoidMethodDeclaratorRest
+	= FormalParameters ("throws" ClassTypeList)? ( MethodBody / ";" )
+
+ConstructorDeclaratorRest
+	= FormalParameters ("throws" ClassTypeList)? MethodBody
+
+MethodBody
+	= Block
+
+InterfaceDeclaration
+	= "interface" NAME TypeParameters? ("extends" ClassTypeList)? InterfaceBody
+
+InterfaceBody
+	= "{" InterfaceBodyDeclaration* "}"
+
+InterfaceBodyDeclaration
+	= Modifier* InterfaceMemberDecl / ";"
+
+InterfaceMemberDecl
+	= InterfaceMethodOrFieldDecl 
+	/ InterfaceGenericMethodDecl 
+	/ "void" NAME VoidInterfaceMethodDeclaratorRest 
+	/ InterfaceDeclaration 
+	/ AnnotationTypeDeclaration 
+	/ ClassDeclaration 
+	/ EnumDeclaration
+
+InterfaceMethodOrFieldDecl
+	= Type NAME InterfaceMethodOrFieldRest
+
+InterfaceMethodOrFieldRest
+	= ConstantDeclaratorsRest ";" 
+	/ InterfaceMethodDeclaratorRest
+
+InterfaceMethodDeclaratorRest
+	= FormalParameters Dim* ("throws" ClassTypeList)? ";"
+
+InterfaceGenericMethodDecl
+	= TypeParameters ( Type / "void" ) NAME InterfaceMethodDeclaratorRest
+
+VoidInterfaceMethodDeclaratorRest
+	= FormalParameters ("throws" ClassTypeList)? ";"
+
+ConstantDeclaratorsRest
+	= ConstantDeclaratorRest ("," ConstantDeclarator)*
+
+ConstantDeclarator
+	= NAME ConstantDeclaratorRest
+
+ConstantDeclaratorRest
+	= Dim* "=" VariableInitializer
+
+EnumDeclaration
+	= "enum" NAME ("implements" ClassTypeList)? EnumBody
+
+EnumBody
+	= "{" EnumConstants? ","? EnumBodyDeclarations? "}"
+
+EnumConstants
+	= EnumConstant ("," EnumConstant)*
+
+EnumConstant
+	= Annotation* NAME Arguments? ClassBody?
+
+EnumBodyDeclarations
+	= ";" ClassBodyDeclaration*
+LocalVariableDeclarationStatement
+	= ("final" / Annotation)* Type VariableDeclarators ";"
+VariableDeclarators
+	= VariableDeclarator ("," VariableDeclarator)*
+VariableDeclarator
+	= NAME Dim* ("=" VariableInitializer)?
+FormalParameters
+	= "(" FormalParameterList? ")"
+FormalParameter
+	= ("final" / Annotation)* Type VariableDeclaratorId
+LastFormalParameter
+	= ("final" / Annotation)* Type "..." VariableDeclaratorId
+FormalParameterList
+	= FormalParameter ("," FormalParameter)* ("," LastFormalParameter)? / LastFormalParameter
+VariableDeclaratorId
+	= NAME Dim*
+
+
+
+Block
+	= "{" BlockStatements "}"
+BlockStatements
+	= BlockStatement*
+BlockStatement
+	= LocalVariableDeclarationStatement 
+	/ Modifier* ( ClassDeclaration / EnumDeclaration ) 
+	/ Statement
+
+Statement
+	= Block 
+	/ { "assert" @Expression (":" @Expression)? #Assert } ";" 
+	/ {"if" ParExpression @Statement ("else" @Statement)? #If }
+	/ {"for" "(" ForInit? ";" Expression? ";" ForUpdate? ")" Statement #For }
+	/ {"for" "(" FormalParameter ":" Expression ")" Statement #ForEach }
+	/ {"while" ParExpression Statement #While }
+	/ {"do" Statement "while" ParExpression #DoWhile } ";"  
+	/ {"try" Block ( Catch+ Finally? / Finally ) #Try }
+	/ {"switch" ParExpression "{" SwitchBlockStatementGroups "}" #Switch }
+	/ {"synchronized" ParExpression Block #Sync }  
+	/ {"return" Expression? #Return } ";" 
+	/ {"throw" Expression #Throw } ";" 
+	/ {"break" NAME? #Break } ";" 
+	/ {"continue" NAME? #Continue} ";" 
+	/ {";" #empty } 
+	/ StatementExpression  ";" 
+	/ {NAME ":" Statement }
+
+Catch
+	= { "catch" "(" FormalParameter ")" @Block #Catch }
+
+Finally
+	= { "finally" @Block #Finally }
+	
+SwitchBlockStatementGroups
+	= SwitchBlockStatementGroup*
+SwitchBlockStatementGroup
+	= SwitchLabel BlockStatements
+SwitchLabel
+	= "case" ConstantExpression ":" / "case" EnumConstantName ":" / "default" ":"
+
+ForInit
+	= ("final" / Annotation)* Type VariableDeclarators / StatementExpression ("," StatementExpression)*
+
+ForUpdate
+	= StatementExpression ("," StatementExpression)*
+
+EnumConstantName
+	= NAME
+StatementExpression
+	= Expression
+ConstantExpression
+	= Expression
+Expression
+	= ConditionalExpression (AssignmentOperator ConditionalExpression)*
+AssignmentOperator
+	= "=" #assign / "+=" #selfassign / "-=" / "*=" / "/=" / "&=" / "|=" / "^=" / "%=" / "<<=" / ">>=" / ">>>="
+ConditionalExpression
+	= ConditionalOrExpression {@ "?" @Expression ":" @ConditionalOrExpression #trinary }*
+ConditionalOrExpression
+	= ConditionalAndExpression {@ "||" @ConditionalAndExpression #or }*
+ConditionalAndExpression
+	= InclusiveOrExpression {@ "&&" @InclusiveOrExpression #and }*
+InclusiveOrExpression
+	= ExclusiveOrExpression {@ "|" @ExclusiveOrExpression #bitor }*
+ExclusiveOrExpression
+	= AndExpression {@ "^" @AndExpression }*
+AndExpression
+	= EqualityExpression {@ "&" @EqualityExpression }*
+EqualityExpression
+	= RelationalExpression {@ ( "==" #eq / "!=" #neq ) @RelationalExpression }*
+RelationalExpression
+	= ShiftExpression {@ ( ( "<=" #lte / ">=" #gte / "<" #lt / ">" #gt ) @ShiftExpression / "instanceof" #instanceof @ReferenceType ) }*
+ShiftExpression
+	= AdditiveExpression {@ ( "<<" / ">>" / ">>>" ) @AdditiveExpression }*
+AdditiveExpression
+	= MultiplicativeExpression {@ ( "+" #add / "-" #sub ) MultiplicativeExpression }*
+MultiplicativeExpression
+	= UnaryExpression {@ ( "*" #mul / "/" #div / "%" #mod ) UnaryExpression }*
+UnaryExpression
+	= { PrefixOp @UnaryExpression } / { "(" @Type ")" @UnaryExpression #cast } / Primary {@ Selector }* {@ PostfixOp }*
+Primary
+	= ParExpression / NonWildcardTypeArguments ( ExplicitGenericInvocationSuffix / "this" Arguments ) / "this" Arguments? / "super" SuperSuffix / Literal / "new" Creator / QNAME NAMESuffix? / BasicType Dim* "." "class" / "void" "." "class"
+NAMESuffix
+	= "[" ( "]" Dim* "." "class" / Expression "]" ) / Arguments / "." ( "class" / ExplicitGenericInvocation / "this" / "super" Arguments / "new" NonWildcardTypeArguments? InnerCreator )
+ExplicitGenericInvocation
+	= NonWildcardTypeArguments ExplicitGenericInvocationSuffix
+NonWildcardTypeArguments
+	= "<" ReferenceType ("," ReferenceType)* ">"
+ExplicitGenericInvocationSuffix
+	= "super" SuperSuffix / NAME Arguments
+PrefixOp
+	= "++" #inc / "--" #dec / "!" #not / "~" #compl / "+" #plus / "-" #minus
+PostfixOp
+	= "++" #postinc / "--" #postdec
+Selector
+	= "." NAME Arguments? / "." ExplicitGenericInvocation / "." "this" / "." "super" SuperSuffix / "." "new" NonWildcardTypeArguments? InnerCreator / DimExpr
+SuperSuffix
+	= Arguments / "." NonWildcardTypeArguments? NAME Arguments?
+BasicType
+	= ( 'byte' / 'short' / 'char' / 'int' / 'long' / 'float' / 'double' / 'boolean' ) !W _
+Arguments
+	= "(" (@Expression ("," @Expression)*)? ")"
+Creator
+	= NonWildcardTypeArguments? CreatedName ClassCreatorRest / NonWildcardTypeArguments? ( ClassType / BasicType ) ArrayCreatorRest
+CreatedName
+	= NAME NonWildcardTypeArguments? ("." NAME NonWildcardTypeArguments?)*
+InnerCreator
+	= NAME ClassCreatorRest
+ArrayCreatorRest
+	= "[" ( "]" Dim* ArrayInitializer / Expression "]" DimExpr* Dim* )
+ClassCreatorRest
+	= Arguments ClassBody?
+ArrayInitializer
+	= "{" (VariableInitializer ("," VariableInitializer)*)? ","? "}"
+VariableInitializer
+	= ArrayInitializer / Expression
+ParExpression
+	= "(" Expression ")"
+QNAME
+	= NAME ("." NAME)*
+Dim
+	= "[" "]"
+DimExpr
+	= "[" Expression "]"
+Type
+	= ( BasicType / ClassType ) Dim*
+ReferenceType
+	= BasicType Dim+ / ClassType Dim*
+ClassType
+	= NAME TypeArguments? ("." NAME TypeArguments?)*
+ClassTypeList
+	= ClassType ("," ClassType)*
+TypeArguments
+	= "<" TypeArgument ("," TypeArgument)* ">"
+TypeArgument
+	= ReferenceType / "?" (( "extends" / "super" ) ReferenceType)?
+TypeParameters
+	= "<" TypeParameter ("," TypeParameter)* ">"
+TypeParameter
+	= NAME ("extends" Bound)?
+Bound
+	= ClassType ("&" ClassType)*
+
+Modifier
+	= Annotation / ( 'public' / 'protected' / 'private' / 'static' / 'abstract' / 'final' / 'native' / 'synchronized' / 'transient' / 'volatile' / 'strictfp' ) !W _
+
+AnnotationTypeDeclaration
+	= "@" "interface" NAME AnnotationTypeBody
+AnnotationTypeBody
+	= "{" AnnotationTypeElementDeclaration* "}"
+AnnotationTypeElementDeclaration
+	= Modifier* AnnotationTypeElementRest / ";"
+AnnotationTypeElementRest
+	= Type AnnotationMethodOrConstantRest ";" / ClassDeclaration / EnumDeclaration / InterfaceDeclaration / AnnotationTypeDeclaration
+AnnotationMethodOrConstantRest
+	= AnnotationMethodRest / AnnotationConstantRest
+AnnotationMethodRest
+	= NAME "(" ")" DefaultValue?
+AnnotationConstantRest
+	= VariableDeclarators
+DefaultValue
+	= "default" ElementValue
+
 	
 Literal
 	= ( FloatLiteral / IntegerLiteral / CharLiteral / StringLiteral / { 'true' !W #true } / { 'false' !W #false } / { 'null' !W #null } ) _
@@ -427,106 +450,4 @@ OctalEscape
 UnicodeEscape
 	= 'u'+ HEX HEX HEX HEX
 
-AT
-	= '@' _
-AND
-	= '&' ![&=] _
-ANDAND
-	= '&&' _
-ANDEQU
-	= '&=' _
-BANG
-	= '!' !'=' _
-BSR
-	= '>>>' !'=' _
-BSREQU
-	= '>>>=' _
-COLON
-	= ':' _
-COMMA
-	= ',' _
-DEC
-	= '--' _
-DIV
-	= '/' !'=' _
-DIVEQU
-	= '/=' _
-DOT
-	= '.' _
-ELLIPSIS
-	= '...' _
-EQU
-	= '=' !'=' _
-EQUAL
-	= '==' _
-GE
-	= '>=' _
-GT
-	= '>' ![=->] _
-HAT
-	= '^' !'=' _
-HATEQU
-	= '^=' _
-INC
-	= '++' _
-LBRK
-	= '[' _
-LE
-	= '<=' _
-LPAR
-	= '(' _
-LPOINT
-	= '<' _
-LT
-	= '<' ![<-=] _
-LWING
-	= '{' _
-MINUS
-	= '-' !'-' _
-MINUSEQU
-	= '-=' _
-MOD
-	= '%' !'=' _
-MODEQU
-	= '%=' _
-NOTEQUAL
-	= '!=' _
-OR
-	= '|' ![=|] _
-OREQU
-	= '|=' _
-OROR
-	= '||' _
-PLUS
-	= '+' ![+=] _
-PLUSEQU
-	= '+=' _
-QUERY
-	= '?' _
-RBRK
-	= ']' _
-RPAR
-	= ')' _
-RPOINT
-	= '>' _
-RWING
-	= '}' _
-SEMI
-	= ';' _
-SL
-	= '<<' !'=' _
-SLEQU
-	= '<<=' _
-SR
-	= '>>' ![=->] _
-SREQU
-	= '>>=' _
-STAR
-	= '*' !'=' _
-STAREQU
-	= '*=' _
-TILDA
-	= '~' _
-EOT
-	= !.
 
