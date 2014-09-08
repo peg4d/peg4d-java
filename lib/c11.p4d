@@ -23,8 +23,8 @@ export
 	/ CChar
 
 File
-	= _ { (@ExternalDeclaration)* #Source } EOT
-	
+	= _ { (@TopLevel)* #Source } EOT
+
 Chunk
 	= TopLevel
 	/ Expression
@@ -35,19 +35,19 @@ _
 	
 S
 	= [ \n\r\t\u000B\u000C]
-	
+
 BLOCKCOMMENT
 	= '/*' (!'*/' .)* '*/'
-	
+
 LINECOMMENT
 	= '//' (!'\n' .)*
-	
+
 PRAGMA
 	= '#' (!'\n' .)*
 
 ATTRIBUTE
 	= '__attribute__' !W _ '((' (!'))' .)* '))' _
-	
+
 EOL
 	= ('\r'? '\n' / !.)
 
