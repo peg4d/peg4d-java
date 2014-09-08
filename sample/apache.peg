@@ -1,0 +1,55 @@
+TopLevel = Lines;
+EOT      = !.;
+WS       = [ \t\n\r]*;
+Digit    = [0-9];
+Digit2   = Digit Digit;
+Digit3   = Digit2 Digit;
+Digit4   = Digit2 Digit2;
+Digit1_3 = Digit Digit? Digit?;
+Letter   = [a-zA-Z];
+Letter2  = Letter Letter;
+Letter3  = Letter2 Letter;
+None     = "-";
+BL       = '[';
+BR       = ']';
+DQ       = '"';
+DOT      = ".";
+Lines    = << Line@+ EOT #lines >>;
+Line     = << WS IP@ WS IdentD@ WS UsrID@ WS Time@ WS Access@ WS Status@ WS Size@ WS (Refer@ WS UA@ WS)? #line >>;
+IP       = << ( Digit1_3 DOT Digit1_3 DOT Digit1_3 DOT Digit1_3
+              / "::1"
+              / "localhost"
+              / None
+              ) #ip >>
+         ;
+IdentD   = << None #identd >>;
+UsrID    = << None #usrid >>;
+Time     = BL << Time_@ #time >> BR
+         / << None #time >>
+         ;
+Time_    = Day@ "/" Month@ "/" Year@ ":" Hour@ ":" Minute@ ":" Second@ WS Zone@;
+Day      = << Digit2 #day >>;
+Month    = << Letter3 #month >>;
+Year     = << Digit4 #year >>;
+Hour     = << Digit2 #hour >>;
+Minute   = << Digit2 #minute >>;
+Second   = << Digit2 #second >>;
+Zone     = ( "+"
+           / "-"
+           ) Digit4
+         ;
+Access   = DQ << Access_ #access >> DQ;
+Access_  = Method@ WS URL@ WS Protocol@;
+Method   = << (!" " .)+ #method >>;
+URL      = << (!" " .)+ #url >>;
+Protocol = << (!DQ .)+ #protocol>>;
+Status   = << ( [0-9]+
+              / None
+              ) #status >>
+         ;
+Size     = << ( [0-9]+
+              / None
+              ) #size >>
+         ;
+Refer    = DQ << (!DQ .)+ #refer >> DQ;
+UA       = DQ << (!DQ .)+ #ua >> DQ;
