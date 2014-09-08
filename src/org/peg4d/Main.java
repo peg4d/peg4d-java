@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 
 import org.peg4d.ext.Generator;
+import org.peg4d.vm.VirtualMachine;
 
 public class Main {
 	public final static String  ProgName  = "PEG4d";
@@ -89,6 +90,16 @@ public class Main {
 		if(PEGFormatter != null) {
 			GrammarFormatter fmt = loadFormatter(PEGFormatter);
 			peg.formatAll(fmt);
+			ParsingSource source = Main.loadSource(peg, InputFileName);
+			ParsingObject emptyObject = new ParsingObject(peg.getModelTag("#empty"), source, 0);
+			ParsingContext c = new ParsingContext(emptyObject, source, 0);
+			VirtualMachine.run(c, 1, ((CodeGenerator) fmt).opList.ArrayValues);
+			if(c.left != null) {
+				System.out.println(c.left.toString());
+			}
+			else {
+				System.out.println("Failer: pos" + c.fpos);
+			}
 			return;
 		}
 		if(InputFileName != null) {
