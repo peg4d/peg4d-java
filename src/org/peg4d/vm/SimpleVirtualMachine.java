@@ -6,9 +6,6 @@ public class SimpleVirtualMachine {
 	public static void run(SimpleVmParsingContext c, int pc, Opcode[] code) {
 		boolean exit = true;
 		while(exit == true) {
-			if(pc == 6 | pc == 7 | pc == 8){
-				System.out.println();
-			}
 			Opcode op = code[pc];
 			switch(op.opcode) {
 			case EXIT:
