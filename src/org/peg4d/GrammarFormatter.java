@@ -5,7 +5,7 @@ import java.util.HashMap;
 import org.peg4d.vm.MachineInstruction;
 import org.peg4d.vm.Opcode;
 
-class GrammarFormatter extends ParsingVisitor {
+class GrammarFormatter extends ParsingExpressionVisitor {
 	protected StringBuilder sb = null;
 	public GrammarFormatter() {
 		this.sb = null;

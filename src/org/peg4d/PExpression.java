@@ -44,7 +44,7 @@ public abstract class PExpression {
 		this.semanticId = this.uniqueId;
 	}
 		
-	protected abstract void visit(ParsingVisitor probe);
+	protected abstract void visit(ParsingExpressionVisitor probe);
 	public PExpression getExpression() {
 		return this;
 	}
@@ -123,7 +123,7 @@ class PNonTerminal extends PExpression {
 		this.symbol = ruleName;
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitNonTerminal(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
@@ -179,7 +179,7 @@ class PString extends PTerminal {
 		}
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitString(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
@@ -228,7 +228,7 @@ class PAny extends PTerminal {
 		return true;
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitAny(this);
 	}
 	@Override
@@ -253,7 +253,7 @@ class PCharacter extends PTerminal {
 		this.charset = charset;
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitCharacter(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
@@ -328,7 +328,7 @@ class POptional extends PUnary {
 		super(base, flag | PExpression.HasOptional | PExpression.NoMemo, e);
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitOptional(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
@@ -409,7 +409,7 @@ class PRepetition extends PUnary {
 		this.atleast = atLeast;
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitRepetition(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
@@ -518,7 +518,7 @@ class PAnd extends PUnary {
 		super(base, flag | PExpression.HasAnd, e);
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitAnd(this);
 	}
 	@Override
@@ -544,7 +544,7 @@ class PNot extends PUnary {
 		super(base, PExpression.HasNot | flag, e);
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitNot(this);
 	}
 	@Override
@@ -752,7 +752,7 @@ class PSequence extends PList {
 		super(base, flag, l);
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitSequence(this);
 	}
 	@Override
@@ -776,7 +776,7 @@ class PChoice extends PList {
 		super(base, flag | PExpression.HasChoice, list);
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitChoice(this);
 	}
 	@Override
@@ -942,7 +942,7 @@ class PConnector extends PUnary {
 		this.index = index;
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitConnector(this);
 	}
 	@Override
@@ -983,7 +983,7 @@ class PTagging extends PTerminal {
 		this.tag = tag;
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitTagging(this);
 	}
 	@Override
@@ -1005,7 +1005,7 @@ class PMessage extends PTerminal {
 		this.symbol = message;
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitMessage(this);
 	}
 	@Override
@@ -1030,7 +1030,7 @@ class PConstructor extends PList {
 		this.tagName = tagName == null ? "#new" : tagName;
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitConstructor(this);
 	}
 	
@@ -1113,7 +1113,7 @@ class PExport extends PUnary {
 		super(base, flag | PExpression.NoMemo, e);
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitExport(this);
 	}
 	@Override
@@ -1137,7 +1137,7 @@ abstract class POperator extends PExpression {
 		this.inner = inner;
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitOperation(this);
 	}
 	@Override
@@ -1257,7 +1257,7 @@ class ParsingIndent extends PTerminal {
 		super(base, flag | PExpression.HasContext);
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitIndent(this);
 	}
 	@Override
@@ -1307,7 +1307,7 @@ class ParsingFlag extends PExpression {
 		context.opCheckFlag(this.flagName);
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitParsingFlag(this);
 	}
 }
@@ -1319,7 +1319,7 @@ class ParsingEnableFlag extends POperator {
 		this.flagName = flagName;
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitParsingEnableFlag(this);
 	}
 	@Override
@@ -1343,7 +1343,7 @@ class ParsingDisableFlag extends POperator {
 		this.flagName = flagName;
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitParsingDisableFlag(this);
 	}
 	@Override
@@ -1377,7 +1377,7 @@ class PDeprecated extends POperator {
 		context.opDeprecated(this.message);
 	}
 	@Override
-	protected void visit(ParsingVisitor probe) {
+	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitDeprecated(this);
 	}
 }
