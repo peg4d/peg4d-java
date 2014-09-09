@@ -195,20 +195,21 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 	}
 
 	@Override
-	public void visitOperation(POperator e) {
-		if(e instanceof PMatch) {
-			sb.append("<match ");
-			e.inner.visit(this);
-			sb.append(">");
-		}
-//		else if(e instanceof PCommit) {
-//			sb.append("<commit ");
-//			e.inner.visit(this);
-//			sb.append(">");
-//		}
-		else {
-			e.inner.visit(this);
-		}
+	public void visitParsingFunction(ParsingFunction e) {
+		sb.append("<");
+		sb.append(e.funcName);
+		sb.append(e.getParameters());
+		sb.append(">");
+	}
+
+	@Override
+	public void visitParsingOperation(ParsingOperation e) {
+		sb.append("<");
+		sb.append(e.funcName);
+		sb.append(e.getParameters());
+		sb.append(" ");
+		e.inner.visit(this);
+		sb.append(">");
 	}
 	
 	@Override
@@ -217,25 +218,6 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 		sb.append(e.flagName);
 	}
 	
-	@Override
-	public void visitParsingEnableFlag(ParsingEnableFlag e) {
-		sb.append("<enable ");
-		sb.append(".");
-		sb.append(e.flagName);
-		sb.append(" ");
-		e.inner.visit(this);
-		sb.append(">");
-	}
-	
-	@Override
-	public void visitParsingDisableFlag(ParsingDisableFlag e) {
-		sb.append("<disable ");
-		sb.append(".");
-		sb.append(e.flagName);
-		sb.append(" ");
-		e.inner.visit(this);
-		sb.append(">");
-	}
 
 }
 
@@ -445,8 +427,8 @@ class CodeGenerator extends GrammarFormatter {
 	}
 
 	@Override
-	public void visitOperation(POperator e) {
-		if(e instanceof PMatch) {
+	public void visitParsingOperation(ParsingOperation e) {
+		if(e instanceof ParsingMatch) {
 			sb.append("<match ");
 			e.inner.visit(this);
 			sb.append(">");

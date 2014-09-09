@@ -96,10 +96,10 @@ public class GrammarFactory {
 	}
 	
 	public final PExpression newMemo(PExpression e) {
-		if(e instanceof PMemo) {
+		if(e instanceof ParsingMemo) {
 			return e;
 		}
-		return new PMemo(e);
+		return new ParsingMemo(e);
 	}
 
 	public final PExpression newNonTerminal(Grammar peg, String text) {
@@ -203,7 +203,7 @@ public class GrammarFactory {
 		if(!p.hasObjectOperation() && !p.is(PExpression.HasNonTerminal)) {
 			return p;
 		}
-		return new PMatch(p);
+		return new ParsingMatch(p);
 	}
 	
 	public final PExpression newOneMore(Grammar peg, PExpression p) {
@@ -252,8 +252,8 @@ public class GrammarFactory {
 	}
 	
 	private PExpression newAndImpl(Grammar peg, PExpression p) {
-		if(p instanceof POperator) {
-			p = ((POperator)p).inner;
+		if(p instanceof ParsingOperation) {
+			p = ((ParsingOperation)p).inner;
 		}
 		return new PAnd(peg, 0, p);
 	}
@@ -281,8 +281,8 @@ public class GrammarFactory {
 				return new PNotCharacter(peg, 0, (PCharacter)p);
 			}
 		}
-		if(p instanceof POperator) {
-			p = ((POperator)p).inner;
+		if(p instanceof ParsingOperation) {
+			p = ((ParsingOperation)p).inner;
 		}
 		return new PNot(peg, 0, newMatch(peg, p));
 	}
@@ -370,7 +370,7 @@ public class GrammarFactory {
 	public PExpression newConstructor(Grammar peg, String tagName, PExpression p) {
 		PExpression e = new PConstructor(peg, 0, false, "#"+tagName, toSequenceList(p));
 		if(peg.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
-			e = new PMemo(e);
+			e = new ParsingMemo(e);
 		}
 		return e;
 	}
@@ -378,7 +378,7 @@ public class GrammarFactory {
 	public PExpression newJoinConstructor(Grammar peg, String tagName, PExpression p) {
 		PExpression e = new PConstructor(peg, 0, true, "#"+tagName, toSequenceList(p));
 		if(peg.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
-			e = new PMemo(e);
+			e = new ParsingMemo(e);
 		}
 		return e;
 	}

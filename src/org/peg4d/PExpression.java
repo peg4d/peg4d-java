@@ -1130,15 +1130,85 @@ class PExport extends PUnary {
 	}
 }
 
-abstract class POperator extends PExpression {
+abstract class ParsingFunction extends PExpression {
+	String funcName;
+	protected ParsingFunction(String funcName, Grammar base, int flag) {
+		super(base, flag);
+		this.funcName = funcName;
+	}
+	@Override
+	protected void visit(ParsingExpressionVisitor probe) {
+		probe.visitParsingFunction(this);
+	}
+//	@Override
+//	boolean checkFirstByte(int ch) {
+//		return this.inner.checkFirstByte(ch);
+//	}
+	String getParameters() {
+		return "";
+	}
+}
+
+class ParsingIndent extends ParsingFunction {
+	ParsingIndent(Grammar base, int flag) {
+		super("indent", base, flag | PExpression.HasContext);
+	}
+	@Override
+	boolean checkFirstByte(int ch) {
+		return (ch == '\t' || ch == ' ');
+	}
+	@Override
+	public void vmMatch(ParsingContext context) {
+		context.opIndent();
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+		context.opIndent();
+	}
+}
+
+class ParsingFail extends ParsingFunction {
+	String message;
+	ParsingFail(Grammar base, int flag, String message) {
+		super("fail", base, flag);
+		this.message = message;
+	}
+	@Override
+	public void vmMatch(ParsingContext context) {
+		context.opFailure(this.message);
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+		context.opFailure(this.message);
+	}
+}
+
+class ParsingCatch extends ParsingFunction {
+	ParsingCatch(Grammar base, int flag) {
+		super("catch", base, flag);
+	}
+	@Override
+	public void vmMatch(ParsingContext context) {
+		context.opCatch();
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+		context.opCatch();
+	}
+}
+
+
+abstract class ParsingOperation extends PExpression {
+	String funcName;
 	PExpression inner;
-	protected POperator(PExpression inner) {
+	protected ParsingOperation(String funcName, PExpression inner) {
 		super(inner.base, inner.flag);
+		this.funcName = funcName;
 		this.inner = inner;
 	}
 	@Override
 	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitOperation(this);
+		probe.visitParsingOperation(this);
 	}
 	@Override
 	boolean checkFirstByte(int ch) {
@@ -1148,17 +1218,20 @@ abstract class POperator extends PExpression {
 	public PExpression getExpression() {
 		return this.inner;
 	}
+	public String getParameters() {
+		return "";
+	}
 }
 
-class PMemo extends POperator {
+class ParsingMemo extends ParsingOperation {
 	static ParsingObject NonTransition = new ParsingObject(null, null, 0);
 	PExpression parent = null;
 	boolean enableMemo = true;
 	int memoHit = 0;
 	int memoMiss = 0;
 
-	protected PMemo(PExpression inner) {
-		super(inner);
+	protected ParsingMemo(PExpression inner) {
+		super("memo", inner);
 		this.semanticId = inner.semanticId;
 	}
 
@@ -1230,9 +1303,9 @@ class PMemo extends POperator {
 	}
 }
 
-class PMatch extends POperator {
-	protected PMatch(PExpression inner) {
-		super(inner);
+class ParsingMatch extends ParsingOperation {
+	protected ParsingMatch(PExpression inner) {
+		super("match", inner);
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -1252,31 +1325,9 @@ class PMatch extends POperator {
 	}
 }
 
-class ParsingIndent extends PTerminal {
-	ParsingIndent(Grammar base, int flag) {
-		super(base, flag | PExpression.HasContext);
-	}
-	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitIndent(this);
-	}
-	@Override
-	boolean checkFirstByte(int ch) {
-		return (ch == '\t' || ch == ' ');
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opIndent();
-	}
-	@Override
-	public void simpleMatch(ParsingStream context) {
-		context.opIndent();
-	}
-}
-
-class ParsingStackIndent extends POperator {
+class ParsingStackIndent extends ParsingOperation {
 	ParsingStackIndent(PExpression e) {
-		super(e);
+		super("indent", e);
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -1292,35 +1343,35 @@ class ParsingStackIndent extends POperator {
 	}
 }
 
-class ParsingFlag extends PExpression {
+class ParsingFlag extends PTerminal {
 	String flagName;
 	protected ParsingFlag(Grammar peg, int flag, String flagName) {
 		super(peg, flag | PExpression.HasContext);
 		this.flagName = flagName;
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opCheckFlag(this.flagName);
-	}
-	@Override
-	public void simpleMatch(ParsingStream context) {
-		context.opCheckFlag(this.flagName);
-	}
-	@Override
 	protected void visit(ParsingExpressionVisitor probe) {
 		probe.visitParsingFlag(this);
 	}
+	@Override
+	public void vmMatch(ParsingContext context) {
+		context.opCheckFlag(this.flagName);
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+		context.opCheckFlag(this.flagName);
+	}
 }
 
-class ParsingEnableFlag extends POperator {
+class ParsingEnableFlag extends ParsingOperation {
 	String flagName;
 	protected ParsingEnableFlag(String flagName, PExpression inner) {
-		super(inner);
+		super("enable", inner);
 		this.flagName = flagName;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitParsingEnableFlag(this);
+	public String getParameters() {
+		return " ." + this.flagName;
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -1336,15 +1387,15 @@ class ParsingEnableFlag extends POperator {
 	}
 }
 
-class ParsingDisableFlag extends POperator {
+class ParsingDisableFlag extends ParsingOperation {
 	String flagName;
 	protected ParsingDisableFlag(String flagName, PExpression inner) {
-		super(inner);
+		super("disable", inner);
 		this.flagName = flagName;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitParsingDisableFlag(this);
+	public String getParameters() {
+		return " ." + this.flagName;
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -1360,47 +1411,9 @@ class ParsingDisableFlag extends POperator {
 	}
 }
 
-class ParsingFail extends PExpression {
-	String message;
-	ParsingFail(Grammar base, int flag, String message) {
-		super(base, flag);
-		this.message = message;
-	}
-	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitFail(this);
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opFailure(this.message);
-	}
-	@Override
-	public void simpleMatch(ParsingStream context) {
-		context.opFailure(this.message);
-	}
-}
-
-class ParsingCatch extends PExpression {
-	ParsingCatch(Grammar base, int flag) {
-		super(base, flag);
-	}
-	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitCatch(this);
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opCatch();
-	}
-	@Override
-	public void simpleMatch(ParsingStream context) {
-		context.opCatch();
-	}
-}
-
-class ParsingDebug extends POperator {
+class ParsingDebug extends ParsingOperation {
 	protected ParsingDebug(PExpression inner) {
-		super(inner);
+		super("debug", inner);
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -1418,8 +1431,30 @@ class ParsingDebug extends POperator {
 		this.inner.simpleMatch(context);
 		context.opDebug(this.inner);
 	}
+}
+
+class ParsingApply extends ParsingOperation {
+	protected ParsingApply(PExpression inner) {
+		super("|apply", inner);
+	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitOperation(this);
+	public void vmMatch(ParsingContext context) {
+		context.opRememberPosition();
+		context.opRememberFailurePosition();
+		context.opStoreObject();
+		this.inner.vmMatch(context);
+		context.opDebug(this.inner);
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+//		ParsingStream s = new ParsingStream(context.left);
+//		
+//		this.inner.simpleMatch(s);
+//		context.opRememberPosition();
+//		context.opRememberFailurePosition();
+//		context.opStoreObject();
+//		this.inner.simpleMatch(context);
+//		context.opDebug(this.inner);
 	}
 }
+

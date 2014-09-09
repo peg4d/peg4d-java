@@ -276,8 +276,8 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 	}
 
 	@Override
-	public void visitOperation(POperator e) {
-		if(e instanceof PMatch) {
+	public void visitParsingOperation(ParsingOperation e) {
+		if(e instanceof ParsingMatch) {
 			sb.append("<match ");
 			e.inner.visit(this);
 			sb.append(">");

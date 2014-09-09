@@ -8,8 +8,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 
 import org.peg4d.ext.Generator;
-import org.peg4d.vm.SimpleVirtualMachine;
-import org.peg4d.vm.VirtualMachine;
 
 public class Main {
 	public final static String  ProgName  = "PEG4d";
@@ -89,20 +87,32 @@ public class Main {
 		}
 		Grammar peg = GrammarFile == null ? Grammar.PEG4d : new GrammarFactory().newGrammar("main", GrammarFile);
 		if(PEGFormatter != null) {
-			SimpleGrammarFormatter fmt = loadSimpleFormatter(PEGFormatter);
-			peg.simpleFormatAll(fmt);
-			ParsingSource source = Main.loadSource(peg, InputFileName);
-			ParsingObject emptyObject = new ParsingObject(peg.getModelTag("#empty"), source, 0);
-			SimpleVmParsingContext c = new SimpleVmParsingContext(emptyObject, source, 0);
-			SimpleVirtualMachine.run(c, 1, ((SimpleCodeGenerator) fmt).opList.ArrayValues);
-			if(c.left != null) {
-				System.out.println(c.left.toString());
+			GrammarFormatter fmt = loadGrammarFormatter(PEGFormatter);
+			StringBuilder sb = new StringBuilder();
+			fmt.formatHeader(sb);
+			UList<PegRule> list = peg.getRuleList();
+			for(int i = 0; i < 0; i++) {
+				PegRule r = list.ArrayValues[i];
+				fmt.formatRule(r.ruleName, r.expr, sb);
 			}
-			else {
-				System.out.println("Failer: pos" + c.fpos);
-			}
-			return;
+			fmt.formatFooter(sb);
+			System.out.println(sb.toString());
 		}
+//		if(PEGFormatter != null) {
+//			GrammarFormatter fmt = loadSimpleFormatter(PEGFormatter);
+//			peg.simpleFormatAll(fmt);
+//			ParsingSource source = Main.loadSource(peg, InputFileName);
+//			ParsingObject emptyObject = new ParsingObject(peg.getModelTag("empty"), source, 0);
+//			SimpleVmParsingContext c = new SimpleVmParsingContext(emptyObject, source, 0);
+//			SimpleVirtualMachine.run(c, 1, ((SimpleCodeGenerator) fmt).opList.ArrayValues);
+//			if(c.left != null) {
+//				System.out.println(c.left.toString());
+//			}
+//			else {
+//				System.out.println("Failer: pos" + c.fpos);
+//			}
+//			return;
+//		}
 		if(InputFileName != null) {
 			loadInputFile(peg, InputFileName);
 		}
@@ -247,10 +257,10 @@ public class Main {
 
 	private final static UMap<Class<?>> driverMap = new UMap<Class<?>>();
 	static {
-		driverMap.put("p4d", GrammarFormatter.class);
-		driverMap.put("peg", GrammarFormatter.class);
-		driverMap.put("vm", CodeGenerator.class);
-		driverMap.put("svm", SimpleCodeGenerator.class);
+		driverMap.put("p4d", org.peg4d.GrammarFormatter.class);
+		driverMap.put("peg", org.peg4d.GrammarFormatter.class);
+		driverMap.put("vm", org.peg4d.CodeGenerator.class);
+		driverMap.put("svm", org.peg4d.SimpleCodeGenerator.class);
 	}
 
 	private static GrammarFormatter loadDriverImpl(String driverName) {
@@ -258,11 +268,12 @@ public class Main {
 			return (GrammarFormatter) driverMap.get(driverName).newInstance();
 		}
 		catch(Exception e) {
+			e.printStackTrace();
 		}
 		return null;
 	}
 	
-	private static GrammarFormatter loadFormatter(String driverName) {
+	private static GrammarFormatter loadGrammarFormatter(String driverName) {
 		GrammarFormatter d = loadDriverImpl(driverName);
 		if(d == null) {
 			System.out.println("Supported formatter list:");
@@ -273,37 +284,40 @@ public class Main {
 				if(d != null) {
 					System.out.println("\t" + k + " - " + d.getDesc());
 				}
-			}
-			Main._Exit(1, "undefined formatter: " + driverName);
-		}
-		return d;
-	}
-	
-	private static SimpleGrammarFormatter loadSimpleDriverImpl(String driverName) {
-		try {
-			return (SimpleGrammarFormatter) driverMap.get(driverName).newInstance();
-		}
-		catch(Exception e) {
-		}
-		return null;
-	}
-	
-	private static SimpleGrammarFormatter loadSimpleFormatter(String driverName) {
-		SimpleGrammarFormatter d = loadSimpleDriverImpl(driverName);
-		if(d == null) {
-			System.out.println("Supported formatter list:");
-			UList<String> driverList = driverMap.keys();
-			for(int i = 0; i < driverList.size(); i++) {
-				String k = driverList.ArrayValues[i];
-				d = loadSimpleDriverImpl(k);
-				if(d != null) {
-					System.out.println("\t" + k + " - " + d.getDesc());
+				else {
+					System.out.println("\t" + k + " - " + d);
 				}
 			}
 			Main._Exit(1, "undefined formatter: " + driverName);
 		}
 		return d;
 	}
+	
+//	private static SimpleGrammarFormatter loadSimpleDriverImpl(String driverName) {
+//		try {
+//			return (SimpleGrammarFormatter) driverMap.get(driverName).newInstance();
+//		}
+//		catch(Exception e) {
+//		}
+//		return null;
+//	}
+//	
+//	private static SimpleGrammarFormatter loadSimpleFormatter(String driverName) {
+//		SimpleGrammarFormatter d = loadSimpleDriverImpl(driverName);
+//		if(d == null) {
+//			System.out.println("Supported formatter list:");
+//			UList<String> driverList = driverMap.keys();
+//			for(int i = 0; i < driverList.size(); i++) {
+//				String k = driverList.ArrayValues[i];
+//				d = loadSimpleDriverImpl(k);
+//				if(d != null) {
+//					System.out.println("\t" + k + " - " + d.getDesc());
+//				}
+//			}
+//			Main._Exit(1, "undefined formatter: " + driverName);
+//		}
+//		return d;
+//	}
 
 	private synchronized static void loadInputFile(Grammar peg, String fileName) {
 		String startPoint = StartingPoint;

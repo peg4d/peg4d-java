@@ -74,23 +74,15 @@ class ParsingExpressionVisitor {
 	public void visitConstructor(PConstructor e) {
 		this.visitList(e);
 	}
-	public void visitOperation(POperator e) {
+	public void visitParsingFunction(ParsingFunction parsingFunction) {
+		// TODO Auto-generated method stub
+	}
+	public void visitParsingOperation(ParsingOperation e) {
 		e.inner.visit(this);
 	}
 
 	public void visitParsingFlag(ParsingFlag e) {
-	}
-	public void visitFail(ParsingFail parsingFail) {
-	}
-	public void visitCatch(ParsingCatch parsingCatch) {
-	}
-	
-	public void visitParsingEnableFlag(ParsingEnableFlag e) {
-		e.inner.visit(this);
-	}
-	
-	public void visitParsingDisableFlag(ParsingDisableFlag e) {
-		e.inner.visit(this);
+
 	}
 }
 
@@ -126,8 +118,8 @@ class NonTerminalChecker extends ParsingExpressionVisitor {
 
 	void verify(PegRule rule) {
 		this.initVisitor();
-		if(Main.PackratStyleMemo && !(rule.expr instanceof PMemo)) {
-			rule.expr = new PMemo(rule.expr);
+		if(Main.PackratStyleMemo && !(rule.expr instanceof ParsingMemo)) {
+			rule.expr = new ParsingMemo(rule.expr);
 			rule.expr.base.EnabledMemo += 1;
 		}
 		this.startRule = rule;
@@ -334,7 +326,7 @@ class Inliner extends ParsingExpressionVisitor {
 		}
 	}
 	@Override
-	public void visitOperation(POperator e) {
+	public void visitParsingOperation(ParsingOperation e) {
 		if(isInlinable(e.inner)) {
 			e.inner = doInline(e, (PNonTerminal)e.inner);
 		}
@@ -365,8 +357,8 @@ class Optimizer extends ParsingExpressionVisitor {
 //	}
 	
 	private PExpression removeOperation(PExpression e) {
-		if(e instanceof PMatch) {
-			PExpression inner = ((PMatch) e).inner;
+		if(e instanceof ParsingMatch) {
+			PExpression inner = ((ParsingMatch) e).inner;
 			if(!inner.hasObjectOperation()) {
 				this.peg.InterTerminalOptimization += 1;
 				//System.out.println("removed: " + e);
@@ -392,7 +384,7 @@ class Optimizer extends ParsingExpressionVisitor {
 		e.inner.visit(this);
 	}
 	@Override
-	public void visitOperation(POperator e) {
+	public void visitParsingOperation(ParsingOperation e) {
 		e.inner = removeOperation(e.inner);
 		e.inner.visit(this);
 	}
@@ -464,7 +456,7 @@ class MemoRemover extends ParsingExpressionVisitor {
 		}
 	}
 
-	final boolean isRemoved(PMemo pm) {
+	final boolean isRemoved(ParsingMemo pm) {
 		if(pm.memoMiss < this.cutMiss) {
 			return true;
 		}
@@ -472,8 +464,8 @@ class MemoRemover extends ParsingExpressionVisitor {
 	}
 	
 	PExpression removeMemo(PExpression e) {
-		if(e instanceof PMemo) {
-			PMemo pm = (PMemo)e;
+		if(e instanceof ParsingMemo) {
+			ParsingMemo pm = (ParsingMemo)e;
 			if(this.isRemoved(pm)) {
 				this.RemovedCount += 1;
 				return pm.inner;
@@ -574,7 +566,7 @@ class ObjectRemover extends ParsingExpressionVisitor {
 	}
 
 	@Override
-	public void visitOperation(POperator e) {
+	public void visitParsingOperation(ParsingOperation e) {
 		PExpression ne = this.removeObjectOperation(e.inner);
 		if(ne == null) {
 			this.returnPeg = null;			
