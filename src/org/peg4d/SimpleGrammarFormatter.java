@@ -126,7 +126,7 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 		this.writeCode(MachineInstruction.opValue, ParsingCharset.quoteString('\'', e.symbol, '\''));
 	}
 	@Override
-	public void visitIndent(PIndent e) {
+	public void visitIndent(ParsingIndent e) {
 		this.writeCode(MachineInstruction.opIndent);
 	}
 	@Override
