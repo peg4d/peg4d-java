@@ -46,19 +46,21 @@ public class Grammar {
 
 	final boolean loadGrammarFile(String fileName) {
 		PEG4dGrammar peg4d = Grammar.PEG4d;
-		ParsingStream context = peg4d.newParserContext(Main.loadSource(peg4d, fileName));
+		ParsingSource s = Main.loadSource(peg4d, fileName);
+		ParsingContext context = new ParsingContext(s); //peg4d.newParserContext();
 		this.name = fileName;
 		if(fileName.indexOf('/') > 0) {
 			this.name = fileName.substring(fileName.lastIndexOf('/')+1);
 		}
 		context.setRecognitionMode(false);
 		while(context.hasByteChar()) {
-			ParsingObject po = context.parseChunk();
+			ParsingObject po = context.parse(peg4d, "Chunk");
 			if(context.isFailure()) {
-				Main._Exit(1, context.formatErrorMessage("error", "syntax error"));
+				String msg = context.source.formatPositionLine("error", context.fpos, context.getErrorMessage());
+				Main._Exit(1, msg);
 				break;
 			}
-			if(!PEG4dGrammar.performExpressionConstruction1(this, context, po)) {
+			if(!PEG4dGrammar.performExpressionConstruction1(this, po)) {
 				return false;
 			}
 		}
@@ -181,11 +183,11 @@ public class Grammar {
 			Main._Exit(1, "PegError found");
 		}
 		this.memoRemover = new MemoRemover(this);
-		ParsingStream c = this.newParserContext();
+		ParsingContext context = new ParsingContext(null);
 		for(int i = 0; i < nameList.size(); i++) {
 			PegRule rule = this.getRule(nameList.ArrayValues[i]);
 			if(rule.getGrammar() == this) {
-				rule.testExample(c);
+				rule.testExample(this, context);
 			}
 		}
 	}
@@ -224,7 +226,7 @@ public class Grammar {
 	int PredicatedChoiceL1 = 0;
 	int UnpredicatedChoiceL1 = 0;
 
-	void updateStat(Stat stat) {
+	void updateStat(ParsingStat stat) {
 		stat.setText("Peg", this.getName());
 		stat.setCount("PegSize", this.DefinedExpressionSize);
 		stat.setCount("PegReference",   this.Reference);
@@ -254,17 +256,17 @@ public class Grammar {
 //		}
 	}
 
-	public ParsingStream newParserContext() {
-		return new TracingPackratParser(this, new StringSource(this, ""), 0);
-	}
-
-	public ParsingStream newParserContext(ParsingSource source) {
-		ParsingStream p = new TracingPackratParser(this, source);
-		if(Main.RecognitionOnlyMode) {
-			p.setRecognitionMode(true);
-		}
-		return p;
-	}
+//	public ParsingStream newParserContext() {
+//		return new TracingPackratParser(this, new StringSource(this, ""), 0);
+//	}
+//
+//	public ParsingStream newParserContext(ParsingSource source) {
+//		ParsingStream p = new TracingPackratParser(this, source);
+//		if(Main.RecognitionOnlyMode) {
+//			p.setRecognitionMode(true);
+//		}
+//		return p;
+//	}
 
 	public final UList<String> makeList(String startPoint) {
 		return new ListMaker().make(this, startPoint);
@@ -463,14 +465,14 @@ class PegRule {
 		this.annotation = new PegRuleAnnotation(key,value, this.annotation);
 	}
 	
-	public void testExample(ParsingStream context) {
+	public void testExample(Grammar peg, ParsingContext context) {
 		PegRuleAnnotation a = this.annotation;
 		while(a != null) {
 			if(a.key.equals("example")) {
 				String msg = this.ruleName + " " + a.value;
 				ParsingSource s = new StringSource(this.getGrammar(), "string", 1, a.value);
-				context.resetSource(s);
-				context.parseChunk(this.ruleName);
+				context.resetSource(s, 0);
+				context.parse(peg, this.ruleName);
 				if(context.isFailure() || context.hasByteChar()) {
 					msg = "[FAILED] " + msg;
 					if(Main.TestMode) {
@@ -483,8 +485,8 @@ class PegRule {
 			if(a.key.equals("bad-example")) {
 				String msg = this.ruleName + " " + a.value;
 				ParsingSource s = new StringSource(this.getGrammar(), "string", 1, a.value);
-				context.resetSource(s);
-				context.parseChunk(this.ruleName);
+				context.resetSource(s, 0);
+				context.parse(peg, this.ruleName);
 				if(!context.isFailure() && !context.hasByteChar()) {
 					msg = "[FAILED] " + msg;
 					if(Main.TestMode) {
@@ -545,7 +547,7 @@ class PEG4dGrammar extends Grammar {
 	static final int ParsingApply       = ParsingTag.tagId("ParsingApply");
 	static final int ParsingStringfy    = ParsingTag.tagId("ParsingStringfy");
 
-	static boolean performExpressionConstruction1(Grammar loading, ParsingStream context, ParsingObject po) {
+	static boolean performExpressionConstruction1(Grammar loading, ParsingObject po) {
 		//System.out.println("DEBUG? parsed: " + po);		
 		if(po.is(PEG4dGrammar.ParsingRule)) {
 			if(po.size() > 3) {
@@ -567,7 +569,7 @@ class PEG4dGrammar extends Grammar {
 			return true;
 		}
 		if(po.is(PEG4dGrammar.ParsingImport)) {
-			String filePath = searchPegFilePath(context, po.textAt(0, ""));
+			String filePath = searchPegFilePath(po.getSource(), po.textAt(0, ""));
 			String ns = po.textAt(1, "");
 			loading.importGrammar(ns, filePath);
 			return true;
@@ -592,8 +594,8 @@ class PEG4dGrammar extends Grammar {
 		}
 	}
 
-	private static String searchPegFilePath(ParsingStream context, String filePath) {
-		String f = context.source.getFilePath(filePath);
+	private static String searchPegFilePath(ParsingSource s, String filePath) {
+		String f = s.getFilePath(filePath);
 		if(new File(f).exists()) {
 			return f;
 		}
@@ -800,10 +802,10 @@ class PEG4dGrammar extends Grammar {
 		this.factory.setGrammar("p4d", this);
 	}
 	
-	@Override
-	public ParsingStream newParserContext(ParsingSource source) {
-		return new TracingPackratParser(this, source, 0);  // best parser
-	}
+//	@Override
+//	public ParsingStream newParserContext(ParsingSource source) {
+//		return new TracingPackratParser(this, source, 0);  // best parser
+//	}
 
 	// Definiton of PEG4d 	
 	private final PExpression t(String token) {

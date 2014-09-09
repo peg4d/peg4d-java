@@ -324,17 +324,18 @@ public class Main {
 		Main.printVerbose("FileName", fileName);
 		Main.printVerbose("Grammar", peg.getName());
 		Main.printVerbose("StartingPoint", StartingPoint);
-		ParsingStream p = peg.newParserContext(Main.loadSource(peg, fileName));
+		ParsingSource source = Main.loadSource(peg, fileName);
+		ParsingContext context = new ParsingContext(Main.loadSource(peg, fileName));
 		if(Main.StatLevel == 0) {
 			long t = System.currentTimeMillis();
-			p.setRecognitionMode(true);
+			context.setRecognitionMode(true);
 			while(System.currentTimeMillis()-t < 4000) {
 				System.out.print(".");System.out.flush();
-				p.parseChunk(startPoint);
-				p.pos = 0;
+				context.parseChunk(peg, startPoint);
+				context.pos = 0;
 			}
-			p.setRecognitionMode(false);
-			p.initMemo();
+			context.setRecognitionMode(false);
+			context.initMemo();
 			System.gc();
 			try{
 				Thread.sleep(500);
@@ -342,15 +343,23 @@ public class Main {
 			}
 			System.out.println(" GO!!");
 		}
-		p.beginPeformStat();
-		ParsingObject pego = p.parse(startPoint);
-		if(p.isFailure()) {
-			p.showPosition("syntax error", p.fpos);
+		source = Main.loadSource(peg, fileName);
+		context = new ParsingContext(source);
+		ParsingStat stat = null;
+		if(OutputType.equalsIgnoreCase("stat")) {
+			context.initStat(new ParsingStat(peg, source));
+		}
+		ParsingObject pego = context.parse(peg, startPoint);
+		if(context.isFailure()) {
+			System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
 			return;
 		}
-		p.endPerformStat(pego);
-		if(p.hasByteChar()) {
-			p.showPosition("unconsumed", p.pos);
+		if(context.hasByteChar()) {
+			System.out.println(context.source.formatPositionLine("unconsumed", context.pos, ""));
+		}
+		if(OutputType.equalsIgnoreCase("stat")) {
+			context.recordStat(pego);
+			return;
 		}
 		if(OutputType.equalsIgnoreCase("pego")) {
 			new Generator(OutputFileName).writePego(pego);
@@ -380,13 +389,13 @@ public class Main {
 				continue;
 			}
 			ParsingSource source = new StringSource(peg, "(stdin)", linenum, line);
-			ParsingStream p = peg.newParserContext(source);
-			ParsingObject pego = p.parse(startPoint);
-			if(p.isFailure()) {
-				System.out.println(p.source.formatPositionLine("error", p.fpos, "syntax error"));
+			ParsingContext context = new ParsingContext(source);
+			ParsingObject po = context.parse(peg, startPoint);
+			if(context.isFailure()) {
+				System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
 			}
 			else {
-				System.out.println("Parsed: " + pego);
+				System.out.println("Parsed: " + po);
 			}
 			linenum = linenum + 1;
 		}
@@ -414,18 +423,18 @@ public class Main {
 		int linenum = 1;
 		String line = null;
 		while ((line = readMultiLine("?>>> ", "    ")) != null) {
-			ParsingStream p = peg.newParserContext();
 			ParsingSource source = new StringSource(peg, "(stdin)", linenum, line);
+			ParsingContext context = new ParsingContext(source);
 			for(int i = 0; i < ruleList.size(); i++) {
 				PegRule rule = ruleList.ArrayValues[i];
 				if(rule.objectType) {
-					p.resetSource(source);
-					ParsingObject pego = p.parse(rule.ruleName);
-					if(p.isFailure()) {
+					context.resetSource(source, 0);
+					context.parse(peg, rule.ruleName);
+					if(context.isFailure()) {
 						continue;
 					}
 					seq.add(rule.ruleName);
-					infer(ruleList, p, seq);
+					infer(ruleList, context, seq, peg);
 					seq.pop();
 				}
 			}
@@ -434,33 +443,33 @@ public class Main {
 		System.out.println("");
 	}
 	
-	static void infer(UList<PegRule> ruleList, ParsingStream p, UList<String> seq) {
-		if(!p.hasByteChar()) {
+	static void infer(UList<PegRule> ruleList, ParsingContext context, UList<String> seq, Grammar peg) {
+		if(!context.hasByteChar()) {
 			printSequence(seq);
 			return;
 		}
 		boolean foundRule = false;
-		long pos = p.getPosition();
+		long pos = context.getPosition();
 		for(int i = 0; i < ruleList.size(); i++) {
 			PegRule rule = ruleList.ArrayValues[i];
 			//if(rule.objectType) {
-				p.setPosition(pos);
-				ParsingObject pego = p.parse(rule.ruleName);
-				if(p.isFailure()) {
+				context.setPosition(pos);
+				context.parse(peg, rule.ruleName);
+				if(context.isFailure()) {
 					continue;
 				}
 				seq.add(rule.ruleName);
 				foundRule = true;
-				infer(ruleList, p, seq);
+				infer(ruleList, context, seq, peg);
 				seq.pop();
 			//}
 		}
 		if(!foundRule) {
-			p.setPosition(pos);
-			int ch = p.getByteChar();
+			context.setPosition(pos);
+			int ch = context.getByteChar();
 			seq.add("'" + (char)ch + "'");
-			p.consume(1);
-			infer(ruleList, p, seq);
+			context.consume(1);
+			infer(ruleList, context, seq, peg);
 			seq.pop();
 		}
 	}

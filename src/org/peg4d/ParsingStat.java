@@ -9,9 +9,9 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-class Stat {
+class ParsingStat {
 
-	Stat(Grammar peg, ParsingSource source) {
+	ParsingStat(Grammar peg, ParsingSource source) {
 		this.PegSize = peg.factory.definedExpressionList.size();
 		source.stat = this;
 	}
@@ -246,7 +246,7 @@ class Stat {
 		this.ErapsedTime = System.currentTimeMillis();
 	}
 	
-	public void end(ParsingObject pego, ParsingStream p) {
+	public void end(ParsingObject pego, ParsingContext p) {
 		this.ErapsedTime = (System.currentTimeMillis() - ErapsedTime);
 
 		System.gc(); // meaningless ?
@@ -272,7 +272,7 @@ class Stat {
 		if(fileName.lastIndexOf('.') > 0) {
 			id = fileName.substring(0, fileName.lastIndexOf('.'));
 		}
-		id += "#" + p.peg.DefinedExpressionSize;
+		id += "#" ;//+ p.peg.DefinedExpressionSize;
 
 		this.set(new vText("FileName", fileName));
 		this.setCount1("FileSize", this.statFileLength);
@@ -313,7 +313,7 @@ class Stat {
 		ckeckRepeatCounter();
 
 		this.statObject(pego);
-		p.peg.updateStat(this);
+		//p.peg.updateStat(this);
 		if(Main.ParserName == null) {
 			this.setText("StatId", id);
 		}

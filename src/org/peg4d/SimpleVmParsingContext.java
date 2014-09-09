@@ -8,7 +8,9 @@ import org.peg4d.vm.Opcode;
 public class SimpleVmParsingContext extends ParsingContext {
 	
 	public SimpleVmParsingContext(ParsingObject left, ParsingSource s, long pos) {
-		super(left, s, pos);
+		super(s);
+		this.left = left; // FIXME
+		this.pos = pos;
 	}
 	
 	public void opMatchCharset(byte[] bdata) {
@@ -21,6 +23,7 @@ public class SimpleVmParsingContext extends ParsingContext {
 		}
 	}
 	
+	@Override
 	public void opConnectObject(int index) {
 		ParsingObject parent = this.opop();
 		parent.setLength(parent.getLength() + this.left.getLength());
