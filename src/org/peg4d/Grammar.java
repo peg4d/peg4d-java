@@ -298,7 +298,19 @@ public class Grammar {
 		fmt.formatFooter(sb);
 		System.out.println(sb.toString());
 	}
-
+	
+	public final void simpleFormatAll(SimpleGrammarFormatter fmt) {
+		StringBuilder sb = new StringBuilder();
+		fmt.formatHeader(sb);
+		UList<PegRule> list = this.getRuleList();
+		for(int i = 0; i < list.size(); i++) {
+			PegRule r = list.ArrayValues[i];
+			fmt.nonTerminalMap.put(r.ruleName, fmt.opList.size());
+			fmt.formatRule(r.ruleName, r.expr, sb);
+		}
+		fmt.formatFooter(sb);
+		System.out.println(sb.toString());
+	}
 	
 	final PExpression newNonTerminal(String text) {
 		return this.factory.newNonTerminal(this, text);
