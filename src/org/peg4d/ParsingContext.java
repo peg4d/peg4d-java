@@ -571,12 +571,6 @@ public class ParsingContext {
 			//System.out.println("indent isFailure? " + this.isFailure() + " indent=" + indentStack.utf8.length + " '" + "'" + " left=" + this.left);
 		}
 	}
-
-	public final void opDeprecated(String message) {
-		if(!this.isFailure()) {
-			System.out.println(source.formatErrorMessage("deprecated", this.pos, message));
-		}
-	}
 	
 	public final ParsingObject getResult() {
 		return this.left;
@@ -590,20 +584,20 @@ public class ParsingContext {
 		this.opCommitPosition();
 		long pos = this.lstack[lstacktop];
 		if(this.isFailure()) {
-			System.out.println(source.formatErrorMessage("debug", this.pos, "failure in " + inner));
+			System.out.println(source.formatPositionLine("debug", this.pos, "failure in " + inner));
 			return;
 		}
 		if(this.left != left) {
-			System.out.println(source.formatErrorMessage("debug", pos,
+			System.out.println(source.formatPositionLine("debug", pos,
 				"transition #" + this.left.getTag() + " => #" + left.getTag() + " in " + inner));
 			return;
 		}
 		if(this.pos != pos) {
-			System.out.println(source.formatErrorMessage("debug", pos,
+			System.out.println(source.formatPositionMessage("debug", pos,
 				"consumed pos=" + pos + " => " + this.pos + " in " + inner));
 			return;
 		}
-		System.out.println(source.formatErrorMessage("debug", pos, "pass in " + inner));
+		System.out.println(source.formatPositionLine("debug", pos, "pass in " + inner));
 	}
 
 

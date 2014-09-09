@@ -66,7 +66,7 @@ public class ParsingObject {
 	}
 	
 	public final String formatSourceMessage(String type, String msg) {
-		return this.source.formatErrorMessage(type, this.getSourcePosition(), msg);
+		return this.source.formatPositionLine(type, this.getSourcePosition(), msg);
 	}
 	
 	public final boolean isEmptyToken() {

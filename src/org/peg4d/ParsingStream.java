@@ -31,7 +31,7 @@ public class ParsingStream extends ParsingContext {
 	}
 
 	public final String formatErrorMessage(String msg1, String msg2) {
-		return this.source.formatErrorMessage(msg1, this.pos, msg2);
+		return this.source.formatPositionLine(msg1, this.pos, msg2);
 	}
 
 	public final void showPosition(String msg) {
@@ -39,11 +39,11 @@ public class ParsingStream extends ParsingContext {
 	}
 
 	public final void showPosition(String msg, long pos) {
-		System.out.println(this.source.formatErrorMessage("debug", pos, msg));
+		System.out.println(this.source.formatPositionLine("debug", pos, msg));
 	}
 
 	public final void showErrorMessage(String msg) {
-		System.out.println(this.source.formatErrorMessage("error", this.fpos, msg));
+		System.out.println(this.source.formatPositionLine("error", this.fpos, msg));
 		Main._Exit(1, msg);
 	}
 	
@@ -77,7 +77,7 @@ public class ParsingStream extends ParsingContext {
 				continue;
 			}
 			if(spos < ppos) {
-				System.out.println(source.formatErrorMessage("error", fpos, "syntax error"));
+				System.out.println(source.formatPositionLine("error", fpos, "syntax error"));
 				System.out.println("skipped[" + spos + "]: " + this.source.substring(spos, ppos));
 			}
 			return this.left;
@@ -106,7 +106,7 @@ public class ParsingStream extends ParsingContext {
 
 	public final ParsingObject newErrorObject() {
 		ParsingObject pego = new ParsingObject(this.peg.getModelTag("#error"), this.source, this.fpos); // FIXME
-		String msg = this.source.formatErrorMessage("syntax error", pego.getSourcePosition(), "");
+		String msg = this.source.formatPositionLine("syntax error", pego.getSourcePosition(), "");
 		pego.setValue(msg);
 		return pego;
 	}

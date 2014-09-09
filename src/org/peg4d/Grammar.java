@@ -435,7 +435,7 @@ class PegRule {
 	
 	void reportError(String msg) {
 		if(this.source != null) {
-			Main._PrintLine(this.source.formatErrorMessage("error", this.pos, msg));
+			Main._PrintLine(this.source.formatPositionLine("error", this.pos, msg));
 		}
 		else {
 			System.out.println("ERROR: " + msg);
@@ -443,7 +443,7 @@ class PegRule {
 	}
 	void reportWarning(String msg) {
 		if(this.source != null) {
-			Main._PrintLine(this.source.formatErrorMessage("warning", this.pos, msg));
+			Main._PrintLine(this.source.formatPositionLine("warning", this.pos, msg));
 		}
 	}
 
@@ -985,7 +985,7 @@ class PEG4dGrammar extends Grammar {
 			Tag(PDebug)
 		);
 		PExpression _FailFunc = Constructor(
-			t("<fail"), _S, P("SingleQuotedString"), Spacing, t(">"), Tag(PFail)
+			t("<fail"), _S, Link(P("SingleQuotedString")), Spacing, t(">"), Tag(PFail)
 		);
 		PExpression _CatchFunc = Constructor(
 			t("<catch>"), Tag(PCatch)
