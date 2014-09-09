@@ -1360,24 +1360,66 @@ class ParsingDisableFlag extends POperator {
 	}
 }
 
-class PDeprecated extends POperator {
+class ParsingFail extends PExpression {
 	String message;
-	protected PDeprecated(String message, PExpression inner) {
-		super(inner);
+	ParsingFail(Grammar base, int flag, String message) {
+		super(base, flag);
 		this.message = message;
 	}
 	@Override
+	protected void visit(ParsingExpressionVisitor probe) {
+		probe.visitFail(this);
+	}
+	@Override
 	public void vmMatch(ParsingContext context) {
-		this.inner.vmMatch(context);
-		context.opDeprecated(this.message);
+		context.opFailure(this.message);
 	}
 	@Override
 	public void simpleMatch(ParsingStream context) {
-		this.inner.vmMatch(context);
-		context.opDeprecated(this.message);
+		context.opFailure(this.message);
+	}
+}
+
+class ParsingCatch extends PExpression {
+	ParsingCatch(Grammar base, int flag) {
+		super(base, flag);
 	}
 	@Override
 	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitDeprecated(this);
+		probe.visitCatch(this);
+	}
+	@Override
+	public void vmMatch(ParsingContext context) {
+		context.opCatch();
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+		context.opCatch();
+	}
+}
+
+class ParsingDebug extends POperator {
+	protected ParsingDebug(PExpression inner) {
+		super(inner);
+	}
+	@Override
+	public void vmMatch(ParsingContext context) {
+		context.opRememberPosition();
+		context.opRememberFailurePosition();
+		context.opStoreObject();
+		this.inner.vmMatch(context);
+		context.opDebug(this.inner);
+	}
+	@Override
+	public void simpleMatch(ParsingStream context) {
+		context.opRememberPosition();
+		context.opRememberFailurePosition();
+		context.opStoreObject();
+		this.inner.simpleMatch(context);
+		context.opDebug(this.inner);
+	}
+	@Override
+	protected void visit(ParsingExpressionVisitor probe) {
+		probe.visitOperation(this);
 	}
 }

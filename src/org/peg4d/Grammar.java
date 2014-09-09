@@ -374,10 +374,19 @@ public class Grammar {
 		this.factory.addSequence(l, e);
 	}
 
-	public PExpression newDeprecated(String message, PExpression e) {
-		return new PDeprecated(message, e);
+	public PExpression newDebug(PExpression e) {
+		return new ParsingDebug(e);
 	}
 
+	public PExpression newFail(String message) {
+		return new ParsingFail(this, 0, message);
+	}
+
+	public PExpression newCatch() {
+		return new ParsingCatch(this, 0);
+	}
+
+	
 	public PExpression newFlag(String flagName) {
 		return new ParsingFlag(this, 0, flagName);
 	}
@@ -506,12 +515,6 @@ class PEG4dGrammar extends Grammar {
 	static final int PZeroMore    = ParsingTag.tagId("PZeroMore");
 	static final int PTimes       = ParsingTag.tagId("PTimes");
 	
-	static final int PMatch       = ParsingTag.tagId("PMatch");
-
-	static final int PFlag      = ParsingTag.tagId("PFlag");
-	static final int PEnable      = ParsingTag.tagId("PEnable");
-	static final int PDisable     = ParsingTag.tagId("PDisable");
-	static final int PIndent      = ParsingTag.tagId("PIndent");
 	
 	static final int PSequence    = ParsingTag.tagId("PSequence");
 	static final int PChoice      = ParsingTag.tagId("PChoice");
@@ -520,7 +523,18 @@ class PEG4dGrammar extends Grammar {
 	static final int PLeftJoin    = ParsingTag.tagId("PLeftJoin");
 	static final int PTagging     = ParsingTag.tagId("PTagging");
 	static final int PMessage     = ParsingTag.tagId("PMessage");
-	static final int PDeprecated  = ParsingTag.tagId("PDeprecated");
+	
+	static final int PMatch       = ParsingTag.tagId("PMatch");
+
+	static final int PFlag        = ParsingTag.tagId("PFlag");
+	static final int PEnable      = ParsingTag.tagId("PEnable");
+	static final int PDisable     = ParsingTag.tagId("PDisable");
+	static final int PIndent      = ParsingTag.tagId("PIndent");
+
+	static final int PDebug       = ParsingTag.tagId("PDebug");
+	static final int PFail        = ParsingTag.tagId("PFail");
+	static final int PCatch       = ParsingTag.tagId("PCatch");
+		
 	static final int Name         = ParsingTag.tagId("Name");
 	static final int List         = ParsingTag.tagId("List");
 	static final int Integer      = ParsingTag.tagId("Integer");
@@ -738,9 +752,14 @@ class PEG4dGrammar extends Grammar {
 			return loading.newIndent(toParsingExpression(loading, ruleName, pego.get(0)));
 		}
 		
-		if(pego.is(PEG4dGrammar.PDeprecated)) {
-			return loading.newDeprecated(ParsingCharset.unquoteString(pego.textAt(0, "")),
-					toParsingExpression(loading, ruleName, pego.get(1)));
+		if(pego.is(PEG4dGrammar.PDebug)) {
+			return loading.newDebug(toParsingExpression(loading, ruleName, pego.get(0)));
+		}
+		if(pego.is(PEG4dGrammar.PFail)) {
+			return loading.newFail(ParsingCharset.unquoteString(pego.textAt(0, "")));
+		}
+		if(pego.is(PEG4dGrammar.PCatch)) {
+			return loading.newCatch();
 		}
 //		if(pego.is("PExport")) {
 //		Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));
@@ -839,12 +858,9 @@ class PEG4dGrammar extends Grammar {
 	private PExpression Link(PExpression e) {
 		return new PConnector(this, 0, e, -1);
 	}
+	
 	private PExpression Link(int index, PExpression e) {
 		return new PConnector(this, 0, e, index);
-	}
-	
-	private PExpression Deprecated(String msg, PExpression e) {
-		return this.newDeprecated(msg, e);
 	}
 	
 	public Grammar loadPEG4dGrammar() {
@@ -935,14 +951,6 @@ class PEG4dGrammar extends Grammar {
 			Spacing,
 			ConstructorEnd
 		));
-//		PExpression _LazyFunc = Constructor(
-//			t("<lazy"), 
-//			_WS,
-//			set(n("NonTerminal_")),
-//			Spacing,
-//			t(">"),
-//			Tag("#PLazyNonTerminal")
-//		);
 		PExpression _MatchFunc = Constructor(
 			t("<match"), _S,
 			Link(P("Expr_")), Spacing, t(">"),
@@ -971,6 +979,18 @@ class PEG4dGrammar extends Grammar {
 			Link(P("Expr_")), Spacing, t(">"),
 			Tag(PDisable)
 		);
+		PExpression _DebugFunc = Constructor(
+			t("<debug"), _S,
+			Link(P("Expr_")), Spacing, t(">"),
+			Tag(PDebug)
+		);
+		PExpression _FailFunc = Constructor(
+			t("<fail"), _S, P("SingleQuotedString"), Spacing, t(">"), Tag(PFail)
+		);
+		PExpression _CatchFunc = Constructor(
+			t("<catch>"), Tag(PCatch)
+		);
+		
 		setRule("Term_", 
 			Choice(
 				P("SingleQuotedString"), P("Charcter_"), P("Flag_"), 
@@ -978,7 +998,8 @@ class PEG4dGrammar extends Grammar {
 				Sequence(t("("), Spacing, P("Expr_"), Spacing, t(")")),
 				P("Constructor_"), P("NonTerminal_"), 
 				P("String"), 
-				_MatchFunc, _EnableFlagFunc, _DisableFlagFunc, _IndentFunc
+				_MatchFunc, _EnableFlagFunc, _DisableFlagFunc, _IndentFunc,
+				_DebugFunc, _FailFunc, _CatchFunc
 			)
 		);
 		this.setRule("SuffixTerm_", Sequence(

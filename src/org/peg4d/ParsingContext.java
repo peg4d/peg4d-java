@@ -74,16 +74,12 @@ public class ParsingContext {
 		this.pos = pos;
 	}
 
-	public long fpos = 0;
+	long fpos = 0;
+	Object errorInfo = null;
 	
 	public final boolean isFailure() {
 		return this.left == null;
 	}
-
-//	final ParsingObject foundFailure(PExpression e) {
-//		this.opFailure();
-//		return this.left;
-//	}
 	
 	final long rememberFailure() {
 		return this.fpos;
@@ -231,6 +227,39 @@ public class ParsingContext {
 		this.memoMap.setMemo(keypos, e, po, length);
 	}
 
+	public final void opRememberPosition() {
+		lpush(this.pos);
+	}
+
+	public final void opCommitPosition() {
+		lpop();
+	}
+
+	public final void opBacktrackPosition() {
+		lpop();
+		rollback(this.lstack[this.lstacktop]);
+	}
+	
+	public final void opRememberSequencePosition() {
+		lpush(this.pos);
+		lpush(this.markObjectStack());
+		opush(this.left);
+	}
+
+	public final void opCommitSequencePosition() {
+		opop();
+		lpop();
+		lpop();
+	}
+
+	public final void opBackTrackSequencePosition() {
+		this.left = opop();
+		lpop();
+		this.abortLinkLog((int)this.lstack[this.lstacktop]);
+		lpop();
+		this.rollback(this.lstack[this.lstacktop]);
+	}
+
 	public final void opFailure() {
 		if(this.pos >= fpos) {  // adding error location
 			this.fpos = this.pos;
@@ -238,6 +267,68 @@ public class ParsingContext {
 		this.left = null;
 	}
 
+	HashMap<Long, Object> errorMap = new HashMap<Long, Object>();
+	private void setErrorInfo(Object errorInfo) {
+		Long key = this.pos;
+		if(!this.errorMap.containsKey(key)) {
+			this.errorMap.put(key, errorInfo);
+		}
+	}
+
+	private void removeErrorInfo() {
+		Long key = this.pos;
+		this.errorMap.remove(key);
+	}
+
+	private String getErrorMessage() {
+		Object errorInfo = this.errorMap.get(this.fpos);
+		if(errorInfo == null) {
+			return "syntax error";
+		}
+		if(errorInfo instanceof PExpression) {
+			return "syntax error: unrecognized " + errorInfo;
+		}
+		return errorInfo.toString();
+	}
+	
+	public final void opFailure(PExpression errorInfo) {
+		if(this.pos >= fpos) {  // adding error location
+			this.fpos = this.pos;
+			this.setErrorInfo(errorInfo);
+		}
+		this.left = null;
+	}
+
+	public final void opFailure(String errorInfo) {
+		if(this.pos >= fpos) {  // adding error location
+			this.fpos = this.pos;
+			this.setErrorInfo(errorInfo);
+		}
+		this.left = null;
+	}
+
+	public final void opRememberFailurePosition() {
+		lpush(this.fpos);
+	}
+
+	public final void opUpdateFailurePosition() {
+		lpop();
+	}
+
+	public final void opForgetFailurePosition() {
+		lpop();
+		this.fpos = this.lstack[this.lstacktop];
+	}
+	
+	public final void opCatch() {
+		if(this.canTransCapture()) {
+			this.left.setSourcePosition(this.fpos);
+			this.left.setValue(this.getErrorMessage());
+		}
+	}
+
+	
+	
 	public final void opMatchText(byte[] t) {
 		if(this.source.match(this.pos, t)) {
 			this.consume(t.length);
@@ -312,51 +403,6 @@ public class ParsingContext {
 		this.consume(consume);
 	}
 
-	public final void opRememberPosition() {
-		lpush(this.pos);
-	}
-
-	public final void opCommitPosition() {
-		lpop();
-	}
-
-	public final void opBacktrackPosition() {
-		lpop();
-		rollback(this.lstack[this.lstacktop]);
-	}
-
-	public final void opRememberSequencePosition() {
-		lpush(this.pos);
-		lpush(this.markObjectStack());
-		opush(this.left);
-	}
-
-	public final void opCommitSequencePosition() {
-		opop();
-		lpop();
-		lpop();
-	}
-
-	public final void opBackTrackSequencePosition() {
-		this.left = opop();
-		lpop();
-		this.abortLinkLog((int)this.lstack[this.lstacktop]);
-		lpop();
-		this.rollback(this.lstack[this.lstacktop]);
-	}
-
-	public final void opRememberFailurePosition() {
-		lpush(this.fpos);
-	}
-
-	public final void opUpdateFailurePosition() {
-		lpop();
-	}
-
-	public final void opForgetFailurePosition() {
-		lpop();
-		this.fpos = this.lstack[this.lstacktop];
-	}
 
 	public final void opStoreObject() {
 		this.opush(this.left);
@@ -534,6 +580,30 @@ public class ParsingContext {
 	
 	public final ParsingObject getResult() {
 		return this.left;
+	}
+
+	public void opDebug(PExpression inner) {
+		this.opDropStoredObject();
+		ParsingObject left = this.ostack[ostacktop];
+		this.opUpdateFailurePosition();
+		long fpos = this.lstack[lstacktop];
+		this.opCommitPosition();
+		long pos = this.lstack[lstacktop];
+		if(this.isFailure()) {
+			System.out.println(source.formatErrorMessage("debug", this.pos, "failure in " + inner));
+			return;
+		}
+		if(this.left != left) {
+			System.out.println(source.formatErrorMessage("debug", pos,
+				"transition #" + this.left.getTag() + " => #" + left.getTag() + " in " + inner));
+			return;
+		}
+		if(this.pos != pos) {
+			System.out.println(source.formatErrorMessage("debug", pos,
+				"consumed pos=" + pos + " => " + this.pos + " in " + inner));
+			return;
+		}
+		System.out.println(source.formatErrorMessage("debug", pos, "pass in " + inner));
 	}
 
 

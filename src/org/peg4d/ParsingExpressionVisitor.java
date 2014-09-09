@@ -77,11 +77,12 @@ class ParsingExpressionVisitor {
 	public void visitOperation(POperator e) {
 		e.inner.visit(this);
 	}
-	public void visitDeprecated(PDeprecated e) {
-	}
 
 	public void visitParsingFlag(ParsingFlag e) {
-
+	}
+	public void visitFail(ParsingFail parsingFail) {
+	}
+	public void visitCatch(ParsingCatch parsingCatch) {
 	}
 	
 	public void visitParsingEnableFlag(ParsingEnableFlag e) {
