@@ -1,0 +1,5 @@
+// PEG4d Debug
+
+Chunk
+	= <debug .*>
+

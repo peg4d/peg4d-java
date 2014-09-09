@@ -1,0 +1,8 @@
+// PEG4d fail and catch
+
+Chunk
+	= .* <fail 'oh! my god'>
+	/ { 'abc' #name }
+	/ { #error <catch> }
+
+
