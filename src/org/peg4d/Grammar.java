@@ -325,96 +325,64 @@ public class Grammar {
 		return e;
 	}
 	
-	final PExpression newString(String text) {
-		return this.factory.newString(this, text);
-	}
-	final PExpression newAny(String t) {
-		return this.factory.newAny(this, t);
-	}	
-	public PExpression newByte(int ch, String t) {
-		return this.factory.newByte(this, ch, t);
-	}
-	final PExpression newCharacter(ParsingCharset u) {
-		return this.factory.newCharacter(this, u);
-	}
-	final PExpression newOptional(PExpression p) {
-		return this.factory.newOptional(this, p);
-	}
-	final PExpression newOneMore(PExpression p) {
-		return this.factory.newOneMore(this, p);
-	}
-	final PExpression newZeroMore(PExpression p) {
-		return this.factory.newZeroMore(this, p);
-	}
-	final PExpression newAnd(PExpression p) {
-		return this.factory.newAnd(this, p);
-	}
-	final PExpression newNot(PExpression p) {
-		return this.factory.newNot(this, p);
-	}
-	final PExpression newChoice(UList<PExpression> l) {
-		return this.factory.newChoice(this, l);
-	}
-	final PExpression newSequence(UList<PExpression> l) {
-		return this.factory.newSequence(this, l);
-	}
-	final PExpression newConstructor(String tagName, PExpression p) {
-		return this.factory.newConstructor(this, tagName, p);
-	}
-	final PExpression newJoinConstructor(String tagName, PExpression p) {
-		return this.factory.newJoinConstructor(this, tagName, p);
-	}
-	final PExpression newConnector(PExpression p, int index) {
-		return this.factory.newConnector(this, p, index);
-	}
-	final PExpression newTagging(String tag) {
-		return this.factory.newTagging(this, tag);
-	}
-	final PExpression newMessage(String msg) {
-		return this.factory.newMessage(this, msg);
-	}
-	final PExpression newMatch(PExpression e) {
-		return this.factory.newMatch(this, e);
-	}
-
-	final void addChoice(UList<PExpression> l, PExpression e) {
-		this.factory.addChoice(this, l, e);
-	}
-	final void addSequence(UList<PExpression> l, PExpression e) {
-		this.factory.addSequence(l, e);
-	}
-
-	public PExpression newDebug(PExpression e) {
-		return new ParsingDebug(e);
-	}
-
-	public PExpression newFail(String message) {
-		return new ParsingFail(0, message);
-	}
-
-	public PExpression newCatch() {
-		return new ParsingCatch(0);
-	}
-
-	
-	public PExpression newFlag(String flagName) {
-		return new ParsingFlag(0, flagName);
-	}
-
-	public PExpression newEnableFlag(String flagName, PExpression e) {
-		return new ParsingEnableFlag(flagName, e);
-	}
-
-	public PExpression newDisableFlag(String flagName, PExpression e) {
-		return new ParsingDisableFlag(flagName, e);
-	}
-
-	public PExpression newIndent(PExpression e) {
-		if(e == null) {
-			return new ParsingIndent(0);
-		}
-		return new ParsingStackIndent(e);
-	}
+//	final PExpression newString(String text) {
+//		return PExpression.newString(text);
+//	}
+//	final PExpression newAny(String t) {
+//		return PExpression.newAny(t);
+//	}	
+//	public PExpression newByte(int ch, String t) {
+//		return PExpression.newByteChar(ch);
+//	}
+//	final PExpression newCharacter(ParsingCharset u) {
+//		return PExpression.newCharacter(u);
+//	}
+//	final PExpression newOptional(PExpression p) {
+//		return PExpression.newOptional(p);
+//	}
+//	final PExpression newOneMore(PExpression p) {
+//		return PExpression.newOneMore(p);
+//	}
+//	final PExpression newZeroMore(PExpression p) {
+//		return PExpression.newZeroMore(p);
+//	}
+//	final PExpression newAnd(PExpression p) {
+//		return PExpression.newAnd(p);
+//	}
+//	final PExpression newNot(PExpression p) {
+//		return PExpression.newNot(p);
+//	}
+//	final PExpression newChoice(UList<PExpression> l) {
+//		return PExpression.newChoice(l);
+//	}
+//	final PExpression newSequence(UList<PExpression> l) {
+//		return PExpression.newSequence(l);
+//	}
+//	final PExpression newConstructor(String tagName, PExpression p) {
+//		return PExpression.newConstructor(tagName, p);
+//	}
+//	final PExpression newJoinConstructor(String tagName, PExpression p) {
+//		return PExpression.newJoinConstructor(tagName, p);
+//	}
+//	final PExpression newConnector(PExpression p, int index) {
+//		return PExpression.newConnector(p, index);
+//	}
+//	final PExpression newTagging(String tag) {
+//		return PExpression.newTagging(tag);
+//	}
+//	final PExpression newMessage(String msg) {
+//		return PExpression.newMessage(msg);
+//	}
+//	final PExpression newMatch(PExpression e) {
+//		return PExpression.newMatch(e);
+//	}
+//
+//	final void addChoice(UList<PExpression> l, PExpression e) {
+//		PExpression.addChoice(l, e);
+//	}
+//	final void addSequence(UList<PExpression> l, PExpression e) {
+//		PExpression.addSequence(l, e);
+//	}
 
 }
 
@@ -646,10 +614,10 @@ class PEG4dGrammar extends Grammar {
 				Main.printVerbose("direct inlining", t);
 				return loading.getExpression(t);
 			}
-			return loading.newString(ParsingCharset.unquoteString(po.getText()));
+			return PExpression.newString(ParsingCharset.unquoteString(po.getText()));
 		}
 		if(po.is(PEG4dGrammar.ParsingString)) {
-			return loading.newString(ParsingCharset.unquoteString(po.getText()));
+			return PExpression.newString(ParsingCharset.unquoteString(po.getText()));
 		}
 		if(po.is(PEG4dGrammar.ParsingCharacter)) {
 			ParsingCharset u = null;
@@ -665,7 +633,7 @@ class PEG4dGrammar extends Grammar {
 					//System.out.println("u=" + u + " by " + o);
 				}
 			}
-			return loading.newCharacter(u);
+			return PExpression.newCharacter(u);
 		}
 		if(po.is(PEG4dGrammar.ParsingByte)) {
 			String t = po.getText();
@@ -675,111 +643,111 @@ class PEG4dGrammar extends Grammar {
 				c = (c * 16) + ParsingCharset.hex(t.charAt(4));
 				c = (c * 16) + ParsingCharset.hex(t.charAt(5));
 				if(c < 128) {
-					return loading.newByte(c, java.lang.String.valueOf((char)c));					
+					return PExpression.newByteChar(c);					
 				}
 				String t2 = java.lang.String.valueOf((char)c);
-				return loading.newString(t2);
+				return PExpression.newString(t2);
 			}
 			int c = ParsingCharset.hex(t.charAt(t.length()-2)) * 16 + ParsingCharset.hex(t.charAt(t.length()-1)); 
-			return loading.newByte(c, t);
+			return PExpression.newByteChar(c);
 		}
 		if(po.is(PEG4dGrammar.ParsingAny)) {
-			return loading.newAny(po.getText());
+			return PExpression.newAny(po.getText());
 		}
 		if(po.is(PEG4dGrammar.ParsingChoice)) {
 			UList<PExpression> l = new UList<PExpression>(new PExpression[po.size()]);
 			for(int i = 0; i < po.size(); i++) {
 				PExpression e = toParsingExpression(loading, ruleName, po.get(i));
-				loading.addChoice(l, e);
+				PExpression.addChoice(l, e);
 			}
-			return loading.newChoice(l);
+			return PExpression.newChoice(l);
 		}
 		if(po.is(PEG4dGrammar.ParsingSequence)) {
 			UList<PExpression> l = new UList<PExpression>(new PExpression[po.size()]);
 			for(int i = 0; i < po.size(); i++) {
 				PExpression e = toParsingExpression(loading, ruleName, po.get(i));
-				loading.addSequence(l, e);
+				PExpression.addSequence(l, e);
 			}
-			return loading.newSequence(l);
+			return PExpression.newSequence(l);
 		}
 		if(po.is(PEG4dGrammar.ParsingNot)) {
-			return loading.newNot(toParsingExpression(loading, ruleName, po.get(0)));
+			return PExpression.newNot(toParsingExpression(loading, ruleName, po.get(0)));
 		}
 		if(po.is(PEG4dGrammar.ParsingAnd)) {
-			return loading.newAnd(toParsingExpression(loading, ruleName, po.get(0)));
+			return PExpression.newAnd(toParsingExpression(loading, ruleName, po.get(0)));
 		}
 		if(po.is(PEG4dGrammar.ParsingOneMore)) {
-			return loading.newOneMore(toParsingExpression(loading, ruleName, po.get(0)));
+			return PExpression.newOneMore(toParsingExpression(loading, ruleName, po.get(0)));
 		}
 		if(po.is(PEG4dGrammar.ParsingZeroMore)) {
-			return loading.newZeroMore(toParsingExpression(loading, ruleName, po.get(0)));
+			return PExpression.newZeroMore(toParsingExpression(loading, ruleName, po.get(0)));
 		}
 		if(po.is(PEG4dGrammar.ParsingOptional)) {
-			return loading.newOptional(toParsingExpression(loading, ruleName, po.get(0)));
+			return PExpression.newOptional(toParsingExpression(loading, ruleName, po.get(0)));
 		}
 		if(po.is(PEG4dGrammar.PTimes)) {
 			int n = ParsingCharset.parseInt(po.textAt(0, ""), 1);
 			PExpression e = toParsingExpression(loading, ruleName, po.get(0));
 			UList<PExpression> l = new UList<PExpression>(new PExpression[n]);
 			for(int i = 0; i < n; i++) {
-				loading.addSequence(l, e);
+				PExpression.addSequence(l, e);
 			}
-			return loading.newSequence(l);
+			return PExpression.newSequence(l);
 		}
 		if(po.is(PEG4dGrammar.ParsingTagging)) {
-			return loading.newTagging(po.getText());
+			return PExpression.newTagging(new ParsingTag(po.getText()));
 		}
 		if(po.is(PEG4dGrammar.ParsingValue)) {
-			return loading.newMessage(po.getText());
+			return PExpression.newMessage(po.getText());
 		}
 		if(po.is(PEG4dGrammar.ParsingLeftJoin)) {
 			PExpression seq = toParsingExpression(loading, ruleName, po.get(0));
-			return loading.newJoinConstructor(ruleName, seq);
+			return PExpression.newJoinConstructor(seq);
 		}
 		if(po.is(PEG4dGrammar.ParsingConstructor)) {
 			PExpression seq = toParsingExpression(loading, ruleName, po.get(0));
-			return loading.newConstructor(ruleName, seq);
+			return PExpression.newConstructor(seq);
 		}
 		if(po.is(PEG4dGrammar.ParsingConnector)) {
 			int index = -1;
 			if(po.size() == 2) {
 				index = ParsingCharset.parseInt(po.textAt(1, ""), -1);
 			}
-			return loading.newConnector(toParsingExpression(loading, ruleName, po.get(0)), index);
+			return PExpression.newConnector(toParsingExpression(loading, ruleName, po.get(0)), index);
 		}
 		if(po.is(PEG4dGrammar.ParsingMatch)) {
-			return loading.newMatch(toParsingExpression(loading, ruleName, po.get(0)));
+			return PExpression.newMatch(toParsingExpression(loading, ruleName, po.get(0)));
 		}
 		if(po.is(PEG4dGrammar.ParsingEnableFlag)) {
-			return loading.newEnableFlag(po.textAt(0, ""), toParsingExpression(loading, ruleName, po.get(1)));
+			return PExpression.newEnableFlag(po.textAt(0, ""), toParsingExpression(loading, ruleName, po.get(1)));
 		}
 		if(po.is(PEG4dGrammar.ParsingDisableFlag)) {
-			return loading.newDisableFlag(po.textAt(0, ""), toParsingExpression(loading, ruleName, po.get(1)));
+			return PExpression.newDisableFlag(po.textAt(0, ""), toParsingExpression(loading, ruleName, po.get(1)));
 		}
 		if(po.is(PEG4dGrammar.ParsingFlag)) {
-			return loading.newFlag(po.getText());
+			return PExpression.newFlag(po.getText());
 		}
 		if(po.is(PEG4dGrammar.ParsingIndent)) {
 			if(po.size() == 0) {
-				return loading.newIndent(null);
+				return PExpression.newIndent(null);
 			}
-			return loading.newIndent(toParsingExpression(loading, ruleName, po.get(0)));
+			return PExpression.newIndent(toParsingExpression(loading, ruleName, po.get(0)));
 		}
 		
 		if(po.is(PEG4dGrammar.ParsingDebug)) {
-			return loading.newDebug(toParsingExpression(loading, ruleName, po.get(0)));
+			return PExpression.newDebug(toParsingExpression(loading, ruleName, po.get(0)));
 		}
 		if(po.is(PEG4dGrammar.ParsingFail)) {
-			return loading.newFail(ParsingCharset.unquoteString(po.textAt(0, "")));
+			return PExpression.newFail(ParsingCharset.unquoteString(po.textAt(0, "")));
 		}
 		if(po.is(PEG4dGrammar.ParsingCatch)) {
-			return loading.newCatch();
+			return PExpression.newCatch();
 		}
 //		if(po.is(PEG4dGrammar.ParsingApply)) {
-//			return loading.newApply(toParsingExpression(loading, ruleName, po.get(0)));
+//			return PExpression.newApply(toParsingExpression(loading, ruleName, po.get(0)));
 //		}
 //		if(po.is(PEG4dGrammar.ParsingStringfy)) {
-//			return loading.newStringfy();
+//			return PExpression.newStringfy();
 //		}
 //		if(pego.is("PExport")) {
 //		Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));
@@ -818,7 +786,7 @@ class PEG4dGrammar extends Grammar {
 
 	// Definiton of PEG4d 	
 	private final PExpression t(String token) {
-		return this.newString(token);
+		return PExpression.newString(token);
 	}
 	private final PExpression c(String text) {
 		return new PCharacter(0, ParsingCharset.newParsingCharset(text));
@@ -844,14 +812,14 @@ class PEG4dGrammar extends Grammar {
 	private final PExpression Sequence(PExpression ... elist) {
 		UList<PExpression> l = new UList<PExpression>(new PExpression[8]);
 		for(PExpression e : elist) {
-			this.addSequence(l, e);
+			PExpression.addSequence(l, e);
 		}
 		return new PSequence(0, l);
 	}
 	private final PExpression Choice(PExpression ... elist) {
 		UList<PExpression> l = new UList<PExpression>(new PExpression[8]);
 		for(PExpression e : elist) {
-			this.addChoice(l, e);
+			PExpression.addChoice(l, e);
 		}
 		return new PChoice(0, l);
 	}
@@ -859,19 +827,19 @@ class PEG4dGrammar extends Grammar {
 		return new PNot(0, e);
 	}
 	private final PExpression Tag(int tagId) {
-		return newTagging(ParsingTag.tagName(tagId));
+		return PExpression.newTagging(new ParsingTag(ParsingTag.tagName(tagId)));
 	}
 	private final PExpression Constructor(PExpression ... elist) {
 		UList<PExpression> l = new UList<PExpression>(new PExpression[8]);
 		for(PExpression e : elist) {
-			this.addSequence(l, e);
+			PExpression.addSequence(l, e);
 		}
 		return new PConstructor(0, false, l);
 	}
 	private PExpression LeftJoin(PExpression ... elist) {
 		UList<PExpression> l = new UList<PExpression>(new PExpression[8]);
 		for(PExpression e : elist) {
-			this.addSequence(l, e);
+			PExpression.addSequence(l, e);
 		}
 		return new PConstructor(0, true, l);
 	}
@@ -884,7 +852,7 @@ class PEG4dGrammar extends Grammar {
 	}
 	
 	public Grammar loadPEG4dGrammar() {
-		PExpression Any = newAny(".");
+		PExpression Any = PExpression.newAny(".");
 		PExpression _NEWLINE = c("\\r\\n");
 		PExpression _S = Choice(c(" \\t\\r\\n"), t("\u3000"));
 		PExpression _DIGIT = c("0-9");

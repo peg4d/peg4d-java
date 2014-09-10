@@ -117,6 +117,477 @@ public abstract class PExpression {
 				|| this.is(PExpression.HasTagging) 
 				|| this.is(PExpression.HasMessage);
 	}
+	
+	// factory
+	
+	private static UMap<PExpression> uniqueExpressionMap = new UMap<PExpression>();
+	private static int unique = 0;
+	private static boolean StringSpecialization = true;
+
+//	private static String prefixNonTerminal = "a\b";
+	private static String prefixString = "t\b";
+	private static String prefixByte   = "b\b";
+	private static String prefixCharacter = "c\b";
+	private static String prefixNot = "!\b";
+	private static String prefixAnd = "&\b";
+	private static String prefixOneMore = "+\b";
+	private static String prefixZeroMore = "*\b";
+	private static String prefixOptional = "?\b";
+	private static String prefixSequence = " \b";
+	private static String prefixChoice = "/\b";
+	
+	private static String prefixSetter  = "S\b";
+	private static String prefixTagging = "T\b";
+	private static String prefixMessage = "M\b";
+	
+	public final static int newExpressionId() {
+		unique++;
+		return unique;
+	}
+
+	private static PExpression getUnique(String t) {
+		PExpression e = uniqueExpressionMap.get(t);
+		if(e != null) {
+			return e;
+		}
+		return null;
+	}
+
+	private static PExpression putUnique(String t, PExpression e) {
+//		if(Main.AllExpressionMemo && !e.is(PExpression.NoMemo)) {
+//			e.base.EnabledMemo += 1;
+//			e = newMemo(e);
+//		}
+		uniqueExpressionMap.put(t, e);
+		e.uniqueId = newExpressionId();
+		return e;
+	}
+
+//	public final PExpression newMemo(PExpression e) {
+//		if(e instanceof ParsingMemo) {
+//			return e;
+//		}
+//		return new ParsingMemo(e);
+//	}
+
+//	public final PExpression newNonTerminal(String text) {
+//		String key = prefixNonTerminal + text;
+//		PExpression e = getsem(key);
+//		if(e == null) {
+//			e = putsem(key, new PNonTerminal(0, text));
+//		}
+//		return e;
+//	}
+
+	public static final PExpression newString(String text) {
+		String key = prefixString + text;
+		PExpression e = getUnique(key);
+		if(e == null) {
+			e = putUnique(key, newStringImpl(text));
+		}
+		return e;
+	}
+
+	private static PExpression newStringImpl(String text) {
+		byte[] utf8 = ParsingCharset.toUtf8(text);
+		if(StringSpecialization) {
+			if(ParsingCharset.toUtf8(text).length == 1) {
+				return new PByteChar(0, utf8[0]);
+			}
+		}
+		return new PString(0, text, utf8);	
+	}
+
+	public final static PExpression newByteChar(int ch) {
+		String key = prefixByte + (ch & 0xff);
+		PExpression e = getUnique(key);
+		if(e == null) {
+			e = putUnique(key, new PByteChar(0, ch));
+		}
+		return e;
+	}
+
+	public final static PExpression newAny(String text) {
+		PExpression e = getUnique(text);
+		if(e == null) {
+			e = new PAny(0);
+			e = putUnique(text, e);
+		}
+		return e;
+	}
+	
+	public final static PExpression newCharacter(ParsingCharset u) {
+//		ParsingCharset u = ParsingCharset.newParsingCharset(text);
+//		String key = prefixCharacter + u.toString();
+//		PExpression e = getsem(key);
+//		if(e == null) {
+//			e = new PCharacter(0, u);
+//			e = putsem(key, e);
+//		}
+//		return e;
+		return new PCharacter(0, u);
+	}
+
+	private final static String pkey(PExpression p) {
+		return "#" + p.uniqueId;
+	}
+	
+	public final static PExpression newOptional(PExpression p) {
+		if(p.isUnique()) {
+			String key = prefixOptional + pkey(p);
+			PExpression e = getUnique(key);
+			if(e == null) {
+				e = putUnique(key, newOptionalImpl(p));
+			}
+			return e;
+		}
+		return newOptionalImpl(p);
+	}
+
+	private static PExpression newOptionalImpl(PExpression p) {
+		if(StringSpecialization) {
+			if(p instanceof PByteChar) {
+				return new POptionalByteChar(0, (PByteChar)p);
+			}
+			if(p instanceof PString) {
+				return new POptionalString(0, (PString)p);
+			}
+			if(p instanceof PCharacter) {
+				return new POptionalCharacter(0, (PCharacter)p);
+			}
+		}
+		if(p instanceof PRepetition) {
+			((PRepetition) p).atleast = 0;
+			return p;
+		}
+		return new POptional(0, p);
+	}
+	
+	public final static PExpression newMatch(PExpression p) {
+		if(!p.hasObjectOperation() && !p.is(PExpression.HasNonTerminal)) {
+			return p;
+		}
+		return new ParsingMatch(p);
+	}
+	
+	public final static PExpression newOneMore(PExpression p) {
+		String key = prefixOneMore + pkey(p);
+		PExpression e = getUnique(key);
+		if(e == null) {
+			e = putUnique(key, newOneMoreImpl(p));
+		}
+		return e;
+	}
+
+	private static PExpression newOneMoreImpl(PExpression p) {
+//		if(peg.optimizationLevel > 0) {
+//			if(p instanceof PCharacter) {
+//				peg.LexicalOptimization += 1;
+//				return new POneMoreCharacter(0, (PCharacter)p);
+//			}
+//		}
+		return new PRepetition(0, p, 1);
+	}
+	
+	public final static PExpression newZeroMore(PExpression p) {
+		if(p.isUnique()) {
+			String key = prefixZeroMore + pkey(p);
+			PExpression e = getUnique(key);
+			if(e == null) {
+				e = putUnique(key, newZeroMoreImpl(p));
+			}
+			return e;
+		}
+		return newZeroMoreImpl(p);
+	}
+
+	private static PExpression newZeroMoreImpl(PExpression p) {
+		if(p instanceof PCharacter) {
+			return new PZeroMoreCharacter(0, (PCharacter)p);
+		}
+		return new PRepetition(0, p, 0);
+	}
+
+	public final static PExpression newAnd(PExpression p) {
+		if(p.isUnique()) {
+			String key = prefixAnd + pkey(p);
+			PExpression e = getUnique(key);
+			if(e == null) {
+				e = putUnique(key, newAndImpl(p));
+			}
+			return e;
+		}
+		return newAndImpl(p);
+	}
+	
+	private static PExpression newAndImpl(PExpression p) {
+		return new PAnd(0, p);
+	}
+
+	public final static PExpression newNot(PExpression p) {
+		if(p.isUnique()) {
+			String key = prefixNot + pkey(p);
+			PExpression e = getUnique(key);
+			if(e == null) {
+				e = putUnique(key, newNotImpl(p));
+			}
+			return e;
+		}
+		return newNotImpl(p);
+	}
+	
+	private static PExpression newNotImpl(PExpression p) {
+		if(StringSpecialization) {
+			if(p instanceof PString) {
+				if(p instanceof PByteChar) {
+					return new PNotByteChar(0, (PByteChar)p);
+				}
+				return new PNotString(0, (PString)p);
+			}
+			if(p instanceof PCharacter) {
+				return new PNotCharacter(0, (PCharacter)p);
+			}
+		}
+		if(p instanceof ParsingOperation) {
+			p = ((ParsingOperation)p).inner;
+		}
+		return new PNot(0, newMatch(p));
+	}
+	
+	private static boolean isUnique(UList<PExpression> l) {
+		for(int i = 0; i < l.size(); i++) {
+			PExpression se = l.ArrayValues[i];
+			if(!se.isUnique()) {
+				return false;
+			}
+		}
+		return true;
+	}
+	public final static PExpression newChoice(UList<PExpression> l) {
+		if(l.size() == 1) {
+			return l.ArrayValues[0];
+		}
+		if(isUnique(l)) {
+			String key = prefixChoice;
+			boolean isAllText = true;
+			for(int i = 0; i < l.size(); i++) {
+				PExpression p = l.ArrayValues[i];
+				key += pkey(p);
+				if(!(p instanceof PString) && !(p instanceof PString)) {
+					isAllText = false;
+				}
+			}
+			PExpression e = getUnique(key);
+			if(e == null) {
+				e = putUnique(key, newChoiceImpl(l, isAllText));
+			}
+			return e;
+		}
+		return newChoiceImpl(l, false);
+	}
+
+	private static PExpression newChoiceImpl(UList<PExpression> l, boolean isAllText) {
+//		if(peg.optimizationLevel > 0) {
+////			if(isAllText) {
+////				return new PegWordChoice(0, l);
+////			}
+//		}
+//		if(peg.optimizationLevel > 2) {
+//			return new PMappedChoice(0, l);
+//		}		
+		return new PChoice(0, l);
+	}
+	
+	public final static PExpression mergeChoice(PExpression e, PExpression e2) {
+		if(e == null) return e2;
+		if(e2 == null) return e;
+		UList<PExpression> l = new UList<PExpression>(new PExpression[e.size()+e2.size()]);
+		addChoice(l, e);
+		addChoice(l, e2);
+		return newChoice(l);
+	}
+	
+	public final static void addChoice(UList<PExpression> l, PExpression e) {
+		if(e instanceof PChoice) {
+			for(int i = 0; i < e.size(); i++) {
+				addChoice(l, e.get(i));
+			}
+			return;
+		}
+		if(StringSpecialization) {
+			if(l.size() > 0 && (e instanceof PByteChar || e instanceof PCharacter)) {
+				PExpression prev = l.ArrayValues[l.size()-1];
+				if(prev instanceof PByteChar) {
+					int ch = ((PByteChar) prev).byteChar;
+					ParsingCharset charset = new ByteCharset(ch, ch);
+					PCharacter c = new PCharacter(0, charset);
+					l.ArrayValues[l.size()-1] = c;
+					prev = c;
+				}
+				if(prev instanceof PCharacter) {
+					ParsingCharset charset = ((PCharacter) prev).charset;
+					if(e instanceof PCharacter) {
+						charset = charset.merge(((PCharacter) e).charset);
+					}
+					else {
+						int ch = ((PByteChar) e).byteChar;
+						charset.appendByte(ch, ch);
+					}
+					return;
+				}
+			}
+		}
+		l.add(e);
+	}
+
+	public final static PExpression newSequence(UList<PExpression> l) {
+		if(l.size() == 1) {
+			return l.ArrayValues[0];
+		}
+		if(l.size() == 0) {
+			return newString("");
+		}
+		if(isUnique(l)) {
+			String key = prefixSequence;
+			for(int i = 0; i < l.size(); i++) {
+				key += pkey(l.ArrayValues[i]);
+			}
+			PExpression e = getUnique(key);
+			if(e == null) {
+				e = putUnique(key, newSequenceImpl(l));
+			}
+			return e;
+		}
+		return newSequenceImpl(l);
+	}
+	
+	public final static void addSequence(UList<PExpression> l, PExpression e) {
+		if(e instanceof PSequence) {
+			for(int i = 0; i < e.size(); i++) {
+				addSequence(l, e.get(i));
+			}
+		}
+		else {
+			l.add(e);
+		}
+	}
+
+	private static PExpression newSequenceImpl(UList<PExpression> l) {
+		PExpression orig = new PSequence(0, l);
+//		if(peg.optimizationLevel > 1) {
+//			int nsize = l.size()-1;
+//			if(nsize > 0 && l.ArrayValues[nsize] instanceof PAny) {
+//				boolean allNot = true;
+//				for(int i = 0; i < nsize; i++) {
+//					if(!(l.ArrayValues[nsize] instanceof PNot)) {
+//						allNot = false;
+//						break;
+//					}
+//				}
+//				if(allNot) {
+//					return newNotAnyImpl(orig, l, nsize);
+//				}
+//			}
+//		}
+		return orig;
+	}
+
+	public final static PExpression newConstructor(PExpression p) {
+		PExpression e = new PConstructor(0, false, toSequenceList(p));
+//		if(peg.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
+//			e = new ParsingMemo(e);
+//		}
+		return e;
+	}
+
+	public final static PExpression newJoinConstructor(PExpression p) {
+		PExpression e = new PConstructor(0, true, toSequenceList(p));
+//		if(peg.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
+//			e = new ParsingMemo(e);
+//		}
+		return e;
+	}
+	
+	public final static UList<PExpression> toSequenceList(PExpression e) {
+		if(e instanceof PSequence) {
+			return ((PSequence) e).list;
+		}
+		UList<PExpression> l = new UList<PExpression>(new PExpression[1]);
+		l.add(e);
+		return l;
+	}
+	
+	private static PExpression newNotAnyImpl(PExpression orig, UList<PExpression> l, int nsize) {
+//		if(nsize == 1) {
+//			return new PNotAny(0, (PNot)l.ArrayValues[0], orig);
+//		}
+		return orig;
+	}
+	
+	public final static PExpression newConnector(PExpression p, int index) {
+		if(p.isUnique()) {
+			String key = prefixSetter + index + pkey(p);
+			PExpression e = getUnique(key);
+			if(e == null) {
+				e = putUnique(key, new PConnector(0, p, index));
+			}
+			return e;
+		}
+		return new PConnector(0, p, index);
+	}
+
+	public final static PExpression newTagging(ParsingTag tag) {
+		String key = prefixTagging + tag;
+		PExpression e = getUnique(key);
+		if(e == null) {
+			e = putUnique(key, new PTagging(0, tag));
+		}
+		return e;
+	}
+
+	public final static PExpression newMessage(String msg) {
+		String key = prefixMessage + msg;
+		PExpression e = getUnique(key);
+		if(e == null) {
+			e = putUnique(key, new PMessage(0, msg));
+		}
+		return e;
+	}
+		
+
+	public final static PExpression newDebug(PExpression e) {
+		return new ParsingDebug(e);
+	}
+
+	public final static PExpression newFail(String message) {
+		return new ParsingFail(0, message);
+	}
+
+	public final static PExpression newCatch() {
+		return new ParsingCatch(0);
+	}
+
+	
+	public final static PExpression newFlag(String flagName) {
+		return new ParsingFlag(0, flagName);
+	}
+
+	public final static PExpression newEnableFlag(String flagName, PExpression e) {
+		return new ParsingEnableFlag(flagName, e);
+	}
+
+	public final static PExpression newDisableFlag(String flagName, PExpression e) {
+		return new ParsingDisableFlag(flagName, e);
+	}
+
+	public final static PExpression newIndent(PExpression e) {
+		if(e == null) {
+			return new ParsingIndent(0);
+		}
+		return new ParsingStackIndent(e);
+	}
+
+	
 }
 
 class PNonTerminal extends PExpression {
@@ -159,6 +630,12 @@ class PNonTerminal extends PExpression {
 //			System.out.println("pos=" + context.pos + " called " + this.symbol + " isFailure: " + context.isFailure() + " " + this.resolvedExpression);
 //		}
 	}
+	
+	
+	
+	
+	
+	
 }
 
 abstract class PTerminal extends PExpression {
