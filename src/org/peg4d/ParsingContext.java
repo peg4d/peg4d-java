@@ -70,6 +70,10 @@ public class ParsingContext {
 				System.out.println(source.formatPositionLine("error", fpos, "syntax error"));
 				System.out.println("skipped[" + spos + "]: " + this.source.substring(spos, ppos));
 			}
+			if(this.left == po && po.size() == 0) {
+				po.setTag(new ParsingTag("#text"));
+				po.setEndPosition(this.pos);
+			}
 			return this.left;
 		}
 		return null;
