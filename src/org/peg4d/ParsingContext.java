@@ -44,7 +44,7 @@ public class ParsingContext {
 	public final int getByteChar() {
 		return this.source.byteAt(pos);
 	}
-	
+		
 	public final ParsingObject parseChunk(Grammar peg, String startPoint) {
 		this.initMemo();
 		PExpression start = peg.getExpression(startPoint);
@@ -70,13 +70,17 @@ public class ParsingContext {
 				System.out.println(source.formatPositionLine("error", fpos, "syntax error"));
 				System.out.println("skipped[" + spos + "]: " + this.source.substring(spos, ppos));
 			}
-			if(this.left == po && po.size() == 0) {
-				po.setTag(new ParsingTag("#text"));
-				po.setEndPosition(this.pos);
-			}
+			checkUnusedText(po);
 			return this.left;
 		}
 		return null;
+	}
+	
+	private final void checkUnusedText(ParsingObject po) {
+		if(this.left == po) {
+			po.setTag(new ParsingTag("text"));
+			po.setEndPosition(this.pos);
+		}
 	}
 
 	public final ParsingObject parseChunk(Grammar peg) {
@@ -92,6 +96,7 @@ public class ParsingContext {
 		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
 		this.left = po;
 		start.simpleMatch(this);
+		checkUnusedText(po);
 		return this.left;
 	}
 
