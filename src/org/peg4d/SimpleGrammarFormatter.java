@@ -179,20 +179,18 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 	public void visitNot(PNot e) {
 		int labelL = newLabel();
 		int labelE = newLabel();
-		writeCode(MachineInstruction.opRememberPosition);
 		writeCode(MachineInstruction.opRememberFailurePosition);
+		writeCode(MachineInstruction.opRememberPosition);
 		writeCode(MachineInstruction.opStoreObject);
 		e.inner.visit(this);
-		//writeCode(MachineInstruction.opRestoreNegativeObject);
+		writeCode(MachineInstruction.opRestoreNegativeObject);
 		writeJumpCode(MachineInstruction.IFFAIL, labelE);
-		writeCode(MachineInstruction.opForgetFailurePosition);
-		writeCode(MachineInstruction.opBacktrackPosition);
-		writeCode(MachineInstruction.opDropStoredObject);
-		writeJumpCode(MachineInstruction.JUMP, labelL);
-		writeLabel(labelE);
 		writeCode(MachineInstruction.opCommitPosition);
 		writeCode(MachineInstruction.opForgetFailurePosition);
-		writeCode(MachineInstruction.opRestoreObject);
+		writeJumpCode(MachineInstruction.JUMP, labelL);
+		writeLabel(labelE);
+		writeCode(MachineInstruction.opBacktrackPosition);
+		writeCode(MachineInstruction.opCommitPosition);
 		writeLabel(labelL);
 	}
 

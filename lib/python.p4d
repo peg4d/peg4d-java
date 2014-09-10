@@ -1,0 +1,276 @@
+// PEG4d Python 2 Grammar
+
+File
+	= { (_ NL / @TopLevel)* #File}
+
+Chunk
+	= TopLevel
+
+TopLevel
+	= Stmt
+
+W
+	= [a-zA-Z0-9_]
+
+NL
+	= '\r'? '\n'
+
+S
+	= [ \t]
+
+_
+	= S*
+
+// Token
+// ====
+
+"if"     = 'if' !W _
+"else"   = 'else' !W _
+"while   = 'while' !W _
+"elif"     = 'elif' !W _
+"do"     = 'do' !W _
+"for"    = 'for' !W _
+"class"   = 'class' !W _
+"raise"   = 'raise' !W _
+"with"   = 'with' !W _
+"continue" = 'continue' !W _
+"break"    = 'break' !W _
+"return"   = 'return' !W _
+"print"    = 'print' !W _
+"as"       = 'as' !W _
+"in"       = 'in' !W _
+"import"   = 'import' !W _
+"from"     = 'from' !W _
+"def"      = 'def' !W _
+"try"      = 'try' !W _
+"except"   = 'except' !W _
+"or"       = 'or' !W _
+"and"      = 'and' !W _
+"not"      = 'not' !W _
+
+"*"      = '*' !'=' _
+"+"      = '+' ![+=] _
+"-"      = '-' !('-' / [=>]) _
+"~"      = '~' _
+"!"      = '!' !'=' _
+"["      = '[' _
+"]"      = ']' _
+","      = ',' _
+"..."    = '...' _
+":"      = _ ':' ![>] _
+"/"      = '/' !'=' _
+"%"      = '%' ![=>] _
+"{"      = '{' !'=' _
+"}"      = '}' !'=' _
+"<="     = '<=' _
+">="     = '>=' _
+"<"      = '<' ![=] _
+">"      = '>' ![=] _
+"=="     = '==' _
+"!="     = '!=' _
+"^"      = '^' ![=] _
+"|"      = '|' ![=] _
+"&&"     = '&&' _
+"||"     = '||' _
+"?"      = '?' _
+
+"/="       = '/=' _;
+"%="       = '%=' _
+"+="       = '+=' _
+"-="       = '-=' _
+"&="       = '&=' _
+"^="       = '^=' _
+"|="       = '|=' _
+"="        = '=' !'=' _
+"."        = '.' _
+
+"("        = '(' _
+")"        = ')' _
+
+// Block, Statement
+
+Stmt
+	= {"if" @Expr _ @Block (@Elif)* (_ NL* 'else' _ @Block)? #If }
+	/ {"while" @Expr @Block #While}
+	/ {"for" @Symbol "in" @Expr @Block #ForEach}
+	/ {"return" @Expr #Return}
+	/ ImportStmt EOS
+	/ {"break" #Break}
+	/ {"continue" #Continue}
+	/ {"def" _  @Symbol "(" @Params ")" @Block #Function}
+	/ {"class" @Symbol (S* "(" S* (Extend@)? S* ")" )? @ClassBlock #Class}
+	/ {"try" @Block "except" @Expr S* @Block #Try}
+	/ {"assert" @Expr (_ "," @Expr)? #Assert}
+	/ {"print"  @Expr #Print }
+	/ {"raise"  @Expr #Throw }
+	/ {"with"   @Expr "as" @Symbol ":" @Block #With}
+	/ {'return' _ @Expr #Return}
+	/ Expr EOS?
+	/ EOS+
+
+Elif
+	= {"elif" S+ @Expr _ @Block #if }
+
+EOS
+	= ';'
+	/ NL
+	/ "#" (!'\n' .)* '\n'
+
+ImportStmt
+	= {"import" @ImportSymbol (S* "," S* @Symbol)* #Import}
+	/ {"from" @Symbol "import" @ImportSymbol (S* "," S* @ImportSymbol)* #FromImport}
+
+Extend
+	= { @ExtendContent #super }
+
+ExtendContent
+	= Symbol
+
+Block
+	= { <indent ":" _ NL (_ NL / @IndentStmt)+ > #Block}
+	/ _ { @Stmt #Block}
+
+IndentStmt
+	= <indent> S+ Stmt
+
+ClassBlock
+	= NL+ { <indent (S* EOS+ / @ClassStmt EOS?)+ > #Block};
+
+ClassStmt
+	= <indent> _ Stmt
+
+Expr
+	= Assign
+
+Assign
+	= OrExpr {@ S* AssignOp S* OrExpr@}*
+
+AssignOp
+	= '=' !'=' #Assign
+	/ '+='     #Addeq
+	/ '-='     #Subeq
+	/ '*='     #Muleq
+	/ '/='     #Diveq
+
+OrExpr
+	= AndExpr {@ S* 'or' S* @AndExpr #Or }*
+
+AndExpr
+	= BitwiseExpr {@ S* 'and' S* @BitwiseExpr #And }*
+
+BitwiseExpr
+	= Equal {@ S* ("|" !'|' #BitOr / "&" !'&' #BitAnd / "^" #BitXor) S* @Equal }*
+
+Equal
+	= Relation {@ S*  @EqOp S* @Relation}*
+
+EqOp
+	= 'is' S+ 'not' #Noteq
+	/ 'is' #Eq
+	/ '==' #Eq
+	/ '!=' #Noteq
+	/ 'in' #In
+
+Relation
+	= Shift {@ S* ('<' !'<' #Lt / '<=' #Lte / '>' !'>' #Gt / '>=' #Gte) S* @Shift }*
+
+Shift
+	= Sum {@ S* ("<<" #LShift / ">>" #RShift) S* @Sum }*
+
+Sum
+	= Product {@ S* ('+' #Add / '-' #Sub) S* @Product }*
+
+Product
+	= Unary {@ S* ("*" #Mul / "/" #Div / "%" #Mod) S* @Unary }*
+
+Unary
+	= { ("not" #Not / "!" #Not / "-" #Minus / "+" #Plus / "~" #Compl) @Unary }
+	/ Value {@ Selector }*
+
+Selector
+	= '.' Symbol@ #Field
+	/ '[' S* (@Slice / @Expr) S* ']' #Index
+	/ '(' @{ _* ( _* @Expr ( _* ',' _* @Expr )* )? #Args } ')'  #Apply
+
+Slice
+	= { @SliceBegin ":" @SliceEnd #Slice }
+	/ { @SliceBegin ":" #Slice }
+	/ { ":" @SliceEnd #Slice }
+
+SliceBegin
+	= { @Expr #SliceBegin }
+
+SliceEnd
+	= { @Expr #SliceEnd }
+
+Value
+	= StringLiteral
+	/ Symbol
+	/ Number
+	/ ArrayLiteral
+	/ MapLiteral
+	/ TupleLiteral
+
+ArrayLiteral
+	= { "[" (@Expr)? (_* "," _* @Expr)* _* "]" #Array}
+	/ { "[" @Expr "for" @Symbol "in" @Expr (_* "if" Expr@)? _* "]" #ListComprehension }
+
+MapLiteral
+	= { "{" _* (@MapContent)? (_* "," _* @MapContent )* _* "}" #Map}
+
+TupleLiteral
+	= { "(" @Expr ")" #Group }
+	/ { "(" _* @Expr (_* "," _* @Expr)+ _* ")" #Tuple}
+
+MapContent
+	= { (@StringLiteral / @Symbol) ":" @Expr #KeyValue};
+
+Params
+	= { (@Param)? (_* "," _* @Param)* _* #Params};
+
+Param
+	= { @Symbol (S* "=" @Expr)? #Param }
+
+Args
+	= { (@Expr)? (_* "," @Expr)* #Args};
+
+Symbol
+	= { "True" #TTrue }
+	/ { "False" #TFalse }
+	/ { "None" #TNull }
+	/ { [a-zA-Z_$][0-9a-zA-Z_$]* #Name}
+
+StringLiteral
+	= [bru]? '"""' { ('\\"' / !'"""' .)*  #String } '"""'
+	/ [bru]? "'''" { ("\\'" / !"'''" .)*  #String } "'''"
+	/ [bru]? '"' { ('\\"' / !'"' .)* #String } '"'
+	/ [bru]? "'" { ("\\'" / !"'" .)* #String } "'"
+
+DIGIT = [0-9]
+
+Digits = DIGIT+
+
+Exponent = [eE] [+-]? Digits
+
+FloatLiteral
+	= "." Digits Exponent?
+	/ Digits "." Exponent
+	/ Digits (("." (Digits Exponent?)?) / Exponent);
+
+IntegerLiteral
+	= "0" [xX] [0-9a-fA-F]+      // hexadecimal integer
+	/ "0" [0-7]+                 // octal integer
+	/ "0"                        // zero
+	/ [1-9] Digits?             // decimal integer
+
+Number
+	= { ("-" / "+")? FloatLiteral   #Float }
+	/ { ("-" / "+")? IntegerLiteral #Int }
+
+Asterisk
+	= { '*' #Asterisk}
+
+ImportSymbol
+	= Symbol
+	/ Asterisk
+
