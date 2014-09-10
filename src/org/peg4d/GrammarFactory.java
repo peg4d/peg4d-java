@@ -45,24 +45,10 @@ public class GrammarFactory {
 		}
 		return this.newGrammar(filePath, filePath);
 	}
-	
-	// Expression
 
-	UList<PExpression> definedExpressionList = new UList<PExpression>(new PExpression[128]);
-	
-	short issue(PExpression peg) {
-		this.definedExpressionList.add(peg);
-		return (short)this.definedExpressionList.size();
-	}
+	UMap<PExpression> uniqueExpressionMap = new UMap<PExpression>();
 
-	public final PExpression getDefinedExpression(long oid) {
-		int index = (short)oid;
-		return this.definedExpressionList.ArrayValues[index-1];
-	}
-
-	UMap<PExpression> semMap = new UMap<PExpression>();
-
-	private static String prefixNonTerminal = "a\b";
+//	private static String prefixNonTerminal = "a\b";
 	private static String prefixString = "t\b";
 	private static String prefixByte   = "b\b";
 	private static String prefixCharacter = "c\b";
@@ -79,37 +65,45 @@ public class GrammarFactory {
 	private static String prefixMessage = "M\b";
 	
 	private PExpression getsem(String t) {
-		PExpression e = semMap.get(t);
+		PExpression e = uniqueExpressionMap.get(t);
 		if(e != null) {
-			
+			return e;
 		}
 		return null;
 	}
 
 	private PExpression putsem(String t, PExpression e) {
-		if(Main.AllExpressionMemo && !e.is(PExpression.NoMemo)) {
-			e.base.EnabledMemo += 1;
-			e = newMemo(e);
-		}
-		semMap.put(t, e);
+//		if(Main.AllExpressionMemo && !e.is(PExpression.NoMemo)) {
+//			e.base.EnabledMemo += 1;
+//			e = newMemo(e);
+//		}
+		uniqueExpressionMap.put(t, e);
+		e.uniqueId = newExpressionId();
 		return e;
 	}
 	
-	public final PExpression newMemo(PExpression e) {
-		if(e instanceof ParsingMemo) {
-			return e;
-		}
-		return new ParsingMemo(e);
+	private int uniqueId = 0;
+	public final int newExpressionId() {
+		uniqueId++;
+		return uniqueId;
 	}
 
-	public final PExpression newNonTerminal(Grammar peg, String text) {
-		String key = prefixNonTerminal + text;
-		PExpression e = getsem(key);
-		if(e == null) {
-			e = putsem(key, new PNonTerminal(peg, 0, text));
-		}
-		return e;
-	}
+//	public final PExpression newMemo(PExpression e) {
+//		if(e instanceof ParsingMemo) {
+//			return e;
+//		}
+//		return new ParsingMemo(e);
+//	}
+
+//	public final PExpression newNonTerminal(Grammar peg, String text) {
+//		String key = prefixNonTerminal + text;
+//		PExpression e = getsem(key);
+//		if(e == null) {
+//			e = putsem(key, new PNonTerminal(peg, 0, text));
+//		}
+//		return e;
+//	}
+	
 
 	public final PExpression newString(Grammar peg, String text) {
 		String key = prefixString + text;
@@ -121,29 +115,29 @@ public class GrammarFactory {
 	}
 
 	private PExpression newStringImpl(Grammar peg, String text) {
+		byte[] utf8 = ParsingCharset.toUtf8(text);
 		if(peg.optimizationLevel > 0) {
 			if(ParsingCharset.toUtf8(text).length == 1) {
 				peg.LexicalOptimization += 1;
-				return new PByteChar(peg, 0, text);				
+				return new PByteChar(0, utf8[0]);
 			}
 		}
-		return new PString(peg, 0, text);	
+		return new PString(0, text, utf8);	
 	}
 
 	public final PExpression newByte(Grammar peg, int ch, String text) {
 		String key = prefixByte + text;
 		PExpression e = getsem(key);
 		if(e == null) {
-			e = putsem(key, new PByteChar(peg, 0, ch, text));
+			e = putsem(key, new PByteChar(0, ch));
 		}
 		return e;
 	}
 
-	
 	public final PExpression newAny(Grammar peg, String text) {
 		PExpression e = getsem(text);
 		if(e == null) {
-			e = new PAny(peg, 0);
+			e = new PAny(0);
 			e = putsem(text, e);
 		}
 		return e;
@@ -158,47 +152,46 @@ public class GrammarFactory {
 //			e = putsem(key, e);
 //		}
 //		return e;
-		return new PCharacter(peg, 0, u);
+		return new PCharacter(0, u);
 	}
 
+	private String pkey(PExpression p) {
+		return "#" + p.uniqueId;
+	}
+	
 	public final PExpression newOptional(Grammar peg, PExpression p) {
-		String key = prefixOptional + p.key();
-		PExpression e = getsem(key);
-		if(e == null) {
-			e = putsem(key, newOptionalImpl(peg, p));
+		if(p.isUnique()) {
+			String key = prefixOptional + pkey(p);
+			PExpression e = getsem(key);
+			if(e == null) {
+				e = putsem(key, newOptionalImpl(peg, p));
+			}
+			return e;
 		}
-		return e;
+		return newOptionalImpl(peg, p);
 	}
 
 	private PExpression newOptionalImpl(Grammar peg, PExpression p) {
 		if(p instanceof PByteChar) {
 			peg.LexicalOptimization += 1;
-			return new POptionalByteChar(peg, 0, (PByteChar)p);
+			return new POptionalByteChar(0, (PByteChar)p);
 		}
 		if(p instanceof PString) {
 			peg.LexicalOptimization += 1;
-			return new POptionalString(peg, 0, (PString)p);
+			return new POptionalString(0, (PString)p);
 		}
 		if(p instanceof PCharacter) {
 			peg.LexicalOptimization += 1;
-			return new POptionalCharacter(peg, 0, (PCharacter)p);
+			return new POptionalCharacter(0, (PCharacter)p);
 		}
 		if(p instanceof PRepetition) {
 			((PRepetition) p).atleast = 0;
 			peg.LexicalOptimization += 1;
 			return p;
 		}
-		return new POptional(peg, 0, newCommit(peg, p));
+		return new POptional(0, p);
 	}
 	
-	private PExpression newCommit(Grammar peg, PExpression p) {
-//		if(!p.is(PExpression.HasConstructor) && !p.is(PExpression.HasNonTerminal) && !p.is(PExpression.HasConnector)) {
-//			return p;
-//		}
-//		return new PCommit(p);
-		return p;
-	}
-
 	public final PExpression newMatch(Grammar peg, PExpression p) {
 		if(!p.hasObjectOperation() && !p.is(PExpression.HasNonTerminal)) {
 			return p;
@@ -207,7 +200,7 @@ public class GrammarFactory {
 	}
 	
 	public final PExpression newOneMore(Grammar peg, PExpression p) {
-		String key = prefixOneMore + p.key();
+		String key = prefixOneMore + pkey(p);
 		PExpression e = getsem(key);
 		if(e == null) {
 			e = putsem(key, newOneMoreImpl(peg, p));
@@ -222,49 +215,55 @@ public class GrammarFactory {
 //				return new POneMoreCharacter(peg, 0, (PCharacter)p);
 //			}
 		}
-		return new PRepetition(peg, 0, newCommit(peg, p), 1);
+		return new PRepetition(0, p, 1);
 	}
 	
 	public final PExpression newZeroMore(Grammar peg, PExpression p) {
-		String key = prefixZeroMore + p.key();
-		PExpression e = getsem(key);
-		if(e == null) {
-			e = putsem(key, newZeroMoreImpl(peg, p));
+		if(p.isUnique()) {
+			String key = prefixZeroMore + pkey(p);
+			PExpression e = getsem(key);
+			if(e == null) {
+				e = putsem(key, newZeroMoreImpl(peg, p));
+			}
+			return e;
 		}
-		return e;
+		return newZeroMoreImpl(peg, p);
 	}
 
 	private PExpression newZeroMoreImpl(Grammar peg, PExpression p) {
 		if(p instanceof PCharacter) {
 			peg.LexicalOptimization += 1;
-			return new PZeroMoreCharacter(peg, 0, (PCharacter)p);
+			return new PZeroMoreCharacter(0, (PCharacter)p);
 		}
-		return new PRepetition(peg, 0, newCommit(peg, p), 0);
+		return new PRepetition(0, p, 0);
 	}
 
 	public final PExpression newAnd(Grammar peg, PExpression p) {
-		String key = prefixAnd + p.key();
-		PExpression e = getsem(key);
-		if(e == null) {
-			e = putsem(key, this.newAndImpl(peg, p));
+		if(p.isUnique()) {
+			String key = prefixAnd + pkey(p);
+			PExpression e = getsem(key);
+			if(e == null) {
+				e = putsem(key, this.newAndImpl(peg, p));
+			}
+			return e;
 		}
-		return e;
+		return this.newAndImpl(peg, p);
 	}
 	
 	private PExpression newAndImpl(Grammar peg, PExpression p) {
-		if(p instanceof ParsingOperation) {
-			p = ((ParsingOperation)p).inner;
-		}
-		return new PAnd(peg, 0, p);
+		return new PAnd(0, p);
 	}
 
 	public final PExpression newNot(Grammar peg, PExpression p) {
-		String key = prefixNot + p.key();
-		PExpression e = getsem(key);
-		if(e == null) {
-			e = putsem(key, this.newNotImpl(peg, p));
+		if(p.isUnique()) {
+			String key = prefixNot + pkey(p);
+			PExpression e = getsem(key);
+			if(e == null) {
+				e = putsem(key, this.newNotImpl(peg, p));
+			}
+			return e;
 		}
-		return e;
+		return this.newNotImpl(peg, p);
 	}
 	
 	private PExpression newNotImpl(Grammar peg, PExpression p) {
@@ -272,39 +271,51 @@ public class GrammarFactory {
 			if(p instanceof PString) {
 				peg.LexicalOptimization += 1;
 				if(p instanceof PByteChar) {
-					return new PNotByteChar(peg, 0, (PByteChar)p);
+					return new PNotByteChar(0, (PByteChar)p);
 				}
-				return new PNotString(peg, 0, (PString)p);
+				return new PNotString(0, (PString)p);
 			}
 			if(p instanceof PCharacter) {
 				peg.LexicalOptimization += 1;
-				return new PNotCharacter(peg, 0, (PCharacter)p);
+				return new PNotCharacter(0, (PCharacter)p);
 			}
 		}
 		if(p instanceof ParsingOperation) {
 			p = ((ParsingOperation)p).inner;
 		}
-		return new PNot(peg, 0, newMatch(peg, p));
+		return new PNot(0, newMatch(peg, p));
 	}
 	
+	private boolean isUnique(UList<PExpression> l) {
+		for(int i = 0; i < l.size(); i++) {
+			PExpression se = l.ArrayValues[i];
+			if(!se.isUnique()) {
+				return false;
+			}
+		}
+		return true;
+	}
 	public PExpression newChoice(Grammar peg, UList<PExpression> l) {
 		if(l.size() == 1) {
 			return l.ArrayValues[0];
 		}
-		String key = prefixChoice;
-		boolean isAllText = true;
-		for(int i = 0; i < l.size(); i++) {
-			PExpression se = l.ArrayValues[i];
-			key += se.key();
-			if(!(se instanceof PString) && !(se instanceof PString)) {
-				isAllText = false;
+		if(isUnique(l)) {
+			String key = prefixChoice;
+			boolean isAllText = true;
+			for(int i = 0; i < l.size(); i++) {
+				PExpression p = l.ArrayValues[i];
+				key += pkey(p);
+				if(!(p instanceof PString) && !(p instanceof PString)) {
+					isAllText = false;
+				}
 			}
+			PExpression e = getsem(key);
+			if(e == null) {
+				e = putsem(key, newChoiceImpl(peg, l, isAllText));
+			}
+			return e;
 		}
-		PExpression e = getsem(key);
-		if(e == null) {
-			e = putsem(key, newChoiceImpl(peg, l, isAllText));
-		}
-		return e;
+		return newChoiceImpl(peg, l, false);
 	}
 
 	private PExpression newChoiceImpl(Grammar peg, UList<PExpression> l, boolean isAllText) {
@@ -314,9 +325,9 @@ public class GrammarFactory {
 //			}
 		}
 		if(peg.optimizationLevel > 2) {
-			return new PMappedChoice(peg, 0, l);
+			return new PMappedChoice(0, l);
 		}		
-		return new PChoice(peg, 0, l);
+		return new PChoice(0, l);
 	}
 	
 	public PExpression mergeChoice(Grammar peg, PExpression e, PExpression e2) {
@@ -325,7 +336,7 @@ public class GrammarFactory {
 		UList<PExpression> l = new UList<PExpression>(new PExpression[e.size()+e2.size()]);
 		addChoice(peg, l, e);
 		addChoice(peg, l, e2);
-		return new PChoice(peg, 0, l);
+		return new PChoice(0, l);
 	}
 
 	public PExpression newSequence(Grammar peg, UList<PExpression> l) {
@@ -335,20 +346,23 @@ public class GrammarFactory {
 		if(l.size() == 0) {
 			return this.newString(peg, "");
 		}
-		String key = prefixSequence;
-		for(int i = 0; i < l.size(); i++) {
-			key += l.ArrayValues[i].key();
+		if(isUnique(l)) {
+			String key = prefixSequence;
+			for(int i = 0; i < l.size(); i++) {
+				key += pkey(l.ArrayValues[i]);
+			}
+			PExpression e = getsem(key);
+			if(e == null) {
+				e = newSequenceImpl(peg, l);
+				e = putsem(key, e);
+			}
+			return e;
 		}
-		PExpression e = getsem(key);
-		if(e == null) {
-			e = newSequenceImpl(peg, l);
-			e = putsem(key, e);
-		}
-		return e;
+		return newSequenceImpl(peg, l);
 	}
 
 	private PExpression newSequenceImpl(Grammar peg, UList<PExpression> l) {
-		PExpression orig = new PSequence(peg, 0, l);
+		PExpression orig = new PSequence(0, l);
 		if(peg.optimizationLevel > 1) {
 			int nsize = l.size()-1;
 			if(nsize > 0 && l.ArrayValues[nsize] instanceof PAny) {
@@ -368,18 +382,18 @@ public class GrammarFactory {
 	}
 
 	public PExpression newConstructor(Grammar peg, String tagName, PExpression p) {
-		PExpression e = new PConstructor(peg, 0, false, "#"+tagName, toSequenceList(p));
-		if(peg.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
-			e = new ParsingMemo(e);
-		}
+		PExpression e = new PConstructor(0, false, toSequenceList(p));
+//		if(peg.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
+//			e = new ParsingMemo(e);
+//		}
 		return e;
 	}
 
 	public PExpression newJoinConstructor(Grammar peg, String tagName, PExpression p) {
-		PExpression e = new PConstructor(peg, 0, true, "#"+tagName, toSequenceList(p));
-		if(peg.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
-			e = new ParsingMemo(e);
-		}
+		PExpression e = new PConstructor(0, true, toSequenceList(p));
+//		if(peg.memoFactor != 0 && (Main.AllExpressionMemo || Main.ObjectFocusedMemo)) {
+//			e = new ParsingMemo(e);
+//		}
 		return e;
 	}
 	
@@ -400,20 +414,23 @@ public class GrammarFactory {
 	}
 	
 	public final PExpression newConnector(Grammar peg, PExpression p, int index) {
-		String key = prefixSetter + index + p.key();
-		PExpression e = getsem(key);
-		if(e == null) {
-			e = new PConnector(peg, 0, p, index);
-			e = putsem(key, e);
+		if(p.isUnique()) {
+			String key = prefixSetter + index + pkey(p);
+			PExpression e = getsem(key);
+			if(e == null) {
+				e = new PConnector(0, p, index);
+				e = putsem(key, e);
+			}
+			return e;
 		}
-		return e;
+		return new PConnector(0, p, index);
 	}
 
 	public final PExpression newTagging(Grammar peg, String tag) {
 		String key = prefixTagging + tag;
 		PExpression e = getsem(key);
 		if(e == null) {
-			e = new PTagging(peg, 0, peg.getModelTag(tag));
+			e = new PTagging(0, peg.getModelTag(tag));
 			e = putsem(key, e);
 		}
 		return e;
@@ -423,7 +440,7 @@ public class GrammarFactory {
 		String key = prefixMessage + msg;
 		PExpression e = getsem(key);
 		if(e == null) {
-			e = new PMessage(peg, 0, msg);
+			e = new PMessage(0, msg);
 			e = putsem(key, e);
 		}
 		return e;
@@ -442,7 +459,7 @@ public class GrammarFactory {
 				if(prev instanceof PByteChar) {
 					int ch = ((PByteChar) prev).byteChar;
 					ParsingCharset charset = new ByteCharset(ch, ch);
-					PCharacter c = new PCharacter(e.base, 0, charset);
+					PCharacter c = new PCharacter(0, charset);
 					l.ArrayValues[l.size()-1] = c;
 					prev = c;
 				}
@@ -472,12 +489,4 @@ public class GrammarFactory {
 			l.add(e);
 		}
 	}
-
-	
-//	int memoId = 0;
-//	PegMemo newMemo(Peg e) {
-//		return null;
-//	}
-//	
-//}
 }

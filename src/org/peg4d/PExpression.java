@@ -32,19 +32,19 @@ public abstract class PExpression {
 	public final static int NoMemo            = 1 << 20;
 	public final static int Debug             = 1 << 24;
 	
-	Grammar    base;
 	int        flag       = 0;
-	short      uniqueId   = 0;
-	short      semanticId = 0;
+	int        uniqueId   = 0;
+//	short      uniqueId   = 0;
+//	short      semanticId = 0;
 		
-	protected PExpression(Grammar base, int flag) {
-		this.base = base;
+	protected PExpression(int flag) {
+//		this.base = base;
 		this.flag = flag;
-		this.uniqueId = base.factory.issue(this);
-		this.semanticId = this.uniqueId;
+//		this.uniqueId = base.factory.issue(this);
+//		this.semanticId = this.uniqueId;
 	}
-		
-	protected abstract void visit(ParsingExpressionVisitor probe);
+	abstract PExpression dup();
+	protected abstract void visit(ParsingExpressionVisitor visitor);
 	public PExpression getExpression() {
 		return this;
 	}
@@ -67,9 +67,13 @@ public abstract class PExpression {
 		this.flag |= (e.flag & PExpression.Mask);
 	}
 	
-	public String key() {
-		return "#" + this.uniqueId;
+	public final boolean isUnique() {
+		return this.uniqueId > 0;
 	}
+	
+//	public final String key() {
+//		return "#" + this.uniqueId;
+//	}
 	
 	public int size() {
 		return 0;
@@ -116,15 +120,21 @@ public abstract class PExpression {
 }
 
 class PNonTerminal extends PExpression {
+	Grammar base;
 	String symbol;
 	PExpression    resolvedExpression = null;
 	PNonTerminal(Grammar base, int flag, String ruleName) {
-		super(base, flag | PExpression.HasNonTerminal | PExpression.NoMemo);
+		super(flag | PExpression.HasNonTerminal | PExpression.NoMemo);
+		this.base = base;
 		this.symbol = ruleName;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitNonTerminal(this);
+	PExpression dup() {
+		return new PNonTerminal(base, flag, symbol);
+	}
+	@Override
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitNonTerminal(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
 		if(this.resolvedExpression != null) {
@@ -137,9 +147,6 @@ class PNonTerminal extends PExpression {
 			return this.base.getExpression(this.symbol);
 		}
 		return this.resolvedExpression;
-	}
-	public boolean isForeignNonTerminal() {
-		return this.resolvedExpression.base != this.base;
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -155,8 +162,8 @@ class PNonTerminal extends PExpression {
 }
 
 abstract class PTerminal extends PExpression {
-	PTerminal (Grammar base, int flag) {
-		super(base, flag);
+	PTerminal (int flag) {
+		super(flag);
 	}
 	@Override
 	public final int size() {
@@ -171,16 +178,32 @@ abstract class PTerminal extends PExpression {
 class PString extends PTerminal {
 	String text;
 	byte[] utf8;
-	public PString(Grammar base, int flag, String text) {
-		super(base, PExpression.HasString | PExpression.NoMemo | flag);
+	PString(int flag, String text, byte[] utf8) {
+		super(PExpression.HasString | PExpression.NoMemo | flag);
 		this.text = text;
-		if(text != null) {
-			utf8 = ParsingCharset.toUtf8(text);
+		this.utf8 = utf8;
+	}
+	PString(int flag, String text) {
+		this(flag, text, ParsingCharset.toUtf8(text));
+	}
+	PString(int flag, int ch) {
+		super(PExpression.HasString | PExpression.NoMemo | flag);
+		utf8 = new byte[1];
+		utf8[0] = (byte)ch;
+		if(ch >= ' ' && ch < 127) {
+			this.text = String.valueOf((char)ch);
+		}
+		else {
+			this.text = String.format("0x%x", ch);
 		}
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitString(this);
+	PExpression dup() { 
+		return new PString(flag, text, utf8); 
+	}
+	@Override
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitString(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
 		if(this.text.length() == 0) {
@@ -200,15 +223,12 @@ class PString extends PTerminal {
 
 class PByteChar extends PString {
 	int byteChar;
-	PByteChar(Grammar base, int flag, String token) {
-		super(base, flag, token);
+	PByteChar(int flag, int ch) {
+		super(flag, ch);
 		this.byteChar = this.utf8[0] & 0xff;
 	}
-	PByteChar(Grammar base, int flag, int ch, String text) {
-		super(base, flag, null);
-		this.utf8 = new byte[1];
-		this.utf8[0] = (byte)ch;
-		this.byteChar = ch & 0xff;
+	@Override PExpression dup() { 
+		return new PByteChar(flag, byteChar);
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -221,15 +241,16 @@ class PByteChar extends PString {
 }
 
 class PAny extends PTerminal {
-	PAny(Grammar base, int flag) {
-		super(base, PExpression.HasAny | PExpression.NoMemo | flag);
+	PAny(int flag) {
+		super(PExpression.HasAny | PExpression.NoMemo | flag);
 	}
+	@Override PExpression dup() { return this; }
 	@Override boolean checkFirstByte(int ch) {
 		return true;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitAny(this);
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitAny(this);
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -248,13 +269,14 @@ class PAny extends PTerminal {
 
 class PCharacter extends PTerminal {
 	ParsingCharset charset;
-	PCharacter(Grammar base, int flag, ParsingCharset charset) {
-		super(base, PExpression.HasCharacter | PExpression.NoMemo | flag);
+	PCharacter(int flag, ParsingCharset charset) {
+		super(PExpression.HasCharacter | PExpression.NoMemo | flag);
 		this.charset = charset;
 	}
+	@Override PExpression dup() { return this; }
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitCharacter(this);
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitCharacter(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
 		return this.charset.hasByte(ch);
@@ -281,8 +303,8 @@ class PCharacter extends PTerminal {
 //		this.orig = orig;
 //	}
 //	@Override
-//	protected void visit(ParsingVisitor probe) {
-//		probe.visitNotAny(this);
+//	protected void visit(ParsingVisitor visitor) {
+//		visitor.visitNotAny(this);
 //	}
 //	@Override boolean checkFirstByte(int ch) {
 //		return this.not.checkFirstByte(ch) && this.orig.checkFirstByte(ch);
@@ -308,8 +330,8 @@ class PCharacter extends PTerminal {
 
 abstract class PUnary extends PExpression {
 	PExpression inner;
-	public PUnary(Grammar base, int flag, PExpression e) {
-		super(base, flag);
+	PUnary(int flag, PExpression e) {
+		super(flag);
 		this.inner = e;
 		this.derived(e);
 	}
@@ -324,12 +346,15 @@ abstract class PUnary extends PExpression {
 }
 
 class POptional extends PUnary {
-	public POptional(Grammar base, int flag, PExpression e) {
-		super(base, flag | PExpression.HasOptional | PExpression.NoMemo, e);
+	POptional(int flag, PExpression e) {
+		super(flag | PExpression.HasOptional | PExpression.NoMemo, e);
+	}
+	@Override PExpression dup() { 
+		return new POptional(flag, inner); 
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitOptional(this);
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitOptional(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
 		return true;
@@ -356,9 +381,12 @@ class POptional extends PUnary {
 
 class POptionalString extends POptional {
 	byte[] utf8;
-	POptionalString(Grammar base, int flag, PString e) {
-		super(base, flag | PExpression.NoMemo, e);
+	POptionalString(int flag, PString e) {
+		super(flag | PExpression.NoMemo, e);
 		this.utf8 = e.utf8;
+	}
+	@Override PExpression dup() { 
+		return new POptionalString(flag, (PString)inner); 
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -372,9 +400,12 @@ class POptionalString extends POptional {
 
 class POptionalByteChar extends POptional {
 	int byteChar;
-	POptionalByteChar(Grammar base, int flag, PByteChar e) {
-		super(base, flag | PExpression.NoMemo, e);
+	POptionalByteChar(int flag, PByteChar e) {
+		super(flag | PExpression.NoMemo, e);
 		this.byteChar = e.byteChar;
+	}
+	@Override PExpression dup() { 
+		return new POptionalByteChar(flag, (PByteChar)inner); 
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -388,9 +419,12 @@ class POptionalByteChar extends POptional {
 
 class POptionalCharacter extends POptional {
 	ParsingCharset charset;
-	POptionalCharacter(Grammar base, int flag, PCharacter e) {
-		super(base, flag | PExpression.NoMemo, e);
+	POptionalCharacter(int flag, PCharacter e) {
+		super(flag | PExpression.NoMemo, e);
 		this.charset = e.charset;
+	}
+	@Override PExpression dup() { 
+		return new POptionalCharacter(flag, (PCharacter)inner); 
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -404,13 +438,16 @@ class POptionalCharacter extends POptional {
 
 class PRepetition extends PUnary {
 	public int atleast = 0; 
-	protected PRepetition(Grammar base, int flag, PExpression e, int atLeast) {
-		super(base, flag | PExpression.HasRepetition, e);
+	PRepetition(int flag, PExpression e, int atLeast) {
+		super(flag | PExpression.HasRepetition, e);
 		this.atleast = atLeast;
 	}
+	@Override PExpression dup() { 
+		return new PRepetition(flag, inner, atleast); 
+	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitRepetition(this);
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitRepetition(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
 		if(this.atleast > 0) {
@@ -496,9 +533,12 @@ class PRepetition extends PUnary {
 
 class PZeroMoreCharacter extends PRepetition {
 	ParsingCharset charset;
-	public PZeroMoreCharacter(Grammar base, int flag, PCharacter e) {
-		super(base, flag, e, 0);
+	PZeroMoreCharacter(int flag, PCharacter e) {
+		super(flag, e, 0);
 		this.charset = e.charset;
+	}
+	@Override PExpression dup() { 
+		return new PZeroMoreCharacter(flag, (PCharacter)inner); 
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -514,12 +554,15 @@ class PZeroMoreCharacter extends PRepetition {
 }
 
 class PAnd extends PUnary {
-	PAnd(Grammar base, int flag, PExpression e) {
-		super(base, flag | PExpression.HasAnd, e);
+	PAnd(int flag, PExpression e) {
+		super(flag | PExpression.HasAnd, e);
+	}
+	@Override PExpression dup() { 
+		return new PAnd(flag, inner); 
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitAnd(this);
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitAnd(this);
 	}
 	@Override
 	boolean checkFirstByte(int ch) {
@@ -540,12 +583,15 @@ class PAnd extends PUnary {
 }
 
 class PNot extends PUnary {
-	PNot(Grammar base, int flag, PExpression e) {
-		super(base, PExpression.HasNot | flag, e);
+	PNot(int flag, PExpression e) {
+		super(PExpression.HasNot | flag, e);
+	}
+	@Override PExpression dup() { 
+		return new PNot(flag, inner); 
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitNot(this);
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitNot(this);
 	}
 	@Override
 	boolean checkFirstByte(int ch) {
@@ -580,9 +626,12 @@ class PNot extends PUnary {
 
 class PNotString extends PNot {
 	byte[] utf8;
-	PNotString(Grammar peg, int flag, PString e) {
-		super(peg, flag | PExpression.NoMemo, e);
+	PNotString(int flag, PString e) {
+		super(flag | PExpression.NoMemo, e);
 		this.utf8 = e.utf8;
+	}
+	@Override PExpression dup() { 
+		return new PNotString(flag, (PString)inner); 
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -596,9 +645,12 @@ class PNotString extends PNot {
 
 class PNotByteChar extends PNotString {
 	int byteChar;
-	PNotByteChar(Grammar peg, int flag, PByteChar e) {
-		super(peg, flag, e);
+	PNotByteChar(int flag, PByteChar e) {
+		super(flag, e);
 		this.byteChar = e.byteChar;
+	}
+	@Override PExpression dup() { 
+		return new PNotByteChar(flag, (PByteChar)inner); 
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -612,9 +664,12 @@ class PNotByteChar extends PNotString {
 
 class PNotCharacter extends PNot {
 	ParsingCharset charset;
-	PNotCharacter(Grammar base, int flag, PCharacter e) {
-		super(base, flag | PExpression.NoMemo, e);
+	PNotCharacter(int flag, PCharacter e) {
+		super(flag | PExpression.NoMemo, e);
 		this.charset = e.charset;
+	}
+	@Override PExpression dup() { 
+		return new PNotCharacter(flag, (PCharacter)inner); 
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -629,8 +684,8 @@ class PNotCharacter extends PNot {
 abstract class PList extends PExpression {
 	UList<PExpression> list;
 	int length = 0;
-	PList(Grammar base, int flag, UList<PExpression> list) {
-		super(base, flag);
+	PList(int flag, UList<PExpression> list) {
+		super(flag);
 		this.list = list;
 	}
 	@Override
@@ -663,7 +718,6 @@ abstract class PList extends PExpression {
 		}
 		context.opCommitSequencePosition();
 	}
-
 	
 	private boolean isOptional(PExpression e) {
 		if(e instanceof POptional) {
@@ -748,12 +802,16 @@ abstract class PList extends PExpression {
 }
 
 class PSequence extends PList {
-	PSequence(Grammar base, int flag, UList<PExpression> l) {
-		super(base, flag, l);
+	PSequence(int flag, UList<PExpression> l) {
+		super(flag, l);
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitSequence(this);
+	PExpression dup() {
+		return new PSequence(flag, list);
+	}
+	@Override
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitSequence(this);
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -772,12 +830,16 @@ class PSequence extends PList {
 }
 
 class PChoice extends PList {
-	PChoice(Grammar base, int flag, UList<PExpression> list) {
-		super(base, flag | PExpression.HasChoice, list);
+	PChoice(int flag, UList<PExpression> list) {
+		super(flag | PExpression.HasChoice, list);
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitChoice(this);
+	PExpression dup() {
+		return new PChoice(flag, list);
+	}
+	@Override
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitChoice(this);
 	}
 	@Override
 	boolean checkFirstByte(int ch) {
@@ -827,8 +889,12 @@ class PChoice extends PList {
 
 class PMappedChoice extends PChoice {
 	PExpression[] caseOf = null;
-	PMappedChoice(Grammar base, int flag, UList<PExpression> list) {
-		super(base, flag, list);
+	PMappedChoice(int flag, UList<PExpression> list) {
+		super(flag, list);
+	}
+	@Override
+	PExpression dup() {
+		return new PMappedChoice(flag, list);
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -845,7 +911,7 @@ class PMappedChoice extends PChoice {
 			for(int ch = 0; ch < ParsingCharset.MAX; ch++) {
 				this.caseOf[ch] = selectC1(ch, failed);
 			}
-			this.base.PredictionOptimization += 1;
+//			this.base.PredictionOptimization += 1;
 		}
 	}
 	private PExpression selectC1(int ch, PExpression failed) {
@@ -866,14 +932,14 @@ class PMappedChoice extends PChoice {
 			}
 		}
 		if(l != null) {
-			e = new PChoice(e.base, 0, l);
-			e.base.UnpredicatedChoiceL1 += 1;
+			e = new PChoice(0, l);
+//			e.base.UnpredicatedChoiceL1 += 1;
 		}
 		else {
 			if(e == null) {
 				e = failed;
 			}
-			e.base.PredicatedChoiceL1 +=1;
+//			e.base.PredicatedChoiceL1 +=1;
 		}
 		return e;
 	}
@@ -922,28 +988,38 @@ class PMappedChoice extends PChoice {
 //}
 
 class PAlwaysFailure extends PString {
-	public PAlwaysFailure(PExpression orig) {
-		super(orig.base, 0, "\0");
+	PExpression dead;
+	PAlwaysFailure(PExpression dead) {
+		super(0, "\0");
+		this.dead = dead;
+	}
+	@Override
+	PExpression dup() {
+		return new PAlwaysFailure(dead);
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
-		context.opFailure();
+		context.opFailure(dead);
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
-		context.opFailure(this);
+		context.opFailure(dead);
 	}
 }
 
 class PConnector extends PUnary {
 	public int index;
-	public PConnector(Grammar base, int flag, PExpression e, int index) {
-		super(base, flag | PExpression.HasConnector | PExpression.NoMemo, e);
+	PConnector(int flag, PExpression e, int index) {
+		super(flag | PExpression.HasConnector | PExpression.NoMemo, e);
 		this.index = index;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitConnector(this);
+	PExpression dup() {
+		return new PConnector(flag, inner, index);
+	}
+	@Override
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitConnector(this);
 	}
 	@Override
 	boolean checkFirstByte(int ch) {
@@ -978,13 +1054,17 @@ class PConnector extends PUnary {
 
 class PTagging extends PTerminal {
 	ParsingTag tag;
-	PTagging(Grammar base, int flag, ParsingTag tag) {
-		super(base, PExpression.HasTagging | PExpression.NoMemo | flag);
+	PTagging(int flag, ParsingTag tag) {
+		super(PExpression.HasTagging | PExpression.NoMemo | flag);
 		this.tag = tag;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitTagging(this);
+	PExpression dup() {
+		return new PTagging(flag, tag);
+	}
+	@Override
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitTagging(this);
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -992,21 +1072,25 @@ class PTagging extends PTerminal {
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
-		if(!context.isRecognitionMode()) {
-			context.left.setTag(this.tag.tagging());
+		if(context.canTransCapture()) {
+			context.left.setTag(this.tag);
 		}
 	}
 }
 
 class PMessage extends PTerminal {
 	String symbol;
-	PMessage(Grammar base, int flag, String message) {
-		super(base, flag | PExpression.NoMemo | PExpression.HasMessage);
+	PMessage(int flag, String message) {
+		super(flag | PExpression.NoMemo | PExpression.HasMessage);
 		this.symbol = message;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitMessage(this);
+	PExpression dup() {
+		return new PMessage(flag, symbol);
+	}
+	@Override
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitMessage(this);
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -1022,16 +1106,18 @@ class PMessage extends PTerminal {
 
 class PConstructor extends PList {
 	boolean leftJoin = false;
-	String tagName;
 	int prefetchIndex = 0;
-	PConstructor(Grammar base, int flag, boolean leftJoin, String tagName, UList<PExpression> list) {
-		super(base, flag | PExpression.HasConstructor, list);
+	PConstructor(int flag, boolean leftJoin, UList<PExpression> list) {
+		super(flag | PExpression.HasConstructor, list);
 		this.leftJoin = leftJoin;
-		this.tagName = tagName == null ? "#new" : tagName;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitConstructor(this);
+	PExpression dup() {
+		return new PConstructor(flag, leftJoin, list);
+	}
+	@Override
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitConstructor(this);
 	}
 	
 	@Override
@@ -1051,7 +1137,7 @@ class PConstructor extends PList {
 		long startIndex = context.getPosition();
 		ParsingObject left = context.left;
 		if(context.isRecognitionMode()) {
-			ParsingObject newone = context.newParsingObject(this.tagName, startIndex, this);
+			ParsingObject newone = context.newParsingObject(startIndex, this);
 			context.left = newone;
 			for(int i = 0; i < this.size(); i++) {
 				this.get(i).simpleMatch(context);
@@ -1072,7 +1158,7 @@ class PConstructor extends PList {
 				}
 			}
 			int mark = context.markObjectStack();
-			ParsingObject newnode = context.newParsingObject(this.tagName, startIndex, this);
+			ParsingObject newnode = context.newParsingObject(startIndex, this);
 			context.left = newnode;
 			if(this.leftJoin) {
 				context.logLink(newnode, -1, left);
@@ -1109,12 +1195,16 @@ class PConstructor extends PList {
 
 
 class PExport extends PUnary {
-	public PExport(Grammar base, int flag, PExpression e) {
-		super(base, flag | PExpression.NoMemo, e);
+	PExport(int flag, PExpression e) {
+		super(flag | PExpression.NoMemo, e);
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitExport(this);
+	PExpression dup() {
+		return new PExport(flag, inner);
+	}
+	@Override
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitExport(this);
 	}
 	@Override
 	boolean checkFirstByte(int ch) {
@@ -1132,13 +1222,13 @@ class PExport extends PUnary {
 
 abstract class ParsingFunction extends PExpression {
 	String funcName;
-	protected ParsingFunction(String funcName, Grammar base, int flag) {
-		super(base, flag);
+	ParsingFunction(String funcName, int flag) {
+		super(flag);
 		this.funcName = funcName;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitParsingFunction(this);
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitParsingFunction(this);
 	}
 //	@Override
 //	boolean checkFirstByte(int ch) {
@@ -1150,8 +1240,11 @@ abstract class ParsingFunction extends PExpression {
 }
 
 class ParsingIndent extends ParsingFunction {
-	ParsingIndent(Grammar base, int flag) {
-		super("indent", base, flag | PExpression.HasContext);
+	ParsingIndent(int flag) {
+		super("indent", flag | PExpression.HasContext);
+	}
+	@Override PExpression dup() {
+		return this;
 	}
 	@Override
 	boolean checkFirstByte(int ch) {
@@ -1169,9 +1262,12 @@ class ParsingIndent extends ParsingFunction {
 
 class ParsingFail extends ParsingFunction {
 	String message;
-	ParsingFail(Grammar base, int flag, String message) {
-		super("fail", base, flag);
+	ParsingFail(int flag, String message) {
+		super("fail", flag);
 		this.message = message;
+	}
+	@Override PExpression dup() {
+		return new ParsingFail(flag, message);
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -1184,8 +1280,11 @@ class ParsingFail extends ParsingFunction {
 }
 
 class ParsingCatch extends ParsingFunction {
-	ParsingCatch(Grammar base, int flag) {
-		super("catch", base, flag);
+	ParsingCatch(int flag) {
+		super("catch", flag);
+	}
+	@Override PExpression dup() {
+		return this;
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -1197,18 +1296,17 @@ class ParsingCatch extends ParsingFunction {
 	}
 }
 
-
 abstract class ParsingOperation extends PExpression {
 	String funcName;
 	PExpression inner;
 	protected ParsingOperation(String funcName, PExpression inner) {
-		super(inner.base, inner.flag);
+		super(inner.flag);
 		this.funcName = funcName;
 		this.inner = inner;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitParsingOperation(this);
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitParsingOperation(this);
 	}
 	@Override
 	boolean checkFirstByte(int ch) {
@@ -1225,14 +1323,19 @@ abstract class ParsingOperation extends PExpression {
 
 class ParsingMemo extends ParsingOperation {
 	static ParsingObject NonTransition = new ParsingObject(null, null, 0);
-	PExpression parent = null;
+
 	boolean enableMemo = true;
+	int memoId;
 	int memoHit = 0;
 	int memoMiss = 0;
 
-	protected ParsingMemo(PExpression inner) {
+	ParsingMemo(int memoId, PExpression inner) {
 		super("memo", inner);
-		this.semanticId = inner.semanticId;
+		this.memoId = memoId;
+	}
+
+	@Override PExpression dup() {
+		return new ParsingMemo(0, inner);
 	}
 
 	@Override
@@ -1288,11 +1391,11 @@ class ParsingMemo extends ParsingOperation {
 	private void disabledMemo() {
 		//this.show();
 		this.enableMemo = false;
-		this.base.DisabledMemo += 1;
-		int factor = this.base.EnabledMemo / 10;
-		if(factor != 0 && this.base.DisabledMemo % factor == 0) {
-			this.base.memoRemover.removeDisabled();
-		}
+//		this.base.DisabledMemo += 1;
+//		int factor = this.base.EnabledMemo / 10;
+//		if(factor != 0 && this.base.DisabledMemo % factor == 0) {
+//			this.base.memoRemover.removeDisabled();
+//		}
 	}
 
 	void show() {
@@ -1304,8 +1407,11 @@ class ParsingMemo extends ParsingOperation {
 }
 
 class ParsingMatch extends ParsingOperation {
-	protected ParsingMatch(PExpression inner) {
+	ParsingMatch(PExpression inner) {
 		super("match", inner);
+	}
+	@Override PExpression dup() {
+		return new ParsingMatch(inner);
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -1329,6 +1435,9 @@ class ParsingStackIndent extends ParsingOperation {
 	ParsingStackIndent(PExpression e) {
 		super("indent", e);
 	}
+	@Override PExpression dup() {
+		return new ParsingStackIndent(inner);
+	}
 	@Override
 	public void vmMatch(ParsingContext context) {
 		context.opPushIndent();
@@ -1345,13 +1454,16 @@ class ParsingStackIndent extends ParsingOperation {
 
 class ParsingFlag extends PTerminal {
 	String flagName;
-	protected ParsingFlag(Grammar peg, int flag, String flagName) {
-		super(peg, flag | PExpression.HasContext);
+	ParsingFlag(int flag, String flagName) {
+		super(flag | PExpression.HasContext);
 		this.flagName = flagName;
 	}
+	@Override PExpression dup() {
+		return new ParsingFlag(flag, flagName);
+	}
 	@Override
-	protected void visit(ParsingExpressionVisitor probe) {
-		probe.visitParsingFlag(this);
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitParsingFlag(this);
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -1365,9 +1477,12 @@ class ParsingFlag extends PTerminal {
 
 class ParsingEnableFlag extends ParsingOperation {
 	String flagName;
-	protected ParsingEnableFlag(String flagName, PExpression inner) {
+	ParsingEnableFlag(String flagName, PExpression inner) {
 		super("enable", inner);
 		this.flagName = flagName;
+	}
+	@Override PExpression dup() {
+		return new ParsingEnableFlag(flagName, inner);
 	}
 	@Override
 	public String getParameters() {
@@ -1389,9 +1504,12 @@ class ParsingEnableFlag extends ParsingOperation {
 
 class ParsingDisableFlag extends ParsingOperation {
 	String flagName;
-	protected ParsingDisableFlag(String flagName, PExpression inner) {
+	ParsingDisableFlag(String flagName, PExpression inner) {
 		super("disable", inner);
 		this.flagName = flagName;
+	}
+	@Override PExpression dup() {
+		return new ParsingDisableFlag(flagName, inner);
 	}
 	@Override
 	public String getParameters() {
@@ -1415,6 +1533,9 @@ class ParsingDebug extends ParsingOperation {
 	protected ParsingDebug(PExpression inner) {
 		super("debug", inner);
 	}
+	@Override PExpression dup() {
+		return new ParsingDebug(inner);
+	}
 	@Override
 	public void vmMatch(ParsingContext context) {
 		context.opRememberPosition();
@@ -1434,8 +1555,11 @@ class ParsingDebug extends ParsingOperation {
 }
 
 class ParsingApply extends ParsingOperation {
-	protected ParsingApply(PExpression inner) {
+	ParsingApply(PExpression inner) {
 		super("|apply", inner);
+	}
+	@Override PExpression dup() {
+		return new ParsingApply(inner);
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {

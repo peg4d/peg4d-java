@@ -1,5 +1,6 @@
 package org.peg4d;
 
+
 class ParsingExpressionVisitor {
 	private UMap<String> visitedMap = new UMap<String>();
 	boolean isVisited(String name) {
@@ -104,12 +105,47 @@ class ListMaker extends ParsingExpressionVisitor {
 	}
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
-		if(	!e.isForeignNonTerminal() && !this.isVisited(e.symbol)) {
-			visited(e.symbol);
+		if(	e.base != peg && !this.isVisited(e.symbol)) {
 			this.visitImpl(e.symbol);
 		}
 	}
 }
+
+class Importer extends ParsingExpressionVisitor {
+	private Grammar dst;
+	private Grammar src;
+	private UMap<String> params;
+	private PExpression returnExpression = null;
+	Importer(Grammar dst, Grammar src, String startPoint, UMap<String> params) {
+		this.dst = dst;
+		this.src = src;
+		this.initVisitor();
+		this.visitRule(startPoint);
+	}
+	
+	PExpression importRule(Grammar dst, Grammar src, String startPoint, UMap<String> params) {
+		this.dst = dst;
+		this.src = src;
+		this.initVisitor();
+		this.visitRule(startPoint);
+		return returnExpression;
+	}
+	
+	private void visitRule(String name) {
+		this.visited(name);
+		PExpression next = src.getExpression(name);
+		next.visit(this);
+	}
+	
+	@Override
+	public void visitNonTerminal(PNonTerminal e) {
+		if( e.base != src && !this.isVisited(e.symbol)) {
+			this.visitRule(e.symbol);
+		}
+	}
+}
+
+
 
 class NonTerminalChecker extends ParsingExpressionVisitor {
 	PegRule startRule;
@@ -118,10 +154,10 @@ class NonTerminalChecker extends ParsingExpressionVisitor {
 
 	void verify(PegRule rule) {
 		this.initVisitor();
-		if(Main.PackratStyleMemo && !(rule.expr instanceof ParsingMemo)) {
-			rule.expr = new ParsingMemo(rule.expr);
-			rule.expr.base.EnabledMemo += 1;
-		}
+//		if(Main.PackratStyleMemo && !(rule.expr instanceof ParsingMemo)) {
+//			rule.expr = new ParsingMemo(rule.expr);
+//			rule.expr.base.EnabledMemo += 1;
+//		}
 		this.startRule = rule;
 		this.verifyImpl(rule);
 	}
@@ -139,7 +175,7 @@ class NonTerminalChecker extends ParsingExpressionVisitor {
 		PegRule next = e.base.getRule(e.symbol);
 		if(next == null) {
 			checking.reportError("undefined label: " + e.symbol);
-			e.base.setRule(e.symbol, new ParsingFlag(e.base, 0, e.symbol));
+			e.base.setRule(e.symbol, new ParsingFlag(0, e.symbol));
 			next = e.base.getRule(e.symbol);
 		}
 		e.resolvedExpression = next.expr;
@@ -509,7 +545,6 @@ class MemoRemover extends ParsingExpressionVisitor {
 //			}
 //		}
 	}
-	
 }
 
 class ObjectRemover extends ParsingExpressionVisitor {
@@ -605,7 +640,7 @@ class ObjectRemover extends ParsingExpressionVisitor {
 			}
 		}
 		//System.out.println("@@@ size=" + l.size() + " e=" + e);
-		this.returnPeg = e.base.newSequence(l);
+		this.returnPeg = new PSequence(0, l);
 	}
 }
 

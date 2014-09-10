@@ -20,11 +20,11 @@ public class ParsingUtils {
 	}
 	
 	public final static long memoKey(long pos, PExpression e) {
-		return (pos << 16) | e.semanticId;
+		return (pos << 16) | ((ParsingMemo)e).memoId;
 	}
-	public final static long failure(long pos, PExpression e) {
-		return (pos << 16) | e.uniqueId;
-	}
+//	public final static long failure(long pos, PExpression e) {
+//		return (pos << 16) | e.uniqueId;
+//	}
 	public final static long getpos(long pospeg) {
 		return (pospeg >> 16);
 	}

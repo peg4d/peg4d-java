@@ -120,7 +120,7 @@ public class Grammar {
 	}
 
 	public final void setRule(String ruleName, PExpression e) {
-		this.ruleMap.put(ruleName, new PegRule(null, 0, ruleName, e));
+		this.ruleMap.put(ruleName, new PegRule(this, null, 0, ruleName, e));
 	}
 
 	public final void setRule(String ruleName, PegRule rule) {
@@ -314,9 +314,17 @@ public class Grammar {
 		System.out.println(sb.toString());
 	}
 	
+	private UMap<PExpression> nonTerminalMap = new UMap<PExpression>();
+	
 	final PExpression newNonTerminal(String text) {
-		return this.factory.newNonTerminal(this, text);
+		PExpression e = nonTerminalMap.get(text);
+		if(e == null) {
+			e = new PNonTerminal(this, 0, text);
+			nonTerminalMap.put(text, e);
+		}
+		return e;
 	}
+	
 	final PExpression newString(String text) {
 		return this.factory.newString(this, text);
 	}
@@ -381,16 +389,16 @@ public class Grammar {
 	}
 
 	public PExpression newFail(String message) {
-		return new ParsingFail(this, 0, message);
+		return new ParsingFail(0, message);
 	}
 
 	public PExpression newCatch() {
-		return new ParsingCatch(this, 0);
+		return new ParsingCatch(0);
 	}
 
 	
 	public PExpression newFlag(String flagName) {
-		return new ParsingFlag(this, 0, flagName);
+		return new ParsingFlag(0, flagName);
 	}
 
 	public PExpression newEnableFlag(String flagName, PExpression e) {
@@ -403,7 +411,7 @@ public class Grammar {
 
 	public PExpression newIndent(PExpression e) {
 		if(e == null) {
-			return new ParsingIndent(this, 0);
+			return new ParsingIndent(0);
 		}
 		return new ParsingStackIndent(e);
 	}
@@ -413,13 +421,14 @@ public class Grammar {
 class PegRule {
 	ParsingSource source;
 	long     pos;
+	Grammar  peg;
 	
 	String ruleName;
 	PExpression expr;
 	int length = 0;
 	boolean objectType;
 
-	public PegRule(ParsingSource source, long pos, String ruleName, PExpression e) {
+	public PegRule(Grammar peg, ParsingSource source, long pos, String ruleName, PExpression e) {
 		this.source = source;
 		this.pos = pos;
 		this.ruleName = ruleName;
@@ -432,7 +441,7 @@ class PegRule {
 	}
 	
 	Grammar getGrammar() {
-		return this.expr.base;
+		return this.peg;
 	}
 	
 	void reportError(String msg) {
@@ -558,7 +567,7 @@ class PEG4dGrammar extends Grammar {
 				ruleName = quote(ruleName);
 			}
 			PExpression e = toParsingExpression(loading, ruleName, po.get(1));
-			PegRule rule = new PegRule(po.getSource(), po.getSourcePosition(), ruleName, e);
+			PegRule rule = new PegRule(loading, po.getSource(), po.getSourcePosition(), ruleName, e);
 //			if(ruleName.equals("ParsingrimaryType")) {
 //				System.out.println("DEBUG: " + po + "\n" + rule);
 //			}
@@ -812,42 +821,42 @@ class PEG4dGrammar extends Grammar {
 		return this.newString(token);
 	}
 	private final PExpression c(String text) {
-		return new PCharacter(this, 0, ParsingCharset.newParsingCharset(text));
+		return new PCharacter(0, ParsingCharset.newParsingCharset(text));
 	}
 	private final PExpression P(String ruleName) {
 		return new PNonTerminal(this, 0, ruleName);
 	}
 	private final PExpression Optional(PExpression e) {
-		return new POptional(this, 0, e);
+		return new POptional(0, e);
 	}
 	private final PExpression zero(PExpression e) {
-		return new PRepetition(this, 0, e, 0);
+		return new PRepetition(0, e, 0);
 	}
 	private final PExpression zero(PExpression ... elist) {
-		return new PRepetition(this, 0, Sequence(elist), 0);
+		return new PRepetition(0, Sequence(elist), 0);
 	}
 	private final PExpression one(PExpression e) {
-		return new PRepetition(this, 0, e, 1);
+		return new PRepetition(0, e, 1);
 	}
 	private final PExpression one(PExpression ... elist) {
-		return new PRepetition(this, 0, Sequence(elist), 1);
+		return new PRepetition(0, Sequence(elist), 1);
 	}
 	private final PExpression Sequence(PExpression ... elist) {
 		UList<PExpression> l = new UList<PExpression>(new PExpression[8]);
 		for(PExpression e : elist) {
 			this.addSequence(l, e);
 		}
-		return new PSequence(this, 0, l);
+		return new PSequence(0, l);
 	}
 	private final PExpression Choice(PExpression ... elist) {
 		UList<PExpression> l = new UList<PExpression>(new PExpression[8]);
 		for(PExpression e : elist) {
 			this.addChoice(l, e);
 		}
-		return new PChoice(this, 0, l);
+		return new PChoice(0, l);
 	}
 	private final PExpression Not(PExpression e) {
-		return new PNot(this, 0, e);
+		return new PNot(0, e);
 	}
 	private final PExpression Tag(int tagId) {
 		return newTagging(ParsingTag.tagName(tagId));
@@ -857,21 +866,21 @@ class PEG4dGrammar extends Grammar {
 		for(PExpression e : elist) {
 			this.addSequence(l, e);
 		}
-		return new PConstructor(this, 0, false, null, l);
+		return new PConstructor(0, false, l);
 	}
 	private PExpression LeftJoin(PExpression ... elist) {
 		UList<PExpression> l = new UList<PExpression>(new PExpression[8]);
 		for(PExpression e : elist) {
 			this.addSequence(l, e);
 		}
-		return new PConstructor(this, 0, true, null, l);
+		return new PConstructor(0, true, l);
 	}
 	private PExpression Link(PExpression e) {
-		return new PConnector(this, 0, e, -1);
+		return new PConnector(0, e, -1);
 	}
 	
 	private PExpression Link(int index, PExpression e) {
-		return new PConnector(this, 0, e, index);
+		return new PConnector(0, e, index);
 	}
 	
 	public Grammar loadPEG4dGrammar() {

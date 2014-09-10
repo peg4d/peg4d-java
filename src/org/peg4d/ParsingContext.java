@@ -195,7 +195,7 @@ public class ParsingContext {
 		return b;
 	}
 	
-	final ParsingObject newParsingObject(String tagName, long pos, PConstructor created) {
+	final ParsingObject newParsingObject(long pos, PConstructor created) {
 		if(this.isRecognitionMode()) {
 			this.successResult.setSourcePosition(pos);
 			return this.successResult;
@@ -616,7 +616,7 @@ public class ParsingContext {
 
 	public final void opTagging(ParsingTag tag) {
 		if(this.canTransCapture()) {
-			this.left.setTag(tag.tagging());
+			this.left.setTag(tag);
 		}
 	}
 
@@ -986,10 +986,10 @@ class DebugMemo extends ParsingContextMemo {
 		}
 		if(o1 != null && o2 != null) {
 			if(o1.generated != o2.generated) {
-				System.out.println("diff: generaetd " + "pos1=" + keypos + ", p1=" + keypeg.uniqueId);
+				System.out.println("diff: generaetd " + "pos1=" + keypos + ", p1=" + keypeg);
 			}
 			if(o1.consumed != o2.consumed) {
-				System.out.println("diff: consumed " + "pos1=" + keypos + ", p1=" + keypeg.uniqueId);
+				System.out.println("diff: consumed " + "pos1=" + keypos + ", p1=" + keypeg);
 			}
 		}
 		return o1;
