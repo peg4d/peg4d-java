@@ -150,22 +150,24 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 		int labelL = newLabel();
 		int labelE = newLabel();
 		int labelE2 = newLabel();
-		/*if(e.atleast == 1) {
+		if(e.atleast == 1) {
+			writeCode(MachineInstruction.opRememberPosition);
 			e.inner.visit(this);
 			writeJumpCode(MachineInstruction.IFFAIL,labelE2);
-		}*/
+			writeCode(MachineInstruction.opCommitPosition);
+		}
 		writeLabel(labelL);
-		writeCode(MachineInstruction.opStoreObject);
 		writeCode(MachineInstruction.opRememberPosition);
+		writeCode(MachineInstruction.opStoreObject);
 		e.inner.visit(this);
 		writeJumpCode(MachineInstruction.IFFAIL, labelE);
 		writeCode(MachineInstruction.opDropStoredObject);
-		writeCode(MachineInstruction.opForgetFailurePosition);
+		writeCode(MachineInstruction.opCommitPosition);
 		writeJumpCode(MachineInstruction.JUMP, labelL);
 		writeLabel(labelE);
-		writeCode(MachineInstruction.opBacktrackPosition);
 		writeCode(MachineInstruction.opRestoreObject);
 		writeLabel(labelE2);
+		writeCode(MachineInstruction.opBacktrackPosition);
 	}
 	
 	@Override
@@ -233,18 +235,22 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 		for(int i = 0; i < e.size(); i++) {
 			writeCode(MachineInstruction.opStoreObject);
 			writeCode(MachineInstruction.opRememberPosition);
+			writeCode(MachineInstruction.opRememberPosition);
 			e.get(i).visit(this);
 			writeJumpCode(MachineInstruction.IFSUCC, labelS);
 			if(i != e.size() - 1) {
 				writeCode(MachineInstruction.opRestoreObject);
+				writeCode(MachineInstruction.opCommitPosition);
 			}
 			writeCode(MachineInstruction.opBacktrackPosition);
 		}
+		writeCode(MachineInstruction.opForgetFailurePosition);
 		writeCode(MachineInstruction.opDropStoredObject);
 		writeJumpCode(MachineInstruction.JUMP, labelE1);
 		writeLabel(labelS);
 		writeCode(MachineInstruction.opDropStoredObject);
-		writeCode(MachineInstruction.opForgetFailurePosition);
+		writeCode(MachineInstruction.opCommitPosition);
+		writeCode(MachineInstruction.opCommitPosition);
 		writeLabel(labelE1);
 	}
 
