@@ -26,7 +26,7 @@ _
 
 "if"     = 'if' !W _
 "else"   = 'else' !W _
-"while   = 'while' !W _
+"while"   = 'while' !W _
 "elif"     = 'elif' !W _
 "do"     = 'do' !W _
 "for"    = 'for' !W _
