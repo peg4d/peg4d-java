@@ -397,6 +397,7 @@ class PegRule {
 	boolean objectType;
 
 	public PegRule(Grammar peg, ParsingSource source, long pos, String ruleName, PExpression e) {
+		this.peg = peg;
 		this.source = source;
 		this.pos = pos;
 		this.ruleName = ruleName;
@@ -442,33 +443,25 @@ class PegRule {
 		this.annotation = new PegRuleAnnotation(key,value, this.annotation);
 	}
 	
-	public void testExample(Grammar peg, ParsingContext context) {
+	public final void testExample(Grammar peg, ParsingContext context) {
 		PegRuleAnnotation a = this.annotation;
 		while(a != null) {
-			if(a.key.equals("example")) {
-				String msg = this.ruleName + " " + a.value;
+			boolean isExample = a.key.equals("example");
+			boolean isBadExample = a.key.equals("bad-example");
+			if(isExample || isBadExample) {
+				boolean ok = true;
 				ParsingSource s = new StringSource(this.getGrammar(), "string", 1, a.value);
 				context.resetSource(s, 0);
 				context.parse(peg, this.ruleName);
 				if(context.isFailure() || context.hasByteChar()) {
-					msg = "[FAILED] " + msg;
-					if(Main.TestMode) {
-						Main._Exit(1, msg);
-					}
-					System.out.println(msg);
+					if(isExample) ok = false;
 				}
-				Main.printVerbose("Testing", this.ruleName + " " + a.value);
-			}
-			if(a.key.equals("bad-example")) {
-				String msg = this.ruleName + " " + a.value;
-				ParsingSource s = new StringSource(this.getGrammar(), "string", 1, a.value);
-				context.resetSource(s, 0);
-				context.parse(peg, this.ruleName);
-				if(!context.isFailure() && !context.hasByteChar()) {
-					msg = "[FAILED] " + msg;
-					if(Main.TestMode) {
-						Main._Exit(1, msg);
-					}
+				else {
+					if(isBadExample) ok = false;
+				}
+				String msg = ( ok ? "[PASS]" : "[FAIL]" ) + " " + this.ruleName + " " + a.value;
+				if(Main.TestMode && !ok) {	
+					Main._Exit(1, "[FAIL] tested " + a.value + " by " + peg.getRule(this.ruleName));
 				}
 				Main.printVerbose("Testing", msg);
 			}

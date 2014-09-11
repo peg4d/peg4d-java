@@ -53,7 +53,7 @@ public class Main {
 	public static boolean VerbosePeg = false;
 
 	// --test
-	public static boolean TestMode = false;
+	public static boolean TestMode = true;
 
 	// --a
 	public static boolean DiskMode = false;
