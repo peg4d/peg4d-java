@@ -1,0 +1,343 @@
+{
+    "fileTypes": [
+        "p4d", 
+        "peg"
+    ], 
+    "name": "peg4d", 
+    "patterns": [
+        {
+            "include": "#commentBlock"
+        }, 
+        {
+            "include": "#commentLine"
+        }, 
+        {
+            "include": "#docCommentLine"
+        }, 
+        {
+            "include": "#charSet"
+        }, 
+        {
+            "include": "#literalDouble"
+        }, 
+        {
+            "include": "#literalSingle"
+        }, 
+        {
+            "include": "#literalBack"
+        }, 
+        {
+            "captures": {
+                "1": {
+                    "name": "entity.name.type"
+                }, 
+                "2": {
+                    "name": "invalid"
+                }
+            }, 
+            "match": "^([a-zA-Z$_][a-zA-Z$_0-9]*)[\\t ]*(\".*\")[\\t ]*=?", 
+            "name": "source.peg4d.ruleDefinition"
+        }, 
+        {
+            "captures": {
+                "1": {
+                    "name": "entity.name.type"
+                }, 
+                "2": {
+                    "name": "invalid"
+                }
+            }, 
+            "match": "^([a-zA-Z$_][a-zA-Z$_0-9]*)[\\t ]*('.*')[\\t ]*=?", 
+            "name": "source.peg4d.ruleDefinition"
+        }, 
+        {
+            "captures": {
+                "1": {
+                    "name": "entity.name.type"
+                }
+            }, 
+            "match": "^([a-zA-Z_][a-zA-Z$_0-9]*)[\\s\\t]*=?", 
+            "name": "source.peg4d.ruleDefinition"
+        }, 
+        {
+            "include": "#invalidCaptureBlockOldest"
+        }, 
+        {
+            "include": "#captureBlockOld"
+        }, 
+        {
+            "include": "#leftJoinCaptureBlock"
+        }, 
+        {
+            "include": "#leftJoinCaptureBlockOld"
+        }, 
+        {
+            "include": "#captureBlock"
+        }, 
+        {
+            "include": "#capturedRule"
+        }, 
+        {
+            "include": "#capturedRuleOld"
+        }, 
+        {
+            "include": "#rule"
+        },
+        {
+            "include": "#exprLabel"
+        },
+        {
+            "include": "#pegOperator"
+        }
+    ], 
+    "repository": {
+        "captureBlock": {
+            "begin": "\\{", 
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.peg4d"
+                }
+            }, 
+            "end": "\\}", 
+            "endCaptures": {
+                "0": {
+                    "name": "keyword.operator.peg4d"
+                }
+            }, 
+            "patterns": [
+                {
+                    "include": "#invalidCaptureBlockOld"
+                }, 
+                {
+                    "include": "source.peg4d"
+                }
+            ]
+        },
+        "captureBlockOld": {
+            "begin": "<\\{", 
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.peg4d"
+                }
+            }, 
+            "end": "\\}>", 
+            "endCaptures": {
+                "0": {
+                    "name": "keyword.operator.peg4d"
+                }
+            }, 
+            "patterns": [
+                {
+                    "include": "#invalidCaptureBlock"
+                }, 
+                {
+                    "include": "source.peg4d"
+                }
+            ]
+        }, 
+        "leftJoinCaptureBlock": {
+            "begin": "([a-zA-Z$_][a-zA-Z$_0-9]*)\\s*(\\{@)", 
+            "beginCaptures": {
+                "1": {
+                    "name": "variable.parameter.peg4d"
+                },
+                "2": {
+                    "name": "keyword.operator.peg4d"
+                }
+            }, 
+            "end": "\\}", 
+            "endCaptures": {
+                "0": {
+                    "name": "keyword.operator.peg4d"
+                }
+            }, 
+            "patterns": [
+                {
+                    "include": "#invalidCaptureBlockOld"
+                }, 
+                {
+                    "include": "source.peg4d"
+                }
+            ]
+        },
+        "leftJoinCaptureBlockOld": {
+            "begin": "([a-zA-Z$_][a-zA-Z$_0-9]*)\\s*(<\\{\\^)", 
+            "beginCaptures": {
+                "1": {
+                    "name": "variable.parameter.peg4d"
+                },
+                "2": {
+                    "name": "keyword.operator.peg4d"
+                }
+            }, 
+            "end": "\\}>", 
+            "endCaptures": {
+                "0": {
+                    "name": "keyword.operator.peg4d"
+                }
+            }, 
+            "patterns": [
+                {
+                    "include": "#invalidCaptureBlock"
+                }, 
+                {
+                    "include": "source.peg4d"
+                }
+            ]
+        },
+        "invalidCaptureBlock": {
+            "begin": "\\{", 
+            "end": "\\}", 
+            "name": "invalid"
+        }, 
+        "invalidCaptureBlockOld": {
+            "begin": "<\\{", 
+            "end": "\\}>", 
+            "name": "invalid"
+        }, 
+        "invalidCaptureBlockOldest": {
+            "begin": "<<|8<", 
+            "end": ">>|>8", 
+            "name": "invalid"
+        }, 
+        "capturedRuleOld": {
+            "match": "([a-zA-Z$_][a-zA-Z$_0-9]*)(\\^)([0-9]*)", 
+            "captures": {
+                "1": {
+                    "name": "variable.parameter.peg4d"
+                },
+                "2": {
+                    "name": "keyword.operator.peg4d"
+                },
+                "3": {
+                    "name": "keyword.operator.peg4d"
+                }
+            }
+        }, 
+        "capturedRule": {
+            "match": "(@)(\\[[0-9]+\\])?([a-zA-Z$_][a-zA-Z$_0-9]*)", 
+            "captures": {
+                "1": {
+                    "name": "keyword.operator.peg4d"
+                },
+                "2": {
+                    "name": "keyword.operator.peg4d"
+                },
+                "3": {
+                    "name": "variable.parameter.peg4d"
+                }
+            }
+        }, 
+        "charSet": {
+            "begin": "\\[", 
+            "end": "\\]", 
+            "name": "keyword.operator"
+        }, 
+        "commentBlock": {
+            "begin": "/\\*", 
+            "captures": {
+                "0": {
+                    "name": "punctuation.definition.comment.peg4d"
+                }
+            }, 
+            "end": "\\*/", 
+            "name": "comment.block"
+        }, 
+        "commentLine": {
+            "captures": {
+                "1": {
+                    "name": "punctuation.definition.comment.js"
+                }
+            }, 
+            "match": "(//).*$\\n?", 
+            "name": "comment.line.double-slash.js"
+        }, 
+        "docCommentBlock": {
+            "begin": "/\\*\\*(?!/)", 
+            "captures": {
+                "0": {
+                    "name": "punctuation.definition.comment.peg4d"
+                }
+            }, 
+            "end": "\\*/", 
+            "name": "comment.block.documentation.peg"
+        }, 
+        "exprLabel": {
+            "match": "#[a-zA-Z$_][a-zA-Z$_0-9]*(\\.[a-zA-Z$_][a-zA-Z$_0-9]*)*", 
+            "name": "entity.name.function"
+        }, 
+        "literalDouble": {
+            "begin": "\"", 
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.string.begin.peg4d"
+                }
+            }, 
+            "end": "\"", 
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.string.end.peg4d"
+                }
+            }, 
+            "name": "string.quoted.double.peg4d", 
+            "patterns": [
+                {
+                    "match": "\\\\(x\\h{2}|[0-2][0-7]{,2}|3[0-6][0-7]|37[0-7]?|[4-7][0-7]?|.)", 
+                    "name": "constant.character.escape.peg4d"
+                }
+            ]
+        }, 
+        "literalSingle": {
+            "begin": "'", 
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.string.begin.peg4d"
+                }
+            }, 
+            "end": "'", 
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.string.end.peg4d"
+                }
+            }, 
+            "name": "string.quoted.single.peg4d", 
+            "patterns": [
+                {
+                    "match": "\\\\(x\\h{2}|[0-2][0-7]{,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.)", 
+                    "name": "constant.character.escape.peg4d"
+                }
+            ]
+        }, 
+        "literalBack": {
+            "begin": "`", 
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.string.begin.peg4d"
+                }
+            }, 
+            "end": "`", 
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.string.end.peg4d"
+                }
+            }, 
+            "name": "string.quoted.back.peg4d", 
+            "patterns": [
+                {
+                    "match": "\\\\(x\\h{2}|[0-2][0-7]{,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.)", 
+                    "name": "constant.character.escape.peg4d"
+                }
+            ]
+        }, 
+        "pegOperator": {
+            "match": "[/.+*?&!=@^]", 
+            "name": "keyword.operator.peg4d"
+        }, 
+        "rule": {
+            "match": "[a-zA-Z$_][a-zA-Z$_0-9]*", 
+            "name": "entity.name.type"
+        }
+    }, 
+    "scopeName": "source.peg4d", 
+    "uuid": "de7f68da-d5c8-40e7-97a0-0614548f1b8d"
+}
