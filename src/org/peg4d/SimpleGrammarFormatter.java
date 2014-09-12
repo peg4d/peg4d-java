@@ -36,6 +36,11 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 		sb.append("\t" + mi + "\n");
 		opList.add(new Opcode(mi));
 	}
+	
+	private void writeNewObjectCode(MachineInstruction mi, PExpression p) {
+		sb.append("\t" + mi + "\n");
+		opList.add(new Opcode(mi, p));
+	}
 
 	private void writeJumpCode(MachineInstruction mi, int labelId) {
 		sb.append("\t" + mi + " L" + labelId + "\n");
@@ -262,7 +267,7 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 			writeCode(MachineInstruction.opLeftJoinObject);
 		}
 		else {
-			writeCode(MachineInstruction.opNewObject);
+			writeNewObjectCode(MachineInstruction.opNewObject, e);
 		}
 		writeCode(MachineInstruction.opRememberPosition);
 		for(int i = 0; i < e.size(); i++) {

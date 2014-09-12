@@ -31,10 +31,10 @@ public class SimpleVmParsingContext extends ParsingContext {
 		this.left = parent;
 	}
 	
-	public void opNewObject() {
+	public void opNewObject(PExpression p) {
 		if(this.canTransCapture()) {
 			ParsingModel model = new ParsingModel();
-			this.left = new ParsingObject(model.get("#empty"), this.source, this.pos);
+			this.left = new ParsingObject(model.get("#empty"), this.source, this.pos, p);
 		}
 	}
 	
@@ -45,7 +45,6 @@ public class SimpleVmParsingContext extends ParsingContext {
 				tagName = new String(op.bdata, "UTF-8");
 				ParsingTag tag = new ParsingTag(tagName);
 				this.left.setTag(tag.tagging());
-				this.left.setSourcePosition(lstack[lstacktop - 1]);
 				this.left.setLength((int) (this.pos - this.lstack[this.lstacktop - 1]));
 			} catch (UnsupportedEncodingException e) {
 				e.printStackTrace();
