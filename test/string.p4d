@@ -1,0 +1,10 @@
+// PEG4d testing
+
+// String is implict declartion
+
+Chunk
+	[example ""]
+	[example "abc"]
+	[example "\""]
+	[example "\\"]
+	= String

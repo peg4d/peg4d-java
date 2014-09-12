@@ -1,0 +1,18 @@
+// PEG Test
+
+Chunk
+	= String
+	/ ByteChar
+
+String
+	[example: aa]
+	[bad-example: aaa]
+	[bad-example: a]
+	= 'aa'
+
+ByteChar
+	[example: b]
+	[bad-example: bb]
+	= 'b'
+
+

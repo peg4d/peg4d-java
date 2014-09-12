@@ -1,0 +1,31 @@
+
+
+Chunk
+	= ''
+
+TIMES
+	= e*5
+
+C99	= <true>
+C11	= <false>
+TYPEDEF = <choice>
+
+FLAG
+	= <if C99> 'hoge'
+	/ !<if C99> 'hoge'
+
+CONTROL_FLAG
+	= <with C11 e>
+	/ <without C11 e>
+
+ADD
+	= <|append-choice TYPEDEF>
+
+IMPORT
+	= <import Chunk[Statememt] from 'hoge.p4d'>
+
+LazyChoice
+	= 'if' ...
+	| 'unless' ...
+
+

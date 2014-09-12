@@ -1,0 +1,9 @@
+// PEG4d times
+
+// e*n -- evaluates e the specified times
+
+Chunk
+	[example: aaaaa]
+	[bad-example: aaaa]
+	[bad-example: aaaaaa]
+	= 'a'*5

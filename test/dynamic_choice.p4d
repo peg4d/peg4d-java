@@ -1,0 +1,14 @@
+// PEG4d dynamic choice
+
+
+TYPEDEFNAME
+	= <choice>
+
+TypeDef
+	= {'typedef' S+ @({ W+ #Name} <append-choice TYPEDEFNAME>) }
+	
+
+TypeDef
+	= {DIGIT+} <value 1.0> <|value 'hoge'>
+
+
