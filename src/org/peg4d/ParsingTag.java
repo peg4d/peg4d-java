@@ -35,6 +35,10 @@ public class ParsingTag {
 		return tagName(this.tagId);
 	}
 
+	public final String key() {
+		return this.toString();
+	}
+
 	public ParsingTag tagging() {
 		return this;
 	}

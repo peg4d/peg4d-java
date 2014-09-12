@@ -1,10 +1,15 @@
 // PEG4d ParsingFlag
 // .C11 : default true
 
+C11
+	= '' / !''
+
 Chunk
-	= { &(@<enable .C11 Char>)
-	      @<disable .C11 Char> #Version }
+	= { &(@<with C11 Char>)
+	      @<without C11 Char> #Version }
 
 Char
-	= .C11 { . #C11 } 
+	= <if C11> { . #C11 } 
 	/ { . #C99 }
+
+

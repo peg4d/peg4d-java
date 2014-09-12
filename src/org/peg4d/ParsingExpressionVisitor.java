@@ -1,6 +1,5 @@
 package org.peg4d;
 
-
 class ParsingExpressionVisitor {
 	private UMap<String> visitedMap = new UMap<String>();
 	boolean isVisited(String name) {
@@ -82,7 +81,7 @@ class ParsingExpressionVisitor {
 		e.inner.visit(this);
 	}
 
-	public void visitParsingFlag(ParsingFlag e) {
+	public void visitParsingIfFlag(ParsingIfFlag e) {
 
 	}
 }
@@ -105,7 +104,7 @@ class ListMaker extends ParsingExpressionVisitor {
 	}
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
-		if(	e.base != peg && !this.isVisited(e.symbol)) {
+		if(	e.base == peg && !this.isVisited(e.symbol)) {
 			this.visitImpl(e.symbol);
 		}
 	}
@@ -139,7 +138,7 @@ class Importer extends ParsingExpressionVisitor {
 	
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
-		if( e.base != src && !this.isVisited(e.symbol)) {
+		if( e.base == src && !this.isVisited(e.symbol)) {
 			this.visitRule(e.symbol);
 		}
 	}
@@ -175,7 +174,7 @@ class NonTerminalChecker extends ParsingExpressionVisitor {
 		PegRule next = e.base.getRule(e.symbol);
 		if(next == null) {
 			checking.reportError("undefined label: " + e.symbol);
-			e.base.setRule(e.symbol, new ParsingFlag(0, e.symbol));
+			e.base.setRule(e.symbol, new ParsingIfFlag(0, e.symbol));
 			next = e.base.getRule(e.symbol);
 		}
 		e.resolvedExpression = next.expr;

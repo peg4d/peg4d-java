@@ -33,7 +33,6 @@ public class ParsingContext {
 		this.lstack[0] = -1;
 		this.lstacktop = 1;
 		this.ostacktop = 0;
-		this.emptyTag = new ParsingTag("empty");
 	}
 	
 	
@@ -53,6 +52,7 @@ public class ParsingContext {
 		}
 		long spos = this.getPosition();
 		long fpos = -1;
+		this.emptyTag = peg.newStartTag();
 		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
 		while(hasByteChar()) {
 			long ppos = this.getPosition();
@@ -78,7 +78,6 @@ public class ParsingContext {
 	
 	private final void checkUnusedText(ParsingObject po) {
 		if(this.left == po) {
-			po.setTag(new ParsingTag("text"));
 			po.setEndPosition(this.pos);
 		}
 	}
@@ -93,6 +92,7 @@ public class ParsingContext {
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
+		this.emptyTag = peg.newStartTag();
 		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
 		this.left = po;
 		start.simpleMatch(this);
@@ -184,6 +184,7 @@ public class ParsingContext {
 	}
 	
 	final void forgetFailure(long f) {
+		//System.out.println("forget fpos: " + this.fpos + " <- " + f);
 		this.fpos = f;
 	}
 		
@@ -359,7 +360,8 @@ public class ParsingContext {
 	}
 
 	public final void opFailure() {
-		if(this.pos >= fpos) {  // adding error location
+		if(this.pos > fpos) {  // adding error location
+			//System.out.println("fpos: " + this.fpos + " -> " + this.pos);
 			this.fpos = this.pos;
 		}
 		this.left = null;
@@ -390,16 +392,18 @@ public class ParsingContext {
 	}
 	
 	public final void opFailure(PExpression errorInfo) {
-		if(this.pos >= fpos) {  // adding error location
+		if(this.pos > fpos) {  // adding error location
 			this.fpos = this.pos;
+			//System.out.println("fpos: " + this.fpos + " -> " + this.pos + " " + errorInfo);		
 			this.setErrorInfo(errorInfo);
 		}
 		this.left = null;
 	}
 
 	public final void opFailure(String errorInfo) {
-		if(this.pos >= fpos) {  // adding error location
+		if(this.pos > fpos) {  // adding error location
 			this.fpos = this.pos;
+			//System.out.println("fpos: " + this.fpos + " -> " + this.pos + " " + errorInfo);
 			this.setErrorInfo(errorInfo);
 		}
 		this.left = null;
@@ -415,6 +419,7 @@ public class ParsingContext {
 
 	public final void opForgetFailurePosition() {
 		lpop();
+		//System.out.println("forget fpos: " + this.fpos + " <- " + this.lstack[this.lstacktop]);
 		this.fpos = this.lstack[this.lstacktop];
 	}
 	

@@ -1,4 +1,5 @@
 package org.peg4d;
+
 import org.peg4d.ParsingContextMemo.ObjectMemo;
 
 public abstract class PExpression {
@@ -122,7 +123,9 @@ public abstract class PExpression {
 	
 	private static UMap<PExpression> uniqueExpressionMap = new UMap<PExpression>();
 	private static int unique = 0;
+	
 	private static boolean StringSpecialization = true;
+	private static boolean CharacterChoice      = true;
 
 //	private static String prefixNonTerminal = "a\b";
 	private static String prefixString = "t\b";
@@ -130,7 +133,6 @@ public abstract class PExpression {
 	private static String prefixCharacter = "c\b";
 	private static String prefixNot = "!\b";
 	private static String prefixAnd = "&\b";
-	private static String prefixOneMore = "+\b";
 	private static String prefixZeroMore = "*\b";
 	private static String prefixOptional = "?\b";
 	private static String prefixSequence = " \b";
@@ -148,6 +150,7 @@ public abstract class PExpression {
 	private static PExpression getUnique(String t) {
 		PExpression e = uniqueExpressionMap.get(t);
 		if(e != null) {
+			Main.printVerbose("unique", "" + e);
 			return e;
 		}
 		return null;
@@ -170,15 +173,6 @@ public abstract class PExpression {
 //		return new ParsingMemo(e);
 //	}
 
-//	public final PExpression newNonTerminal(String text) {
-//		String key = prefixNonTerminal + text;
-//		PExpression e = getsem(key);
-//		if(e == null) {
-//			e = putsem(key, new PNonTerminal(0, text));
-//		}
-//		return e;
-//	}
-
 	public static final PExpression newString(String text) {
 		String key = prefixString + text;
 		PExpression e = getUnique(key);
@@ -191,8 +185,12 @@ public abstract class PExpression {
 	private static PExpression newStringImpl(String text) {
 		byte[] utf8 = ParsingCharset.toUtf8(text);
 		if(StringSpecialization) {
-			if(ParsingCharset.toUtf8(text).length == 1) {
+			if(utf8.length == 1) {
 				return new PByteChar(0, utf8[0]);
+			}
+			if(text.length() == 1) {
+				int c = text.charAt(0);
+				return newCharacter(new UnicodeRange(c,c));
 			}
 		}
 		return new PString(0, text, utf8);	
@@ -217,15 +215,13 @@ public abstract class PExpression {
 	}
 	
 	public final static PExpression newCharacter(ParsingCharset u) {
-//		ParsingCharset u = ParsingCharset.newParsingCharset(text);
-//		String key = prefixCharacter + u.toString();
-//		PExpression e = getsem(key);
-//		if(e == null) {
-//			e = new PCharacter(0, u);
-//			e = putsem(key, e);
-//		}
-//		return e;
-		return new PCharacter(0, u);
+		String key = prefixCharacter + u.key();
+		//System.out.println(u.toString() + ": " + u.key());
+		PExpression e = getUnique(key);
+		if(e == null) {
+			e = putUnique(key, new PCharacter(0, u));
+		}
+		return e;
 	}
 
 	private final static String pkey(PExpression p) {
@@ -271,41 +267,40 @@ public abstract class PExpression {
 	}
 	
 	public final static PExpression newOneMore(PExpression p) {
-		String key = prefixOneMore + pkey(p);
-		PExpression e = getUnique(key);
-		if(e == null) {
-			e = putUnique(key, newOneMoreImpl(p));
-		}
-		return e;
-	}
-
-	private static PExpression newOneMoreImpl(PExpression p) {
-//		if(peg.optimizationLevel > 0) {
-//			if(p instanceof PCharacter) {
-//				peg.LexicalOptimization += 1;
-//				return new POneMoreCharacter(0, (PCharacter)p);
-//			}
-//		}
-		return new PRepetition(0, p, 1);
+		UList<PExpression> l = new UList<PExpression>(new PExpression[2]);
+		l.add(p);
+		l.add(newRepetition(p));
+		return newSequence(l);
 	}
 	
-	public final static PExpression newZeroMore(PExpression p) {
+	public final static PExpression newRepetition(PExpression p) {
 		if(p.isUnique()) {
 			String key = prefixZeroMore + pkey(p);
 			PExpression e = getUnique(key);
 			if(e == null) {
-				e = putUnique(key, newZeroMoreImpl(p));
+				e = putUnique(key, newRepetitionImpl(p));
 			}
 			return e;
 		}
-		return newZeroMoreImpl(p);
+		return newRepetitionImpl(p);
 	}
 
-	private static PExpression newZeroMoreImpl(PExpression p) {
+	private static PExpression newRepetitionImpl(PExpression p) {
 		if(p instanceof PCharacter) {
 			return new PZeroMoreCharacter(0, (PCharacter)p);
 		}
 		return new PRepetition(0, p, 0);
+	}
+
+	public final static PExpression newTimes(int ntimes, PExpression p) {
+		if(ntimes == 1) {
+			return p;
+		}
+		UList<PExpression> l = new UList<PExpression>(new PExpression[ntimes]);
+		for(int i = 0; i < ntimes; i++) {
+			addSequence(l, p);
+		}
+		return newSequence(l);
 	}
 
 	public final static PExpression newAnd(PExpression p) {
@@ -414,32 +409,44 @@ public abstract class PExpression {
 			}
 			return;
 		}
-		if(StringSpecialization) {
-			if(l.size() > 0 && (e instanceof PByteChar || e instanceof PCharacter)) {
-				PExpression prev = l.ArrayValues[l.size()-1];
-				if(prev instanceof PByteChar) {
-					int ch = ((PByteChar) prev).byteChar;
-					ParsingCharset charset = new ByteCharset(ch, ch);
-					PCharacter c = new PCharacter(0, charset);
-					l.ArrayValues[l.size()-1] = c;
-					prev = c;
-				}
-				if(prev instanceof PCharacter) {
-					ParsingCharset charset = ((PCharacter) prev).charset;
-					if(e instanceof PCharacter) {
-						charset = charset.merge(((PCharacter) e).charset);
-					}
-					else {
-						int ch = ((PByteChar) e).byteChar;
-						charset.appendByte(ch, ch);
-					}
-					return;
-				}
+		if(CharacterChoice && l.size() > 0 && (e instanceof PByteChar || e instanceof PCharacter)) {
+			PExpression pe = l.ArrayValues[l.size()-1];
+			if(pe instanceof PByteChar || pe instanceof PCharacter) {
+				ParsingCharset b = (e instanceof PByteChar)
+					? new ByteCharset(((PByteChar) e).byteChar, ((PByteChar) e).byteChar)
+					: ((PCharacter)e).charset.dup();
+				b = mergeUpdate(b, pe);
+				l.ArrayValues[l.size()-1] = newCharacter(b);
+				return;
 			}
 		}
 		l.add(e);
 	}
-
+	
+	private static final ParsingCharset mergeUpdate(ParsingCharset cu, PExpression e) {
+		if(e instanceof PByteChar) {
+			return cu.appendByte(((PByteChar) e).byteChar, ((PByteChar) e).byteChar);
+		}
+		ParsingCharset u = ((PCharacter) e).charset;
+		if(u instanceof UnicodeRange) {
+			UnicodeRange r = (UnicodeRange)u;
+			return cu.appendChar(r.beginChar, r.endChar);
+		}
+		ByteCharset ub = (ByteCharset)u;
+		for(int i = 0; i < ub.bitMap.length; i++) {
+			if(ub.bitMap[i]) {
+				cu = cu.appendByte(i, i);
+			}
+		}
+		if(ub.unicodeRangeList != null) {
+			for(int i = 0; i < ub.unicodeRangeList.size(); i++) {
+				UnicodeRange r = ub.unicodeRangeList.ArrayValues[i];
+				cu = cu.appendChar(r.beginChar, r.endChar);
+			}
+		}
+		return cu;
+	}
+	
 	public final static PExpression newSequence(UList<PExpression> l) {
 		if(l.size() == 1) {
 			return l.ArrayValues[0];
@@ -537,7 +544,7 @@ public abstract class PExpression {
 	}
 
 	public final static PExpression newTagging(ParsingTag tag) {
-		String key = prefixTagging + tag;
+		String key = prefixTagging + tag.key();
 		PExpression e = getUnique(key);
 		if(e == null) {
 			e = putUnique(key, new PTagging(0, tag));
@@ -553,8 +560,7 @@ public abstract class PExpression {
 		}
 		return e;
 	}
-		
-
+	
 	public final static PExpression newDebug(PExpression e) {
 		return new ParsingDebug(e);
 	}
@@ -563,26 +569,37 @@ public abstract class PExpression {
 		return new ParsingFail(0, message);
 	}
 
-	public final static PExpression newCatch() {
-		return new ParsingCatch(0);
-	}
+	private static PExpression catchExpression = null;
 
+	public final static PExpression newCatch() {
+		if(catchExpression == null) {
+			catchExpression = new ParsingCatch(0);
+			catchExpression.uniqueId = PExpression.newExpressionId();
+		}
+		return catchExpression;
+	}
 	
 	public final static PExpression newFlag(String flagName) {
-		return new ParsingFlag(0, flagName);
+		return new ParsingIfFlag(0, flagName);
 	}
 
 	public final static PExpression newEnableFlag(String flagName, PExpression e) {
-		return new ParsingEnableFlag(flagName, e);
+		return new ParsingWithFlag(flagName, e);
 	}
 
 	public final static PExpression newDisableFlag(String flagName, PExpression e) {
-		return new ParsingDisableFlag(flagName, e);
+		return new ParsingWithoutFlag(flagName, e);
 	}
+
+	private static PExpression indentExpression = null;
 
 	public final static PExpression newIndent(PExpression e) {
 		if(e == null) {
-			return new ParsingIndent(0);
+			if(indentExpression == null) {
+				indentExpression = new ParsingIndent(0);
+				indentExpression.uniqueId = PExpression.newExpressionId();
+			}
+			return indentExpression;
 		}
 		return new ParsingStackIndent(e);
 	}
@@ -626,16 +643,7 @@ class PNonTerminal extends PExpression {
 	@Override
 	public void simpleMatch(ParsingContext context) {
 		this.resolvedExpression.simpleMatch(context);
-//		if(this.base != Grammar.PEG4d) {
-//			System.out.println("pos=" + context.pos + " called " + this.symbol + " isFailure: " + context.isFailure() + " " + this.resolvedExpression);
-//		}
 	}
-	
-	
-	
-	
-	
-	
 }
 
 abstract class PTerminal extends PExpression {
@@ -736,11 +744,6 @@ class PAny extends PTerminal {
 	@Override
 	public void simpleMatch(ParsingContext context) {
 		context.opMatchAnyChar();
-//		if(context.hasByteChar()) {
-//			context.consume(1);
-//			return;
-//		}
-//		context.foundFailure(this);
 	}
 }
 
@@ -841,17 +844,24 @@ class POptional extends PUnary {
 		context.opRememberFailurePosition();
 		context.opStoreObject();
 		this.inner.vmMatch(context);
-		context.opRestoreObjectIfFailure();
+		if(context.isFailure()) {
+			context.opRestoreObject();
+		}
+		else {
+			context.opDropStoredObject();
+		}
 		context.opForgetFailurePosition();
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
 		long f = context.rememberFailure();
 		ParsingObject left = context.left;
+//		context.opRememberFailurePosition();
+//		context.opStoreObject();
 		this.inner.simpleMatch(context);
 		if(context.isFailure()) {
-			context.forgetFailure(f);
 			context.left = left;
+			context.forgetFailure(f);
 		}
 	}
 }
@@ -932,7 +942,6 @@ class PRepetition extends PUnary {
 		}
 		return true;
 	}
-	
 	@Override
 	public void vmMatch(ParsingContext context) {
 		if(this.atleast == 1) {
@@ -1929,18 +1938,18 @@ class ParsingStackIndent extends ParsingOperation {
 	}
 }
 
-class ParsingFlag extends PTerminal {
+class ParsingIfFlag extends ParsingFunction {
 	String flagName;
-	ParsingFlag(int flag, String flagName) {
-		super(flag | PExpression.HasContext);
+	ParsingIfFlag(int flag, String flagName) {
+		super("if", flag | PExpression.HasContext);
 		this.flagName = flagName;
 	}
 	@Override PExpression dup() {
-		return new ParsingFlag(flag, flagName);
+		return new ParsingIfFlag(flag, flagName);
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
-		visitor.visitParsingFlag(this);
+	public String getParameters() {
+		return " " + this.flagName;
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -1952,18 +1961,18 @@ class ParsingFlag extends PTerminal {
 	}
 }
 
-class ParsingEnableFlag extends ParsingOperation {
+class ParsingWithFlag extends ParsingOperation {
 	String flagName;
-	ParsingEnableFlag(String flagName, PExpression inner) {
-		super("enable", inner);
+	ParsingWithFlag(String flagName, PExpression inner) {
+		super("with", inner);
 		this.flagName = flagName;
 	}
 	@Override PExpression dup() {
-		return new ParsingEnableFlag(flagName, inner);
+		return new ParsingWithFlag(flagName, inner);
 	}
 	@Override
 	public String getParameters() {
-		return " ." + this.flagName;
+		return " " + this.flagName;
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
@@ -1979,18 +1988,18 @@ class ParsingEnableFlag extends ParsingOperation {
 	}
 }
 
-class ParsingDisableFlag extends ParsingOperation {
+class ParsingWithoutFlag extends ParsingOperation {
 	String flagName;
-	ParsingDisableFlag(String flagName, PExpression inner) {
-		super("disable", inner);
+	ParsingWithoutFlag(String flagName, PExpression inner) {
+		super("without", inner);
 		this.flagName = flagName;
 	}
 	@Override PExpression dup() {
-		return new ParsingDisableFlag(flagName, inner);
+		return new ParsingWithoutFlag(flagName, inner);
 	}
 	@Override
 	public String getParameters() {
-		return " ." + this.flagName;
+		return " " + this.flagName;
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {

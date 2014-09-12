@@ -210,14 +210,7 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 		sb.append(" ");
 		e.inner.visit(this);
 		sb.append(">");
-	}
-	
-	@Override
-	public void visitParsingFlag(ParsingFlag e) {
-		sb.append(".");
-		sb.append(e.flagName);
-	}
-	
+	}	
 
 }
 
