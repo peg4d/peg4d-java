@@ -15,6 +15,10 @@ public final class Opcode {
     	this.opcode = mi;
     	this.ndata = ndata;
     }
+    public Opcode(MachineInstruction mi, PExpression p) {
+    	this.opcode = mi;
+    	this.generated = p;
+    }
     @Override
 	public String toString() {
     	if(this.bdata == null) {

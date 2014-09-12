@@ -74,7 +74,7 @@ public class SimpleVirtualMachine {
 				c.opConnectObject(op.ndata);
 				break;			
 			case opNewObject:
-				c.opNewObject();
+				c.opNewObject(op.generated);
 				break;
 			case opCommitObject:
 				c.opCommitObject();
