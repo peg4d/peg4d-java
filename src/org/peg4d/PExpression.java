@@ -252,10 +252,9 @@ public abstract class PExpression {
 				return new POptionalCharacter(0, (PCharacter)p);
 			}
 		}
-		if(p instanceof PRepetition) {
-			((PRepetition) p).atleast = 0;
-			return p;
-		}
+//		if(p instanceof PSequence) {
+//			
+//		}
 		return new POptional(0, p);
 	}
 	
@@ -289,7 +288,7 @@ public abstract class PExpression {
 		if(p instanceof PCharacter) {
 			return new PZeroMoreCharacter(0, (PCharacter)p);
 		}
-		return new PRepetition(0, p, 0);
+		return new PRepetition(0, p);
 	}
 
 	public final static PExpression newTimes(int ntimes, PExpression p) {
@@ -924,32 +923,32 @@ class POptionalCharacter extends POptional {
 }
 
 class PRepetition extends PUnary {
-	public int atleast = 0; 
-	PRepetition(int flag, PExpression e, int atLeast) {
+//	public int atleast = 0; 
+	PRepetition(int flag, PExpression e/*, int atLeast*/) {
 		super(flag | PExpression.HasRepetition, e);
-		this.atleast = atLeast;
+//		this.atleast = atLeast;
 	}
 	@Override PExpression dup() { 
-		return new PRepetition(flag, inner, atleast); 
+		return new PRepetition(flag, inner/*, atleast*/); 
 	}
 	@Override
 	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitRepetition(this);
 	}
 	@Override boolean checkFirstByte(int ch) {
-		if(this.atleast > 0) {
-			return this.inner.checkFirstByte(ch);
-		}
+//		if(this.atleast > 0) {
+//			return this.inner.checkFirstByte(ch);
+//		}
 		return true;
 	}
 	@Override
 	public void vmMatch(ParsingContext context) {
-		if(this.atleast == 1) {
-			this.inner.vmMatch(context);
-			if(context.isFailure()) {
-				return;
-			}
-		}
+//		if(this.atleast == 1) {
+//			this.inner.vmMatch(context);
+//			if(context.isFailure()) {
+//				return;
+//			}
+//		}
 		long ppos = -1;
 		long pos = context.getPosition();
 		context.opRememberFailurePosition();
@@ -984,12 +983,12 @@ class PRepetition extends PUnary {
 			pos = context.getPosition();
 			count = count + 1;
 		}
-		if(count < this.atleast) {
-			context.opFailure(this);
-		}
-		else {
-			context.forgetFailure(f);
-		}
+//		if(count < this.atleast) {
+//			context.opFailure(this);
+//		}
+//		else {
+		context.forgetFailure(f);
+//		}
 	}
 }
 
@@ -1020,7 +1019,7 @@ class PRepetition extends PUnary {
 class PZeroMoreCharacter extends PRepetition {
 	ParsingCharset charset;
 	PZeroMoreCharacter(int flag, PCharacter e) {
-		super(flag, e, 0);
+		super(flag, e);
 		this.charset = e.charset;
 	}
 	@Override PExpression dup() { 
@@ -1209,7 +1208,7 @@ abstract class PList extends PExpression {
 		if(e instanceof POptional) {
 			return true;
 		}
-		if(e instanceof PRepetition && ((PRepetition) e).atleast == 0) {
+		if(e instanceof PRepetition) {
 			return true;
 		}
 		return false;

@@ -255,9 +255,9 @@ class NonTerminalChecker extends ParsingExpressionVisitor {
 	public void visitRepetition(PRepetition e) {
 		int stackedLength = this.consumedMinimumLength;
 		this.visitUnary(e);
-		if(e.atleast == 0) {
-			this.consumedMinimumLength = stackedLength;
-		}
+//		if(e.atleast == 0) {
+//			this.consumedMinimumLength = stackedLength;
+//		}
 	}
 	@Override
 	public void visitConnector(PConnector e) {

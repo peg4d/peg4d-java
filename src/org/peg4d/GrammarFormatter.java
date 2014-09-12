@@ -118,12 +118,12 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 	}
 	@Override
 	public void visitRepetition(PRepetition e) {
-		if(e.atleast == 1) {
-			this.format( null, e, "+");
-		}
-		else {
-			this.format(null, e, "*");
-		}
+//		if(e.atleast == 1) {
+//			this.format( null, e, "+");
+//		}
+//		else {
+		this.format(null, e, "*");
+//		}
 	}
 	@Override
 	public void visitAnd(PAnd e) {
@@ -323,10 +323,10 @@ class CodeGenerator extends GrammarFormatter {
 		int labelL = newLabel();
 		int labelE = newLabel();
 		int labelE2 = newLabel();
-		if(e.atleast == 1) {
-			e.inner.visit(this);
-			writeJumpCode(MachineInstruction.IFFAIL,labelE2);
-		}
+//		if(e.atleast == 1) {
+//			e.inner.visit(this);
+//			writeJumpCode(MachineInstruction.IFFAIL,labelE2);
+//		}
 		writeCode(MachineInstruction.opRememberFailurePosition);
 		writeLabel(labelL);
 		e.inner.visit(this);

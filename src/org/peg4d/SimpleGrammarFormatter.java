@@ -150,12 +150,12 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 		int labelL = newLabel();
 		int labelE = newLabel();
 		int labelE2 = newLabel();
-		if(e.atleast == 1) {
-			writeCode(MachineInstruction.opRememberPosition);
-			e.inner.visit(this);
-			writeJumpCode(MachineInstruction.IFFAIL,labelE2);
-			writeCode(MachineInstruction.opCommitPosition);
-		}
+//		if(e.atleast == 1) {
+//			writeCode(MachineInstruction.opRememberPosition);
+//			e.inner.visit(this);
+//			writeJumpCode(MachineInstruction.IFFAIL,labelE2);
+//			writeCode(MachineInstruction.opCommitPosition);
+//		}
 		writeLabel(labelL);
 		writeCode(MachineInstruction.opRememberPosition);
 		writeCode(MachineInstruction.opStoreObject);
