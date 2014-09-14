@@ -323,19 +323,19 @@ public class ParsingContext {
 		rollback(this.lstack[this.lstacktop]);
 	}
 
-	public final void opRememberSequencePosition() {
+	public void opRememberSequencePosition() {
 		lpush(this.pos);
 		lpush(this.markObjectStack());
 		opush(this.left);
 	}
 
-	public final void opCommitSequencePosition() {
+	public void opCommitSequencePosition() {
 		opop();
 		lpop();
 		lpop();
 	}
 
-	public final void opBackTrackSequencePosition() {
+	public void opBackTrackSequencePosition() {
 		this.left = opop();
 		lpop();
 		this.abortLinkLog((int)this.lstack[this.lstacktop]);
@@ -351,7 +351,7 @@ public class ParsingContext {
 		lpop();
 	}
 
-	public final void opForgetFailurePosition() {
+	public void opForgetFailurePosition() {
 		lpop();
 		this.fpos = this.lstack[this.lstacktop];
 	}

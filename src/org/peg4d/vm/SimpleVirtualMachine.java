@@ -58,6 +58,15 @@ public class SimpleVirtualMachine {
 			case opForgetFailurePosition:
 				c.opForgetFailurePosition();
 				break;
+			case opRememberSequencePosition:
+				c.opRememberSequencePosition();
+				break;
+			case opCommitSequencePosition:
+				c.opCommitSequencePosition();
+				break;
+			case opBackTrackSequencePosition:
+				c.opBackTrackSequencePosition();
+				break;
 			case opStoreObject:
 				c.opStoreObject();
 				break;
@@ -81,6 +90,9 @@ public class SimpleVirtualMachine {
 				break;
 			case opTagging:
 				c.opTagging(op);
+				break;
+			case opIndent:
+				c.opIndent();
 				break;
 			}
 			pc = pc + 1;

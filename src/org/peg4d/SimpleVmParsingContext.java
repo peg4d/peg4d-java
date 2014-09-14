@@ -48,4 +48,22 @@ public class SimpleVmParsingContext extends ParsingContext {
 			}
 		}
 	}
+	
+	public void opRememberSequencePosition() {
+		lpush(this.pos);
+		lpush(this.pos);
+		opush(this.left);
+	}
+	
+	public void opForgetFailurePosition() {
+		lpop();
+		this.fpos = this.lstack[this.lstacktop];
+	}
+	
+	public void opBackTrackSequencePosition() {
+		this.left = opop();
+		lpop();
+		lpop();
+		this.rollback(this.lstack[this.lstacktop]);
+	}
 }

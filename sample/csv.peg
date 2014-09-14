@@ -2,11 +2,9 @@ TopLevel
 	= <{ (Line^)* #array }>
 	;
 Line
-	= <{ CSV^ (',' CSV^)* ( '\n' / EOT ) #array }>
+	= <{ CSV^ (',' CSV^)* [\n] #array }>
 	;
 CSV
 	= [ \t]* <{ (![,\n] .)* #value }>
 	;
-EOT
-	= !.
-	;
+

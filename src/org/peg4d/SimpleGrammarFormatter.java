@@ -138,17 +138,18 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 	public void visitOptional(POptional e) {
 		int labelL = newLabel();
 		int labelE = newLabel();
-		writeCode(MachineInstruction.opRememberFailurePosition);
-		writeCode(MachineInstruction.opStoreObject);
+		writeCode(MachineInstruction.opRememberSequencePosition);
 		e.inner.visit(this);
 		writeJumpCode(MachineInstruction.IFFAIL, labelE);
-		writeCode(MachineInstruction.opDropStoredObject);
+		writeCode(MachineInstruction.opCommitSequencePosition);
 		writeJumpCode(MachineInstruction.JUMP, labelL);
 		writeLabel(labelE);
-		writeCode(MachineInstruction.opRestoreObject);
+//		writeCode(MachineInstruction.opRestoreObject);
+//		writeCode(MachineInstruction.opBacktrackPosition);
+//		writeCode(MachineInstruction.opForgetFailurePosition);
+		writeCode(MachineInstruction.opBackTrackSequencePosition);
 		writeLabel(labelL);
 		//writeCode(MachineInstruction.opRestoreObjectIfFailure);
-		writeCode(MachineInstruction.opForgetFailurePosition);
 	}
 	@Override
 	public void visitRepetition(PRepetition e) {
@@ -186,9 +187,10 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 	public void visitNot(PNot e) {
 		int labelL = newLabel();
 		int labelE = newLabel();
-		writeCode(MachineInstruction.opRememberFailurePosition);
-		writeCode(MachineInstruction.opRememberPosition);
-		writeCode(MachineInstruction.opStoreObject);
+		writeCode(MachineInstruction.opRememberSequencePosition);
+//		writeCode(MachineInstruction.opRememberFailurePosition);
+//		writeCode(MachineInstruction.opRememberPosition);
+//		writeCode(MachineInstruction.opStoreObject);
 		e.inner.visit(this);
 		writeCode(MachineInstruction.opRestoreNegativeObject);
 		writeJumpCode(MachineInstruction.IFFAIL, labelE);
@@ -238,24 +240,25 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 		int labelS = newLabel();
 		int labelE1 = newLabel();
 		for(int i = 0; i < e.size(); i++) {
-			writeCode(MachineInstruction.opStoreObject);
-			writeCode(MachineInstruction.opRememberPosition);
-			writeCode(MachineInstruction.opRememberPosition);
+//			writeCode(MachineInstruction.opStoreObject);
+//			writeCode(MachineInstruction.opRememberPosition);
+//			writeCode(MachineInstruction.opRememberPosition);
+			writeCode(MachineInstruction.opRememberSequencePosition);
 			e.get(i).visit(this);
 			writeJumpCode(MachineInstruction.IFSUCC, labelS);
 			if(i != e.size() - 1) {
-				writeCode(MachineInstruction.opRestoreObject);
-				writeCode(MachineInstruction.opCommitPosition);
+				writeCode(MachineInstruction.opBackTrackSequencePosition);
 			}
-			writeCode(MachineInstruction.opBacktrackPosition);
 		}
+		writeCode(MachineInstruction.opBacktrackPosition);
 		writeCode(MachineInstruction.opForgetFailurePosition);
 		writeCode(MachineInstruction.opDropStoredObject);
 		writeJumpCode(MachineInstruction.JUMP, labelE1);
 		writeLabel(labelS);
-		writeCode(MachineInstruction.opDropStoredObject);
-		writeCode(MachineInstruction.opCommitPosition);
-		writeCode(MachineInstruction.opCommitPosition);
+//		writeCode(MachineInstruction.opDropStoredObject);
+//		writeCode(MachineInstruction.opCommitPosition);
+//		writeCode(MachineInstruction.opCommitPosition);
+		writeCode(MachineInstruction.opCommitSequencePosition);
 		writeLabel(labelE1);
 	}
 
