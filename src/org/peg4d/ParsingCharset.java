@@ -6,7 +6,7 @@ public abstract class ParsingCharset {
 	public final static int MAX = 256;
 
 	abstract ParsingCharset dup();
-	abstract int consume(ParsingSource s, long pos);
+	public abstract int consume(ParsingSource s, long pos);
 	abstract boolean hasByte(int c);
 	abstract ParsingCharset appendByte(int c, int c2);
 	abstract ParsingCharset appendChar(int c, int c2);

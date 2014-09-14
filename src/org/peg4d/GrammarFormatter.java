@@ -2,8 +2,8 @@ package org.peg4d;
 
 import java.util.HashMap;
 
-import org.peg4d.vm.MachineInstruction;
-import org.peg4d.vm.Opcode;
+import org.peg4d.vm.Instruction2;
+import org.peg4d.vm.Opcode2;
 
 class GrammarFormatter extends ParsingExpressionVisitor {
 	protected StringBuilder sb = null;
@@ -214,221 +214,268 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 
 }
 
-class CodeGenerator extends GrammarFormatter {
+class CodeGenerator extends ParsingExpressionVisitor {
+	
+	int opIndex = 0;
+	UList<Opcode2> opList = new UList<Opcode2>(new Opcode2[256]);	
+	HashMap<Integer,Integer> labelMap = new HashMap<Integer,Integer>();	
+	HashMap<String,Integer> ruleMap = new HashMap<String,Integer>();
+	
+	
+	private String uniqueRuleName(Grammar peg, String ruleName) {
+		return ruleName;
+	}
+	
+	public final void makeRule(Grammar peg, String ruleName) {
+		this.ruleMap.put(uniqueRuleName(peg, ruleName), opIndex);
+	}
+	
+	private Opcode2 newOpcode(Instruction2 mi) {
+		Opcode2 c = new Opcode2(opIndex, mi);
+		opIndex++;
+		opList.add(c);
+		return c;
+	}
 
-	UList<Opcode> opList = new UList<Opcode>(new Opcode[256]);
-	HashMap<Integer,Integer> labelMap = new HashMap<Integer,Integer>();
-
-//	public CodeGenerator() {
-//		super();
-//	}
+	public final void writeCode(Instruction2 mi) {
+		newOpcode(mi);
+	}
 	
 	int labelId = 0;
-	private int newLabel() {
+	public final int newLabel() {
 		int l = labelId;
 		labelId++;
 		return l;
 	}
-	private void writeLabel(int label) {
-		sb.append(" L" + label + ":\n");
-		labelMap.put(label, opList.size());
+	
+	public final void writeLabel(int label) {
+		Opcode2 c = newOpcode(Instruction2.NOP);
+		c.n = label;
 	}
 	
-	private void writeCode(MachineInstruction mi) {
-		sb.append("\t" + mi + "\n");
-		opList.add(new Opcode(mi));
+	public final void writeJumpCode(Instruction2 mi, int labelId) {
+		Opcode2 c = newOpcode(mi);
+		c.n = labelId;
 	}
 
-	private void writeJumpCode(MachineInstruction mi, int labelId) {
-		sb.append("\t" + mi + " L" + labelId + "\n");
-		opList.add(new Opcode(mi, labelId));
+	private void writeCode(Instruction2 mi, int n, Object v) {
+		Opcode2 c = newOpcode(mi);
+		c.n = n;
+		c.v = c;
 	}
 
-	private void writeCode(MachineInstruction mi, String op) {
-		sb.append("\t" + mi + " " + op + "\n");
-		opList.add(new Opcode(mi));
+	public void begin() {
+
 	}
 
-	@Override
-	public void formatHeader(StringBuilder sb) {
-		this.sb = sb;
-		opList =  new UList<Opcode>(new Opcode[256]);
+	public void end() {
+
+	}
+
+	public void init() {
+		opList   =  new UList<Opcode2>(new Opcode2[256]);
 		labelMap = new HashMap<Integer,Integer>();
-		this.writeCode(MachineInstruction.EXIT);
-		this.sb = null;
+		this.writeCode(Instruction2.EXIT);
 	}
 
-	@Override
-	public void formatRule(String ruleName, PExpression e, StringBuilder sb) {
-		this.sb = sb;
-		this.formatRule(ruleName, e);
-		this.writeCode(MachineInstruction.RET);
-		this.sb = null;
+	public void generateRule(PegRule rule) {
+		makeRule(rule.peg, rule.ruleName);
+		rule.expr.visit(this);
 	}
 	
-	@Override
-	public void formatFooter(StringBuilder sb) {
+	public void finish() {
 		for(int i = 0; i < opList.size(); i++) {
-			Opcode op = opList.ArrayValues[i];
+			Opcode2 op = opList.ArrayValues[i];
 			if(op.isJumpCode()) {
-				op.ndata = labelMap.get(op.ndata) - 1;
+				op.n = labelMap.get(op.n) - 1;
 			}
-			sb.append("["+i+"] " + op + "\n");
+			//sb.append("["+i+"] " + op + "\n");
 		}
-	}
-
-	private void formatRule(String ruleName, PExpression e) {
-		sb.append(ruleName + ":\n");
-		e.visit(this);
 	}
 	
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
-		this.writeCode(MachineInstruction.CALL, e.symbol);
+		this.writeCode(Instruction2.CALL, 0, uniqueRuleName(e.base, e.symbol));
 	}
+	
 	@Override
 	public void visitString(PString e) {
-		this.writeCode(MachineInstruction.opMatchText, ParsingCharset.quoteString('\'', e.text, '\''));
+		int labelFAIL = newLabel();
+		int labelEXIT = newLabel();
+		this.writeCode(Instruction2.TEXT, e.utf8.length, e.utf8);
+		this.writeJumpCode(Instruction2.IFZERO, labelFAIL); {
+			this.writeCode(Instruction2.CONSUME);
+			this.writeJumpCode(Instruction2.JUMP, labelEXIT);
+		}
+		this.writeLabel(labelFAIL); {
+			this.writeCode(Instruction2.FAIL);
+		}
 	}
 	@Override
 	public void visitCharacter(PCharacter e) {
-		this.writeCode(MachineInstruction.opMatchCharset, e.charset.toString());
+		int labelFAIL = newLabel();
+		int labelEXIT = newLabel();
+		this.writeCode(Instruction2.CHAR, 0, e.charset);
+		this.writeJumpCode(Instruction2.IFZERO, labelFAIL); {
+			this.writeCode(Instruction2.CONSUME);
+			this.writeJumpCode(Instruction2.JUMP, labelEXIT);
+		}
+		this.writeLabel(labelFAIL); {
+			this.writeCode(Instruction2.FAIL);
+		}
 	}
 	@Override
 	public void visitAny(PAny e) {
-		this.writeCode(MachineInstruction.opMatchAnyChar);
+		this.writeCode(Instruction2.ANY);
 	}
 	@Override
 	public void visitTagging(PTagging e) {
-		this.writeCode(MachineInstruction.opTagging, e.tag.toString());
+		this.writeCode(Instruction2.TAG, 0, e.tag);
 	}
 	@Override
 	public void visitMessage(PMessage e) {
-		this.writeCode(MachineInstruction.opValue, ParsingCharset.quoteString('\'', e.symbol, '\''));
+		this.writeCode(Instruction2.VALUE, 0, e.symbol);
 	}
 	@Override
 	public void visitIndent(ParsingIndent e) {
-		this.writeCode(MachineInstruction.opIndent);
+		//this.writeCode(Instruction2.opIndent);
 	}
 	@Override
 	public void visitOptional(POptional e) {
-		writeCode(MachineInstruction.opRememberFailurePosition);
-		writeCode(MachineInstruction.opStoreObject);
+		int labelEXIT = newLabel();
+		writeCode(Instruction2.PUSHf); //-2
+		writeCode(Instruction2.PUSHo); //-1
 		e.inner.visit(this);
-		writeCode(MachineInstruction.opRestoreObjectIfFailure);
-		writeCode(MachineInstruction.opForgetFailurePosition);
+		writeJumpCode(Instruction2.IFSUCC, labelEXIT); {
+			this.writeCode(Instruction2.STOREf, -2, null);
+			this.writeCode(Instruction2.STOREo, -1, null);
+		}
+		writeLabel(labelEXIT);
+		writeCode(Instruction2.POP, 2, null);
 	}
 	@Override
 	public void visitRepetition(PRepetition e) {
-		int labelL = newLabel();
-		int labelE = newLabel();
-		int labelE2 = newLabel();
-//		if(e.atleast == 1) {
-//			e.inner.visit(this);
-//			writeJumpCode(MachineInstruction.IFFAIL,labelE2);
-//		}
-		writeCode(MachineInstruction.opRememberFailurePosition);
-		writeLabel(labelL);
-		e.inner.visit(this);
-		writeJumpCode(MachineInstruction.IFFAIL, labelE);
-		writeJumpCode(MachineInstruction.JUMP, labelL);
-		writeLabel(labelE);
-		writeCode(MachineInstruction.opForgetFailurePosition);
-		writeLabel(labelE2);
+		int labelLOOP = newLabel();
+		int labelEXIT = newLabel();
+
+		writeCode(Instruction2.PUSHf); //-3
+		writeCode(Instruction2.PUSHo); //-2
+		writeCode(Instruction2.PUSHp); //-1
+		writeLabel(labelLOOP); {
+			this.writeCode(Instruction2.STOREp, -3, null);			
+			e.inner.visit(this);
+			writeJumpCode(Instruction2.IFFAIL, labelEXIT);
+			writeJumpCode(Instruction2.IFp, labelEXIT);
+			this.writeCode(Instruction2.LOADo, -2, null);
+		}
+		writeJumpCode(Instruction2.JUMP, labelLOOP);
+		writeLabel(labelEXIT);
+		this.writeCode(Instruction2.STOREf, -3, null);
+		this.writeCode(Instruction2.STOREo, -2, null);
+		writeCode(Instruction2.POP, 3, null);
 	}
 	
 	@Override
 	public void visitAnd(PAnd e) {
-		writeCode(MachineInstruction.opRememberPosition);
+		writeCode(Instruction2.PUSHp); //-1
 		e.inner.visit(this);
-		writeCode(MachineInstruction.opBacktrackPosition);
+		this.writeCode(Instruction2.STOREp, -1, null);		
+		writeCode(Instruction2.POP, 1, null);
 	}
 
 	@Override
 	public void visitNot(PNot e) {
-		writeCode(MachineInstruction.opRememberPosition);
-		writeCode(MachineInstruction.opRememberFailurePosition);
-		writeCode(MachineInstruction.opStoreObject);
+		int labelFAIL = newLabel();
+		int labelEXIT = newLabel();
+		writeCode(Instruction2.PUSHf); //-3
+		writeCode(Instruction2.PUSHo); //-2
+		writeCode(Instruction2.PUSHp); //-1
 		e.inner.visit(this);
-		writeCode(MachineInstruction.opRestoreNegativeObject);
-		writeCode(MachineInstruction.opForgetFailurePosition);
-		writeCode(MachineInstruction.opBacktrackPosition);		
+		writeJumpCode(Instruction2.IFFAIL, labelFAIL); {
+			this.writeCode(Instruction2.STOREp, -1, null);		
+			this.writeCode(Instruction2.FAIL);
+			this.writeJumpCode(Instruction2.JUMP, labelEXIT);
+		}
+		writeLabel(labelFAIL); {
+			this.writeCode(Instruction2.STOREo, -2, null);		
+			this.writeCode(Instruction2.STOREf, -3, null);		
+		}
+		writeLabel(labelEXIT);
+		writeCode(Instruction2.POP, 3, null);
 	}
 
 	@Override
 	public void visitConnector(PConnector e) {
-		writeCode(MachineInstruction.opStoreObject);
+		writeCode(Instruction2.PUSHo); //-1
 		e.inner.visit(this);
-		writeCode(MachineInstruction.opConnectObject, ""+e.index);
+		writeCode(Instruction2.LINK, e.index, null);
+		writeCode(Instruction2.POP, 1, null);
 	}
 
 	@Override
 	public void visitSequence(PSequence e) {
-		int labelF = newLabel();
-		int labelE = newLabel();
-		writeCode(MachineInstruction.opRememberSequencePosition);
+		int labelFAIL = newLabel();
+		int labelEXIT = newLabel();
+		writeCode(Instruction2.PUSHp); //-1
 		for(int i = 0; i < e.size(); i++) {
 			PExpression se = e.get(i);
 			se.visit(this);
-			writeJumpCode(MachineInstruction.IFFAIL, labelF);
+			writeJumpCode(Instruction2.IFFAIL, labelFAIL);
 		}
-		writeCode(MachineInstruction.opCommitSequencePosition);
-		writeJumpCode(MachineInstruction.JUMP, labelE);
-		writeLabel(labelF);
-		writeCode(MachineInstruction.opBackTrackSequencePosition);
-		writeLabel(labelE);
+		this.writeJumpCode(Instruction2.JUMP, labelEXIT);
+		writeLabel(labelFAIL); {
+			this.writeCode(Instruction2.STOREp, -1, null);
+		}
+		writeLabel(labelEXIT);
+		writeCode(Instruction2.POP, 1, null);
 	}
 
 	@Override
 	public void visitChoice(PChoice e) {
-		int labelS = newLabel();
-		int labelE = newLabel();
-		writeCode(MachineInstruction.opRememberFailurePosition);
+		int labelOK = newLabel();
+		int labelEXIT = newLabel();
+		writeCode(Instruction2.PUSHf); //-2
+		writeCode(Instruction2.PUSHo); //-1
 		for(int i = 0; i < e.size(); i++) {
-			e.get(i).visit(this);
-			writeJumpCode(MachineInstruction.IFSUCC, labelS);
+			PExpression se = e.get(i);
+			se.visit(this);
+			writeJumpCode(Instruction2.IFSUCC, labelOK);
+			writeCode(Instruction2.STOREo, -1, null);
 		}
-		writeCode(MachineInstruction.opUpdateFailurePosition);
-		writeJumpCode(MachineInstruction.JUMP, labelE);
-		writeLabel(labelS);
-		writeCode(MachineInstruction.opForgetFailurePosition);
-		writeLabel(labelE);
+		this.writeJumpCode(Instruction2.JUMP, labelEXIT);
+		writeLabel(labelOK); {
+			this.writeCode(Instruction2.STOREf, -2, null);
+		}
+		writeLabel(labelEXIT);
+		writeCode(Instruction2.POP, 2, null);
 	}
 
 	@Override
 	public void visitConstructor(PConstructor e) {
-		int labelF = newLabel();
-		int labelE = newLabel();
+		int labelFAIL = newLabel();
+		int labelEXIT = newLabel();
+		writeCode(Instruction2.PUSHp); //-3
+		writeCode(Instruction2.PUSHo); //-2
 		if(e.leftJoin) {
-			writeCode(MachineInstruction.opLeftJoinObject);
+			writeCode(Instruction2.NEWJOIN);
 		}
 		else {
-			writeCode(MachineInstruction.opNewObject);
+			writeCode(Instruction2.NEW);   // -1
 		}
-		writeCode(MachineInstruction.opRememberSequencePosition);
+		writeCode(Instruction2.STOREo, -2, null);
 		for(int i = 0; i < e.size(); i++) {
 			PExpression se = e.get(i);
+			writeCode(Instruction2.LOADo, -2, null); //-1
 			se.visit(this);
-			writeJumpCode(MachineInstruction.IFFAIL, labelF);
+			writeJumpCode(Instruction2.IFFAIL, labelFAIL);
 		}
-		writeCode(MachineInstruction.opCommitSequencePosition);
-		writeJumpCode(MachineInstruction.JUMP, labelE);
-		writeLabel(labelF);
-		writeCode(MachineInstruction.opBackTrackSequencePosition);
-		writeLabel(labelE);
-		writeCode(MachineInstruction.opCommitObject);
-	}
-
-	@Override
-	public void visitParsingOperation(ParsingOperation e) {
-		if(e instanceof ParsingMatch) {
-			sb.append("<match ");
-			e.inner.visit(this);
-			sb.append(">");
+		writeCode(Instruction2.COMMIT);
+		writeJumpCode(Instruction2.JUMP, labelEXIT);
+		writeLabel(labelFAIL); {
+			writeCode(Instruction2.ABORT);
 		}
-		else {
-			e.inner.visit(this);
-		}
+		writeLabel(labelEXIT);
+		writeCode(Instruction2.POP, 2, null);
 	}
 }
 

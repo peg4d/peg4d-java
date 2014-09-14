@@ -1,6 +1,7 @@
 package org.peg4d;
 
 import org.peg4d.ParsingContextMemo.ObjectMemo;
+import org.peg4d.vm.CodeGenerator2;
 
 public abstract class PExpression {
 	public final static int CyclicRule       = 1;
@@ -33,6 +34,11 @@ public abstract class PExpression {
 	public final static int NoMemo            = 1 << 20;
 	public final static int Debug             = 1 << 24;
 	
+	public final static int ParsedResult      = -1;
+	public final static int SourcePosition          = 0;
+	public final static int FailurePosition          = 1;
+	
+	
 	int        flag       = 0;
 	int        uniqueId   = 0;
 //	short      uniqueId   = 0;
@@ -51,6 +57,8 @@ public abstract class PExpression {
 	}
 	public abstract void vmMatch(ParsingContext context);
 	public abstract void simpleMatch(ParsingContext context);
+	final void writeCode(CodeGenerator2 gen){}
+
 
 	boolean checkFirstByte(int ch) {
 		return true;
@@ -703,6 +711,7 @@ class PString extends PTerminal {
 	public void simpleMatch(ParsingContext context) {
 		context.opMatchText(this.utf8);
 	}
+
 }
 
 class PByteChar extends PString {
@@ -863,6 +872,7 @@ class POptional extends PUnary {
 			context.forgetFailure(f);
 		}
 	}
+
 }
 
 class POptionalString extends POptional {
@@ -990,6 +1000,8 @@ class PRepetition extends PUnary {
 		context.forgetFailure(f);
 //		}
 	}
+	
+
 }
 
 //class POneMoreCharacter extends PRepetition {
@@ -1065,6 +1077,7 @@ class PAnd extends PUnary {
 		this.inner.simpleMatch(context);
 		context.rollback(pos);
 	}
+
 }
 
 class PNot extends PUnary {
@@ -1107,6 +1120,7 @@ class PNot extends PUnary {
 		}
 		context.rollback(pos);
 	}
+
 }
 
 class PNotString extends PNot {
@@ -1312,6 +1326,7 @@ class PSequence extends PList {
 			}
 		}
 	}
+
 }
 
 class PChoice extends PList {
@@ -1370,6 +1385,7 @@ class PChoice extends PList {
 		}
 		assert(context.isFailure());
 	}
+
 }
 
 class PMappedChoice extends PChoice {

@@ -8,6 +8,7 @@ public enum MachineInstruction {
 	RET,
 	IFSUCC,
 	IFFAIL,
+	NOP,
 	opFailure,
 	opMatchText,
 	opMatchByteChar,
