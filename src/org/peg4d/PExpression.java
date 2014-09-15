@@ -41,24 +41,20 @@ public abstract class PExpression {
 	
 	int        flag       = 0;
 	int        uniqueId   = 0;
-//	short      uniqueId   = 0;
-//	short      semanticId = 0;
+	int        consumed   = 0;
 		
 	protected PExpression(int flag) {
-//		this.base = base;
 		this.flag = flag;
-//		this.uniqueId = base.factory.issue(this);
-//		this.semanticId = this.uniqueId;
 	}
+
 	abstract PExpression dup();
+	
 	protected abstract void visit(ParsingExpressionVisitor visitor);
 	public PExpression getExpression() {
 		return this;
 	}
-	public abstract void vmMatch(ParsingContext context);
 	public abstract void simpleMatch(ParsingContext context);
 	final void writeCode(CodeGenerator2 gen){}
-
 
 	boolean checkFirstByte(int ch) {
 		return true;
@@ -80,10 +76,6 @@ public abstract class PExpression {
 		return this.uniqueId > 0;
 	}
 	
-//	public final String key() {
-//		return "#" + this.uniqueId;
-//	}
-	
 	public int size() {
 		return 0;
 	}
@@ -93,10 +85,6 @@ public abstract class PExpression {
 	
 	public PExpression get(int index, PExpression def) {
 		return def;
-	}
-
-	String nameAt(int index) {
-		return null;
 	}
 
 	private final static GrammarFormatter DefaultFormatter = new GrammarFormatter();
@@ -644,10 +632,6 @@ class PNonTerminal extends PExpression {
 		return this.resolvedExpression;
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		this.resolvedExpression.vmMatch(context);
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		this.resolvedExpression.simpleMatch(context);
 	}
@@ -704,14 +688,9 @@ class PString extends PTerminal {
 		return ParsingCharset.getFirstChar(this.utf8) == ch;
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opMatchText(this.utf8);
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		context.opMatchText(this.utf8);
 	}
-
 }
 
 class PByteChar extends PString {
@@ -722,10 +701,6 @@ class PByteChar extends PString {
 	}
 	@Override PExpression dup() { 
 		return new PByteChar(flag, byteChar);
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opMatchByteChar(this.byteChar);
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -746,10 +721,6 @@ class PAny extends PTerminal {
 		visitor.visitAny(this);
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opMatchAnyChar();
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		context.opMatchAnyChar();
 	}
@@ -768,10 +739,6 @@ class PCharacter extends PTerminal {
 	}
 	@Override boolean checkFirstByte(int ch) {
 		return this.charset.hasByte(ch);
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opMatchCharset(this.charset);
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -848,19 +815,6 @@ class POptional extends PUnary {
 		return true;
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opRememberFailurePosition();
-		context.opStoreObject();
-		this.inner.vmMatch(context);
-		if(context.isFailure()) {
-			context.opRestoreObject();
-		}
-		else {
-			context.opDropStoredObject();
-		}
-		context.opForgetFailurePosition();
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		long f = context.rememberFailure();
 		ParsingObject left = context.left;
@@ -885,10 +839,6 @@ class POptionalString extends POptional {
 		return new POptionalString(flag, (PString)inner); 
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opMatchOptionalText(this.utf8);
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		context.opMatchOptionalText(this.utf8);
 	}
@@ -904,10 +854,6 @@ class POptionalByteChar extends POptional {
 		return new POptionalByteChar(flag, (PByteChar)inner); 
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opMatchOptionalByteChar(this.byteChar);
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		context.opMatchOptionalByteChar(this.byteChar);
 	}
@@ -921,10 +867,6 @@ class POptionalCharacter extends POptional {
 	}
 	@Override PExpression dup() { 
 		return new POptionalCharacter(flag, (PCharacter)inner); 
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opMatchOptionalCharset(this.charset);
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -952,36 +894,10 @@ class PRepetition extends PUnary {
 		return true;
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-//		if(this.atleast == 1) {
-//			this.inner.vmMatch(context);
-//			if(context.isFailure()) {
-//				return;
-//			}
-//		}
-		long ppos = -1;
-		long pos = context.getPosition();
-		context.opRememberFailurePosition();
-		context.opStoreObject();
-		while(ppos < pos) {
-			context.opRefreshStoredObject();
-			this.inner.vmMatch(context);
-			if(context.isFailure()) {
-				context.opRestoreObject();
-				break;
-			}
-			ppos = pos;
-			pos = context.getPosition();
-		}
-		context.opForgetFailurePosition();
-	}
-
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		long ppos = -1;
 		long pos = context.getPosition();
 		long f = context.rememberFailure();
-		int count = 0;
 		while(ppos < pos) {
 			ParsingObject left = context.left;
 			this.inner.simpleMatch(context);
@@ -991,42 +907,10 @@ class PRepetition extends PUnary {
 			}
 			ppos = pos;
 			pos = context.getPosition();
-			count = count + 1;
 		}
-//		if(count < this.atleast) {
-//			context.opFailure(this);
-//		}
-//		else {
 		context.forgetFailure(f);
-//		}
 	}
-	
-
 }
-
-//class POneMoreCharacter extends PRepetition {
-//	ParsingCharset charset;
-//	public POneMoreCharacter(Grammar base, int flag, PCharacter e) {
-//		super(base, flag, e, 1);
-//		charset = e.charset;
-//	}
-//	@Override
-//	public ParsingObject simpleMatch(ParsingObject left, ParsingContext2 context) {
-//		long pos = context.getPosition();
-//		int consumed = this.charset.consume(context.source, pos);
-//		if(consumed == 0) {
-//			return context.foundFailure(this);
-//		}
-//		pos += consumed;
-//		do {
-//			consumed = this.charset.consume(context.source, pos);
-//			pos += consumed;
-//		}
-//		while(consumed > 0);
-//		context.setPosition(pos);
-//		return left;
-//	}
-//}
 
 class PZeroMoreCharacter extends PRepetition {
 	ParsingCharset charset;
@@ -1066,18 +950,11 @@ class PAnd extends PUnary {
 		return this.inner.checkFirstByte(ch);
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opRememberPosition();
-		this.inner.vmMatch(context);
-		context.opBacktrackPosition();
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		long pos = context.getPosition();
 		this.inner.simpleMatch(context);
 		context.rollback(pos);
 	}
-
 }
 
 class PNot extends PUnary {
@@ -1096,16 +973,6 @@ class PNot extends PUnary {
 		return !this.inner.checkFirstByte(ch);
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opRememberPosition();
-		context.opStoreObject();
-		context.opRememberFailurePosition();
-		this.inner.vmMatch(context);
-		context.opForgetFailurePosition();
-		context.opRestoreNegativeObject();
-		context.opBacktrackPosition();
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		long pos = context.getPosition();
 		long f   = context.rememberFailure();
@@ -1120,7 +987,6 @@ class PNot extends PUnary {
 		}
 		context.rollback(pos);
 	}
-
 }
 
 class PNotString extends PNot {
@@ -1131,10 +997,6 @@ class PNotString extends PNot {
 	}
 	@Override PExpression dup() { 
 		return new PNotString(flag, (PString)inner); 
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opMatchTextNot(utf8);
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -1152,10 +1014,6 @@ class PNotByteChar extends PNotString {
 		return new PNotByteChar(flag, (PByteChar)inner); 
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opMatchByteCharNot(this.byteChar);
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		context.opMatchByteCharNot(this.byteChar);
 	}
@@ -1169,10 +1027,6 @@ class PNotCharacter extends PNot {
 	}
 	@Override PExpression dup() { 
 		return new PNotCharacter(flag, (PCharacter)inner); 
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opMatchCharsetNot(this.charset);
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -1198,6 +1052,7 @@ abstract class PList extends PExpression {
 	public final void set(int index, PExpression e) {
 		this.list.ArrayValues[index] = e;
 	}
+	
 	@Override
 	public final PExpression get(int index, PExpression def) {
 		if(index < this.size()) {
@@ -1205,19 +1060,7 @@ abstract class PList extends PExpression {
 		}
 		return def;
 	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opRememberSequencePosition();
-		for(int i = 0; i < this.size(); i++) {
-			this.get(i).vmMatch(context);
-			if(context.isFailure()) {
-				context.opBackTrackSequencePosition();
-				return;
-			}
-		}
-		context.opCommitSequencePosition();
-	}
-	
+
 	private boolean isOptional(PExpression e) {
 		if(e instanceof POptional) {
 			return true;
@@ -1351,26 +1194,6 @@ class PChoice extends PList {
 		return false;
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opRememberFailurePosition();
-		context.opStoreObject();
-		for(int i = 0; i < this.size(); i++) {
-			this.get(i).vmMatch(context);
-			if(context.isFailure()) {
-				context.opRestoreObject();
-				context.opStoreObject();
-			}
-			else {
-				context.opDropStoredObject();
-				context.opForgetFailurePosition();
-				return;
-			}
-		}
-		context.opDropStoredObject();
-		context.opUpdateFailurePosition();
-	}
-
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		long f = context.rememberFailure();
 		ParsingObject left = context.left;
@@ -1499,10 +1322,6 @@ class PAlwaysFailure extends PString {
 		return new PAlwaysFailure(dead);
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opFailure(dead);
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		context.opFailure(dead);
 	}
@@ -1525,12 +1344,6 @@ class PConnector extends PUnary {
 	@Override
 	boolean checkFirstByte(int ch) {
 		return this.inner.checkFirstByte(ch);
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opStoreObject();
-		this.inner.vmMatch(context);
-		context.opConnectObject(this.index);
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -1568,10 +1381,6 @@ class PTagging extends PTerminal {
 		visitor.visitTagging(this);
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opTagging(this.tag);
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		if(context.canTransCapture()) {
 			context.left.setTag(this.tag);
@@ -1594,12 +1403,8 @@ class PMessage extends PTerminal {
 		visitor.visitMessage(this);
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opValue(this.symbol);
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
-		if(!context.isRecognitionMode()) {
+		if(context.canTransCapture()) {
 			context.left.setValue(this.symbol);
 		}
 	}
@@ -1621,18 +1426,6 @@ class PConstructor extends PList {
 		visitor.visitConstructor(this);
 	}
 	
-	@Override
-	public void vmMatch(ParsingContext context) {
-		if(this.leftJoin) {
-			context.opLeftJoinObject(this);
-		}
-		else {
-			context.opNewObject(this);
-		}
-		super.vmMatch(context);
-		context.opCommitObject();
-	}
-
 	@Override
 	public void simpleMatch(ParsingContext context) {
 		long startIndex = context.getPosition();
@@ -1680,20 +1473,7 @@ class PConstructor extends PList {
 			return;
 		}
 	}
-		
-//	public void lazyMatch(ParsingObject newnode, ParsingContext context, long pos) {
-//		int mark = context.markObjectStack();
-//		for(int i = 0; i < this.size(); i++) {
-//			ParsingObject node = this.get(i).simpleMatch(context);
-//			if(context.isFailure()) {
-//				break;  // this not happens
-//			}
-//		}
-//		context.commitLinkLog(newnode, pos, mark);
-//	}
 }
-
-
 
 class PExport extends PUnary {
 	PExport(int flag, PExpression e) {
@@ -1710,10 +1490,6 @@ class PExport extends PUnary {
 	@Override
 	boolean checkFirstByte(int ch) {
 		return this.inner.checkFirstByte(ch);
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-	
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -1752,10 +1528,6 @@ class ParsingIndent extends ParsingFunction {
 		return (ch == '\t' || ch == ' ');
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opIndent();
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		context.opIndent();
 	}
@@ -1771,10 +1543,6 @@ class ParsingFail extends ParsingFunction {
 		return new ParsingFail(flag, message);
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opFailure(this.message);
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		context.opFailure(this.message);
 	}
@@ -1786,10 +1554,6 @@ class ParsingCatch extends ParsingFunction {
 	}
 	@Override PExpression dup() {
 		return this;
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opCatch();
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -1837,11 +1601,6 @@ class ParsingMemo extends ParsingOperation {
 
 	@Override PExpression dup() {
 		return new ParsingMemo(0, inner);
-	}
-
-	@Override
-	public void vmMatch(ParsingContext context) {
-		this.inner.vmMatch(context);
 	}
 
 	@Override
@@ -1915,12 +1674,6 @@ class ParsingMatch extends ParsingOperation {
 		return new ParsingMatch(inner);
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opDisableTransCapture();
-		this.inner.vmMatch(context);
-		context.opEnableTransCapture();
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		boolean oldMode = context.setRecognitionMode(true);
 		ParsingObject left = context.left;
@@ -1938,12 +1691,6 @@ class ParsingStackIndent extends ParsingOperation {
 	}
 	@Override PExpression dup() {
 		return new ParsingStackIndent(inner);
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opPushIndent();
-		this.inner.vmMatch(context);
-		context.opPopIndent();
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -1967,10 +1714,6 @@ class ParsingIfFlag extends ParsingFunction {
 		return " " + this.flagName;
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opCheckFlag(this.flagName);
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		context.opCheckFlag(this.flagName);
 	}
@@ -1988,12 +1731,6 @@ class ParsingWithFlag extends ParsingOperation {
 	@Override
 	public String getParameters() {
 		return " " + this.flagName;
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opEnableFlag(this.flagName);
-		this.inner.vmMatch(context);
-		context.opPopFlag(this.flagName);
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -2017,12 +1754,6 @@ class ParsingWithoutFlag extends ParsingOperation {
 		return " " + this.flagName;
 	}
 	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opDisableFlag(this.flagName);
-		this.inner.vmMatch(context);
-		context.opPopFlag(this.flagName);
-	}
-	@Override
 	public void simpleMatch(ParsingContext context) {
 		context.opDisableFlag(this.flagName);
 		this.inner.simpleMatch(context);
@@ -2036,14 +1767,6 @@ class ParsingDebug extends ParsingOperation {
 	}
 	@Override PExpression dup() {
 		return new ParsingDebug(inner);
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opRememberPosition();
-		context.opRememberFailurePosition();
-		context.opStoreObject();
-		this.inner.vmMatch(context);
-		context.opDebug(this.inner);
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
@@ -2061,14 +1784,6 @@ class ParsingApply extends ParsingOperation {
 	}
 	@Override PExpression dup() {
 		return new ParsingApply(inner);
-	}
-	@Override
-	public void vmMatch(ParsingContext context) {
-		context.opRememberPosition();
-		context.opRememberFailurePosition();
-		context.opStoreObject();
-		this.inner.vmMatch(context);
-		context.opDebug(this.inner);
 	}
 	@Override
 	public void simpleMatch(ParsingContext context) {
