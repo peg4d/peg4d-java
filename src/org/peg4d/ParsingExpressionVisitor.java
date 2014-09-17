@@ -26,9 +26,11 @@ class ParsingExpressionVisitor {
 	}
 	public void visitString(PString e) {
 	}
+	public void visitByteChar(ParsingByte pByteChar) {
+	}
 	public void visitCharacter(PCharacter e) {
 	}
-	public void visitAny(PAny e) {
+	public void visitAny(ParsingAny e) {
 	}
 //	public void visitNotAny(PNotAny e) {
 //		e.orig.visit(this);
@@ -39,7 +41,7 @@ class ParsingExpressionVisitor {
 	}
 	public void visitIndent(ParsingIndent e) {
 	}
-	public void visitUnary(PUnary e) {
+	public void visitUnary(ParsingUnary e) {
 		e.inner.visit(this);
 	}
 	public void visitNot(PNot e) {
@@ -84,6 +86,51 @@ class ParsingExpressionVisitor {
 	public void visitParsingIfFlag(ParsingIfFlag e) {
 
 	}
+}
+
+abstract class Checker {
+	public final static int False    = 0;
+	public final static int True     = 1;
+	public final static int Unknown  = 2;
+	abstract int check(PExpression e);
+}
+
+class ParsingExpressionChecker {
+	private UMap<PExpression> visitedMap;
+	private void initVisitor() {
+		if(this.visitedMap != null) {
+			this.visitedMap.clear();
+		}
+		else {
+			visitedMap = new UMap<PExpression>();
+		}
+	}
+	private boolean isVisited(String name) {
+		if(this.visitedMap != null) {
+			return this.visitedMap.hasKey(name);
+		}
+		return true;
+	}
+	private void visited(String name, PExpression next) {
+		if(this.visitedMap != null) {		
+			this.visitedMap.put(name, next);
+		}
+	}
+
+	void makeList(PExpression e) {
+		if(e instanceof PNonTerminal) {
+			PNonTerminal ne = (PNonTerminal)e;
+			if(!this.isVisited(ne.getUniqueName())) {
+				visited(ne.getUniqueName(), ne.getNext());
+				makeList(ne.getNext());
+			}
+		}
+		for(int i = 0; i < e.size(); i++) {
+			makeList(e.get(i));
+		}
+	}
+		
+	
 }
 
 class ListMaker extends ParsingExpressionVisitor {
@@ -169,12 +216,13 @@ class NonTerminalChecker extends ParsingExpressionVisitor {
 			checking.length = this.consumedMinimumLength;
 		}
 	}
+
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
 		PegRule next = e.base.getRule(e.symbol);
 		if(next == null) {
 			checking.reportError("undefined label: " + e.symbol);
-			e.base.setRule(e.symbol, new ParsingIfFlag(0, e.symbol));
+			//e.base.setRule(e.symbol, new ParsingIfFlag(0, e.symbol));
 			next = e.base.getRule(e.symbol);
 		}
 		e.resolvedExpression = next.expr;
@@ -230,7 +278,7 @@ class NonTerminalChecker extends ParsingExpressionVisitor {
 		this.consumedMinimumLength += 1;
 	}
 	@Override
-	public void visitAny(PAny e) {
+	public void visitAny(ParsingAny e) {
 		this.consumedMinimumLength += 1;
 	}
 	@Override
@@ -338,7 +386,7 @@ class Inliner extends ParsingExpressionVisitor {
 	}
 
 	@Override
-	public void visitUnary(PUnary e) {
+	public void visitUnary(ParsingUnary e) {
 		if(isInlinable(e.inner)) {
 			e.inner = doInline(e, (PNonTerminal)e.inner);
 		}
@@ -414,7 +462,7 @@ class Optimizer extends ParsingExpressionVisitor {
 	}
 
 	@Override
-	public void visitUnary(PUnary e) {
+	public void visitUnary(ParsingUnary e) {
 		e.inner = removeOperation(e.inner);
 		e.inner.visit(this);
 	}
@@ -517,7 +565,7 @@ class MemoRemover extends ParsingExpressionVisitor {
 	}
 
 	@Override
-	public void visitUnary(PUnary e) {
+	public void visitUnary(ParsingUnary e) {
 		e.inner = this.removeMemo(e.inner);
 		e.inner.visit(this);
 	}
@@ -589,7 +637,7 @@ class ObjectRemover extends ParsingExpressionVisitor {
 		this.returnPeg = null;
 	}
 	@Override
-	public void visitUnary(PUnary e) {
+	public void visitUnary(ParsingUnary e) {
 		PExpression ne = this.removeObjectOperation(e.inner);
 		if(ne == null) {
 			this.returnPeg = null;			

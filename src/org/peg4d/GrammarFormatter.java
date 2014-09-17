@@ -67,6 +67,24 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 	public void visitNonTerminal(PNonTerminal e) {
 		this.formatRuleName(e.symbol, e);
 	}
+
+	@Override
+	public void visitByteChar(ParsingByte e) {
+		char c = (char)e.byteChar;
+		switch(c) {
+		case '\n' : sb.append("'\\n'"); return;
+		case '\t' : sb.append("'\\t'"); return;
+		case '\r' : sb.append("'\\r'"); return;
+		case '\\' : sb.append("'\\\\'"); return;
+		}
+		if(Character.isISOControl(c) || c > 127) {
+			sb.append(String.format("0x%02x", (int)c));
+		}
+		else {
+			sb.append("'" + c + "'");
+		}
+	}
+
 	@Override
 	public void visitString(PString e) {
 		char quote = '\'';
@@ -80,7 +98,7 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 		sb.append(e.charset.toString());
 	}
 	@Override
-	public void visitAny(PAny e) {
+	public void visitAny(ParsingAny e) {
 		sb.append(".");
 	}
 	@Override
@@ -96,11 +114,11 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 	public void visitIndent(ParsingIndent e) {
 		sb.append("indent");
 	}
-	protected void format(String prefix, PUnary e, String suffix) {
+	protected void format(String prefix, ParsingUnary e, String suffix) {
 		if(prefix != null) {
 			sb.append(prefix);
 		}
-		if(e.inner instanceof PTerminal || e.inner instanceof PNonTerminal || e.inner instanceof PConstructor) {
+		if(e.inner instanceof ParsingTerminal || e.inner instanceof PNonTerminal || e.inner instanceof PConstructor) {
 			e.inner.visit(this);
 		}
 		else {
@@ -325,7 +343,7 @@ class CodeGenerator extends ParsingExpressionVisitor {
 		}
 	}
 	@Override
-	public void visitAny(PAny e) {
+	public void visitAny(ParsingAny e) {
 		this.writeCode(Instruction2.ANY);
 	}
 	@Override

@@ -85,7 +85,7 @@ public class Main {
 			performShell2(peg);
 			return;
 		}
-		Grammar peg = GrammarFile == null ? Grammar.PEG4d : new GrammarFactory().newGrammar("main", GrammarFile);
+		Grammar peg = GrammarFile == null ? GrammarFactory.Grammar : new GrammarFactory().newGrammar("main", GrammarFile);
 		if(PEGFormatter != null) {
 			GrammarFormatter fmt = loadGrammarFormatter(PEGFormatter);
 			StringBuilder sb = new StringBuilder();

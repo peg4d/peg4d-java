@@ -24,11 +24,18 @@ public class ParsingTag {
 		tagId("error");
 	}
 	
-	protected int tagId;
+	static final int Name         = tagId("Name");
+	static final int List         = tagId("List");
+	static final int Integer      = tagId("Integer");
+	static final int String       = tagId("String");
+	static final int Text         = tagId("Text");
+	static final int CommonError  = tagId("error");
 
 	public ParsingTag(String tagName) {
 		this.tagId = ParsingTag.tagId(tagName);
 	}
+
+	protected int tagId;
 
 	@Override
 	public final String toString() {

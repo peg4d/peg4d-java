@@ -456,6 +456,16 @@ class ByteCharset extends ParsingCharset {
 			}
 		}
 	}
+
+	final int size() {
+		int count = 0;
+		for(int i = 0; i < 256; i++) {
+			if(bitMap[i]) {
+				count++;
+			}
+		}
+		return count;
+	}
 }
 
 class UnicodeRange extends ParsingCharset {
@@ -545,6 +555,7 @@ class UnicodeRange extends ParsingCharset {
 			sb.append(String.format("U+%04x", this.endChar));
 		}
 	}
+		
 }
 
 class CharacterReader {

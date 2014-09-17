@@ -16,6 +16,7 @@ public class GrammarFactory {
 	}
 
 	UMap<Grammar> grammarMap = new UMap<Grammar>();
+	public final static PEG4dGrammar Grammar = new PEG4dGrammar();
 	
 	Grammar getGrammar(String filePath) {
 		Grammar peg = grammarMap.get(filePath);

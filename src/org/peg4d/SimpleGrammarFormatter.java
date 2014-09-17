@@ -114,7 +114,7 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 		this.writeCode(MachineInstruction.opMatchCharset, e.charset.toString());
 	}
 	@Override
-	public void visitAny(PAny e) {
+	public void visitAny(ParsingAny e) {
 		this.writeCode(MachineInstruction.opMatchAnyChar);
 	}
 	@Override
