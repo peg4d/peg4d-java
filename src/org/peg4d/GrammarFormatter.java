@@ -11,9 +11,9 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 		this.sb = null;
 	}
 	public GrammarFormatter(Grammar peg, StringBuilder sb) {
-		UList<PegRule> ruleList = peg.getRuleList();
+		UList<ParsingRule> ruleList = peg.getRuleList();
 		for(int i = 0; i < ruleList.size(); i++) {
-			PegRule rule = ruleList.ArrayValues[i];
+			ParsingRule rule = ruleList.ArrayValues[i];
 			formatRule(rule.ruleName, rule.expr, sb);
 		}
 	}
@@ -296,7 +296,7 @@ class CodeGenerator extends ParsingExpressionVisitor {
 		this.writeCode(Instruction2.EXIT);
 	}
 
-	public void generateRule(PegRule rule) {
+	public void generateRule(ParsingRule rule) {
 		makeRule(rule.peg, rule.ruleName);
 		rule.expr.visit(this);
 	}

@@ -81,7 +81,7 @@ public class Main {
 			for(int i = FindFileIndex; i < args.length; i++) {
 				peg.importGrammar(args[i]);
 			}
-			peg.verify();
+			peg.verifyRules();
 			performShell2(peg);
 			return;
 		}
@@ -90,9 +90,9 @@ public class Main {
 			GrammarFormatter fmt = loadGrammarFormatter(PEGFormatter);
 			StringBuilder sb = new StringBuilder();
 			fmt.formatHeader(sb);
-			UList<PegRule> list = peg.getRuleList();
+			UList<ParsingRule> list = peg.getRuleList();
 			for(int i = 0; i < 0; i++) {
-				PegRule r = list.ArrayValues[i];
+				ParsingRule r = list.ArrayValues[i];
 				fmt.formatRule(r.ruleName, r.expr, sb);
 			}
 			fmt.formatFooter(sb);
@@ -418,7 +418,7 @@ public class Main {
 
 	public final static void performShell2(Grammar peg) {
 		displayShellVersion(peg);
-		UList<PegRule> ruleList = peg.getRuleList();
+		UList<ParsingRule> ruleList = peg.getRuleList();
 		UList<String> seq = new UList<String>(new String[16]);
 		int linenum = 1;
 		String line = null;
@@ -426,8 +426,8 @@ public class Main {
 			ParsingSource source = new StringSource(peg, "(stdin)", linenum, line);
 			ParsingContext context = new ParsingContext(source);
 			for(int i = 0; i < ruleList.size(); i++) {
-				PegRule rule = ruleList.ArrayValues[i];
-				if(rule.objectType) {
+				ParsingRule rule = ruleList.ArrayValues[i];
+				if(rule.isObjectType()) {
 					context.resetSource(source, 0);
 					context.parse(peg, rule.ruleName);
 					if(context.isFailure()) {
@@ -443,7 +443,7 @@ public class Main {
 		System.out.println("");
 	}
 	
-	static void infer(UList<PegRule> ruleList, ParsingContext context, UList<String> seq, Grammar peg) {
+	static void infer(UList<ParsingRule> ruleList, ParsingContext context, UList<String> seq, Grammar peg) {
 		if(!context.hasByteChar()) {
 			printSequence(seq);
 			return;
@@ -451,7 +451,7 @@ public class Main {
 		boolean foundRule = false;
 		long pos = context.getPosition();
 		for(int i = 0; i < ruleList.size(); i++) {
-			PegRule rule = ruleList.ArrayValues[i];
+			ParsingRule rule = ruleList.ArrayValues[i];
 			//if(rule.objectType) {
 				context.setPosition(pos);
 				context.parse(peg, rule.ruleName);

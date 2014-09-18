@@ -59,24 +59,17 @@ public class PEG4d extends ParsingBuilder {
 			if(po.get(0).is(ParsingTag.String)) {
 				ruleName = quote(ruleName);
 			}
-			PegRule rule = peg.getRule(ruleName);
+			ParsingRule rule = peg.getRule(ruleName);
 			PExpression e = toPExpression(po.get(1));
 			if(rule != null) {
 				if(rule.po != null) {
 					if(rule.peg == peg) {
-						rule.reportWarning("duplicated rule name: " + ruleName);
+						rule.report(ReportLevel.warning, "duplicated rule name: " + ruleName);
 					}
 					rule = null;
 				}
 			}
-			if(rule == null) {
-				rule = new PegRule(peg, ruleName, po.get(0), e);
-			}
-			else {
-				rule.peg = peg;
-				rule.po = po.get(0);
-				rule.expr = e;
-			}
+			rule = new ParsingRule(peg, ruleName, po.get(0), e);
 			peg.setRule(ruleName, rule);
 			if(po.size() >= 3) {
 				readAnnotations(rule, po.get(2));
@@ -98,7 +91,7 @@ public class PEG4d extends ParsingBuilder {
 		return false;
 	}
 	
-	private void readAnnotations(PegRule rule, ParsingObject pego) {
+	private void readAnnotations(ParsingRule rule, ParsingObject pego) {
 		for(int i = 0; i < pego.size(); i++) {
 			ParsingObject p = pego.get(i);
 			if(p.is(PEG4d.Annotation)) {
@@ -227,13 +220,22 @@ public class PEG4d extends ParsingBuilder {
 	}
 
 	public PExpression toOneMoreRepetition(ParsingObject po) {
-		return PExpression.newOneMore(toPExpression(po.get(0)));
+		UList<PExpression> l = new UList<PExpression>(new PExpression[2]);
+		l.add(toPExpression(po.get(0)));
+		l.add(PExpression.newRepetition(toPExpression(po.get(0))));
+		return PExpression.newSequence(l);
 	}
 
 	public PExpression toRepetition(ParsingObject po) {
 		if(po.size() == 2) {
 			int ntimes = ParsingCharset.parseInt(po.textAt(1, ""), -1);
-			return PExpression.newTimes(ntimes, toPExpression(po.get(0)));
+			if(ntimes != 1) {
+				UList<PExpression> l = new UList<PExpression>(new PExpression[ntimes]);
+				for(int i = 0; i < ntimes; i++) {
+					PExpression.addSequence(l, toPExpression(po.get(0)));
+				}
+				return PExpression.newSequence(l);
+			}
 		}
 		return PExpression.newRepetition(toPExpression(po.get(0)));
 	}

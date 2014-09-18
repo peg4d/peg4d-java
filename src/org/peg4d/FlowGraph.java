@@ -77,7 +77,7 @@ class FlowGraph  {
 		return false;
 	}
 
-	int checkLeftRecursion(PegRule rule, String uName, UList<PExpression> stack, int consume) {
+	int checkLeftRecursion(ParsingRule rule, String uName, UList<PExpression> stack, int consume) {
 		int length = consume;
 		if(e instanceof ParsingTerminal) {
 			consume += 1;
@@ -85,7 +85,7 @@ class FlowGraph  {
 		if(e instanceof PNonTerminal) {
 			String n = ((PNonTerminal) e).getUniqueName();
 			if(n.equals(uName) && consume == 0) {
-				rule.reportError("left recursion: " + ((PNonTerminal) e).symbol);
+				//rule.reportError("left recursion: " + ((PNonTerminal) e).symbol);
 			}
 			if(!checkRecursion(e, stack)) {
 				int pos = stack.size();
@@ -111,7 +111,7 @@ class FlowGraph  {
 		return consume;
 	}
 
-	boolean checkObjectType(PegRule rule, UList<PExpression> stack) {
+	boolean checkObjectType(ParsingRule rule, UList<PExpression> stack) {
 		boolean foundObjectType = false;
 		if(e instanceof PConstructor) {
 			foundObjectType = true;

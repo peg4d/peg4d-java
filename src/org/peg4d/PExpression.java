@@ -2,7 +2,11 @@ package org.peg4d;
 
 import org.peg4d.ParsingContextMemo.ObjectMemo;
 
-public abstract class PExpression {
+interface Matcher {
+	boolean simpleMatch(ParsingContext context);
+}
+
+public abstract class PExpression implements Matcher {
 	public final static int CyclicRule       = 1;
 	public final static int HasNonTerminal    = 1 << 1;
 	public final static int HasString         = 1 << 2;
@@ -31,22 +35,32 @@ public abstract class PExpression {
 	public final static int PossibleDifferentRight = 1 << 18;
 	
 	public final static int NoMemo            = 1 << 20;
+
+	public final static int HasSyntaxError    = 1 << 26;
+	public final static int HasTypeError      = 1 << 27;
+
 	
 	int        flag       = 0;
 	int        uniqueId   = 0;
 	ParsingObject po      = null;
 	PExpression flowNext  = null;
+	Matcher matcher;
 		
 	protected PExpression(int flag) {
 		this.flag = flag;
+		this.matcher = this;
 	}
 
 	abstract PExpression dup();
 	protected abstract void visit(ParsingExpressionVisitor visitor);
-	public abstract boolean simpleMatch(ParsingContext context);
+
+	public final boolean fastMatch(ParsingContext c) {
+		return this.matcher.simpleMatch(c);
+	}
+	
 //	public final boolean simpleMatch(ParsingContext context) {
 //		int pos = (int)context.getPosition();
-//		boolean b = this.simpleMatch(context);
+//		boolean b = this.fastMatch(context);
 //		assert(context.isFailure() == !b);
 //		System.out.println("["+pos+"] return: " + b + " by " + this);
 //		return b;
@@ -72,7 +86,6 @@ public abstract class PExpression {
 		}
 		return r;
 	}
-
 
 	public PExpression getExpression() {
 		return this;
@@ -117,18 +130,22 @@ public abstract class PExpression {
 	public final String format(String name) {
 		return this.format(name, new GrammarFormatter());
 	}
-	protected void warning(String msg) {
-		if(Main.VerbosePeg && Main.StatLevel == 0) {
-			Main._PrintLine("PEG warning: " + msg);
+	
+	final void report(ReportLevel level, String msg) {
+		if(this.po != null) {
+			Main._PrintLine(po.formatSourceMessage(level.toString(), msg));
+		}
+		else {
+			System.out.println("" + level.toString() + ": " + msg);
 		}
 	}
+
 	public final boolean hasObjectOperation() {
 		return this.is(PExpression.HasConstructor) 
 				|| this.is(PExpression.HasConnector) 
 				|| this.is(PExpression.HasTagging) 
 				|| this.is(PExpression.HasMessage);
 	}
-	
 	
 	public static PExpression makeFlow(PExpression e, PExpression tail) {
 		e.flowNext = tail;
@@ -150,19 +167,188 @@ public abstract class PExpression {
 		if(e instanceof ParsingUnary) {
 			tail = makeFlow(((ParsingUnary) e).inner, tail);
 		}
-//		if(e instanceof PNonTerminal) {
-//			if(((PNonTerminal) e).resolvedExpression == null) {
-//				((PNonTerminal) e).resolvedExpression = ((PNonTerminal) e).base.getExpression(((PNonTerminal) e).symbol);
-//			}
-//		}
 		return e;
 	}
 
+	private static boolean checkRecursion(String uName, UList<String> stack) {
+		for(int i = 0; i < stack.size() - 1; i++) {
+			if(uName.equals(stack.ArrayValues[i])) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	static int checkLeftRecursion(PExpression e, String uName, UList<String> stack, int consume) {
+		//System.out.println("checking: " + uName + " " + e);
+		if(e == null) {
+			return consume;
+		}
+		if(e instanceof ParsingByte || e instanceof PCharacter) {
+			consume += 1;
+		}
+		if(e instanceof PString) {
+			consume += ((PString) e).utf8.length;
+		}
+		if(e instanceof PNonTerminal) {
+			String n = ((PNonTerminal) e).getUniqueName();
+			((PNonTerminal) e).checkReference();
+			if(n.equals(uName) && consume == 0 && !e.is(HasSyntaxError)) {
+				e.set(HasSyntaxError);
+				e.report(ReportLevel.error, "left recursion: " + ((PNonTerminal) e).symbol);
+			}
+			if(!checkRecursion(n, stack)) {
+				int pos = stack.size();
+				stack.add(n);
+				consume = checkLeftRecursion(((PNonTerminal) e).resolvedExpression, uName, stack, consume);
+				stack.clear(pos);
+			}
+		}
+		if(e instanceof PChoice) {
+			int length = consume;
+			consume = Integer.MAX_VALUE;
+			for(int i = 0; i < e.size(); i++) {
+				int nc = checkLeftRecursion(e.get(i), uName, stack, length);
+				if(nc < consume) {
+					consume = nc;
+				}
+			}
+			return consume;
+		}
+		if(e instanceof ParsingUnary) {
+			if(e instanceof POptional || e instanceof PRepetition) {
+				checkLeftRecursion(((ParsingUnary) e).inner, uName, stack, consume); // skip count
+				return checkLeftRecursion(e.flowNext, uName, stack, consume);
+			}
+			else {
+				return checkLeftRecursion(((ParsingUnary) e).inner, uName, stack, consume);
+			}
+		}
+		if(e instanceof ParsingOperation) {
+			return checkLeftRecursion(((ParsingOperation) e).inner, uName, stack, consume);
+		}
+		if(e instanceof PList) {
+			if(e.size() > 0) {
+				return checkLeftRecursion(e.get(0), uName, stack, consume);
+			}
+		}
+		return checkLeftRecursion(e.flowNext, uName, stack, consume);
+	}
+
+	static ParsingType typeCheck(PExpression e, UList<String> stack, ParsingType leftType, PExpression stopped) {
+		if(e == null || e == stopped) {
+			return leftType;
+		}
+		if(e instanceof PConnector) {
+			ParsingType rightType = typeCheck(((PConnector) e).inner, stack, new ParsingType(), e.flowNext);
+			if(!rightType.isObjectType() && !e.is(HasTypeError)) {
+				e.set(HasTypeError);
+				e.report(ReportLevel.warning, "nothing is connected: in " + e);
+			}
+			leftType.set(((PConnector) e).index, rightType, (PConnector)e);
+			return typeCheck(e.flowNext, stack, leftType, stopped);
+		}
+		if(e instanceof PConstructor) {
+			boolean LeftJoin = ((PConstructor) e).leftJoin;
+			if(LeftJoin) {
+				if(!leftType.isObjectType() && !e.is(HasTypeError)) {
+					e.set(HasTypeError);
+					e.report(ReportLevel.warning, "type error: unspecific left in " + e);
+				}
+			}
+			else {
+				if(leftType.isObjectType() && !e.is(HasTypeError)) {
+					e.set(HasTypeError);
+					e.report(ReportLevel.warning, "type error: object transition of " + leftType + " before " + e);
+				}
+			}
+			if(((PConstructor) e).type == null) {
+				ParsingType t = leftType.isEmpty() ? leftType : new ParsingType();
+				if(LeftJoin) {
+					t.set(0, leftType);
+				}
+				t.setConstructor((PConstructor)e);
+				((PConstructor) e).type = typeCheck(e.get(0), stack, t, e.flowNext);
+				
+			}
+			if(LeftJoin) {
+				leftType.addUnionType(((PConstructor) e).type.dup());
+			}
+			else {
+				leftType = ((PConstructor) e).type.dup();
+			}
+		}
+		if(e instanceof PTagging) {
+			leftType.addTagging(((PTagging) e).tag);
+		}
+		if(e instanceof PNonTerminal) {
+			ParsingRule r = ((PNonTerminal) e).getRule();
+			if(r.type == null) {
+				String n = ((PNonTerminal) e).getUniqueName();
+				if(!checkRecursion(n, stack)) {
+					int pos = stack.size();
+					stack.add(n);
+					ParsingType t = new ParsingType();
+					r.type = t;
+					r.type = typeCheck(((PNonTerminal) e).resolvedExpression, stack, t, null);
+					stack.clear(pos);
+				}
+				if(r.type == null) {
+					e.report(ReportLevel.warning, "uninferred NonTerminal: " + n);				
+				}
+			}
+			if(r.type != null) {
+				if(r.type.isObjectType()) {
+					leftType = r.type.dup();
+				}
+			}
+		}
+		if(e instanceof PChoice) {
+			if(e.size() > 1) {
+				ParsingType rightType = typeCheck(e.get(0), stack, leftType.dup(), e.flowNext);
+				if(leftType.hasTransition(rightType)) {
+					for(int i = 1; i < e.size(); i++) {
+						ParsingType unionType = typeCheck(e.get(i), stack, leftType.dup(), e.flowNext);
+						rightType.addUnionType(unionType);
+					}					
+				}
+				else {
+					for(int i = 1; i < e.size(); i++) {
+						ParsingType lleftType = rightType;
+						lleftType.enableUnionTagging();
+						rightType = typeCheck(e.get(i), stack, lleftType, e.flowNext);
+						if(lleftType.hasTransition(rightType)) {
+							if(!e.get(i).is(HasTypeError)) {
+								e.get(i).set(HasTypeError);
+								e.report(ReportLevel.warning, "type error: mixed type: " + leftType + "/" + lleftType + "/" + rightType + " at " + e.get(i) + " in " + e);
+							}
+						}
+					}
+					rightType.disableUnionTagging();
+					//System.out.println("CHOICE: " + e + "\n\t" + rightType);
+				}
+				leftType = rightType;
+			}
+		}
+		if(e instanceof ParsingUnary) {
+			leftType = typeCheck(((ParsingUnary) e).inner, stack, leftType, e.flowNext);
+		}
+		if(e instanceof ParsingOperation) {
+			leftType = typeCheck(((ParsingOperation) e).inner, stack, leftType, e.flowNext);
+		}
+		if(e instanceof PSequence) {
+			if(e.size() > 0) {
+				leftType = typeCheck(e.get(0), stack, leftType, e.flowNext);
+			}
+		}
+		return typeCheck(e.flowNext, stack, leftType, stopped);
+	}
+	
 	// factory
 	
 	private static int unique = 0;
 	
-	private static boolean Conservative = false;
+	private static boolean Conservative = true;
 	private static boolean StringSpecialization = true;
 	private static boolean CharacterChoice      = true;
 	
@@ -229,10 +415,6 @@ public abstract class PExpression {
 		if(utf8.length == 1) {
 			return newByteChar(utf8[0]);
 		}
-//		if(text.length() == 1) {
-//			int c = text.charAt(0);
-//			return newCharacter(new UnicodeRange(c, c));
-//		}
 		return newByteSequence(utf8, text);
 	}
 
@@ -350,30 +532,12 @@ public abstract class PExpression {
 		}
 		return new ParsingMatch(p);
 	}
-	
-	public final static PExpression newOneMore(PExpression p) {
-		UList<PExpression> l = new UList<PExpression>(new PExpression[2]);
-		l.add(p);
-		l.add(newRepetition(p));
-		return newSequence(l);
-	}
-	
+		
 	public final static PExpression newRepetition(PExpression p) {
 //		if(p instanceof PCharacter) {
 //			return new PZeroMoreCharacter(0, (PCharacter)p);
 //		}
 		return new PRepetition(0, p);
-	}
-
-	public final static PExpression newTimes(int ntimes, PExpression p) {
-		if(ntimes == 1) {
-			return p;
-		}
-		UList<PExpression> l = new UList<PExpression>(new PExpression[ntimes]);
-		for(int i = 0; i < ntimes; i++) {
-			addSequence(l, p);
-		}
-		return newSequence(l);
 	}
 
 	public final static PExpression newAnd(PExpression p) {
@@ -559,6 +723,9 @@ class PNonTerminal extends PExpression {
 	String getUniqueName() {
 		return this.base.uniqueRuleName(this.symbol);
 	}
+	final ParsingRule getRule() {
+		return this.base.getRule(this.symbol);
+	}
 	@Override
 	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitNonTerminal(this);
@@ -570,6 +737,20 @@ class PNonTerminal extends PExpression {
 		}
 		return WeakAccept;
 	}
+
+	void checkReference() {
+		if(this.resolvedExpression == null) {
+			this.resolvedExpression = this.base.getExpression(this.symbol);
+			//System.out.println("NonTerminal: " + this + " ref: " + this.resolvedExpression);
+			if(this.resolvedExpression == null) {
+				this.report(ReportLevel.error, "undefined rule: " + this.symbol);
+				this.resolvedExpression = new ParsingIfFlag(0, this.symbol);
+				ParsingRule rule = new ParsingRule(this.base, this.symbol, null, this.resolvedExpression);
+				this.base.setRule(this.symbol, rule);
+			}
+		}
+	}
+
 	final PExpression getNext() {
 		if(this.resolvedExpression == null) {
 			return this.base.getExpression(this.symbol);
@@ -578,7 +759,7 @@ class PNonTerminal extends PExpression {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		return this.resolvedExpression.simpleMatch(context);
+		return this.resolvedExpression.fastMatch(context);
 	}
 }
 
@@ -595,6 +776,38 @@ abstract class ParsingTerminal extends PExpression {
 		return this;  // just avoid NullPointerException
 	}
 }
+
+class ParsingByte extends ParsingTerminal {
+	int byteChar;
+	String errorToken = null;
+	ParsingByte(int ch) {
+		super(0);
+		this.byteChar = ch;
+	}
+	@Override PExpression dup() { 
+		ParsingByte n = new ParsingByte(byteChar);
+		n.errorToken = errorToken;
+		return n;
+	}
+	@Override
+	protected void visit(ParsingExpressionVisitor visitor) {
+		visitor.visitByteChar(this);
+	}
+	@Override
+	public boolean simpleMatch(ParsingContext context) {
+		if(context.source.byteAt(context.pos) == this.byteChar) {
+			context.consume(1);
+			return true;
+		}
+		context.opFailure();
+		return false;
+	}
+	@Override
+	short acceptByte(int ch, PExpression stopped) {
+		return (byteChar == ch) ? Accept : Reject;
+	}
+}
+
 
 class PString extends ParsingTerminal {
 	String text;
@@ -645,36 +858,6 @@ class PString extends ParsingTerminal {
 	}
 }
 
-class ParsingByte extends ParsingTerminal {
-	int byteChar;
-	String errorToken = null;
-	ParsingByte(int ch) {
-		super(0);
-		this.byteChar = ch;
-	}
-	@Override PExpression dup() { 
-		ParsingByte n = new ParsingByte(byteChar);
-		n.errorToken = errorToken;
-		return n;
-	}
-	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
-		visitor.visitByteChar(this);
-	}
-	@Override
-	public boolean simpleMatch(ParsingContext context) {
-		if(context.source.byteAt(context.pos) == this.byteChar) {
-			context.consume(1);
-			return true;
-		}
-		context.opFailure();
-		return false;
-	}
-	@Override
-	short acceptByte(int ch, PExpression stopped) {
-		return (byteChar == ch) ? Accept : Reject;
-	}
-}
 
 class ParsingAny extends ParsingTerminal {
 	ParsingAny() {
@@ -769,7 +952,7 @@ class POptional extends ParsingUnary {
 	public boolean simpleMatch(ParsingContext context) {
 		long f = context.rememberFailure();
 		ParsingObject left = context.left;
-		if(!this.inner.simpleMatch(context)) {
+		if(!this.inner.fastMatch(context)) {
 			context.left = left;
 			context.forgetFailure(f);
 		}
@@ -851,7 +1034,7 @@ class PRepetition extends ParsingUnary {
 		long f = context.rememberFailure();
 		while(ppos < pos) {
 			ParsingObject left = context.left;
-			if(!this.inner.simpleMatch(context)) {
+			if(!this.inner.fastMatch(context)) {
 				context.left = left;
 				break;
 			}
@@ -907,7 +1090,7 @@ class PAnd extends ParsingUnary {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		long pos = context.getPosition();
-		this.inner.simpleMatch(context);
+		this.inner.fastMatch(context);
 		context.rollback(pos);
 		return !context.isFailure();
 	}
@@ -937,7 +1120,7 @@ class PNot extends ParsingUnary {
 		long pos = context.getPosition();
 		long f   = context.rememberFailure();
 		ParsingObject left = context.left;
-		if(this.inner.simpleMatch(context)) {
+		if(this.inner.fastMatch(context)) {
 			context.rollback(pos);
 			context.opFailure(this);
 			return false;
@@ -1077,7 +1260,7 @@ class PSequence extends PList {
 		int mark = context.markObjectStack();
 		for(int i = 0; i < this.size(); i++) {
 			//System.out.println("Attmpt Sequence " + this.get(i) + " isFailure: " + context.isFailure());
-			if(!(this.get(i).simpleMatch(context))) {
+			if(!(this.get(i).fastMatch(context))) {
 				context.abortLinkLog(mark);
 				context.rollback(pos);
 				return false;
@@ -1120,7 +1303,7 @@ class PChoice extends PList {
 		ParsingObject left = context.left;
 		for(int i = 0; i < this.size(); i++) {
 			context.left = left;
-			if(this.get(i).simpleMatch(context)) {
+			if(this.get(i).fastMatch(context)) {
 				context.forgetFailure(f);
 				return true;
 			}
@@ -1146,7 +1329,7 @@ class PMappedChoice extends PChoice {
 		if(this.caseOf == null) {
 			tryPrediction();
 		}
-		return caseOf[ch].simpleMatch(context);
+		return caseOf[ch].fastMatch(context);
 	}
 	void tryPrediction() {
 		if(this.caseOf == null) {
@@ -1276,7 +1459,7 @@ class PConnector extends ParsingUnary {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		ParsingObject left = context.left;
-		if(!this.inner.simpleMatch(context)) {
+		if(!this.inner.fastMatch(context)) {
 			return false;
 		}
 		if(context.left != left && context.canTransCapture()) {
@@ -1344,6 +1527,7 @@ class PMessage extends ParsingTerminal {
 class PConstructor extends PList {
 	boolean leftJoin = false;
 	int prefetchIndex = 0;
+	ParsingType type;
 	PConstructor(int flag, boolean leftJoin, UList<PExpression> list) {
 		super(flag | PExpression.HasConstructor, list);
 		this.leftJoin = leftJoin;
@@ -1365,7 +1549,7 @@ class PConstructor extends PList {
 			ParsingObject newone = context.newParsingObject(startIndex, this);
 			context.left = newone;
 			for(int i = 0; i < this.size(); i++) {
-				if(!this.get(i).simpleMatch(context)) {
+				if(!this.get(i).fastMatch(context)) {
 					context.rollback(startIndex);
 					return false;
 				}
@@ -1375,7 +1559,7 @@ class PConstructor extends PList {
 		}
 		else {
 			for(int i = 0; i < this.prefetchIndex; i++) {
-				if(!this.get(i).simpleMatch(context)) {
+				if(!this.get(i).fastMatch(context)) {
 					context.rollback(startIndex);
 					return false;
 				}
@@ -1387,7 +1571,7 @@ class PConstructor extends PList {
 				context.logLink(newnode, -1, left);
 			}
 			for(int i = this.prefetchIndex; i < this.size(); i++) {
-				if(!this.get(i).simpleMatch(context)) {
+				if(!this.get(i).fastMatch(context)) {
 					context.abortLinkLog(mark);
 					context.rollback(startIndex);
 					return false;
@@ -1549,7 +1733,7 @@ class ParsingMemo extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		if(!this.enableMemo) {
-			return this.inner.simpleMatch(context);
+			return this.inner.fastMatch(context);
 		}
 		long pos = context.getPosition();
 		ParsingObject left = context.left;
@@ -1562,7 +1746,7 @@ class ParsingMemo extends ParsingOperation {
 			}
 			return !(context.isFailure());
 		}
-		this.inner.simpleMatch(context);
+		this.inner.fastMatch(context);
 		int length = (int)(context.getPosition() - pos);
 		context.setMemo(pos, this, (context.left == left) ? NonTransition : context.left, length);
 		this.memoMiss += 1;
@@ -1620,7 +1804,7 @@ class ParsingMatch extends ParsingOperation {
 	public boolean simpleMatch(ParsingContext context) {
 		boolean oldMode = context.setRecognitionMode(true);
 		ParsingObject left = context.left;
-		if(this.inner.simpleMatch(context)) {
+		if(this.inner.fastMatch(context)) {
 			context.setRecognitionMode(oldMode);
 			context.left = left;
 			return true;
@@ -1640,7 +1824,7 @@ class ParsingStackIndent extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opPushIndent();
-		this.inner.simpleMatch(context);
+		this.inner.fastMatch(context);
 		context.opPopIndent();
 		return !(context.isFailure());
 	}
@@ -1686,7 +1870,7 @@ class ParsingWithFlag extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opEnableFlag(this.flagName);
-		this.inner.simpleMatch(context);
+		this.inner.fastMatch(context);
 		context.opPopFlag(this.flagName);
 		return !(context.isFailure());
 	}
@@ -1708,7 +1892,7 @@ class ParsingWithoutFlag extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opDisableFlag(this.flagName);
-		this.inner.simpleMatch(context);
+		this.inner.fastMatch(context);
 		context.opPopFlag(this.flagName);
 		return !(context.isFailure());
 	}
@@ -1726,7 +1910,7 @@ class ParsingDebug extends ParsingOperation {
 		context.opRememberPosition();
 		context.opRememberFailurePosition();
 		context.opStoreObject();
-		this.inner.simpleMatch(context);
+		this.inner.fastMatch(context);
 		context.opDebug(this.inner);
 		return !(context.isFailure());
 	}
@@ -1743,11 +1927,11 @@ class ParsingApply extends ParsingOperation {
 	public boolean simpleMatch(ParsingContext context) {
 //		ParsingContext s = new ParsingContext(context.left);
 //		
-//		this.inner.simpleMatch(s);
+//		this.inner.fastMatch(s);
 //		context.opRememberPosition();
 //		context.opRememberFailurePosition();
 //		context.opStoreObject();
-//		this.inner.simpleMatch(context);
+//		this.inner.fastMatch(context);
 //		context.opDebug(this.inner);
 		return !(context.isFailure());
 
