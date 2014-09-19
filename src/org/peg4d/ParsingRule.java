@@ -1,6 +1,11 @@
 package org.peg4d;
 
 class ParsingRule {
+	public final static int LexicalRule   = 0;
+	public final static int ObjectRule    = 1;
+	public final static int OperationRule = 2;
+	public final static int ReservedRule  = 3;
+	
 	Grammar  peg;
 	String ruleName;
 
@@ -87,6 +92,19 @@ class ParsingRule {
 		return this.type.isObjectType();
 	}
 
+	public final static int typeOf(String ruleName) {
+		boolean firstUpperCase = Character.isUpperCase(ruleName.charAt(0));
+		for(int i = 1; i < ruleName.length(); i++) {
+			if(Character.isUpperCase(ruleName.charAt(i)) && !firstUpperCase) {
+				return OperationRule;
+			}
+			if(Character.isLowerCase(ruleName.charAt(i)) && firstUpperCase) {
+				return ObjectRule;
+			}
+		}
+		return firstUpperCase ? LexicalRule : ReservedRule;
+	}
+	
 	void typeCheck() {
 		boolean firstUpperCase = Character.isUpperCase(this.ruleName.charAt(0));
 		boolean containUpperCase = false;
