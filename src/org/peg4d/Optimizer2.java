@@ -4,40 +4,44 @@ package org.peg4d;
 
 class Optimizer2 {
 	
+	public static boolean InlineNonTerminal = false;
+	public static boolean CharacterChoice   = false;
+	public static boolean StringChoice      = false;
+	public static boolean PredictedChoice   = false;
+	
+	static void enableOptimizer() {
+		InlineNonTerminal = true;
+		CharacterChoice   = true;
+		StringChoice      = true;
+		PredictedChoice   = true;  // Don't enable. it bugs
+	}
+
+	public static int countOptimizedNonTerminal = 0;
+	public static int countOptimizedCharacterChoice = 0;
+	public static int countOptimizedStringChoice = 0;
+	public static int countOptimizedChoice       = 0;
+	
 	final static void optimize(ParsingExpression e) {
+		if(!e.isOptimized()) {
+			if(e instanceof PNonTerminal) {
+				optimizeChoice((PNonTerminal)e);
+			}
+		}
 		for(int i = 0; i < e.size(); i++) {
 			optimize(e.get(i));
 		}
-		if(e instanceof ParsingChoice) {
-			optimizeChoice((ParsingChoice)e);
+		if(!e.isOptimized()) {
+			if(e instanceof ParsingChoice) {
+				optimizeChoice((ParsingChoice)e);
+			}
 		}
 	}
-	
-	final static void optimizeChoice(ParsingChoice choice) {
-		int[] c = new int[256];
-		if(checkCharacterChoice(choice, c)) {
-			choice.matcher = new ByteChoiceMatcher(c);
-		}
-		for(int i = 0; i < c.length; i++) { 
-			c[i] = 0; 
-		}
-		if(checkStringChoice(choice, c)) {
-			ParsingExpression[] matchCase = new ParsingExpression[257];
-			makeStringChoice(choice, matchCase, new ParsingEmpty());
-			ParsingExpression f = new ParsingFailure(choice);
-			for(int i = 0; i < matchCase.length; i++) {
-				if(matchCase[i] == null) {
-					matchCase[i] = f;
-				}
-			}
-			choice.matcher = new StringChoiceMatcher(matchCase);
-		}
-		ParsingExpression[] matchCase = new ParsingExpression[257];
-		matchCase[256] = new ParsingFailure(choice);  // EOF
-		for(int ch = 0; ch < 256; ch++) {
-			matchCase[ch] = selectChoice(choice, ch, matchCase[256]);
-		}
-		choice.matcher = new MappedChoiceMatcher(matchCase);
+
+	final static void optimizeChoice(PNonTerminal ne) {
+		ParsingExpression e = resolveNonTerminal(ne);
+		ne.matcher = e.matcher;
+		countOptimizedNonTerminal += 1;
+		//ne.report(ReportLevel.notice, "inlining " + e);
 	}
 	
 	final static ParsingExpression resolveNonTerminal(ParsingExpression e) {
@@ -47,7 +51,60 @@ class Optimizer2 {
 		}
 		return e;
 	}
-	
+
+	final static void optimizeChoice(ParsingChoice choice) {
+		int[] c = new int[256];
+		if(CharacterChoice && checkCharacterChoice(choice, c)) {
+//			System.out.println("Optimized1: " + choice);
+			for(int ch = 0; ch < 256; ch++) {
+//				if(c[ch] > 0) {
+//					System.out.println("|1 " + GrammarFormatter.stringfyByte(ch) + ": true" );
+//				}
+			}
+			choice.matcher = new ByteChoiceMatcher(c);
+			countOptimizedCharacterChoice += 1;
+			countOptimizedChoice += 1;
+			return;
+		}
+		for(int i = 0; i < c.length; i++) { 
+			c[i] = 0; 
+		}
+		if(StringChoice && checkStringChoice(choice, c)) {
+			ParsingExpression[] matchCase = new ParsingExpression[257];
+			makeStringChoice(choice, matchCase, new ParsingEmpty());
+			ParsingExpression f = new ParsingFailure(choice);
+			//System.out.println("Optimized2: " + choice);
+			for(int ch = 0; ch < matchCase.length; ch++) {
+				if(matchCase[ch] == null) {
+					matchCase[ch] = f;
+				}
+				else {
+					//System.out.println("|2 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
+					if(matchCase[ch] instanceof ParsingChoice) {
+						optimizeChoice((ParsingChoice)matchCase[ch]);
+					}
+				}
+			}
+			choice.matcher = new StringChoiceMatcher(matchCase);
+			countOptimizedChoice += 1;
+			countOptimizedStringChoice += 1;
+			return;
+		}
+		if(PredictedChoice) {
+			ParsingExpression[] matchCase = new ParsingExpression[257];
+			matchCase[256] = new ParsingFailure(choice);  // EOF
+			//System.out.println("Optimized3: " + choice);
+			for(int ch = 0; ch < 256; ch++) {
+				matchCase[ch] = selectChoice(choice, ch, matchCase[256]);
+//				if(matchCase[ch] != matchCase[256]) {
+//					System.out.println("|3 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
+//				}
+				countOptimizedChoice += 1;
+			}
+			choice.matcher = new MappedChoiceMatcher(matchCase);
+		}
+	}
+		
 	final static boolean checkCharacterChoice(ParsingChoice choice, int[] c) {
 		for(int i = 0; i < choice.size(); i++) {
 			ParsingExpression e = resolveNonTerminal(choice.get(i));
@@ -104,6 +161,7 @@ class Optimizer2 {
 				}
 				continue;
 			}
+			//System.out.println("@@@@@ NotString: " + e);
 			return false;
 		}
 		return true;
@@ -150,22 +208,21 @@ class Optimizer2 {
 	private static ParsingExpression selectChoice(ParsingChoice choice, int ch, ParsingExpression failed) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[2]);
 		for(int i = 0; i < choice.size(); i++) {
-			if(choice.get(i).acceptByte(ch, null) == ParsingExpression.Accept) {
+			if(choice.get(i).acceptByte(ch) != ParsingExpression.Reject) {
 				l.add(choice.get(i));
 			}
 		}
 		if(l.size() == 0) {
 			l.add(failed);
 		}
-		return ParsingExpression.newSequence(l);
+		return ParsingExpression.newChoice(l);
 	}
-	
 }
 
 class ByteChoiceMatcher implements Matcher {
 	boolean bitMap[];
 
-	public ByteChoiceMatcher(int[] c) {
+	ByteChoiceMatcher(int[] c) {
 		this.bitMap = new boolean[257];
 		for(int i = 0; i < c.length; i++) { 
 			if(c[i] > 0) {
@@ -198,7 +255,7 @@ class StringChoiceMatcher implements Matcher {
 		int c = context.source.byteAt(context.pos);
 		long pos = context.getPosition();
 		context.consume(1);
-		if(this.matchCase[c].fastMatch(context)) {
+		if(this.matchCase[c].matcher.simpleMatch(context)) {
 			return true;
 		}
 		context.rollback(pos);
@@ -216,6 +273,6 @@ class MappedChoiceMatcher implements Matcher {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		int c = context.source.byteAt(context.pos);
-		return this.matchCase[c].fastMatch(context);
+		return this.matchCase[c].matcher.simpleMatch(context);
 	}
 }

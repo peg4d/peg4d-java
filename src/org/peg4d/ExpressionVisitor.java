@@ -1,6 +1,6 @@
 package org.peg4d;
 
-class ParsingExpressionVisitor {
+class ExpressionVisitor {
 	private UMap<String> visitedMap = new UMap<String>();
 	boolean isVisited(String name) {
 		if(this.visitedMap != null) {
@@ -24,21 +24,22 @@ class ParsingExpressionVisitor {
 			e.peg.getExpression(e.ruleName).visit(this);
 		}
 	}
+	public void visitEmpty(ParsingEmpty e) {
+	}
+	public void visitByte(ParsingByte e) {
+	}
+	public void visitByteRange(ParsingByteRange e) {
+	}
 	public void visitString(PString e) {
-	}
-	public void visitByteChar(ParsingByte pByteChar) {
-	}
-	public void visitCharacter(ParsingByteRange e) {
 	}
 	public void visitAny(ParsingAny e) {
 	}
-//	public void visitNotAny(PNotAny e) {
-//		e.orig.visit(this);
-//	}
 	public void visitTagging(ParsingTagging e) {
 	}
-	public void visitMessage(ParsingValue e) {
+	public void visitValue(ParsingValue e) {
 	}
+	
+	
 	public void visitIndent(ParsingIndent e) {
 	}
 	public void visitUnary(ParsingUnary e) {
@@ -47,7 +48,7 @@ class ParsingExpressionVisitor {
 	public void visitNot(ParsingNot e) {
 		this.visitUnary(e);
 	}
-	public void visitAnd(PAnd e) {
+	public void visitAnd(ParsingAnd e) {
 		this.visitUnary(e);
 	}
 	public void visitOptional(ParsingOption e) {
@@ -76,15 +77,14 @@ class ParsingExpressionVisitor {
 	public void visitConstructor(PConstructor e) {
 		this.visitList(e);
 	}
+
 	public void visitParsingFunction(ParsingFunction parsingFunction) {
-		// TODO Auto-generated method stub
 	}
+	
 	public void visitParsingOperation(ParsingOperation e) {
 		e.inner.visit(this);
 	}
-
 	public void visitParsingIfFlag(ParsingIfFlag e) {
-
 	}
 }
 
@@ -133,7 +133,7 @@ class ParsingExpressionVisitor {
 //	
 //}
 
-class ListMaker extends ParsingExpressionVisitor {
+class ListMaker extends ExpressionVisitor {
 	private UList<String> nameList;
 	private Grammar peg;
 	UList<String> make(Grammar peg, String startPoint) {
@@ -157,104 +157,41 @@ class ListMaker extends ParsingExpressionVisitor {
 	}
 }
 
-class Importer extends ParsingExpressionVisitor {
-	private Grammar dst;
-	private Grammar src;
-	private UMap<String> params;
-	private ParsingExpression returnExpression = null;
-	Importer(Grammar dst, Grammar src, String startPoint, UMap<String> params) {
-		this.dst = dst;
-		this.src = src;
-		this.initVisitor();
-		this.visitRule(startPoint);
-	}
-	
-	ParsingExpression importRule(Grammar dst, Grammar src, String startPoint, UMap<String> params) {
-		this.dst = dst;
-		this.src = src;
-		this.initVisitor();
-		this.visitRule(startPoint);
-		return returnExpression;
-	}
-	
-	private void visitRule(String name) {
-		this.visited(name);
-		ParsingExpression next = src.getExpression(name);
-		next.visit(this);
-	}
-	
-	@Override
-	public void visitNonTerminal(PNonTerminal e) {
-		if( e.peg == src && !this.isVisited(e.ruleName)) {
-			this.visitRule(e.ruleName);
-		}
-	}
-}
+//class Importer extends ExpressionVisitor {
+//	private Grammar dst;
+//	private Grammar src;
+//	private UMap<String> params;
+//	private ParsingExpression returnExpression = null;
+//	Importer(Grammar dst, Grammar src, String startPoint, UMap<String> params) {
+//		this.dst = dst;
+//		this.src = src;
+//		this.initVisitor();
+//		this.visitRule(startPoint);
+//	}
+//	
+//	ParsingExpression importRule(Grammar dst, Grammar src, String startPoint, UMap<String> params) {
+//		this.dst = dst;
+//		this.src = src;
+//		this.initVisitor();
+//		this.visitRule(startPoint);
+//		return returnExpression;
+//	}
+//	
+//	private void visitRule(String name) {
+//		this.visited(name);
+//		ParsingExpression next = src.getExpression(name);
+//		next.visit(this);
+//	}
+//	
+//	@Override
+//	public void visitNonTerminal(PNonTerminal e) {
+//		if( e.peg == src && !this.isVisited(e.ruleName)) {
+//			this.visitRule(e.ruleName);
+//		}
+//	}
+//}
 
-class Inliner extends ParsingExpressionVisitor {
-	Grammar peg;
-	Inliner(Grammar peg) {
-		this.peg = peg;
-	}
-	void performInlining() {
-		UList<ParsingExpression> pegList = this.peg.getExpressionList();
-		for(int i = 0; i < pegList.size(); i++) {
-			pegList.ArrayValues[i].visit(this);
-		}
-	}
-	final boolean isInlinable(ParsingExpression e) {
-		if(e instanceof PNonTerminal) {
-			PNonTerminal n = (PNonTerminal)e;
-			//n.derived(n.getNext());
-			if(peg.optimizationLevel > 3) {
-				return ! n.calling.is(ParsingExpression.CyclicRule);
-			}
-		}
-		return false;
-	}
-	
-	final ParsingExpression doInline(ParsingExpression parent, PNonTerminal r) {
-//		System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " e=" + r.jumpExpression);
-		this.peg.InliningCount += 1;
-		return r.calling;
-	}
-
-	@Override
-	public void visitUnary(ParsingUnary e) {
-		if(isInlinable(e.inner)) {
-			e.inner = doInline(e, (PNonTerminal)e.inner);
-		}
-		else {
-			e.inner.visit(this);
-		}
-		e.derived(e.inner);
-	}
-	@Override
-	public void visitList(ParsingList e) {
-		for(int i = 0; i < e.size(); i++) {
-			ParsingExpression se = e.get(i);
-			if(isInlinable(se)) {
-				e.set(i, doInline(e, (PNonTerminal)se));
-			}
-			else {
-				se.visit(this);
-			}
-			e.derived(se);
-		}
-	}
-	@Override
-	public void visitParsingOperation(ParsingOperation e) {
-		if(isInlinable(e.inner)) {
-			e.inner = doInline(e, (PNonTerminal)e.inner);
-		}
-		else {
-			e.inner.visit(this);
-		}
-		e.derived(e.inner);
-	}
-}
-
-class Optimizer extends ParsingExpressionVisitor {
+class Optimizer extends ExpressionVisitor {
 	Grammar peg;
 	Optimizer(Grammar peg) {
 		this.peg = peg;
@@ -342,7 +279,7 @@ class Optimizer extends ParsingExpressionVisitor {
 	}
 }
 
-class MemoRemover extends ParsingExpressionVisitor {
+class MemoRemover extends ExpressionVisitor {
 	UList<ParsingExpression> pegList;
 	int cutMiss = -1;
 	int RemovedCount = 0;

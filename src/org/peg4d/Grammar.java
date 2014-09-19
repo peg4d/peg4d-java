@@ -167,9 +167,11 @@ public class Grammar {
 			rule.typeCheck();
 			//System.out.println("@Verify " + rule);
 		}
-		new Inliner(this).performInlining();
-		new Optimizer(this).optimize();
-		
+		Optimizer2.enableOptimizer();
+		for(int i = 0; i < nameList.size(); i++) {
+			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
+			Optimizer2.optimize(rule.expr);
+		}
 		if(this.foundError) {
 			Main._Exit(1, "PegError found");
 		}

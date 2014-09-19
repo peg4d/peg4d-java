@@ -41,7 +41,6 @@ public abstract class ParsingExpression implements Matcher {
 	public final static int HasSyntaxError    = 1 << 26;
 	public final static int HasTypeError      = 1 << 27;
 
-	
 	int        flag       = 0;
 	int        uniqueId   = 0;
 	ParsingObject po      = null;
@@ -53,11 +52,15 @@ public abstract class ParsingExpression implements Matcher {
 		this.flag = flag;
 		this.matcher = this;
 	}
+	
+	public final boolean isOptimized() {
+		return (this.matcher != this);
+	}
 
 	abstract ParsingExpression dup();
-	protected abstract void visit(ParsingExpressionVisitor visitor);
+	protected abstract void visit(ExpressionVisitor visitor);
 
-	public final boolean fastMatch(ParsingContext c) {
+	public final boolean fastMatch1(ParsingContext c) {
 //		int pos = (int)context.getPosition();
 //		boolean b = this.matcher.simpleMatch(context);
 //		assert(context.isFailure() == !b);
@@ -71,20 +74,22 @@ public abstract class ParsingExpression implements Matcher {
 	public final static short WeakAccept    = 1;
 	public final static short CheckNextFlow = 2;
 	
-	abstract short acceptByte(int ch, ParsingExpression stopped);
-	
-	protected final short checkNextFlow(short r, int ch, ParsingExpression stopped) {
-		if(r == CheckNextFlow) {
-			if(this.flowNext == null) {
-				return Reject;
-			}
-			if(stopped != this.flowNext ) {
-				return this.flowNext.acceptByte(ch, stopped);
-			}
-			return CheckNextFlow;
-		}
-		return r;
+	short acceptByte(int ch) {
+		return CheckNextFlow;
 	}
+	
+//	protected final short checkNextFlow(short r, int ch, ParsingExpression stopped) {
+//		if(r == CheckNextFlow) {
+//			if(this.flowNext == null) {
+//				return Reject;
+//			}
+//			if(stopped != this.flowNext ) {
+//				return this.flowNext.acceptByte(ch, stopped);
+//			}
+//			return CheckNextFlow;
+//		}
+//		return r;
+//	}
 
 	public ParsingExpression getExpression() {
 		return this;
@@ -127,6 +132,7 @@ public abstract class ParsingExpression implements Matcher {
 		fmt.formatRule(name, this, sb);
 		return sb.toString();
 	}
+	
 	public final String format(String name) {
 		return this.format(name, new GrammarFormatter());
 	}
@@ -236,7 +242,7 @@ public abstract class ParsingExpression implements Matcher {
 			}
 			else if(e instanceof ParsingUnary) {
 				int lmin = checkLeftRecursion(((ParsingUnary) e).inner, uName, minlen, stack, e.flowNext); // skip count
-				if(e instanceof ParsingOption || e instanceof ParsingRepetition || e instanceof ParsingNot || e instanceof PAnd ) {
+				if(e instanceof ParsingOption || e instanceof ParsingRepetition || e instanceof ParsingNot || e instanceof ParsingAnd ) {
 					e.minlen = 0;
 				}
 				else {
@@ -367,7 +373,7 @@ public abstract class ParsingExpression implements Matcher {
 	
 	// factory
 	
-	private static boolean Conservative = true;
+	private static boolean Conservative = false;
 	private static boolean StringSpecialization = true;
 	private static boolean CharacterChoice      = true;
 
@@ -390,7 +396,7 @@ public abstract class ParsingExpression implements Matcher {
 		return new ParsingByte(ch & 0xff);
 	}
 	
-	public final static ParsingExpression newByteChar(int ch, String token) {
+	public final static ParsingExpression newByte(int ch, String token) {
 		ParsingByte e = newByte(ch);
 		e.errorToken = token;
 		return e;
@@ -449,7 +455,7 @@ public abstract class ParsingExpression implements Matcher {
 	public final static ParsingExpression newByteSequence(byte[] utf8, String token) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[utf8.length]);
 		for(int i = 0; i < utf8.length; i++) {
-			l.add(newByteChar(utf8[i], token));
+			l.add(newByte(utf8[i], token));
 		}
 		return newSequence(l);
 	}
@@ -496,7 +502,7 @@ public abstract class ParsingExpression implements Matcher {
 		else {
 			UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[b.length]);
 			for(int i = 0; i < b.length-1; i++) {
-				l.add(newByteChar(b[i], token));
+				l.add(newByte(b[i], token));
 			}
 			l.add(newByteRange(b[b.length-1] & 0xff, b2[b2.length-1] & 0xff, token));
 			return newSequence(l);
@@ -505,17 +511,15 @@ public abstract class ParsingExpression implements Matcher {
 
 	public final static ParsingExpression newByteRange(int c, int c2, String token) {
 		if(c == c2) {
-			return newByteChar(c, token);
+			return newByte(c, token);
 		}
-		if(Conservative) {
-			return new ParsingByteRange(c, c2);
-		}
-		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[c2 - c + 1]);
-		while(c <= c2) {
-			l.add(newByteChar(c, token));
-			c++;
-		}
-		return newChoice(l);
+		return new ParsingByteRange(c, c2);
+//		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[c2 - c + 1]);
+//		while(c <= c2) {
+//			l.add(newByteChar(c, token));
+//			c++;
+//		}
+//		return newChoice(l);
 	}
 	
 	public final static ParsingExpression newCharset(String t, String t2, String token) {
@@ -549,7 +553,7 @@ public abstract class ParsingExpression implements Matcher {
 			}
 			else {
 				if(ch > 0 && ch < 128) {
-					l.add(newByteChar(ch, text));
+					l.add(newByte(ch, text));
 				}
 				ch = next; //r.readChar();
 			}
@@ -617,7 +621,7 @@ public abstract class ParsingExpression implements Matcher {
 	}
 
 	public final static ParsingExpression newAnd(ParsingExpression p) {
-		return new PAnd(0, p);
+		return new ParsingAnd(0, p);
 	}
 	
 	public final static ParsingExpression newNot(ParsingExpression p) {
@@ -751,6 +755,10 @@ abstract class ParsingUnary extends ParsingExpression {
 	public final ParsingExpression get(int index) {
 		return this.inner;
 	}
+	@Override
+	short acceptByte(int ch) {
+		return this.inner.acceptByte(ch);
+	}
 }
 
 abstract class ParsingList extends ParsingExpression {
@@ -773,12 +781,14 @@ abstract class ParsingList extends ParsingExpression {
 	}
 
 	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
-		short r = CheckNextFlow;
-		if(this.size() > 0) {
-			r = this.get(0).acceptByte(ch, null);
+	short acceptByte(int ch) {
+		for(int i = 0; i < this.size(); i++) {
+			short r = this.get(i).acceptByte(ch);
+			if(r != CheckNextFlow) {
+				return r;
+			}
 		}
-		return this.checkNextFlow(r, ch, stopped);
+		return CheckNextFlow;
 	}
 
 //	public final ParsingExpression trim() {
@@ -825,11 +835,8 @@ class ParsingEmpty extends ParsingExpression {
 		return new ParsingEmpty();
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
-	}
-	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
-		return this.checkNextFlow(CheckNextFlow, ch, stopped);
+	protected void visit(ExpressionVisitor visitor) {
+		visitor.visitEmpty(this);
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -848,7 +855,7 @@ class ParsingFailure extends ParsingExpression {
 		return new ParsingFailure(dead);
 	}
 	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
+	short acceptByte(int ch) {
 		return Reject;
 	}
 	@Override
@@ -857,7 +864,7 @@ class ParsingFailure extends ParsingExpression {
 		return false;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 	}
 }
 
@@ -875,11 +882,11 @@ class ParsingByte extends ParsingExpression {
 		return n;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
-		visitor.visitByteChar(this);
+	protected void visit(ExpressionVisitor visitor) {
+		visitor.visitByte(this);
 	}
 	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
+	short acceptByte(int ch) {
 		return (byteChar == ch) ? Accept : Reject;
 	}
 	@Override
@@ -900,11 +907,11 @@ class ParsingAny extends ParsingExpression {
 	}
 	@Override ParsingExpression dup() { return new ParsingAny(); }
 	@Override 
-	short acceptByte(int ch, ParsingExpression stopped) {
+	short acceptByte(int ch) {
 		return Accept;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitAny(this);
 	}
 	@Override
@@ -955,13 +962,12 @@ class PNonTerminal extends ParsingExpression {
 		}
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitNonTerminal(this);
 	}
-	@Override short acceptByte(int ch, ParsingExpression stopped) {
+	@Override short acceptByte(int ch) {
 		if(this.calling != null) {
-			short r = this.calling.acceptByte(ch, null);
-			return this.checkNextFlow(r, ch, stopped);
+			return this.calling.acceptByte(ch);
 		}
 		return WeakAccept;
 	}
@@ -1005,12 +1011,12 @@ class PString extends ParsingAtom {
 		return new PString(flag, text, utf8); 
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitString(this);
 	}
-	@Override short acceptByte(int ch, ParsingExpression stopped) {
+	@Override short acceptByte(int ch) {
 		if(this.utf8.length == 0) {
-			return this.checkNextFlow(CheckNextFlow, ch, stopped);
+			return CheckNextFlow;
 		}
 		return ((this.utf8[0] & 0xff) == ch) ? Accept : Reject;
 	}
@@ -1046,11 +1052,11 @@ class ParsingByteRange extends ParsingExpression {
 		}
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
-		visitor.visitCharacter(this);
+	protected void visit(ExpressionVisitor visitor) {
+		visitor.visitByteRange(this);
 	}
 	@Override 
-	short acceptByte(int ch, ParsingExpression stopped) {
+	short acceptByte(int ch) {
 		return (startByteChar <= ch && ch <= endByteChar) ? Accept : Reject;
 	}
 	@Override
@@ -1065,37 +1071,6 @@ class ParsingByteRange extends ParsingExpression {
 	}
 }
 
-//class PCharacter extends ParsingAtom {
-//ParsingCharset charset;
-//PCharacter(int flag, ParsingCharset charset) {
-//	super(ParsingExpression.HasCharacter | ParsingExpression.NoMemo | flag);
-//	this.charset = charset;
-//}
-//@Override 
-//ParsingExpression dup() { return this; }
-//@Override
-//protected void visit(ParsingExpressionVisitor visitor) {
-//	visitor.visitCharacter(this);
-//}
-//@Override 
-//short acceptByte(int ch, ParsingExpression stopped) {
-//	return this.charset.hasByte(ch) ? Accept : Reject;
-//}
-//@Override
-//public boolean simpleMatch(ParsingContext context) {
-//	int consume = this.charset.consume(context.source, context.pos);
-//	if(consume > 0) {
-//		context.consume(consume);
-//		return true;
-//	}
-//	context.opFailure();
-//	return false;
-//}
-//public void setCount(int[] c) {
-//	// TODO Auto-generated method stub
-//	
-//}
-//}
 
 class ParsingOption extends ParsingUnary {
 	ParsingOption(ParsingExpression e) {
@@ -1105,16 +1080,16 @@ class ParsingOption extends ParsingUnary {
 		return new ParsingOption(inner); 
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitOptional(this);
 	}
 	@Override 
-	short acceptByte(int ch, ParsingExpression stopped) {
-		short r = this.inner.acceptByte(ch, this.flowNext);
+	short acceptByte(int ch) {
+		short r = this.inner.acceptByte(ch);
 		if(r == Accept) {
 			return r;
 		}
-		return this.checkNextFlow(CheckNextFlow, ch, stopped);
+		return CheckNextFlow;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -1128,7 +1103,6 @@ class ParsingOption extends ParsingUnary {
 	}
 }
 
-
 class ParsingRepetition extends ParsingUnary {
 	ParsingRepetition(int flag, ParsingExpression e) {
 		super(flag | ParsingExpression.HasRepetition, e);
@@ -1137,15 +1111,15 @@ class ParsingRepetition extends ParsingUnary {
 		return new ParsingRepetition(flag, inner/*, atleast*/); 
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitRepetition(this);
 	}
-	@Override short acceptByte(int ch, ParsingExpression stopped) {
-		short r = this.inner.acceptByte(ch, this.flowNext);
+	@Override short acceptByte(int ch) {
+		short r = this.inner.acceptByte(ch);
 		if(r == Accept) {
 			return r;
 		}
-		return this.checkNextFlow(CheckNextFlow, ch, stopped);
+		return CheckNextFlow;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -1166,25 +1140,25 @@ class ParsingRepetition extends ParsingUnary {
 	}
 }
 
-class PAnd extends ParsingUnary {
-	PAnd(int flag, ParsingExpression e) {
+class ParsingAnd extends ParsingUnary {
+	ParsingAnd(int flag, ParsingExpression e) {
 		super(flag | ParsingExpression.HasAnd, e);
 	}
 	@Override ParsingExpression dup() { 
-		return new PAnd(flag, inner); 
+		return new ParsingAnd(flag, inner); 
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitAnd(this);
 	}
-	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
-		short r = this.inner.acceptByte(ch, this.flowNext);
-		if(r == Reject) {
-			return Reject;
-		}
-		return this.checkNextFlow(CheckNextFlow, ch, stopped);
-	}
+//	@Override
+//	short acceptByte(int ch) {
+//		short r = this.inner.acceptByte(ch);
+//		if(r == Reject) {
+//			return Reject;
+//		}
+//		return CheckNextFlow;
+//	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		long pos = context.getPosition();
@@ -1202,16 +1176,19 @@ class ParsingNot extends ParsingUnary {
 		return new ParsingNot(flag, inner); 
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitNot(this);
 	}
 	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
-		short r = this.inner.acceptByte(ch, this.flowNext);
+	short acceptByte(int ch) {
+		short r = this.inner.acceptByte(ch);
 		if(r == Accept) {
 			return Reject;
 		}
-		return this.checkNextFlow(CheckNextFlow, ch, stopped);
+		if(r == Reject) {
+			return Accept;
+		}
+		return r;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -1241,7 +1218,7 @@ class ParsingSequence extends ParsingList {
 		return new ParsingSequence(flag, list);
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitSequence(this);
 	}
 	@Override
@@ -1269,14 +1246,14 @@ class ParsingChoice extends ParsingList {
 		return new ParsingChoice(flag, list);
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitChoice(this);
 	}
 	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
+	short acceptByte(int ch) {
 		boolean checkNext = false;
 		for(int i = 0; i < this.size(); i++) {
-			short r = this.get(i).acceptByte(ch, stopped);
+			short r = this.get(i).acceptByte(ch);
 			if(r == Accept) {
 				return r;
 			}
@@ -1313,12 +1290,8 @@ class ParsingConnector extends ParsingUnary {
 		return new ParsingConnector(flag, inner, index);
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitConnector(this);
-	}
-	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
-		return this.inner.acceptByte(ch, stopped);
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -1345,11 +1318,7 @@ class ParsingTagging extends ParsingExpression {
 		return new ParsingTagging(flag, tag);
 	}
 	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
-		return this.checkNextFlow(CheckNextFlow, ch, stopped);
-	}
-	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitTagging(this);
 	}
 	@Override
@@ -1372,8 +1341,8 @@ class ParsingValue extends ParsingExpression {
 		return new ParsingValue(flag, value);
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
-		visitor.visitMessage(this);
+	protected void visit(ExpressionVisitor visitor) {
+		visitor.visitValue(this);
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -1381,10 +1350,6 @@ class ParsingValue extends ParsingExpression {
 			context.left.setValue(this.value);
 		}
 		return true;
-	}
-	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
-		return this.checkNextFlow(CheckNextFlow, ch, stopped);
 	}
 }
 
@@ -1401,10 +1366,9 @@ class PConstructor extends ParsingList {
 		return new PConstructor(flag, leftJoin, list);
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitConstructor(this);
 	}
-	
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		long startIndex = context.getPosition();
@@ -1461,13 +1425,9 @@ abstract class ParsingFunction extends ParsingExpression {
 		this.funcName = funcName;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitParsingFunction(this);
 	}
-//	@Override
-//	boolean checkFirstByte(int ch) {
-//		return this.inner.checkFirstByte(ch);
-//	}
 	String getParameters() {
 		return "";
 	}
@@ -1481,12 +1441,8 @@ abstract class ParsingOperation extends ParsingUnary {
 		this.inner = inner;
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitParsingOperation(this);
-	}
-	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
-		return this.inner.acceptByte(ch, stopped);
 	}
 	@Override
 	public ParsingExpression getExpression() {
@@ -1505,11 +1461,11 @@ class ParsingIndent extends ParsingFunction {
 		return this;
 	}
 	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
+	short acceptByte(int ch) {
 		if (ch == '\t' || ch == ' ') {
 			return Accept;
 		}
-		return this.checkNextFlow(CheckNextFlow, ch, stopped);
+		return CheckNextFlow;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -1533,7 +1489,7 @@ class ParsingFail extends ParsingFunction {
 		return false;
 	}
 	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
+	short acceptByte(int ch) {
 		return Reject;
 	}
 }
@@ -1550,10 +1506,6 @@ class ParsingCatch extends ParsingFunction {
 		context.opCatch();
 		return true;
 	}
-	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
-		return this.checkNextFlow(CheckNextFlow, ch, stopped);
-	}
 }
 
 
@@ -1566,14 +1518,9 @@ class ParsingExport extends ParsingUnary {
 		return new ParsingExport(flag, inner);
 	}
 	@Override
-	protected void visit(ParsingExpressionVisitor visitor) {
+	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitExport(this);
 	}
-	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
-		return this.checkNextFlow(this.inner.acceptByte(ch, this.flowNext), ch, stopped);
-	}
-
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		return true;
@@ -1714,10 +1661,6 @@ class ParsingIfFlag extends ParsingFunction {
 	public boolean simpleMatch(ParsingContext context) {
 		context.opCheckFlag(this.flagName);
 		return !(context.isFailure());
-	}
-	@Override
-	short acceptByte(int ch, ParsingExpression stopped) {
-		return this.checkNextFlow(CheckNextFlow, ch, stopped);
 	}
 }
 

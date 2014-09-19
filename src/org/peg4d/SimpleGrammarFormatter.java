@@ -110,7 +110,7 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 		this.writeCode(MachineInstruction.opMatchText, ParsingCharset.quoteString('\'', e.text, '\''));
 	}
 	@Override
-	public void visitCharacter(ParsingByteRange e) {
+	public void visitByteRange(ParsingByteRange e) {
 		this.writeCode(MachineInstruction.opMatchCharset, e.toString());
 	}
 	@Override
@@ -122,7 +122,7 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 		this.writeCode(MachineInstruction.opTagging, e.tag.toString());
 	}
 	@Override
-	public void visitMessage(ParsingValue e) {
+	public void visitValue(ParsingValue e) {
 		this.writeCode(MachineInstruction.opValue, ParsingCharset.quoteString('\'', e.value, '\''));
 	}
 	@Override
@@ -171,7 +171,7 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 	}
 	
 	@Override
-	public void visitAnd(PAnd e) {
+	public void visitAnd(ParsingAnd e) {
 		writeCode(MachineInstruction.opRememberPosition);
 		e.inner.visit(this);
 		writeCode(MachineInstruction.opBacktrackPosition);

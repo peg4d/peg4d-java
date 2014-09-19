@@ -5,7 +5,7 @@ import java.util.HashMap;
 import org.peg4d.vm.Instruction2;
 import org.peg4d.vm.Opcode2;
 
-class GrammarFormatter extends ParsingExpressionVisitor {
+class GrammarFormatter extends ExpressionVisitor {
 	protected StringBuilder sb = null;
 	public GrammarFormatter() {
 		this.sb = null;
@@ -68,6 +68,11 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 		this.formatRuleName(e.ruleName, e);
 	}
 
+	@Override
+	public void visitEmpty(ParsingEmpty e) {
+		sb.append("''");
+	}
+
 	public final static String stringfyByte(int ch) {
 		char c = (char)ch;
 		switch(c) {
@@ -84,16 +89,13 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 	}
 	
 	@Override
-	public void visitByteChar(ParsingByte e) {
+	public void visitByte(ParsingByte e) {
 		sb.append(stringfyByte(e.byteChar));
 	}
 
 	@Override
 	public void visitString(PString e) {
 		char quote = '\'';
-		if(e.text.indexOf("'") != -1) {
-			quote = '"';
-		}
 		sb.append(ParsingCharset.quoteString(quote, e.text, quote));
 	}
 	public final static String stringfyByte2(int ch) {
@@ -113,7 +115,7 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 		return("" + c);
 	}
 	@Override
-	public void visitCharacter(ParsingByteRange e) {
+	public void visitByteRange(ParsingByteRange e) {
 		sb.append("[");
 		sb.append(stringfyByte2(e.startByteChar));
 		sb.append("-");
@@ -130,7 +132,7 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 		sb.append(e.tag.toString());
 	}
 	@Override
-	public void visitMessage(ParsingValue e) {
+	public void visitValue(ParsingValue e) {
 		sb.append("`" + e.value + "`");
 	}
 	@Override
@@ -159,15 +161,10 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 	}
 	@Override
 	public void visitRepetition(ParsingRepetition e) {
-//		if(e.atleast == 1) {
-//			this.format( null, e, "+");
-//		}
-//		else {
 		this.format(null, e, "*");
-//		}
 	}
 	@Override
-	public void visitAnd(PAnd e) {
+	public void visitAnd(ParsingAnd e) {
 		this.format( "&", e, null);
 	}
 
@@ -185,31 +182,52 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 		this.format(predicate, e, null);
 	}
 
-	protected void format(ParsingList l) {
+	protected void formatSequence(ParsingList l) {
 		for(int i = 0; i < l.size(); i++) {
 			if(i > 0) {
 				sb.append(" ");
+			}
+			int n = formatString(l, i);
+			if(n > i) {
+				i = n;
+				continue;
 			}
 			ParsingExpression e = l.get(i);
 			if(e instanceof ParsingChoice || e instanceof ParsingSequence) {
 				sb.append("( ");
 				e.visit(this);
 				sb.append(" )");
+				continue;
 			}
-			else {
-				if(e == null) {
-					System.out.println("@@@@ " + i + " "); 
-					continue;
-				}
-				e.visit(this);
-			}
+			e.visit(this);
 		}
 	}
 
+	private int formatString(ParsingList l, int start) {
+		int end = l.size();
+		String s = "";
+		for(int i = start; i < end; i++) {
+			ParsingExpression e = l.get(i);
+			if(e instanceof ParsingByte) {
+				char c = (char)(((ParsingByte) e).byteChar);
+				if(c >= ' ' && c < 127) {
+					s += c;
+					continue;
+				}
+			}
+			end = i;
+			break;
+		}
+		if(s.length() > 1) {
+			sb.append(ParsingCharset.quoteString('\'', s, '\''));
+		}
+		return end - 1;
+	}
+	
 	@Override
 	public void visitSequence(ParsingSequence e) {
 		//sb.append("( ");
-		this.format( e);
+		this.formatSequence( e);
 		//sb.append(" )");
 	}
 
@@ -231,7 +249,7 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 		else {
 			sb.append("{ ");
 		}
-		this.format(e);
+		this.formatSequence(e);
 		sb.append(" }");
 	}
 
@@ -255,7 +273,7 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 
 }
 
-class CodeGenerator extends ParsingExpressionVisitor {
+class CodeGenerator extends ExpressionVisitor {
 	
 	int opIndex = 0;
 	UList<Opcode2> opList = new UList<Opcode2>(new Opcode2[256]);	
@@ -353,7 +371,7 @@ class CodeGenerator extends ParsingExpressionVisitor {
 		}
 	}
 	@Override
-	public void visitCharacter(ParsingByteRange e) {
+	public void visitByteRange(ParsingByteRange e) {
 		int labelFAIL = newLabel();
 		int labelEXIT = newLabel();
 		// FIXME this.writeCode(Instruction2.CHAR, 0, e.charset);
@@ -374,7 +392,7 @@ class CodeGenerator extends ParsingExpressionVisitor {
 		this.writeCode(Instruction2.TAG, 0, e.tag);
 	}
 	@Override
-	public void visitMessage(ParsingValue e) {
+	public void visitValue(ParsingValue e) {
 		this.writeCode(Instruction2.VALUE, 0, e.value);
 	}
 	@Override
@@ -417,7 +435,7 @@ class CodeGenerator extends ParsingExpressionVisitor {
 	}
 	
 	@Override
-	public void visitAnd(PAnd e) {
+	public void visitAnd(ParsingAnd e) {
 		writeCode(Instruction2.PUSHp); //-1
 		e.inner.visit(this);
 		this.writeCode(Instruction2.STOREp, -1, null);		
