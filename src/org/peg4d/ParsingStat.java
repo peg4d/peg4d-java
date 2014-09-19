@@ -168,7 +168,7 @@ class ParsingStat {
 	}
 	
 	private final static int MapFifoSize = 9999;
-	Map<Long, PExpression> repeatMap = null;
+	Map<Long, ParsingExpression> repeatMap = null;
 	private long lastestEntryPosition = 0;
 	private int MinimumStoredLength = Integer.MAX_VALUE;
 	
@@ -182,10 +182,10 @@ class ParsingStat {
 		this.CallCount = 0;
 		this.RepeatCount = 0;
 		MinimumStoredLength = Integer.MAX_VALUE;
-		this.repeatMap = new LinkedHashMap<Long, PExpression>(MapFifoSize) {
+		this.repeatMap = new LinkedHashMap<Long, ParsingExpression>(MapFifoSize) {
 			private static final long serialVersionUID = 6725894996600788028L;
 			@Override
-			protected boolean removeEldestEntry(Map.Entry<Long, PExpression> eldest)  {
+			protected boolean removeEldestEntry(Map.Entry<Long, ParsingExpression> eldest)  {
 				if(this.size() > MapFifoSize) {
 					long pos = ParsingUtils.getpos(eldest.getKey());
 					int delta = (int)(lastestEntryPosition - pos);
@@ -201,13 +201,13 @@ class ParsingStat {
 		this.repeatCount = new int[PegSize+1];
 	}
 
-	final void countRepeatCall(PExpression e, long pos) {
+	final void countRepeatCall(ParsingExpression e, long pos) {
 		this.NewObjectCount += 1;
 		this.CallCount += 1;
 		if(this.callCount != null) {
 			callCount[e.uniqueId] += 1;
 			Long key = ParsingUtils.objectId(pos, e);
-			PExpression p = this.repeatMap.get(key);
+			ParsingExpression p = this.repeatMap.get(key);
 			if(p != null) {
 				assert(p == e);
 				RepeatCount += 1;

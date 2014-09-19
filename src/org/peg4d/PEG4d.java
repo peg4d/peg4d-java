@@ -60,7 +60,7 @@ public class PEG4d extends ParsingBuilder {
 				ruleName = quote(ruleName);
 			}
 			ParsingRule rule = peg.getRule(ruleName);
-			PExpression e = toPExpression(po.get(1));
+			ParsingExpression e = toParsingExpression(po.get(1));
 			if(rule != null) {
 				if(rule.po != null) {
 					if(rule.peg == peg) {
@@ -112,18 +112,18 @@ public class PEG4d extends ParsingBuilder {
 	}
 
 	
-	PExpression toPExpression(ParsingObject po) {
-		PExpression e = (PExpression)this.build(po);
+	ParsingExpression toParsingExpression(ParsingObject po) {
+		ParsingExpression e = (ParsingExpression)this.build(po);
 		if(e != null) {
 			e.po = po;
 		}
 		return e;
 	}
 
-	public PExpression toNonTerminal(ParsingObject po) {
+	public ParsingExpression toNonTerminal(ParsingObject po) {
 		String symbol = po.getText();
 //		if(ruleName.equals(symbol)) {
-//			PExpression e = peg.getExpression(ruleName);
+//			ParsingExpression e = peg.getExpression(ruleName);
 //			if(e != null) {
 //				// self-redefinition
 //				return e;  // FIXME
@@ -140,37 +140,37 @@ public class PEG4d extends ParsingBuilder {
 		return "\"" + t + "\"";
 	}
 
-	public PExpression toString(ParsingObject po) {
+	public ParsingExpression toString(ParsingObject po) {
 		String t = quote(po.getText());
 		if(peg.hasRule(t)) {
 			Main.printVerbose("direct inlining", t);
 			return peg.getExpression(t);
 		}
-		return PExpression.newString(ParsingCharset.unquoteString(po.getText()));
+		return ParsingExpression.newString(ParsingCharset.unquoteString(po.getText()));
 	}
 
-	public PExpression toCharacterSequence(ParsingObject po) {
-		return PExpression.newString(ParsingCharset.unquoteString(po.getText()));
+	public ParsingExpression toCharacterSequence(ParsingObject po) {
+		return ParsingExpression.newString(ParsingCharset.unquoteString(po.getText()));
 	}
 
-	public PExpression toCharacter(ParsingObject po) {
-		ParsingCharset u = null;
+	public ParsingExpression toCharacter(ParsingObject po) {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[2]);
 		if(po.size() > 0) {
 			for(int i = 0; i < po.size(); i++) {
 				ParsingObject o = po.get(i);
-				if(o.is(ParsingTag.List)) {
-					u = ParsingCharset.addText(u, o.textAt(0, ""), o.textAt(1, ""));
+				if(o.is(ParsingTag.List)) {  // range
+					l.add(ParsingExpression.newCharset(o.textAt(0, ""), o.textAt(1, ""), po.getText()));
 				}
-				if(o.is(org.peg4d.PEG4d.Character)) {
-					u = ParsingCharset.addText(u, o.getText(), o.getText());
+				if(o.is(org.peg4d.PEG4d.Character)) {  // single
+					l.add(ParsingExpression.newCharset(o.getText(), o.getText(), po.getText()));
 				}
 				//System.out.println("u=" + u + " by " + o);
 			}
 		}
-		return PExpression.newCharacter(u);
+		return ParsingExpression.newChoice(l);
 	}
 
-	public PExpression toByte(ParsingObject po) {
+	public ParsingExpression toByte(ParsingObject po) {
 		String t = po.getText();
 		if(t.startsWith("U+")) {
 			int c = ParsingCharset.hex(t.charAt(2));
@@ -178,143 +178,143 @@ public class PEG4d extends ParsingBuilder {
 			c = (c * 16) + ParsingCharset.hex(t.charAt(4));
 			c = (c * 16) + ParsingCharset.hex(t.charAt(5));
 			if(c < 128) {
-				return PExpression.newByteChar(c);					
+				return ParsingExpression.newByte(c);					
 			}
 			String t2 = java.lang.String.valueOf((char)c);
-			return PExpression.newString(t2);
+			return ParsingExpression.newString(t2);
 		}
 		int c = ParsingCharset.hex(t.charAt(t.length()-2)) * 16 + ParsingCharset.hex(t.charAt(t.length()-1)); 
-		return PExpression.newByteChar(c);
+		return ParsingExpression.newByte(c);
 	}
 
-	public PExpression toAny(ParsingObject po) {
-		return PExpression.newAny(po.getText());
+	public ParsingExpression toAny(ParsingObject po) {
+		return ParsingExpression.newAny(po.getText());
 	}
 
-	public PExpression toChoice(ParsingObject po) {
-		UList<PExpression> l = new UList<PExpression>(new PExpression[po.size()]);
+	public ParsingExpression toChoice(ParsingObject po) {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[po.size()]);
 		for(int i = 0; i < po.size(); i++) {
-			PExpression.addChoice(l, toPExpression(po.get(i)));
+			ParsingExpression.addChoice(l, toParsingExpression(po.get(i)));
 		}
-		return PExpression.newChoice(l);
+		return ParsingExpression.newChoice(l);
 	}
 
-	public PExpression toSequence(ParsingObject po) {
-		UList<PExpression> l = new UList<PExpression>(new PExpression[po.size()]);
+	public ParsingExpression toSequence(ParsingObject po) {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[po.size()]);
 		for(int i = 0; i < po.size(); i++) {
-			PExpression.addSequence(l, toPExpression(po.get(i)));
+			ParsingExpression.addSequence(l, toParsingExpression(po.get(i)));
 		}
-		return PExpression.newSequence(l);
+		return ParsingExpression.newSequence(l);
 	}
 
-	public PExpression toNot(ParsingObject po) {
-		return PExpression.newNot(toPExpression(po.get(0)));
+	public ParsingExpression toNot(ParsingObject po) {
+		return ParsingExpression.newNot(toParsingExpression(po.get(0)));
 	}
 
-	PExpression toAnd(ParsingObject po) {
-		return PExpression.newAnd(toPExpression(po.get(0)));
+	ParsingExpression toAnd(ParsingObject po) {
+		return ParsingExpression.newAnd(toParsingExpression(po.get(0)));
 	}
 
-	public PExpression toOptional(ParsingObject po) {
-		return PExpression.newOptional(toPExpression(po.get(0)));
+	public ParsingExpression toOptional(ParsingObject po) {
+		return ParsingExpression.newOptional(toParsingExpression(po.get(0)));
 	}
 
-	public PExpression toOneMoreRepetition(ParsingObject po) {
-		UList<PExpression> l = new UList<PExpression>(new PExpression[2]);
-		l.add(toPExpression(po.get(0)));
-		l.add(PExpression.newRepetition(toPExpression(po.get(0))));
-		return PExpression.newSequence(l);
+	public ParsingExpression toOneMoreRepetition(ParsingObject po) {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[2]);
+		l.add(toParsingExpression(po.get(0)));
+		l.add(ParsingExpression.newRepetition(toParsingExpression(po.get(0))));
+		return ParsingExpression.newSequence(l);
 	}
 
-	public PExpression toRepetition(ParsingObject po) {
+	public ParsingExpression toRepetition(ParsingObject po) {
 		if(po.size() == 2) {
 			int ntimes = ParsingCharset.parseInt(po.textAt(1, ""), -1);
 			if(ntimes != 1) {
-				UList<PExpression> l = new UList<PExpression>(new PExpression[ntimes]);
+				UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[ntimes]);
 				for(int i = 0; i < ntimes; i++) {
-					PExpression.addSequence(l, toPExpression(po.get(0)));
+					ParsingExpression.addSequence(l, toParsingExpression(po.get(0)));
 				}
-				return PExpression.newSequence(l);
+				return ParsingExpression.newSequence(l);
 			}
 		}
-		return PExpression.newRepetition(toPExpression(po.get(0)));
+		return ParsingExpression.newRepetition(toParsingExpression(po.get(0)));
 	}
 
 	// PEG4d TransCapturing
 
-	public PExpression toConstructor(ParsingObject po) {
-		PExpression seq = toPExpression(po.get(0));
-		return PExpression.newConstructor(seq);
+	public ParsingExpression toConstructor(ParsingObject po) {
+		ParsingExpression seq = toParsingExpression(po.get(0));
+		return ParsingExpression.newConstructor(seq);
 	}
 
-	public PExpression toLeftJoin(ParsingObject po) {
-		PExpression seq = toPExpression(po.get(0));
-		return PExpression.newJoinConstructor(seq);
+	public ParsingExpression toLeftJoin(ParsingObject po) {
+		ParsingExpression seq = toParsingExpression(po.get(0));
+		return ParsingExpression.newJoinConstructor(seq);
 	}
 
-	public PExpression toConnector(ParsingObject po) {
+	public ParsingExpression toConnector(ParsingObject po) {
 		int index = -1;
 		if(po.size() == 2) {
 			index = ParsingCharset.parseInt(po.textAt(1, ""), -1);
 		}
-		return PExpression.newConnector(toPExpression(po.get(0)), index);
+		return ParsingExpression.newConnector(toParsingExpression(po.get(0)), index);
 	}
 
-	public PExpression toTagging(ParsingObject po) {
-		return PExpression.newTagging(peg.newTag(po.getText()));
+	public ParsingExpression toTagging(ParsingObject po) {
+		return ParsingExpression.newTagging(peg.newTag(po.getText()));
 	}
 
-	public PExpression toValue(ParsingObject po) {
-		return PExpression.newValue(po.getText());
+	public ParsingExpression toValue(ParsingObject po) {
+		return ParsingExpression.newValue(po.getText());
 	}
 
 	//PEG4d Function
 	
-	public PExpression toMatch(ParsingObject po) {
-		return PExpression.newMatch(toPExpression(po.get(0)));
+	public ParsingExpression toMatch(ParsingObject po) {
+		return ParsingExpression.newMatch(toParsingExpression(po.get(0)));
 	}
 
-	public PExpression toWith(ParsingObject po) {
-		return PExpression.newEnableFlag(po.textAt(0, ""), toPExpression(po.get(1)));
+	public ParsingExpression toWith(ParsingObject po) {
+		return ParsingExpression.newEnableFlag(po.textAt(0, ""), toParsingExpression(po.get(1)));
 	}
 
-	public PExpression toWithout(ParsingObject po) {
-		return PExpression.newDisableFlag(po.textAt(0, ""), toPExpression(po.get(1)));
+	public ParsingExpression toWithout(ParsingObject po) {
+		return ParsingExpression.newDisableFlag(po.textAt(0, ""), toParsingExpression(po.get(1)));
 	}
 //
-//	private static public PExpression toParsingExpressionImpl(Grammar peg, String ruleName, ParsingObject po) {
+//	private static public ParsingExpression toParsingExpressionImpl(Grammar peg, String ruleName, ParsingObject po) {
 //		if(po.is(org.peg4d.PEG4d.ParsingMatch)) {
-//			return PExpression.newMatch(toPExpression(po.get(0)));
+//			return ParsingExpression.newMatch(toParsingExpression(po.get(0)));
 //		}
 //		if(po.is(org.peg4d.PEG4d.ParsingWithFlag)) {
 //		}
 //		if(po.is(org.peg4d.PEG4d.ParsingWithoutFlag)) {
-//			return PExpression.newDisableFlag(po.textAt(0, ""), toPExpression(po.get(1)));
+//			return ParsingExpression.newDisableFlag(po.textAt(0, ""), toParsingExpression(po.get(1)));
 //		}
 //		if(po.is(org.peg4d.PEG4d.ParsingIfFlag)) {
-//			return PExpression.newFlag(po.textAt(0, ""));
+//			return ParsingExpression.newFlag(po.textAt(0, ""));
 //		}
 //		if(po.is(org.peg4d.PEG4d.ParsingIndent)) {
 //			if(po.size() == 0) {
-//				return PExpression.newIndent(null);
+//				return ParsingExpression.newIndent(null);
 //			}
-//			return PExpression.newIndent(toPExpression(po.get(0)));
+//			return ParsingExpression.newIndent(toParsingExpression(po.get(0)));
 //		}
 //		
 //		if(po.is(org.peg4d.PEG4d.ParsingDebug)) {
-//			return PExpression.newDebug(toPExpression(po.get(0)));
+//			return ParsingExpression.newDebug(toParsingExpression(po.get(0)));
 //		}
 //		if(po.is(org.peg4d.PEG4d.ParsingFail)) {
-//			return PExpression.newFail(ParsingCharset.unquoteString(po.textAt(0, "")));
+//			return ParsingExpression.newFail(ParsingCharset.unquoteString(po.textAt(0, "")));
 //		}
 //		if(po.is(org.peg4d.PEG4d.ParsingCatch)) {
-//			return PExpression.newCatch();
+//			return ParsingExpression.newCatch();
 //		}
 ////		if(po.is(PEG4dGrammar.ParsingApply)) {
-////			return PExpression.newApply(toParsingExpression(loading, ruleName, po.get(0)));
+////			return ParsingExpression.newApply(toParsingExpression(loading, ruleName, po.get(0)));
 ////		}
 ////		if(po.is(PEG4dGrammar.ParsingStringfy)) {
-////			return PExpression.newStringfy();
+////			return ParsingExpression.newStringfy();
 ////		}
 ////		if(pego.is("PExport")) {
 ////		Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));

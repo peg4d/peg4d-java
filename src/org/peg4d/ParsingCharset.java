@@ -65,7 +65,8 @@ public abstract class ParsingCharset {
 		}
 		return u.appendChar(c, c2);
 	}
-		
+	
+	
 	final static ParsingCharset addText(ParsingCharset u, String t, String t2) {
 		int c = parseAscii(t);
 		int c2 = parseAscii(t2);

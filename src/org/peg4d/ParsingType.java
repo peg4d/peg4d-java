@@ -115,7 +115,7 @@ public class ParsingType {
 		
 	}
 
-	public void set(int index, ParsingType rightType, PConnector e) {
+	public void set(int index, ParsingType rightType, ParsingConnector e) {
 		// TODO Auto-generated method stub
 		
 	}

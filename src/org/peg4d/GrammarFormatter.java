@@ -21,7 +21,7 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 	public String getDesc() {
 		return "PEG4d ";
 	}
-	public void format(PExpression e, StringBuilder sb) {
+	public void format(ParsingExpression e, StringBuilder sb) {
 		this.sb = sb;
 		e.visit(this);
 		this.sb = null;
@@ -30,13 +30,13 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 	}
 	public void formatFooter(StringBuilder sb) {
 	}
-	public void formatRule(String ruleName, PExpression e, StringBuilder sb) {
+	public void formatRule(String ruleName, ParsingExpression e, StringBuilder sb) {
 		this.sb = sb;
 		this.formatRuleName(ruleName, e);
 		sb.append(this.getNewLine());
 		sb.append(this.getSetter());
 		sb.append(" ");
-		if(e instanceof PChoice) {
+		if(e instanceof ParsingChoice) {
 			for(int i = 0; i < e.size(); i++) {
 				if(i > 0) {
 					sb.append(this.getNewLine());
@@ -60,29 +60,32 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 	public String getSemiColon() {
 		return "";
 	}
-	public void formatRuleName(String ruleName, PExpression e) {
+	public void formatRuleName(String ruleName, ParsingExpression e) {
 		sb.append(ruleName);
 	}
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
-		this.formatRuleName(e.symbol, e);
+		this.formatRuleName(e.ruleName, e);
 	}
 
-	@Override
-	public void visitByteChar(ParsingByte e) {
-		char c = (char)e.byteChar;
+	public final static String stringfyByte(int ch) {
+		char c = (char)ch;
 		switch(c) {
-		case '\n' : sb.append("'\\n'"); return;
-		case '\t' : sb.append("'\\t'"); return;
-		case '\r' : sb.append("'\\r'"); return;
-		case '\\' : sb.append("'\\\\'"); return;
+		case '\n' : return("'\\n'"); 
+		case '\t' : return("'\\t'"); 
+		case '\r' : return("'\\r'"); 
+		case '\'' : return("'\\''"); 
+		case '\\' : return("'\\\\'"); 
 		}
 		if(Character.isISOControl(c) || c > 127) {
-			sb.append(String.format("0x%02x", (int)c));
+			return(String.format("0x%02x", (int)c));
 		}
-		else {
-			sb.append("'" + c + "'");
-		}
+		return("'" + c + "'");
+	}
+	
+	@Override
+	public void visitByteChar(ParsingByte e) {
+		sb.append(stringfyByte(e.byteChar));
 	}
 
 	@Override
@@ -93,22 +96,42 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 		}
 		sb.append(ParsingCharset.quoteString(quote, e.text, quote));
 	}
+	public final static String stringfyByte2(int ch) {
+		char c = (char)ch;
+		switch(c) {
+		case '\n' : return("\\n"); 
+		case '\t' : return("\\t"); 
+		case '\r' : return("\\r"); 
+		case '\'' : return("\\'"); 
+		case ']' : return("\\]"); 
+		case '-' : return("\\-"); 
+		case '\\' : return("\\\\"); 
+		}
+		if(Character.isISOControl(c) || c > 127) {
+			return(String.format("\\x%02x", (int)c));
+		}
+		return("" + c);
+	}
 	@Override
-	public void visitCharacter(PCharacter e) {
-		sb.append(e.charset.toString());
+	public void visitCharacter(ParsingByteRange e) {
+		sb.append("[");
+		sb.append(stringfyByte2(e.startByteChar));
+		sb.append("-");
+		sb.append(stringfyByte2(e.endByteChar));
+		sb.append("]");
 	}
 	@Override
 	public void visitAny(ParsingAny e) {
 		sb.append(".");
 	}
 	@Override
-	public void visitTagging(PTagging e) {
+	public void visitTagging(ParsingTagging e) {
 		sb.append("#");
 		sb.append(e.tag.toString());
 	}
 	@Override
-	public void visitMessage(PMessage e) {
-		sb.append("`" + e.symbol + "`");
+	public void visitMessage(ParsingValue e) {
+		sb.append("`" + e.value + "`");
 	}
 	@Override
 	public void visitIndent(ParsingIndent e) {
@@ -118,7 +141,7 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 		if(prefix != null) {
 			sb.append(prefix);
 		}
-		if(e.inner instanceof ParsingTerminal || e.inner instanceof PNonTerminal || e.inner instanceof PConstructor) {
+		if(e.inner instanceof ParsingAtom || e.inner instanceof PNonTerminal || e.inner instanceof PConstructor) {
 			e.inner.visit(this);
 		}
 		else {
@@ -131,11 +154,11 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 		}
 	}
 	@Override
-	public void visitOptional(POptional e) {
+	public void visitOptional(ParsingOption e) {
 		this.format( null, e, "?");
 	}
 	@Override
-	public void visitRepetition(PRepetition e) {
+	public void visitRepetition(ParsingRepetition e) {
 //		if(e.atleast == 1) {
 //			this.format( null, e, "+");
 //		}
@@ -149,12 +172,12 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 	}
 
 	@Override
-	public void visitNot(PNot e) {
+	public void visitNot(ParsingNot e) {
 		this.format( "!", e, null);
 	}
 
 	@Override
-	public void visitConnector(PConnector e) {
+	public void visitConnector(ParsingConnector e) {
 		String predicate = "@";
 		if(e.index != -1) {
 			predicate += "[" + e.index + "]";
@@ -162,13 +185,13 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 		this.format(predicate, e, null);
 	}
 
-	protected void format(PList l) {
+	protected void format(ParsingList l) {
 		for(int i = 0; i < l.size(); i++) {
 			if(i > 0) {
 				sb.append(" ");
 			}
-			PExpression e = l.get(i);
-			if(e instanceof PChoice || e instanceof PSequence) {
+			ParsingExpression e = l.get(i);
+			if(e instanceof ParsingChoice || e instanceof ParsingSequence) {
 				sb.append("( ");
 				e.visit(this);
 				sb.append(" )");
@@ -184,14 +207,14 @@ class GrammarFormatter extends ParsingExpressionVisitor {
 	}
 
 	@Override
-	public void visitSequence(PSequence e) {
+	public void visitSequence(ParsingSequence e) {
 		//sb.append("( ");
 		this.format( e);
 		//sb.append(" )");
 	}
 
 	@Override
-	public void visitChoice(PChoice e) {
+	public void visitChoice(ParsingChoice e) {
 		for(int i = 0; i < e.size(); i++) {
 			if(i > 0) {
 				sb.append(" / ");
@@ -313,7 +336,7 @@ class CodeGenerator extends ParsingExpressionVisitor {
 	
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
-		this.writeCode(Instruction2.CALL, 0, uniqueRuleName(e.base, e.symbol));
+		this.writeCode(Instruction2.CALL, 0, uniqueRuleName(e.peg, e.ruleName));
 	}
 	
 	@Override
@@ -330,10 +353,10 @@ class CodeGenerator extends ParsingExpressionVisitor {
 		}
 	}
 	@Override
-	public void visitCharacter(PCharacter e) {
+	public void visitCharacter(ParsingByteRange e) {
 		int labelFAIL = newLabel();
 		int labelEXIT = newLabel();
-		this.writeCode(Instruction2.CHAR, 0, e.charset);
+		// FIXME this.writeCode(Instruction2.CHAR, 0, e.charset);
 		this.writeJumpCode(Instruction2.IFZERO, labelFAIL); {
 			this.writeCode(Instruction2.CONSUME);
 			this.writeJumpCode(Instruction2.JUMP, labelEXIT);
@@ -347,19 +370,19 @@ class CodeGenerator extends ParsingExpressionVisitor {
 		this.writeCode(Instruction2.ANY);
 	}
 	@Override
-	public void visitTagging(PTagging e) {
+	public void visitTagging(ParsingTagging e) {
 		this.writeCode(Instruction2.TAG, 0, e.tag);
 	}
 	@Override
-	public void visitMessage(PMessage e) {
-		this.writeCode(Instruction2.VALUE, 0, e.symbol);
+	public void visitMessage(ParsingValue e) {
+		this.writeCode(Instruction2.VALUE, 0, e.value);
 	}
 	@Override
 	public void visitIndent(ParsingIndent e) {
 		//this.writeCode(Instruction2.opIndent);
 	}
 	@Override
-	public void visitOptional(POptional e) {
+	public void visitOptional(ParsingOption e) {
 		int labelEXIT = newLabel();
 		writeCode(Instruction2.PUSHf); //-2
 		writeCode(Instruction2.PUSHo); //-1
@@ -372,7 +395,7 @@ class CodeGenerator extends ParsingExpressionVisitor {
 		writeCode(Instruction2.POP, 2, null);
 	}
 	@Override
-	public void visitRepetition(PRepetition e) {
+	public void visitRepetition(ParsingRepetition e) {
 		int labelLOOP = newLabel();
 		int labelEXIT = newLabel();
 
@@ -402,7 +425,7 @@ class CodeGenerator extends ParsingExpressionVisitor {
 	}
 
 	@Override
-	public void visitNot(PNot e) {
+	public void visitNot(ParsingNot e) {
 		int labelFAIL = newLabel();
 		int labelEXIT = newLabel();
 		writeCode(Instruction2.PUSHf); //-3
@@ -423,7 +446,7 @@ class CodeGenerator extends ParsingExpressionVisitor {
 	}
 
 	@Override
-	public void visitConnector(PConnector e) {
+	public void visitConnector(ParsingConnector e) {
 		writeCode(Instruction2.PUSHo); //-1
 		e.inner.visit(this);
 		writeCode(Instruction2.LINK, e.index, null);
@@ -431,12 +454,12 @@ class CodeGenerator extends ParsingExpressionVisitor {
 	}
 
 	@Override
-	public void visitSequence(PSequence e) {
+	public void visitSequence(ParsingSequence e) {
 		int labelFAIL = newLabel();
 		int labelEXIT = newLabel();
 		writeCode(Instruction2.PUSHp); //-1
 		for(int i = 0; i < e.size(); i++) {
-			PExpression se = e.get(i);
+			ParsingExpression se = e.get(i);
 			se.visit(this);
 			writeJumpCode(Instruction2.IFFAIL, labelFAIL);
 		}
@@ -449,13 +472,13 @@ class CodeGenerator extends ParsingExpressionVisitor {
 	}
 
 	@Override
-	public void visitChoice(PChoice e) {
+	public void visitChoice(ParsingChoice e) {
 		int labelOK = newLabel();
 		int labelEXIT = newLabel();
 		writeCode(Instruction2.PUSHf); //-2
 		writeCode(Instruction2.PUSHo); //-1
 		for(int i = 0; i < e.size(); i++) {
-			PExpression se = e.get(i);
+			ParsingExpression se = e.get(i);
 			se.visit(this);
 			writeJumpCode(Instruction2.IFSUCC, labelOK);
 			writeCode(Instruction2.STOREo, -1, null);
@@ -482,7 +505,7 @@ class CodeGenerator extends ParsingExpressionVisitor {
 		}
 		writeCode(Instruction2.STOREo, -2, null);
 		for(int i = 0; i < e.size(); i++) {
-			PExpression se = e.get(i);
+			ParsingExpression se = e.get(i);
 			writeCode(Instruction2.LOADo, -2, null); //-1
 			se.visit(this);
 			writeJumpCode(Instruction2.IFFAIL, labelFAIL);

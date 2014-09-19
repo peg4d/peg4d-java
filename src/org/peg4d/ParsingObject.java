@@ -16,7 +16,7 @@ public class ParsingObject {
 		this.length     = 0;
 	}
 
-	ParsingObject(ParsingTag tag, ParsingSource source, long pos, PExpression e) {
+	ParsingObject(ParsingTag tag, ParsingSource source, long pos, ParsingExpression e) {
 		this.tag        = tag;
 		this.source     = source;
 		this.pospeg     = ParsingUtils.objectId(pos, e);
@@ -85,7 +85,7 @@ public class ParsingObject {
 
 	// AST[]
 	
-	public PExpression getSourceExpression() {
+	public ParsingExpression getSourceExpression() {
 		short pegid = ParsingUtils.getpegid(pospeg);
 		if(pegid > 0 && source.peg != null) {
 			return source.peg.getDefinedExpression(pegid);
@@ -106,7 +106,7 @@ public class ParsingObject {
 
 	boolean compactAST() {
 		if(this.AST != null) {
-			PExpression e = this.getSourceExpression();
+			ParsingExpression e = this.getSourceExpression();
 			if(e instanceof PConstructor && !((PConstructor) e).leftJoin) {
 				this.AST = LazyAST;
 				return true;				

@@ -62,7 +62,7 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 	}
 
 	@Override
-	public void formatRule(String ruleName, PExpression e, StringBuilder sb) {
+	public void formatRule(String ruleName, ParsingExpression e, StringBuilder sb) {
 		this.sb = sb;
 		this.formatRule(ruleName, e);
 		this.writeCode(MachineInstruction.RET);
@@ -96,41 +96,41 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 		}
 	}
 
-	private void formatRule(String ruleName, PExpression e) {
+	private void formatRule(String ruleName, ParsingExpression e) {
 		sb.append(ruleName + ":\n");
 		e.visit(this);
 	}
 	
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
-		this.writeCode(MachineInstruction.CALL, e.symbol);
+		this.writeCode(MachineInstruction.CALL, e.ruleName);
 	}
 	@Override
 	public void visitString(PString e) {
 		this.writeCode(MachineInstruction.opMatchText, ParsingCharset.quoteString('\'', e.text, '\''));
 	}
 	@Override
-	public void visitCharacter(PCharacter e) {
-		this.writeCode(MachineInstruction.opMatchCharset, e.charset.toString());
+	public void visitCharacter(ParsingByteRange e) {
+		this.writeCode(MachineInstruction.opMatchCharset, e.toString());
 	}
 	@Override
 	public void visitAny(ParsingAny e) {
 		this.writeCode(MachineInstruction.opMatchAnyChar);
 	}
 	@Override
-	public void visitTagging(PTagging e) {
+	public void visitTagging(ParsingTagging e) {
 		this.writeCode(MachineInstruction.opTagging, e.tag.toString());
 	}
 	@Override
-	public void visitMessage(PMessage e) {
-		this.writeCode(MachineInstruction.opValue, ParsingCharset.quoteString('\'', e.symbol, '\''));
+	public void visitMessage(ParsingValue e) {
+		this.writeCode(MachineInstruction.opValue, ParsingCharset.quoteString('\'', e.value, '\''));
 	}
 	@Override
 	public void visitIndent(ParsingIndent e) {
 		this.writeCode(MachineInstruction.opIndent);
 	}
 	@Override
-	public void visitOptional(POptional e) {
+	public void visitOptional(ParsingOption e) {
 		int labelL = newLabel();
 		int labelE = newLabel();
 		writeCode(MachineInstruction.opRememberFailurePosition);
@@ -146,7 +146,7 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 		writeCode(MachineInstruction.opForgetFailurePosition);
 	}
 	@Override
-	public void visitRepetition(PRepetition e) {
+	public void visitRepetition(ParsingRepetition e) {
 		int labelL = newLabel();
 		int labelE = newLabel();
 		int labelE2 = newLabel();
@@ -178,7 +178,7 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 	}
 
 	@Override
-	public void visitNot(PNot e) {
+	public void visitNot(ParsingNot e) {
 		int labelL = newLabel();
 		int labelE = newLabel();
 		writeCode(MachineInstruction.opRememberFailurePosition);
@@ -197,7 +197,7 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 	}
 
 	@Override
-	public void visitConnector(PConnector e) {
+	public void visitConnector(ParsingConnector e) {
 		int labelF = newLabel();
 		int labelE = newLabel();
 		writeCode(MachineInstruction.opStoreObject);
@@ -211,12 +211,12 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 	}
 
 	@Override
-	public void visitSequence(PSequence e) {
+	public void visitSequence(ParsingSequence e) {
 		int labelF = newLabel();
 		int labelE = newLabel();
 		writeCode(MachineInstruction.opRememberPosition);
 		for(int i = 0; i < e.size(); i++) {
-			PExpression se = e.get(i);
+			ParsingExpression se = e.get(i);
 			se.visit(this);
 			writeJumpCode(MachineInstruction.IFFAIL, labelF);
 		}
@@ -229,7 +229,7 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 	}
 
 	@Override
-	public void visitChoice(PChoice e) {
+	public void visitChoice(ParsingChoice e) {
 		int labelS = newLabel();
 		int labelE1 = newLabel();
 		for(int i = 0; i < e.size(); i++) {
@@ -266,7 +266,7 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 		}
 		writeCode(MachineInstruction.opRememberPosition);
 		for(int i = 0; i < e.size(); i++) {
-			PExpression se = e.get(i);
+			ParsingExpression se = e.get(i);
 			se.visit(this);
 			writeJumpCode(MachineInstruction.IFFAIL, labelF);
 		}

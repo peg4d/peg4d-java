@@ -1,18 +1,88 @@
 // PEG Test
 
-Chunk
-	= String
-	/ ByteChar
+CHUNK
+	= STRING
+	/ CHAR
 
-String
+CHAR
+        [example: A]
+        [bad-example: AA]
+        = 'A'
+
+STRING
 	[example: aa]
 	[bad-example: aaa]
 	[bad-example: a]
 	= 'aa'
 
-ByteChar
-	[example: b]
-	[bad-example: bb]
-	= 'b'
+NONTERMINAL
+	[example: A]
+	[bad-example: AA]
+	= CHAR
+
+SEQUENCE
+	[example: Aaa]
+	= 'A' 'aa'
+
+SEQUENCE3
+	[example: A_aa]
+	[bad-example: Aaa]
+	= CHAR '_' STRING
+
+ANY
+	[example: AA]
+	[example: Aa]
+	[bad-example: Aaa]
+	= 'A' .
+
+CHOICE
+	[example: AA]
+	[example: aa]
+	[example: aA]
+	[bad-example: Aa]
+	= 'A' CHAR
+	/ STRING
+	/ 'a' CHAR
+
+CHARSET
+	[example: 1]
+	[example: 9]
+	[bad-example: 0]
+	= [1-9]
+
+OPTION
+	[example: Ab]
+	[example: AAb]
+	[bad-example: b]
+	= CHAR CHAR? 'b'
+
+REPETITION
+	[example: bb]
+	[example: bAb]
+	[example: bAAb]
+	[example: bAAAAAAAAAAb]
+	[bad-example: bAAAAAAA]
+	= 'b' CHAR* 'b'
+
+ONEMORE
+        [bad-example: bb]
+        [example: bAb]
+        [example: bAAb]
+        [example: bAAAAAAAAAAb]
+        [bad-example: bAAAAAAA]
+        = 'b' CHAR+ 'b'
+
+GROUP
+	[example: ABa]
+	[example: Aba]
+	[bad-example: Aa]
+	= CHAR ('B' / 'b') 'a'
+
+RECURSION
+	[example: A]
+	[example: aAa]
+	[example: aaAaa]
+	= 'a' RECURSION 'a'
+	/ 'A'
 
 

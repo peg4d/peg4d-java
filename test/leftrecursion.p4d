@@ -1,0 +1,8 @@
+// PEG4d Bad Example
+//     left-recursion
+
+Chunk    = Expr
+Expr     = Expr {@ ('+' #add / '-' #sub) @Expr }
+Expr     = Expr [@ ('*' #mul / '/' #div) @Expr } / Expr
+Expr     = Expr / { [0-9]+ #number } / '(' Expr ')'
+

@@ -19,58 +19,58 @@ class ParsingExpressionVisitor {
 		}
 	}
 	public void visitNonTerminal(PNonTerminal e) {
-		if(!this.isVisited(e.symbol)) {
-			visited(e.symbol);
-			e.base.getExpression(e.symbol).visit(this);
+		if(!this.isVisited(e.ruleName)) {
+			visited(e.ruleName);
+			e.peg.getExpression(e.ruleName).visit(this);
 		}
 	}
 	public void visitString(PString e) {
 	}
 	public void visitByteChar(ParsingByte pByteChar) {
 	}
-	public void visitCharacter(PCharacter e) {
+	public void visitCharacter(ParsingByteRange e) {
 	}
 	public void visitAny(ParsingAny e) {
 	}
 //	public void visitNotAny(PNotAny e) {
 //		e.orig.visit(this);
 //	}
-	public void visitTagging(PTagging e) {
+	public void visitTagging(ParsingTagging e) {
 	}
-	public void visitMessage(PMessage e) {
+	public void visitMessage(ParsingValue e) {
 	}
 	public void visitIndent(ParsingIndent e) {
 	}
 	public void visitUnary(ParsingUnary e) {
 		e.inner.visit(this);
 	}
-	public void visitNot(PNot e) {
+	public void visitNot(ParsingNot e) {
 		this.visitUnary(e);
 	}
 	public void visitAnd(PAnd e) {
 		this.visitUnary(e);
 	}
-	public void visitOptional(POptional e) {
+	public void visitOptional(ParsingOption e) {
 		this.visitUnary(e);
 	}
-	public void visitRepetition(PRepetition e) {
+	public void visitRepetition(ParsingRepetition e) {
 		this.visitUnary(e);
 	}
-	public void visitConnector(PConnector e) {
+	public void visitConnector(ParsingConnector e) {
 		this.visitUnary(e);
 	}
-	public void visitExport(PExport e) {
+	public void visitExport(ParsingExport e) {
 		this.visitUnary(e);
 	}
-	public void visitList(PList e) {
+	public void visitList(ParsingList e) {
 		for(int i = 0; i < e.size(); i++) {
 			e.get(i).visit(this);
 		}
 	}
-	public void visitSequence(PSequence e) {
+	public void visitSequence(ParsingSequence e) {
 		this.visitList(e);
 	}
-	public void visitChoice(PChoice e) {
+	public void visitChoice(ParsingChoice e) {
 		this.visitList(e);
 	}
 	public void visitConstructor(PConstructor e) {
@@ -88,50 +88,50 @@ class ParsingExpressionVisitor {
 	}
 }
 
-abstract class Checker {
-	public final static int False    = 0;
-	public final static int True     = 1;
-	public final static int Unknown  = 2;
-	abstract int check(PExpression e);
-}
-
-class ParsingExpressionChecker {
-	private UMap<PExpression> visitedMap;
-	private void initVisitor() {
-		if(this.visitedMap != null) {
-			this.visitedMap.clear();
-		}
-		else {
-			visitedMap = new UMap<PExpression>();
-		}
-	}
-	private boolean isVisited(String name) {
-		if(this.visitedMap != null) {
-			return this.visitedMap.hasKey(name);
-		}
-		return true;
-	}
-	private void visited(String name, PExpression next) {
-		if(this.visitedMap != null) {		
-			this.visitedMap.put(name, next);
-		}
-	}
-
-	void makeList(PExpression e) {
-		if(e instanceof PNonTerminal) {
-			PNonTerminal ne = (PNonTerminal)e;
-			if(!this.isVisited(ne.getUniqueName())) {
-				visited(ne.getUniqueName(), ne.getNext());
-				makeList(ne.getNext());
-			}
-		}
-		for(int i = 0; i < e.size(); i++) {
-			makeList(e.get(i));
-		}
-	}
-		
-	
-}
+//abstract class Checker {
+//	public final static int False    = 0;
+//	public final static int True     = 1;
+//	public final static int Unknown  = 2;
+//	abstract int check(ParsingExpression e);
+//}
+//
+//class ParsingExpressionChecker {
+//	private UMap<ParsingExpression> visitedMap;
+//	private void initVisitor() {
+//		if(this.visitedMap != null) {
+//			this.visitedMap.clear();
+//		}
+//		else {
+//			visitedMap = new UMap<ParsingExpression>();
+//		}
+//	}
+//	private boolean isVisited(String name) {
+//		if(this.visitedMap != null) {
+//			return this.visitedMap.hasKey(name);
+//		}
+//		return true;
+//	}
+//	private void visited(String name, ParsingExpression next) {
+//		if(this.visitedMap != null) {		
+//			this.visitedMap.put(name, next);
+//		}
+//	}
+//
+//	void makeList(ParsingExpression e) {
+//		if(e instanceof PNonTerminal) {
+//			PNonTerminal ne = (PNonTerminal)e;
+//			if(!this.isVisited(ne.getUniqueName())) {
+//				visited(ne.getUniqueName(), ne.getNext());
+//				makeList(ne.getNext());
+//			}
+//		}
+//		for(int i = 0; i < e.size(); i++) {
+//			makeList(e.get(i));
+//		}
+//	}
+//		
+//	
+//}
 
 class ListMaker extends ParsingExpressionVisitor {
 	private UList<String> nameList;
@@ -146,13 +146,13 @@ class ListMaker extends ParsingExpressionVisitor {
 	void visitImpl(String name) {
 		this.visited(name);
 		this.nameList.add(name);
-		PExpression next = peg.getExpression(name);
+		ParsingExpression next = peg.getExpression(name);
 		next.visit(this);
 	}
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
-		if(	e.base == peg && !this.isVisited(e.symbol)) {
-			this.visitImpl(e.symbol);
+		if(	e.peg == peg && !this.isVisited(e.ruleName)) {
+			this.visitImpl(e.ruleName);
 		}
 	}
 }
@@ -161,7 +161,7 @@ class Importer extends ParsingExpressionVisitor {
 	private Grammar dst;
 	private Grammar src;
 	private UMap<String> params;
-	private PExpression returnExpression = null;
+	private ParsingExpression returnExpression = null;
 	Importer(Grammar dst, Grammar src, String startPoint, UMap<String> params) {
 		this.dst = dst;
 		this.src = src;
@@ -169,7 +169,7 @@ class Importer extends ParsingExpressionVisitor {
 		this.visitRule(startPoint);
 	}
 	
-	PExpression importRule(Grammar dst, Grammar src, String startPoint, UMap<String> params) {
+	ParsingExpression importRule(Grammar dst, Grammar src, String startPoint, UMap<String> params) {
 		this.dst = dst;
 		this.src = src;
 		this.initVisitor();
@@ -179,14 +179,14 @@ class Importer extends ParsingExpressionVisitor {
 	
 	private void visitRule(String name) {
 		this.visited(name);
-		PExpression next = src.getExpression(name);
+		ParsingExpression next = src.getExpression(name);
 		next.visit(this);
 	}
 	
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
-		if( e.base == src && !this.isVisited(e.symbol)) {
-			this.visitRule(e.symbol);
+		if( e.peg == src && !this.isVisited(e.ruleName)) {
+			this.visitRule(e.ruleName);
 		}
 	}
 }
@@ -197,26 +197,26 @@ class Inliner extends ParsingExpressionVisitor {
 		this.peg = peg;
 	}
 	void performInlining() {
-		UList<PExpression> pegList = this.peg.getExpressionList();
+		UList<ParsingExpression> pegList = this.peg.getExpressionList();
 		for(int i = 0; i < pegList.size(); i++) {
 			pegList.ArrayValues[i].visit(this);
 		}
 	}
-	final boolean isInlinable(PExpression e) {
+	final boolean isInlinable(ParsingExpression e) {
 		if(e instanceof PNonTerminal) {
 			PNonTerminal n = (PNonTerminal)e;
-			n.derived(n.getNext());
+			//n.derived(n.getNext());
 			if(peg.optimizationLevel > 3) {
-				return ! n.resolvedExpression.is(PExpression.CyclicRule);
+				return ! n.calling.is(ParsingExpression.CyclicRule);
 			}
 		}
 		return false;
 	}
 	
-	final PExpression doInline(PExpression parent, PNonTerminal r) {
+	final ParsingExpression doInline(ParsingExpression parent, PNonTerminal r) {
 //		System.out.println("inlining: " + parent.getClass().getSimpleName() + " " + r.symbol +  " e=" + r.jumpExpression);
 		this.peg.InliningCount += 1;
-		return r.resolvedExpression;
+		return r.calling;
 	}
 
 	@Override
@@ -230,9 +230,9 @@ class Inliner extends ParsingExpressionVisitor {
 		e.derived(e.inner);
 	}
 	@Override
-	public void visitList(PList e) {
+	public void visitList(ParsingList e) {
 		for(int i = 0; i < e.size(); i++) {
-			PExpression se = e.get(i);
+			ParsingExpression se = e.get(i);
 			if(isInlinable(se)) {
 				e.set(i, doInline(e, (PNonTerminal)se));
 			}
@@ -260,7 +260,7 @@ class Optimizer extends ParsingExpressionVisitor {
 		this.peg = peg;
 	}
 	void optimize() {
-		UList<PExpression> pegList = this.peg.getExpressionList();
+		UList<ParsingExpression> pegList = this.peg.getExpressionList();
 		for(int i = 0; i < pegList.size(); i++) {
 			pegList.ArrayValues[i].visit(this);
 		}
@@ -273,19 +273,19 @@ class Optimizer extends ParsingExpressionVisitor {
 //		}
 //	}
 	
-	private PExpression removeOperation(PExpression e) {
+	private ParsingExpression removeOperation(ParsingExpression e) {
 		if(e instanceof ParsingMatch) {
-			PExpression inner = ((ParsingMatch) e).inner;
-			if(!inner.hasObjectOperation()) {
-				this.peg.InterTerminalOptimization += 1;
-				//System.out.println("removed: " + e);
-				return inner;
-			}
+			ParsingExpression inner = ((ParsingMatch) e).inner;
+//			if(!inner.hasObjectOperation()) {
+//				this.peg.InterTerminalOptimization += 1;
+//				//System.out.println("removed: " + e);
+//				return inner;
+//			}
 			//System.out.println("unremoved: " + e);
 		}
 //		if(e instanceof PCommit) {
-//			PExpression inner = ((PCommit) e).inner;
-//			if(!inner.is(PExpression.HasConnector)) {
+//			ParsingExpression inner = ((PCommit) e).inner;
+//			if(!inner.is(ParsingExpression.HasConnector)) {
 //				this.peg.InterTerminalOptimization += 1;
 //				//System.out.println("removed: " + e);
 //				return inner;
@@ -307,18 +307,15 @@ class Optimizer extends ParsingExpressionVisitor {
 	}
 
 	@Override
-	public void visitList(PList e) {
+	public void visitList(ParsingList e) {
 		for(int i = 0; i < e.size(); i++) {
 			e.set(i, removeOperation(e.get(i)));
 			e.get(i).visit(this);
 		}
-		if(e instanceof PMappedChoice) {
-			((PMappedChoice) e).tryPrediction();
-		}
 	}
 	
-	private boolean needsObjectContext(PExpression e) {
-		if(e.is(PExpression.HasConstructor) || e.is(PExpression.HasConnector) || e.is(PExpression.HasTagging) || e.is(PExpression.HasMessage) || e.is(PExpression.HasContext)) {
+	private boolean needsObjectContext(ParsingExpression e) {
+		if(e.is(ParsingExpression.HasConstructor) || e.is(ParsingExpression.HasConnector) || e.is(ParsingExpression.HasTagging) || e.is(ParsingExpression.HasMessage) || e.is(ParsingExpression.HasContext)) {
 			return true;
 		}
 		return false;
@@ -329,7 +326,7 @@ class Optimizer extends ParsingExpressionVisitor {
 		this.visitList(e);
 		int prefetchIndex = 0;
 		for(int i = 0; i < e.size(); i++) {
-			PExpression sub = e.get(i);
+			ParsingExpression sub = e.get(i);
 			if(needsObjectContext(sub)) {
 				break;
 			}
@@ -346,13 +343,13 @@ class Optimizer extends ParsingExpressionVisitor {
 }
 
 class MemoRemover extends ParsingExpressionVisitor {
-	UList<PExpression> pegList;
+	UList<ParsingExpression> pegList;
 	int cutMiss = -1;
 	int RemovedCount = 0;
 	
 	MemoRemover(Grammar peg) {
 		UList<String> nameList = peg.ruleMap.keys();
-		this.pegList = new UList<PExpression>(new PExpression[nameList.size()]);
+		this.pegList = new UList<ParsingExpression>(new ParsingExpression[nameList.size()]);
 		for(int i = 0; i < nameList.size(); i++) {
 			String ruleName = nameList.ArrayValues[i];
 			this.pegList.add(peg.getExpression(ruleName));
@@ -380,7 +377,7 @@ class MemoRemover extends ParsingExpressionVisitor {
 		return !(pm.enableMemo);
 	}
 	
-	PExpression removeMemo(PExpression e) {
+	ParsingExpression removeMemo(ParsingExpression e) {
 		if(e instanceof ParsingMemo) {
 			ParsingMemo pm = (ParsingMemo)e;
 			if(this.isRemoved(pm)) {
@@ -393,8 +390,8 @@ class MemoRemover extends ParsingExpressionVisitor {
 	
 	@Override
 	public void visitNonTerminal(PNonTerminal e) {
-		if(e.resolvedExpression != null) {
-			e.resolvedExpression = this.removeMemo(e.resolvedExpression);
+		if(e.calling != null) {
+			e.calling = this.removeMemo(e.calling);
 		}
 	}
 
@@ -405,16 +402,16 @@ class MemoRemover extends ParsingExpressionVisitor {
 	}
 
 	@Override
-	public void visitList(PList e) {
+	public void visitList(ParsingList e) {
 		for(int i = 0; i < e.size(); i++) {
-			PExpression se = this.removeMemo(e.get(i));
+			ParsingExpression se = this.removeMemo(e.get(i));
 			e.set(i, se);
 			se.visit(this);
 		}
 	}
 	
 	@Override
-	public void visitChoice(PChoice e) {
+	public void visitChoice(ParsingChoice e) {
 		this.visitList(e);
 //		if(e instanceof PegSelectiveChoice) {
 //			for(int i = 0; i < UCharset.MAX; i++) {
@@ -428,100 +425,100 @@ class MemoRemover extends ParsingExpressionVisitor {
 	}
 }
 
-class ObjectRemover extends ParsingExpressionVisitor {
-	ObjectRemover() {
-	}
-	
-	private PExpression returnPeg = null;
-	PExpression removeObjectOperation(PExpression e) {
-		PExpression stack = this.returnPeg;
-		this.returnPeg = e;
-		e.visit(this);
-		PExpression r = this.returnPeg;
-		this.returnPeg = stack;
-		return r;
-	}
-	
-	@Override
-	public void visitNonTerminal(PNonTerminal e) {
-		if(e.resolvedExpression.hasObjectOperation()) {
-			this.returnPeg = e.base.newNonTerminal(e.symbol + "'");
-		}
-	}
+//class ObjectRemover extends ParsingExpressionVisitor {
+//	ObjectRemover() {
+//	}
+//	
+//	private ParsingExpression returnPeg = null;
+//	ParsingExpression removeObjectOperation(ParsingExpression e) {
+//		ParsingExpression stack = this.returnPeg;
+//		this.returnPeg = e;
+//		e.visit(this);
+//		ParsingExpression r = this.returnPeg;
+//		this.returnPeg = stack;
+//		return r;
+//	}
+//	
 //	@Override
-//	public void visitNotAny(PNotAny e) {
-//		PExpression ne = this.removeObjectOperation(e.not);
+//	public void visitNonTerminal(PNonTerminal e) {
+//		if(e.resolvedExpression.hasObjectOperation()) {
+//			this.returnPeg = e.base.newNonTerminal(e.symbol + "'");
+//		}
+//	}
+////	@Override
+////	public void visitNotAny(PNotAny e) {
+////		ParsingExpression ne = this.removeObjectOperation(e.not);
+////		if(ne == null) {
+////			this.returnPeg = e.base.newAny(".");
+////			return ;
+////		}
+////		e.not = (PNot)ne;
+////		this.returnPeg = e;
+////	}
+//	@Override
+//	public void visitTagging(ParsingTagging e) {
+//		this.returnPeg = null;
+//	}
+//	@Override
+//	public void visitMessage(ParsingValue e) {
+//		this.returnPeg = null;
+//	}
+//	@Override
+//	public void visitIndent(ParsingIndent e) {
+//		this.returnPeg = null;
+//	}
+//	@Override
+//	public void visitUnary(ParsingUnary e) {
+//		ParsingExpression ne = this.removeObjectOperation(e.inner);
 //		if(ne == null) {
-//			this.returnPeg = e.base.newAny(".");
+//			this.returnPeg = null;			
 //			return ;
 //		}
-//		e.not = (PNot)ne;
+//		e.inner = ne;
 //		this.returnPeg = e;
 //	}
-	@Override
-	public void visitTagging(PTagging e) {
-		this.returnPeg = null;
-	}
-	@Override
-	public void visitMessage(PMessage e) {
-		this.returnPeg = null;
-	}
-	@Override
-	public void visitIndent(ParsingIndent e) {
-		this.returnPeg = null;
-	}
-	@Override
-	public void visitUnary(ParsingUnary e) {
-		PExpression ne = this.removeObjectOperation(e.inner);
-		if(ne == null) {
-			this.returnPeg = null;			
-			return ;
-		}
-		e.inner = ne;
-		this.returnPeg = e;
-	}
-
-	@Override
-	public void visitParsingOperation(ParsingOperation e) {
-		PExpression ne = this.removeObjectOperation(e.inner);
-		if(ne == null) {
-			this.returnPeg = null;			
-			return ;
-		}
-		e.inner = ne;
-		this.returnPeg = e;
-	}
-
-	@Override
-	public void visitConnector(PConnector e) {
-		PExpression ne = this.removeObjectOperation(e.inner);
-		if(ne == null) {
-			this.returnPeg = null;
-			return ;
-		}
-		this.returnPeg = ne;
-	}
-
-	@Override
-	public void visitList(PList e) {
-		for(int i = 0; i < e.size(); i++) {
-			PExpression se = e.get(i);
-			e.set(i, removeObjectOperation(se));
-		}
-		this.returnPeg = e.trim();
-	}
-
-	@Override
-	public void visitConstructor(PConstructor e) {
-		UList<PExpression> l = new UList<PExpression>(new PExpression[e.size()]);
-		for(int i = 0; i < e.size(); i++) {
-			PExpression ne = removeObjectOperation(e.get(i));
-			if(ne != null) {
-				l.add(ne);
-			}
-		}
-		//System.out.println("@@@ size=" + l.size() + " e=" + e);
-		this.returnPeg = new PSequence(0, l);
-	}
-}
-
+//
+//	@Override
+//	public void visitParsingOperation(ParsingOperation e) {
+//		ParsingExpression ne = this.removeObjectOperation(e.inner);
+//		if(ne == null) {
+//			this.returnPeg = null;			
+//			return ;
+//		}
+//		e.inner = ne;
+//		this.returnPeg = e;
+//	}
+//
+//	@Override
+//	public void visitConnector(PConnector e) {
+//		ParsingExpression ne = this.removeObjectOperation(e.inner);
+//		if(ne == null) {
+//			this.returnPeg = null;
+//			return ;
+//		}
+//		this.returnPeg = ne;
+//	}
+//
+//	@Override
+//	public void visitList(ParsingList e) {
+//		for(int i = 0; i < e.size(); i++) {
+//			ParsingExpression se = e.get(i);
+//			e.set(i, removeObjectOperation(se));
+//		}
+//		this.returnPeg = e.trim();
+//	}
+//
+//	@Override
+//	public void visitConstructor(PConstructor e) {
+//		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[e.size()]);
+//		for(int i = 0; i < e.size(); i++) {
+//			ParsingExpression ne = removeObjectOperation(e.get(i));
+//			if(ne != null) {
+//				l.add(ne);
+//			}
+//		}
+//		//System.out.println("@@@ size=" + l.size() + " e=" + e);
+//		this.returnPeg = new PSequence(0, l);
+//	}
+//}
+//

@@ -641,6 +641,17 @@ public class Main {
 		return LineNumber;
 	}
 
+	public final static void dumpStack() {
+		Exception e =  new Exception();
+		StackTraceElement[] Elements = e.getStackTrace();
+		for(int i = 0; i < Elements.length; i++) {
+			StackTraceElement elem = Elements[i];
+			System.out.println(elem.getMethodName());
+		}
+	}
+
+	
+	
 	public final static boolean _IsFlag(int flag, int flag2) {
 		return ((flag & flag2) == flag2);
 	}

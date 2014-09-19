@@ -46,7 +46,7 @@ public class ParsingContext {
 		
 	public final ParsingObject parseChunk(Grammar peg, String startPoint) {
 		this.initMemo();
-		PExpression start = peg.getExpression(startPoint);
+		ParsingExpression start = peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
@@ -88,7 +88,7 @@ public class ParsingContext {
 
 	public final ParsingObject parse(Grammar peg, String startPoint) {
 		this.initMemo();
-		PExpression start = peg.getExpression(startPoint);
+		ParsingExpression start = peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
@@ -318,11 +318,11 @@ public class ParsingContext {
 		this.memoMap = new NoMemo();
 	}
 
-	final ObjectMemo getMemo(PExpression e, long keypos) {
+	final ObjectMemo getMemo(ParsingExpression e, long keypos) {
 		return this.memoMap.getMemo(e, keypos);
 	}
 
-	final void setMemo(long keypos, PExpression e, ParsingObject po, int length) {
+	final void setMemo(long keypos, ParsingExpression e, ParsingObject po, int length) {
 		this.memoMap.setMemo(keypos, e, po, length);
 	}
 
@@ -385,13 +385,13 @@ public class ParsingContext {
 		if(errorInfo == null) {
 			return "syntax error";
 		}
-		if(errorInfo instanceof PExpression) {
+		if(errorInfo instanceof ParsingExpression) {
 			return "syntax error: unrecognized " + errorInfo;
 		}
 		return errorInfo.toString();
 	}
 	
-	public final void opFailure(PExpression errorInfo) {
+	public final void opFailure(ParsingExpression errorInfo) {
 		if(this.pos > fpos) {  // adding error location
 			this.fpos = this.pos;
 			//System.out.println("fpos: " + this.fpos + " -> " + this.pos + " " + errorInfo);		
@@ -698,7 +698,7 @@ public class ParsingContext {
 		return this.left;
 	}
 
-	public void opDebug(PExpression inner) {
+	public void opDebug(ParsingExpression inner) {
 		this.opDropStoredObject();
 		ParsingObject left = this.ostack[ostacktop];
 		this.opUpdateFailurePosition();
@@ -734,7 +734,7 @@ abstract class ParsingContextMemo {
 
 	public final class ObjectMemo {
 		ObjectMemo next;
-		PExpression  keypeg;
+		ParsingExpression  keypeg;
 		ParsingObject generated;
 		int  consumed;
 		long key;
@@ -778,8 +778,8 @@ abstract class ParsingContextMemo {
 		m.next = n;
 	}			
 
-	protected abstract void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed);
-	protected abstract ObjectMemo getMemo(PExpression keypeg, long keypos);
+	protected abstract void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed);
+	protected abstract ObjectMemo getMemo(ParsingExpression keypeg, long keypos);
 
 //	public final static long makekey(long pos, Peg keypeg) {
 //		return (pos << 24) | keypeg.uniqueId;
@@ -830,11 +830,11 @@ abstract class ParsingContextMemo {
 
 class NoMemo extends ParsingContextMemo {
 	@Override
-	protected void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
+	protected void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed) {
 	}
 
 	@Override
-	protected ObjectMemo getMemo(PExpression keypeg, long keypos) {
+	protected ObjectMemo getMemo(ParsingExpression keypeg, long keypos) {
 		this.MemoMiss += 1;
 		return null;
 	}
@@ -849,7 +849,7 @@ class PackratMemo extends ParsingContextMemo {
 		this(new HashMap<Long, ObjectMemo>(initSize));
 	}
 	@Override
-	protected final void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
+	protected final void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed) {
 		ObjectMemo m = null;
 		m = newMemo();
 		m.keypeg = keypeg;
@@ -859,7 +859,7 @@ class PackratMemo extends ParsingContextMemo {
 		this.memoMap.put(keypos, m);
 	}
 	@Override
-	protected final ObjectMemo getMemo(PExpression keypeg, long keypos) {
+	protected final ObjectMemo getMemo(ParsingExpression keypeg, long keypos) {
 		ObjectMemo m = this.memoMap.get(keypos);
 		while(m != null) {
 			if(m.keypeg == keypeg) {
@@ -895,7 +895,7 @@ class FifoMemo extends ParsingContextMemo {
 	}
 
 	@Override
-	protected final void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
+	protected final void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed) {
 		ObjectMemo m = null;
 		m = newMemo();
 		long key = ParsingUtils.memoKey(keypos, keypeg);
@@ -910,7 +910,7 @@ class FifoMemo extends ParsingContextMemo {
 	}
 
 	@Override
-	protected final ObjectMemo getMemo(PExpression keypeg, long keypos) {
+	protected final ObjectMemo getMemo(ParsingExpression keypeg, long keypos) {
 		ObjectMemo m = this.memoMap.get(ParsingUtils.memoKey(keypos, keypeg));
 		if(m != null) {
 			this.MemoHit += 1;
@@ -935,7 +935,7 @@ class OpenFifoMemo extends ParsingContextMemo {
 	}
 	
 	@Override
-	protected final void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
+	protected final void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed) {
 		long key = ParsingUtils.memoKey(keypos, keypeg);
 		int hash =  (Math.abs((int)key) % memoArray.length);
 		ObjectMemo m = this.memoArray[hash];
@@ -952,7 +952,7 @@ class OpenFifoMemo extends ParsingContextMemo {
 	}
 
 	@Override
-	protected final ObjectMemo getMemo(PExpression keypeg, long keypos) {
+	protected final ObjectMemo getMemo(ParsingExpression keypeg, long keypos) {
 		long key = ParsingUtils.memoKey(keypos, keypeg);
 		int hash =  (Math.abs((int)key) % memoArray.length);
 		ObjectMemo m = this.memoArray[hash];
@@ -981,12 +981,12 @@ class DebugMemo extends ParsingContextMemo {
 		this.m2 = m2;
 	}
 	@Override
-	protected final void setMemo(long keypos, PExpression keypeg, ParsingObject generated, int consumed) {
+	protected final void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed) {
 		this.m1.setMemo(keypos, keypeg, generated, consumed);
 		this.m2.setMemo(keypos, keypeg, generated, consumed);
 	}
 	@Override
-	protected final ObjectMemo getMemo(PExpression keypeg, long keypos) {
+	protected final ObjectMemo getMemo(ParsingExpression keypeg, long keypos) {
 		ObjectMemo o1 = this.m1.getMemo(keypeg, keypos);
 		ObjectMemo o2 = this.m2.getMemo(keypeg, keypos);
 		if(o1 == null && o2 == null) {

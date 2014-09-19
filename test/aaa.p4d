@@ -1,0 +1,11 @@
+// PEG4d: PEG's unique characteristic
+// @test a
+// @test aaa
+// @test! aaaaa
+
+A
+	[example: a]
+	[example: aaa]
+	[bad-example: aaaaa]
+	= 'a' A 'a' / 'a'
+
