@@ -30,6 +30,16 @@ public class ParsingType {
 
 	@Override
 	public final String toString() {
+		if(this.isEmpty()) {
+			return "boolean";
+		}
+		if(this.isObjectType()) {
+			return "Object";
+		}
+		return "Mutable";
+	}
+
+	public final String toString2() {
 		String t = "";
 		if(this.unionType != null) {
 			t = "|" + this.unionType;

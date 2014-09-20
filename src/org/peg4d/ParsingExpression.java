@@ -9,34 +9,31 @@ interface Matcher {
 }
 
 public abstract class ParsingExpression implements Matcher {
-	public final static int CyclicRule       = 1;
-	public final static int HasNonTerminal    = 1 << 1;
-	public final static int HasString         = 1 << 2;
-	public final static int HasCharacter      = 1 << 3;
-	public final static int HasAny            = 1 << 4;
-	public final static int HasRepetition     = 1 << 5;
-	public final static int HasOptional       = 1 << 6;
-	public final static int HasChoice         = 1 << 7;
-	public final static int HasAnd            = 1 << 8;
-	public final static int HasNot            = 1 << 9;
-	
-	public final static int HasConstructor    = 1 << 10;
-	public final static int HasConnector      = 1 << 11;
-	public final static int HasTagging        = 1 << 12;
-	public final static int HasMessage        = 1 << 13;
-	public final static int HasContext        = 1 << 14;
-	public final static int HasReserved       = 1 << 15;
-	public final static int hasReserved2       = 1 << 16;
-	public final static int Mask = HasNonTerminal | HasString | HasCharacter | HasAny
-	                             | HasRepetition | HasOptional | HasChoice | HasAnd | HasNot
-	                             | HasConstructor | HasConnector | HasTagging | HasMessage 
-	                             | HasReserved | hasReserved2 | HasContext;
-	public final static int HasLazyNonTerminal = Mask;
-
-	public final static int LeftObjectOperation    = 1 << 17;
-	public final static int PossibleDifferentRight = 1 << 18;
-	
-	public final static int NoMemo            = 1 << 20;
+//	public final static int CyclicRule       = 1;
+//	public final static int HasNonTerminal    = 1 << 1;
+//	public final static int HasString         = 1 << 2;
+//	public final static int HasCharacter      = 1 << 3;
+//	public final static int HasAny            = 1 << 4;
+//	public final static int HasRepetition     = 1 << 5;
+//	public final static int HasOptional       = 1 << 6;
+//	public final static int HasChoice         = 1 << 7;
+//	public final static int HasAnd            = 1 << 8;
+//	public final static int HasNot            = 1 << 9;
+//	
+//	public final static int HasConstructor    = 1 << 10;
+//	public final static int HasConnector      = 1 << 11;
+//	public final static int HasTagging        = 1 << 12;
+//	public final static int HasMessage        = 1 << 13;
+//	public final static int HasContext        = 1 << 14;
+//	public final static int HasReserved       = 1 << 15;
+//	public final static int hasReserved2       = 1 << 16;
+//	public final static int Mask = HasNonTerminal | HasString | HasCharacter | HasAny
+//	                             | HasRepetition | HasOptional | HasChoice | HasAnd | HasNot
+//	                             | HasConstructor | HasConnector | HasTagging | HasMessage 
+//	                             | HasReserved | hasReserved2 | HasContext;
+//	public final static int HasLazyNonTerminal = Mask;
+//	
+//	public final static int NoMemo            = 1 << 20;
 	
 	public final static int HasSyntaxError    = 1 << 26;
 	public final static int HasTypeError      = 1 << 27;
@@ -48,8 +45,7 @@ public abstract class ParsingExpression implements Matcher {
 	int        minlen = -1;
 	Matcher matcher;
 		
-	protected ParsingExpression(int flag) {
-		this.flag = flag;
+	protected ParsingExpression() {
 		this.matcher = this;
 	}
 	
@@ -78,19 +74,6 @@ public abstract class ParsingExpression implements Matcher {
 		return CheckNextFlow;
 	}
 	
-//	protected final short checkNextFlow(short r, int ch, ParsingExpression stopped) {
-//		if(r == CheckNextFlow) {
-//			if(this.flowNext == null) {
-//				return Reject;
-//			}
-//			if(stopped != this.flowNext ) {
-//				return this.flowNext.acceptByte(ch, stopped);
-//			}
-//			return CheckNextFlow;
-//		}
-//		return r;
-//	}
-
 	public ParsingExpression getExpression() {
 		return this;
 	}
@@ -103,13 +86,14 @@ public abstract class ParsingExpression implements Matcher {
 		this.flag = this.flag | uflag;
 	}
 
-	protected void derived(ParsingExpression e) {
-		this.flag |= (e.flag & ParsingExpression.Mask);
-	}
-	
-	public final boolean isUnique() {
-		return this.uniqueId > 0;
-	}
+////
+////	protected void derived(ParsingExpression e) {
+////		this.flag |= (e.flag & ParsingExpression.Mask);
+////	}
+//	
+//	public final boolean isUnique() {
+//		return this.uniqueId > 0;
+//	}
 	
 	public int size() {
 		return 0;
@@ -175,73 +159,138 @@ public abstract class ParsingExpression implements Matcher {
 		return false;
 	}
 
-	static int checkLeftRecursion(ParsingExpression e, String uName, int minlen, UList<String> stack, ParsingExpression stopped) {
-		if(e == null || e == stopped) {
-			return minlen;
-		}
+//	static int checkLeftRecursion(ParsingExpression e, String uName, int minlen, UList<String> stack, ParsingExpression stopped) {
+//		if(e == null || e == stopped) {
+//			return minlen;
+//		}
+//		if(e instanceof PNonTerminal) {
+//			PNonTerminal ne = (PNonTerminal) e;
+//			ne.checkReference();
+//			ParsingRule r = ne.getRule();
+//			String n = ne.getUniqueName();
+//			if(n.equals(uName) && minlen == 0 && !e.is(HasSyntaxError)) {
+//				e.set(HasSyntaxError);
+//				System.out.println(uName + " @@ " + stack);
+//				e.report(ReportLevel.error, "left recursion: " + r);
+//			}
+//		}
+//		if(e.minlen == -1) {
+//			if(e instanceof PNonTerminal) {
+//				PNonTerminal ne = (PNonTerminal) e;
+//				ne.checkReference();
+//				ParsingRule r = ne.getRule();
+//				String n = ne.getUniqueName();
+//				if(r.minlen != -1) {
+//					e.minlen = r.minlen;
+//				}
+//				else {
+//					if(!checkRecursion(n, stack)) {
+//						int pos = stack.size();
+//						stack.add(n);
+//						int nc = checkLeftRecursion(ne.calling, uName, minlen, stack, null);
+//						e.minlen = nc - minlen;
+//						stack.clear(pos);
+//					}
+//					else {
+////						System.out.println(uName + " @@ " + stack);
+//						e.minlen = 1; // assuming no left recursion
+//					}
+//				}
+//			}
+//			else if(e instanceof ParsingList) {
+//				if(e instanceof ParsingChoice) {
+////					if(uName.equals("Constructor_")) {
+////						System.out.println("choice: " + e + " flowNext=" + e.flowNext);
+////					}
+//					int lmin = Integer.MAX_VALUE;
+//					for(int i = 0; i < e.size(); i++) {
+//						int nc = checkLeftRecursion(e.get(i), uName, minlen, stack, e.flowNext);
+//						if(nc < lmin) {
+//							lmin = nc;
+//						}
+//					}
+//					e.minlen = lmin - minlen;
+//				}
+//				else {
+//					int nc = minlen;
+//					e.minlen = 0;
+//					for(int i = 0; i < e.size(); i++) {
+//						ParsingExpression eN = e.get(i);
+//						nc = checkLeftRecursion(eN, uName, nc, stack, eN.flowNext);
+//					}
+//					e.minlen = nc - minlen;
+//				}
+////				if(e.minlen == 0) {
+////					System.out.println("debug: e.minlen=0 " + e);
+////				}
+//			}
+//			else if(e instanceof ParsingUnary) {
+//				int lmin = checkLeftRecursion(((ParsingUnary) e).inner, uName, minlen, stack, e.flowNext); // skip count
+//				if(e instanceof ParsingOption || e instanceof ParsingRepetition || e instanceof ParsingNot || e instanceof ParsingAnd ) {
+//					e.minlen = 0;
+//				}
+//				else {
+//					e.minlen = lmin - minlen;
+//				}
+//			}
+//			else {
+//				e.minlen = 0;
+//			}
+//		}
+////		if(e.minlen == -1) {
+////			System.out.println("remaining: " + e);
+////		}
+//		assert(e.minlen != -1);
+//		minlen += e.minlen;
+//		return checkLeftRecursion(e.flowNext, uName, minlen, stack, stopped);
+//	}
+
+	static int checkLeftRecursion(ParsingExpression e, String uName, int start, int minlen, UList<String> stack) {
 		if(e instanceof PNonTerminal) {
 			PNonTerminal ne = (PNonTerminal) e;
 			ne.checkReference();
-			ParsingRule r = ne.getRule();
 			String n = ne.getUniqueName();
-			if(n.equals(uName) && minlen == 0 && !e.is(HasSyntaxError)) {
-				e.set(HasSyntaxError);
-				System.out.println(uName + " @@ " + stack);
-				e.report(ReportLevel.error, "left recursion: " + r);
+			if(n.equals(uName)) {
+				if(minlen == 0 && !e.is(HasSyntaxError)) {
+					ParsingRule r = ne.getRule();
+					e.set(HasSyntaxError);
+					System.out.println(uName + " minlen=" + minlen + " @@ " + stack);
+					e.report(ReportLevel.error, "left recursion: " + ne.getRule());
+				}
+			}
+			if(!checkRecursion(n, stack)) {
+				int pos = stack.size();
+				stack.add(n);
+				int nc = checkLeftRecursion(ne.calling, uName, start, minlen, stack);
+				e.minlen = nc - minlen;
+				stack.clear(pos);
+			}
+			else {
+				//						System.out.println(uName + " @@ " + stack);
+				e.minlen = 1; // assuming no left recursion
 			}
 		}
-		if(e.minlen == -1) {
-			if(e instanceof PNonTerminal) {
-				PNonTerminal ne = (PNonTerminal) e;
-				ne.checkReference();
-				ParsingRule r = ne.getRule();
-				String n = ne.getUniqueName();
-				if(r.minlen != -1) {
-					e.minlen = r.minlen;
-				}
-				else {
-					if(!checkRecursion(n, stack)) {
-						int pos = stack.size();
-						stack.add(n);
-						int nc = checkLeftRecursion(ne.calling, uName, minlen, stack, null);
-						e.minlen = nc - minlen;
-						stack.clear(pos);
-					}
-					else {
-//						System.out.println(uName + " @@ " + stack);
-						e.minlen = 1; // assuming no left recursion
+//		if(e.minlen == -1) {
+			if(e instanceof ParsingChoice) {
+				int lmin = Integer.MAX_VALUE;
+				for(int i = 0; i < e.size(); i++) {
+					int nc = checkLeftRecursion(e.get(i), uName, start, minlen, stack);
+					if(nc < lmin) {
+						lmin = nc;
 					}
 				}
+				e.minlen = lmin - minlen;
 			}
-			else if(e instanceof ParsingList) {
-				if(e instanceof ParsingChoice) {
-//					if(uName.equals("Constructor_")) {
-//						System.out.println("choice: " + e + " flowNext=" + e.flowNext);
-//					}
-					int lmin = Integer.MAX_VALUE;
-					for(int i = 0; i < e.size(); i++) {
-						int nc = checkLeftRecursion(e.get(i), uName, minlen, stack, e.flowNext);
-						if(nc < lmin) {
-							lmin = nc;
-						}
-					}
-					e.minlen = lmin - minlen;
+			else if(e instanceof ParsingSequence || e instanceof PConstructor) {
+				int nc = minlen;
+				for(int i = 0; i < e.size(); i++) {
+					ParsingExpression eN = e.get(i);
+					nc = checkLeftRecursion(eN, uName, start, nc, stack);
 				}
-				else {
-					int nc = minlen;
-					e.minlen = 0;
-					for(int i = 0; i < e.size(); i++) {
-						ParsingExpression eN = e.get(i);
-						nc = checkLeftRecursion(eN, uName, nc, stack, eN.flowNext);
-					}
-					e.minlen = nc - minlen;
-				}
-//				if(e.minlen == 0) {
-//					System.out.println("debug: e.minlen=0 " + e);
-//				}
+				e.minlen = nc - minlen;
 			}
 			else if(e instanceof ParsingUnary) {
-				int lmin = checkLeftRecursion(((ParsingUnary) e).inner, uName, minlen, stack, e.flowNext); // skip count
+				int lmin = checkLeftRecursion(((ParsingUnary) e).inner, uName, start, minlen, stack); // skip count
 				if(e instanceof ParsingOption || e instanceof ParsingRepetition || e instanceof ParsingNot || e instanceof ParsingAnd ) {
 					e.minlen = 0;
 				}
@@ -250,15 +299,17 @@ public abstract class ParsingExpression implements Matcher {
 				}
 			}
 			else {
-				e.minlen = 0;
+				if(e.minlen == -1) {
+					e.minlen = 0;
+				}
 			}
-		}
-//		if(e.minlen == -1) {
-//			System.out.println("remaining: " + e);
 //		}
+		if(e.minlen == -1) {
+			System.out.println("@@@@ " + uName + "," + e);
+		}
 		assert(e.minlen != -1);
 		minlen += e.minlen;
-		return checkLeftRecursion(e.flowNext, uName, minlen, stack, stopped);
+		return minlen;
 	}
 
 	static ParsingType typeCheck(ParsingExpression e, UList<String> stack, ParsingType leftType, ParsingExpression stopped) {
@@ -410,7 +461,7 @@ public abstract class ParsingExpression implements Matcher {
 		if(l.size() == 1) {
 			return l.ArrayValues[0];
 		}
-		return new ParsingSequence(0, l);
+		return new ParsingSequence(l);
 	}
 	
 	public final static void addSequence(UList<ParsingExpression> l, ParsingExpression e) {
@@ -444,7 +495,7 @@ public abstract class ParsingExpression implements Matcher {
 	public static final ParsingExpression newString(String text) {
 		byte[] utf8 = ParsingCharset.toUtf8(text);
 		if(Conservative) {
-			return new PString(0, text, utf8);	
+			return new PString(text, utf8);	
 		}
 		if(utf8.length == 1) {
 			return newByte(utf8[0]);
@@ -617,11 +668,11 @@ public abstract class ParsingExpression implements Matcher {
 //		if(p instanceof PCharacter) {
 //			return new PZeroMoreCharacter(0, (PCharacter)p);
 //		}
-		return new ParsingRepetition(0, p);
+		return new ParsingRepetition(p);
 	}
 
 	public final static ParsingExpression newAnd(ParsingExpression p) {
-		return new ParsingAnd(0, p);
+		return new ParsingAnd(p);
 	}
 	
 	public final static ParsingExpression newNot(ParsingExpression p) {
@@ -639,14 +690,14 @@ public abstract class ParsingExpression implements Matcher {
 //		if(p instanceof ParsingOperation) {
 //			p = ((ParsingOperation)p).inner;
 //		}
-		return new ParsingNot(0, p);
+		return new ParsingNot(p);
 	}
 		
 	public final static ParsingExpression newChoice(UList<ParsingExpression> l) {
 		if(l.size() == 1) {
 			return l.ArrayValues[0];
 		}
-		return new ParsingChoice(0, l);
+		return new ParsingChoice(l);
 	}
 
 	
@@ -662,12 +713,12 @@ public abstract class ParsingExpression implements Matcher {
 	}
 	
 	public final static ParsingExpression newConstructor(ParsingExpression p) {
-		ParsingExpression e = new PConstructor(0, false, toSequenceList(p));
+		ParsingExpression e = new PConstructor(false, toSequenceList(p));
 		return e;
 	}
 
 	public final static ParsingExpression newJoinConstructor(ParsingExpression p) {
-		ParsingExpression e = new PConstructor(0, true, toSequenceList(p));
+		ParsingExpression e = new PConstructor(true, toSequenceList(p));
 		return e;
 	}
 	
@@ -681,15 +732,15 @@ public abstract class ParsingExpression implements Matcher {
 	}
 		
 	public final static ParsingExpression newConnector(ParsingExpression p, int index) {
-		return new ParsingConnector(0, p, index);
+		return new ParsingConnector(p, index);
 	}
 
 	public final static ParsingExpression newTagging(ParsingTag tag) {
-		return new ParsingTagging(0, tag);
+		return new ParsingTagging(tag);
 	}
 
 	public final static ParsingExpression newValue(String msg) {
-		return new ParsingValue(0, msg);
+		return new ParsingValue(msg);
 	}
 	
 	public final static ParsingExpression newDebug(ParsingExpression e) {
@@ -697,20 +748,20 @@ public abstract class ParsingExpression implements Matcher {
 	}
 
 	public final static ParsingExpression newFail(String message) {
-		return new ParsingFail(0, message);
+		return new ParsingFail(message);
 	}
 
 	private static ParsingExpression catchExpression = null;
 
 	public final static ParsingExpression newCatch() {
 		if(catchExpression == null) {
-			catchExpression = new ParsingCatch(0);
+			catchExpression = new ParsingCatch();
 		}
 		return catchExpression;
 	}
 	
 	public final static ParsingExpression newFlag(String flagName) {
-		return new ParsingIfFlag(0, flagName);
+		return new ParsingIfFlag(flagName);
 	}
 
 	public final static ParsingExpression newEnableFlag(String flagName, ParsingExpression e) {
@@ -726,7 +777,7 @@ public abstract class ParsingExpression implements Matcher {
 	public final static ParsingExpression newIndent(ParsingExpression e) {
 		if(e == null) {
 			if(indentExpression == null) {
-				indentExpression = new ParsingIndent(0);
+				indentExpression = new ParsingIndent();
 			}
 			return indentExpression;
 		}
@@ -736,15 +787,15 @@ public abstract class ParsingExpression implements Matcher {
 }
 
 abstract class ParsingAtom extends ParsingExpression {
-	ParsingAtom (int flag) {
-		super(flag);
+	ParsingAtom () {
+		super();
 	}
 }
 
 abstract class ParsingUnary extends ParsingExpression {
 	ParsingExpression inner;
-	ParsingUnary(int flag, ParsingExpression e) {
-		super(flag);
+	ParsingUnary(ParsingExpression e) {
+		super();
 		this.inner = e;
 	}
 	@Override
@@ -763,8 +814,8 @@ abstract class ParsingUnary extends ParsingExpression {
 
 abstract class ParsingList extends ParsingExpression {
 	UList<ParsingExpression> list;
-	ParsingList(int flag, UList<ParsingExpression> list) {
-		super(flag);
+	ParsingList(UList<ParsingExpression> list) {
+		super();
 		this.list = list;
 	}
 	@Override
@@ -828,7 +879,7 @@ abstract class ParsingList extends ParsingExpression {
 
 class ParsingEmpty extends ParsingExpression {
 	ParsingEmpty() {
-		super(0);
+		super();
 		this.minlen = 0;
 	}
 	@Override ParsingExpression dup() { 
@@ -847,7 +898,7 @@ class ParsingEmpty extends ParsingExpression {
 class ParsingFailure extends ParsingExpression {
 	ParsingExpression dead;
 	ParsingFailure(ParsingExpression dead) {
-		super(0);
+		super();
 		this.dead = dead;
 	}
 	@Override
@@ -872,7 +923,7 @@ class ParsingByte extends ParsingExpression {
 	int byteChar;
 	String errorToken = null;
 	ParsingByte(int ch) {
-		super(0);
+		super();
 		this.byteChar = ch;
 		this.minlen = 1;
 	}
@@ -902,7 +953,7 @@ class ParsingByte extends ParsingExpression {
 
 class ParsingAny extends ParsingExpression {
 	ParsingAny() {
-		super(ParsingExpression.HasAny | ParsingExpression.NoMemo);
+		super();
 		this.minlen = 1;
 	}
 	@Override ParsingExpression dup() { return new ParsingAny(); }
@@ -930,14 +981,14 @@ class PNonTerminal extends ParsingExpression {
 	Grammar peg;
 	String  ruleName;
 	ParsingExpression    calling = null;
-	PNonTerminal(Grammar base, int flag, String ruleName) {
-		super(flag | ParsingExpression.HasNonTerminal | ParsingExpression.NoMemo);
+	PNonTerminal(Grammar base, String ruleName) {
+		super();
 		this.peg = base;
 		this.ruleName = ruleName;
 	}
 	@Override
 	ParsingExpression dup() {
-		return new PNonTerminal(peg, flag, ruleName);
+		return new PNonTerminal(peg, ruleName);
 	}
 	String getUniqueName() {
 		return this.peg.uniqueRuleName(this.ruleName);
@@ -948,17 +999,16 @@ class PNonTerminal extends ParsingExpression {
 	void checkReference() {
 		if(this.calling == null) {
 			ParsingRule r = this.getRule();
+			if(r == null) {
+				this.report(ReportLevel.error, "undefined rule: " + this.ruleName);
+				r = new ParsingRule(this.peg, this.ruleName, null, new ParsingIfFlag(this.ruleName));
+				this.peg.setRule(this.ruleName, r);
+			}
 			if(r.minlen != -1) {
 				this.minlen = r.minlen;
 			}
+			r.refc += 1;
 			this.calling = r.expr;
-			//System.out.println("NonTerminal: " + this + " ref: " + this.resolvedExpression);
-			if(this.calling == null) {
-				this.report(ReportLevel.error, "undefined rule: " + this.ruleName);
-				this.calling = new ParsingIfFlag(0, this.ruleName);
-				ParsingRule rule = new ParsingRule(this.peg, this.ruleName, null, this.calling);
-				this.peg.setRule(this.ruleName, rule);
-			}
 		}
 	}
 	@Override
@@ -986,17 +1036,17 @@ class PNonTerminal extends ParsingExpression {
 class PString extends ParsingAtom {
 	String text;
 	byte[] utf8;
-	PString(int flag, String text, byte[] utf8) {
-		super(ParsingExpression.HasString | ParsingExpression.NoMemo | flag);
+	PString(String text, byte[] utf8) {
+		super();
 		this.text = text;
 		this.utf8 = utf8;
 		this.minlen = utf8.length;
 	}
 	PString(int flag, String text) {
-		this(flag, text, ParsingCharset.toUtf8(text));
+		this(text, ParsingCharset.toUtf8(text));
 	}
 	PString(int flag, int ch) {
-		super(ParsingExpression.HasString | ParsingExpression.NoMemo | flag);
+		super();
 		utf8 = new byte[1];
 		utf8[0] = (byte)ch;
 		if(ch >= ' ' && ch < 127) {
@@ -1008,7 +1058,7 @@ class PString extends ParsingAtom {
 	}
 	@Override
 	ParsingExpression dup() { 
-		return new PString(flag, text, utf8); 
+		return new PString(text, utf8); 
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1037,7 +1087,7 @@ class ParsingByteRange extends ParsingExpression {
 	int startByteChar;
 	int endByteChar;
 	ParsingByteRange(int startByteChar, int endByteChar) {
-		super(0);
+		super();
 		this.startByteChar = startByteChar;
 		this.endByteChar = endByteChar;
 		this.minlen = 1;
@@ -1074,7 +1124,7 @@ class ParsingByteRange extends ParsingExpression {
 
 class ParsingOption extends ParsingUnary {
 	ParsingOption(ParsingExpression e) {
-		super(ParsingExpression.HasOptional | ParsingExpression.NoMemo, e);
+		super(e);
 	}
 	@Override ParsingExpression dup() { 
 		return new ParsingOption(inner); 
@@ -1104,11 +1154,11 @@ class ParsingOption extends ParsingUnary {
 }
 
 class ParsingRepetition extends ParsingUnary {
-	ParsingRepetition(int flag, ParsingExpression e) {
-		super(flag | ParsingExpression.HasRepetition, e);
+	ParsingRepetition(ParsingExpression e) {
+		super(e);
 	}
 	@Override ParsingExpression dup() { 
-		return new ParsingRepetition(flag, inner/*, atleast*/); 
+		return new ParsingRepetition(inner/*, atleast*/); 
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1141,11 +1191,11 @@ class ParsingRepetition extends ParsingUnary {
 }
 
 class ParsingAnd extends ParsingUnary {
-	ParsingAnd(int flag, ParsingExpression e) {
-		super(flag | ParsingExpression.HasAnd, e);
+	ParsingAnd(ParsingExpression e) {
+		super(e);
 	}
 	@Override ParsingExpression dup() { 
-		return new ParsingAnd(flag, inner); 
+		return new ParsingAnd(inner); 
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1169,11 +1219,11 @@ class ParsingAnd extends ParsingUnary {
 }
 
 class ParsingNot extends ParsingUnary {
-	ParsingNot(int flag, ParsingExpression e) {
-		super(ParsingExpression.HasNot | flag, e);
+	ParsingNot(ParsingExpression e) {
+		super(e);
 	}
 	@Override ParsingExpression dup() { 
-		return new ParsingNot(flag, inner); 
+		return new ParsingNot(inner); 
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1210,12 +1260,12 @@ class ParsingNot extends ParsingUnary {
 }
 
 class ParsingSequence extends ParsingList {
-	ParsingSequence(int flag, UList<ParsingExpression> l) {
-		super(flag, l);
+	ParsingSequence(UList<ParsingExpression> l) {
+		super(l);
 	}
 	@Override
 	ParsingExpression dup() {
-		return new ParsingSequence(flag, list);
+		return new ParsingSequence(list);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1237,13 +1287,12 @@ class ParsingSequence extends ParsingList {
 }
 
 class ParsingChoice extends ParsingList {
-	ParsingExpression[] caseOf = null;
-	ParsingChoice(int flag, UList<ParsingExpression> list) {
-		super(flag | ParsingExpression.HasChoice, list);
+	ParsingChoice(UList<ParsingExpression> list) {
+		super(list);
 	}
 	@Override
 	ParsingExpression dup() {
-		return new ParsingChoice(flag, list);
+		return new ParsingChoice(list);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1281,13 +1330,13 @@ class ParsingChoice extends ParsingList {
 
 class ParsingConnector extends ParsingUnary {
 	public int index;
-	ParsingConnector(int flag, ParsingExpression e, int index) {
-		super(flag | ParsingExpression.HasConnector | ParsingExpression.NoMemo, e);
+	ParsingConnector(ParsingExpression e, int index) {
+		super(e);
 		this.index = index;
 	}
 	@Override
 	ParsingExpression dup() {
-		return new ParsingConnector(flag, inner, index);
+		return new ParsingConnector(inner, index);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1309,13 +1358,13 @@ class ParsingConnector extends ParsingUnary {
 
 class ParsingTagging extends ParsingExpression {
 	ParsingTag tag;
-	ParsingTagging(int flag, ParsingTag tag) {
-		super(ParsingExpression.HasTagging | ParsingExpression.NoMemo | flag);
+	ParsingTagging(ParsingTag tag) {
+		super();
 		this.tag = tag;
 	}
 	@Override
 	ParsingExpression dup() {
-		return new ParsingTagging(flag, tag);
+		return new ParsingTagging(tag);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1332,13 +1381,13 @@ class ParsingTagging extends ParsingExpression {
 
 class ParsingValue extends ParsingExpression {
 	String value;
-	ParsingValue(int flag, String value) {
-		super(flag | ParsingExpression.NoMemo | ParsingExpression.HasMessage);
+	ParsingValue(String value) {
+		super();
 		this.value = value;
 	}
 	@Override
 	ParsingExpression dup() {
-		return new ParsingValue(flag, value);
+		return new ParsingValue(value);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1357,13 +1406,13 @@ class PConstructor extends ParsingList {
 	boolean leftJoin = false;
 	int prefetchIndex = 0;
 	ParsingType type;
-	PConstructor(int flag, boolean leftJoin, UList<ParsingExpression> list) {
-		super(flag | ParsingExpression.HasConstructor, list);
+	PConstructor(boolean leftJoin, UList<ParsingExpression> list) {
+		super(list);
 		this.leftJoin = leftJoin;
 	}
 	@Override
 	ParsingExpression dup() {
-		return new PConstructor(flag, leftJoin, list);
+		return new PConstructor(leftJoin, list);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1420,8 +1469,8 @@ class PConstructor extends ParsingList {
 
 abstract class ParsingFunction extends ParsingExpression {
 	String funcName;
-	ParsingFunction(String funcName, int flag) {
-		super(flag);
+	ParsingFunction(String funcName) {
+		super();
 		this.funcName = funcName;
 	}
 	@Override
@@ -1436,7 +1485,7 @@ abstract class ParsingFunction extends ParsingExpression {
 abstract class ParsingOperation extends ParsingUnary {
 	String funcName;
 	ParsingOperation(String funcName, ParsingExpression inner) {
-		super(0, inner);
+		super(inner);
 		this.funcName = funcName;
 		this.inner = inner;
 	}
@@ -1454,8 +1503,8 @@ abstract class ParsingOperation extends ParsingUnary {
 }
 
 class ParsingIndent extends ParsingFunction {
-	ParsingIndent(int flag) {
-		super("indent", flag | ParsingExpression.HasContext);
+	ParsingIndent() {
+		super("indent");
 	}
 	@Override ParsingExpression dup() {
 		return this;
@@ -1476,12 +1525,12 @@ class ParsingIndent extends ParsingFunction {
 
 class ParsingFail extends ParsingFunction {
 	String message;
-	ParsingFail(int flag, String message) {
-		super("fail", flag);
+	ParsingFail(String message) {
+		super("fail");
 		this.message = message;
 	}
 	@Override ParsingExpression dup() {
-		return new ParsingFail(flag, message);
+		return new ParsingFail(message);
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -1495,8 +1544,8 @@ class ParsingFail extends ParsingFunction {
 }
 
 class ParsingCatch extends ParsingFunction {
-	ParsingCatch(int flag) {
-		super("catch", flag);
+	ParsingCatch() {
+		super("catch");
 	}
 	@Override ParsingExpression dup() {
 		return this;
@@ -1510,12 +1559,12 @@ class ParsingCatch extends ParsingFunction {
 
 
 class ParsingExport extends ParsingUnary {
-	ParsingExport(int flag, ParsingExpression e) {
-		super(flag | ParsingExpression.NoMemo, e);
+	ParsingExport(ParsingExpression e) {
+		super(e);
 	}
 	@Override
 	ParsingExpression dup() {
-		return new ParsingExport(flag, inner);
+		return new ParsingExport(inner);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1646,12 +1695,12 @@ class ParsingStackIndent extends ParsingOperation {
 
 class ParsingIfFlag extends ParsingFunction {
 	String flagName;
-	ParsingIfFlag(int flag, String flagName) {
-		super("if", flag | ParsingExpression.HasContext);
+	ParsingIfFlag(String flagName) {
+		super("if");
 		this.flagName = flagName;
 	}
 	@Override ParsingExpression dup() {
-		return new ParsingIfFlag(flag, flagName);
+		return new ParsingIfFlag(flagName);
 	}
 	@Override
 	public String getParameters() {

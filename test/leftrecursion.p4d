@@ -2,7 +2,10 @@
 //     left-recursion
 
 Chunk    = Expr
-Expr     = Expr {@ ('+' #add / '-' #sub) @Expr }
-Expr     = Expr [@ ('*' #mul / '/' #div) @Expr } / Expr
-Expr     = Expr / { [0-9]+ #number } / '(' Expr ')'
+
+Expr
+	= Expr {@ ('+' #add / '-' #sub) @Expr }
+	/ Expr {@ ('*' #mul / '/' #div) @Expr }
+	/ { [0-9]+ #number } 
+	/ '(' Expr ')'
 

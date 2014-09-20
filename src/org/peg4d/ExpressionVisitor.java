@@ -251,12 +251,12 @@ class Optimizer extends ExpressionVisitor {
 		}
 	}
 	
-	private boolean needsObjectContext(ParsingExpression e) {
-		if(e.is(ParsingExpression.HasConstructor) || e.is(ParsingExpression.HasConnector) || e.is(ParsingExpression.HasTagging) || e.is(ParsingExpression.HasMessage) || e.is(ParsingExpression.HasContext)) {
-			return true;
-		}
-		return false;
-	}
+//	private boolean needsObjectContext(ParsingExpression e) {
+//		if(e.is(ParsingExpression.HasConstructor) || e.is(ParsingExpression.HasConnector) || e.is(ParsingExpression.HasTagging) || e.is(ParsingExpression.HasMessage) || e.is(ParsingExpression.HasContext)) {
+//			return true;
+//		}
+//		return false;
+//	}
 
 	@Override
 	public void visitConstructor(PConstructor e) {
@@ -264,10 +264,10 @@ class Optimizer extends ExpressionVisitor {
 		int prefetchIndex = 0;
 		for(int i = 0; i < e.size(); i++) {
 			ParsingExpression sub = e.get(i);
-			if(needsObjectContext(sub)) {
-				break;
-			}
-			prefetchIndex = i + 1;
+////			if(needsObjectContext(sub)) {
+////				break;
+////			}
+//			prefetchIndex = i + 1;
 		}
 		if(prefetchIndex > 0) {
 			if(this.peg.optimizationLevel > 1) {

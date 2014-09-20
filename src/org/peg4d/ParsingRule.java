@@ -14,6 +14,7 @@ class ParsingRule {
 	ParsingExpression expr;
 	
 	int minlen = -1;
+	int refc = 0;
 
 	ParsingRule(Grammar peg, String ruleName, ParsingObject po, ParsingExpression e) {
 		this.peg = peg;

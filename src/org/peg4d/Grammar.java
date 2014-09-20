@@ -46,7 +46,7 @@ public class Grammar {
 	}
 	
 	final PNonTerminal newNonTerminal(String text) {
-		return new PNonTerminal(this, 0, text);
+		return new PNonTerminal(this, text);
 	}
 	
 	final boolean loadGrammarFile(String fileName) {
@@ -159,7 +159,7 @@ public class Grammar {
 			String uName = rule.getUniqueName();
 			stack.clear(0);
 			stack.add(uName);
-			rule.minlen = ParsingExpression.checkLeftRecursion(rule.expr, uName, 0, stack, null);
+			rule.minlen = ParsingExpression.checkLeftRecursion(rule.expr, uName, 0, 0, stack);
 			if(rule.type == null) {
 				rule.type = new ParsingType();
 				rule.type = ParsingExpression.typeCheck(rule.expr, stack, rule.type, null);
