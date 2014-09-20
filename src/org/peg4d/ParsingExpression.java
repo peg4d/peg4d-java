@@ -930,7 +930,7 @@ class PNonTerminal extends ParsingExpression {
 //			//assert(this.calling != null);
 //			this.checkReference();
 //		}
-		return this.calling.debugMatch(context);
+		return this.calling.matcher.simpleMatch(context);
 	}
 }
 
@@ -1046,10 +1046,11 @@ class ParsingOption extends ParsingUnary {
 	public boolean simpleMatch(ParsingContext context) {
 		long f = context.rememberFailure();
 		ParsingObject left = context.left;
-		if(!this.inner.debugMatch(context)) {
+		if(!this.inner.matcher.simpleMatch(context)) {
 			context.left = left;
 			context.forgetFailure(f);
 		}
+		left = null;
 		return true;
 	}
 }
@@ -1079,12 +1080,14 @@ class ParsingRepetition extends ParsingUnary {
 		long f = context.rememberFailure();
 		while(ppos < pos) {
 			ParsingObject left = context.left;
-			if(!this.inner.debugMatch(context)) {
+			if(!this.inner.matcher.simpleMatch(context)) {
 				context.left = left;
+				left = null;
 				break;
 			}
 			ppos = pos;
 			pos = context.getPosition();
+			left = null;
 		}
 		context.forgetFailure(f);
 		return true;
@@ -1113,7 +1116,7 @@ class ParsingAnd extends ParsingUnary {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		long pos = context.getPosition();
-		this.inner.debugMatch(context);
+		this.inner.matcher.simpleMatch(context);
 		context.rollback(pos);
 		return !context.isFailure();
 	}
@@ -1146,15 +1149,17 @@ class ParsingNot extends ParsingUnary {
 		long pos = context.getPosition();
 		long f   = context.rememberFailure();
 		ParsingObject left = context.left;
-		if(this.inner.debugMatch(context)) {
+		if(this.inner.matcher.simpleMatch(context)) {
 			context.rollback(pos);
 			context.opFailure(this);
+			left = null;
 			return false;
 		}
 		else {
 			context.rollback(pos);
 			context.forgetFailure(f);
 			context.left = left;
+			left = null;
 			return true;
 		}
 	}
@@ -1177,7 +1182,7 @@ class ParsingSequence extends ParsingList {
 		long pos = context.getPosition();
 		int mark = context.markObjectStack();
 		for(int i = 0; i < this.size(); i++) {
-			if(!(this.get(i).debugMatch(context))) {
+			if(!(this.get(i).matcher.simpleMatch(context))) {
 				context.abortLinkLog(mark);
 				context.rollback(pos);
 				return false;
@@ -1219,12 +1224,14 @@ class ParsingChoice extends ParsingList {
 		ParsingObject left = context.left;
 		for(int i = 0; i < this.size(); i++) {
 			context.left = left;
-			if(this.get(i).debugMatch(context)) {
+			if(this.get(i).matcher.simpleMatch(context)) {
 				context.forgetFailure(f);
+				left = null;
 				return true;
 			}
 		}
 		assert(context.isFailure());
+		left = null;
 		return false;
 	}
 }
@@ -1249,13 +1256,14 @@ class ParsingConnector extends ParsingUnary {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		ParsingObject left = context.left;
-		if(!this.inner.debugMatch(context)) {
+		if(!this.inner.matcher.simpleMatch(context)) {
 			return false;
 		}
 		if(context.canTransCapture() && context.left != left) {
 			context.logLink(left, this.index, context.left);
 		}
 		context.left = left;
+		left = null;
 		return true;
 	}
 }
@@ -1328,12 +1336,11 @@ class PConstructor extends ParsingList {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		long startIndex = context.getPosition();
-		ParsingObject left = context.left;
 		if(context.isRecognitionMode()) {
 			ParsingObject newone = context.newParsingObject(startIndex, this);
 			context.left = newone;
 			for(int i = 0; i < this.size(); i++) {
-				if(!this.get(i).debugMatch(context)) {
+				if(!this.get(i).matcher.simpleMatch(context)) {
 					context.rollback(startIndex);
 					return false;
 				}
@@ -1342,9 +1349,11 @@ class PConstructor extends ParsingList {
 			return true;
 		}
 		else {
+			ParsingObject left = context.left;
 			for(int i = 0; i < this.prefetchIndex; i++) {
-				if(!this.get(i).debugMatch(context)) {
+				if(!this.get(i).matcher.simpleMatch(context)) {
 					context.rollback(startIndex);
+					left = null;
 					return false;
 				}
 			}
@@ -1355,9 +1364,10 @@ class PConstructor extends ParsingList {
 				context.logLink(newnode, -1, left);
 			}
 			for(int i = this.prefetchIndex; i < this.size(); i++) {
-				if(!this.get(i).debugMatch(context)) {
+				if(!this.get(i).matcher.simpleMatch(context)) {
 					context.abortLinkLog(mark);
 					context.rollback(startIndex);
+					left = null;
 					return false;
 				}
 			}
@@ -1366,6 +1376,7 @@ class PConstructor extends ParsingList {
 				context.stat.countObjectCreation();
 			}
 			context.left = newnode;
+			left = null;
 			return true;
 		}
 	}
@@ -1498,10 +1509,9 @@ class ParsingMemo extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		if(!this.enableMemo) {
-			return this.inner.debugMatch(context);
+			return this.inner.matcher.simpleMatch(context);
 		}
 		long pos = context.getPosition();
-		ParsingObject left = context.left;
 		ObjectMemo m = context.getMemo(this, pos);
 		if(m != null) {
 			this.memoHit += 1;
@@ -1511,11 +1521,13 @@ class ParsingMemo extends ParsingOperation {
 			}
 			return !(context.isFailure());
 		}
-		this.inner.debugMatch(context);
+		ParsingObject left = context.left;
+		this.inner.matcher.simpleMatch(context);
 		int length = (int)(context.getPosition() - pos);
 		context.setMemo(pos, this, (context.left == left) ? NonTransition : context.left, length);
 		this.memoMiss += 1;
 		this.tryTracing();
+		left = null;
 		return !(context.isFailure());
 	}
 
@@ -1566,12 +1578,14 @@ class ParsingMatch extends ParsingOperation {
 	public boolean simpleMatch(ParsingContext context) {
 		boolean oldMode = context.setRecognitionMode(true);
 		ParsingObject left = context.left;
-		if(this.inner.debugMatch(context)) {
+		if(this.inner.matcher.simpleMatch(context)) {
 			context.setRecognitionMode(oldMode);
 			context.left = left;
+			left = null;
 			return true;
 		}
 		context.setRecognitionMode(oldMode);
+		left = null;
 		return false;
 	}
 }
@@ -1583,7 +1597,7 @@ class ParsingBlock extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opPushIndent();
-		this.inner.debugMatch(context);
+		this.inner.matcher.simpleMatch(context);
 		context.opPopIndent();
 		return !(context.isFailure());
 	}
@@ -1619,7 +1633,7 @@ class ParsingWithFlag extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opEnableFlag(this.flagName);
-		this.inner.debugMatch(context);
+		this.inner.matcher.simpleMatch(context);
 		context.opPopFlag(this.flagName);
 		return !(context.isFailure());
 	}
@@ -1638,7 +1652,7 @@ class ParsingWithoutFlag extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opDisableFlag(this.flagName);
-		this.inner.debugMatch(context);
+		this.inner.matcher.simpleMatch(context);
 		context.opPopFlag(this.flagName);
 		return !(context.isFailure());
 	}
@@ -1650,12 +1664,28 @@ class ParsingDebug extends ParsingOperation {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		context.opRememberPosition();
-		context.opRememberFailurePosition();
-		context.opStoreObject();
-		this.inner.debugMatch(context);
-		context.opDebug(this.inner);
-		return !(context.isFailure());
+		long pos = context.getPosition();
+		ParsingObject left = context.left;
+		this.inner.matcher.simpleMatch(context);
+		if(context.isFailure()) {
+			System.out.println(context.source.formatPositionLine("debug", context.getPosition(), "failure in " + inner));
+			left = null;
+			return false;
+		}
+		if(context.left != left) {
+			System.out.println(context.source.formatPositionLine("debug", pos,
+				"transition #" + context.left.getTag() + " => #" + left.getTag() + " in " + inner));
+			return true;
+		}
+		else if(context.getPosition() != pos) {
+			System.out.println(context.source.formatPositionMessage("debug", pos,
+				"consumed pos=" + pos + " => " + context.getPosition() + " in " + inner));
+		}
+		else {
+			System.out.println(context.source.formatPositionLine("debug", pos, "pass in " + inner));
+		}
+		left = null;
+		return true;
 	}
 }
 
@@ -1667,11 +1697,11 @@ class ParsingApply extends ParsingOperation {
 	public boolean simpleMatch(ParsingContext context) {
 //		ParsingContext s = new ParsingContext(context.left);
 //		
-//		this.inner.debugMatch(s);
+//		this.inner.matcher.simpleMatch(s);
 //		context.opRememberPosition();
 //		context.opRememberFailurePosition();
 //		context.opStoreObject();
-//		this.inner.debugMatch(context);
+//		this.inner.matcher.simpleMatch(context);
 //		context.opDebug(this.inner);
 		return !(context.isFailure());
 

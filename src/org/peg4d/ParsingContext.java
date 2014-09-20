@@ -210,6 +210,7 @@ public class ParsingContext {
 			return this.successResult;
 		}
 		else {
+			//System.out.println("created pos="+pos + " mark=" + this.markObjectStack());
 			return new ParsingObject(this.emptyTag, this.source, pos, created);
 		}
 	}
@@ -263,6 +264,8 @@ public class ParsingContext {
 		l.next = this.logStack;
 		this.logStack = l;
 		this.stackSize += 1;
+		parent = null; // for GC
+		child = null;  // for GC
 	}
 
 	final void commitLinkLog(ParsingObject newnode, long startIndex, int mark) {
@@ -283,7 +286,7 @@ public class ParsingContext {
 			}
 		}
 		if(objectSize > 0) {
-			newnode = this.newAst(newnode, objectSize);
+			newnode.expandAstToSize(objectSize);
 			for(int i = 0; i < objectSize; i++) {
 				LinkLog cur = first;
 				first = first.next;
@@ -296,19 +299,16 @@ public class ParsingContext {
 			checkNullEntry(newnode);
 		}
 		newnode.setLength((int)(this.getPosition() - startIndex));
+		newnode = null;
 	}
 	
-	private final ParsingObject newAst(ParsingObject pego, int size) {
-		pego.expandAstToSize(size);
-		return pego;
-	}
-
 	private final void checkNullEntry(ParsingObject o) {
 		for(int i = 0; i < o.size(); i++) {
 			if(o.get(i) == null) {
 				o.set(i, new ParsingObject(emptyTag, this.source, 0));
 			}
 		}
+		o = null;
 	}
 
 	protected ParsingContextMemo memoMap = null;
@@ -369,9 +369,9 @@ public class ParsingContext {
 	HashMap<Long, Object> errorMap = new HashMap<Long, Object>();
 	private void setErrorInfo(Object errorInfo) {
 		Long key = this.pos;
-		if(!this.errorMap.containsKey(key)) {
-			this.errorMap.put(key, errorInfo);
-		}
+//		if(!this.errorMap.containsKey(key)) {
+//			this.errorMap.put(key, errorInfo);
+//		}
 	}
 
 	private void removeErrorInfo() {

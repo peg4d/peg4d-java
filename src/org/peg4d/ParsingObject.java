@@ -23,6 +23,11 @@ public class ParsingObject {
 		assert(pos == ParsingUtils.getpos(this.pospeg));
 		this.length     = 0;
 	}
+	
+//	@Override
+//	protected void finalize() {
+//		System.out.println("gc " + this.getSourcePosition());
+//	}
 
 	public final ParsingObject getParent() {
 		return this.parent;
