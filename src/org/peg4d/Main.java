@@ -14,7 +14,7 @@ public class Main {
 	public final static String  ProgName  = "PEG4d";
 	public final static String  CodeName  = "yokohama";
 	public final static int     MajorVersion = 0;
-	public final static int     MinerVersion = 1;
+	public final static int     MinerVersion = 2;
 	public final static int     PatchLevel   = 0;
 	public final static String  Version = "" + MajorVersion + "." + MinerVersion + "." + PatchLevel;
 	public final static String  Copyright = "Copyright (c) 2014, Konoha4e project authors";
