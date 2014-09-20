@@ -160,11 +160,7 @@ public class Grammar {
 			stack.clear(0);
 			stack.add(uName);
 			rule.minlen = ParsingExpression.checkLeftRecursion(rule.expr, uName, 0, 0, stack);
-			if(rule.type == null) {
-				rule.type = new ParsingType();
-				rule.type = ParsingExpression.typeCheck(rule.expr, stack, rule.type, null);
-			}
-			rule.typeCheck();
+			ParsingExpression.typeCheck(rule.expr, rule.type);
 		}
 		Optimizer2.enableOptimizer();
 		for(int i = 0; i < nameList.size(); i++) {

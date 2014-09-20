@@ -16,8 +16,8 @@ public class ParsingContext {
 	public ParsingContext(ParsingSource s, long pos, int stacksize, ParsingContextMemo memo) {
 		this.left = null;
 		this.source = s;
-		this.lstack = new long[stacksize*8];
-		this.ostack = new ParsingObject[stacksize];
+		//this.lstack = new long[stacksize*8];
+		//this.ostack = new ParsingObject[stacksize];
 		this.resetSource(s, pos);
 		this.memoMap = memo != null ? memo : new NoMemo();
 	}
@@ -30,9 +30,9 @@ public class ParsingContext {
 		this.source = source;
 		this.pos = pos;
 		this.fpos = -1;
-		this.lstack[0] = -1;
-		this.lstacktop = 1;
-		this.ostacktop = 0;
+//		this.lstack[0] = -1;
+//		this.lstacktop = 1;
+//		this.ostacktop = 0;
 	}
 	
 	
@@ -118,9 +118,7 @@ public class ParsingContext {
 
 	public String getName() {
 		return this.getClass().getSimpleName();
-	}
-
-	
+	}	
 	
 	long[]   lstack;
 	int      lstacktop;
@@ -139,17 +137,18 @@ public class ParsingContext {
 		return (int)this.lstack[this.lstacktop];
 	}
 
-	ParsingObject[] ostack;
-	int      ostacktop;
-
+//	ParsingObject[] ostack;
+//	int      ostacktop;
+//
 	public final void opush(ParsingObject left) {
-		this.ostack[ostacktop] = left;
-		ostacktop++;
+//		this.ostack[ostacktop] = left;
+//		ostacktop++;
 	}
 
 	public final ParsingObject opop() {
-		ostacktop--;
-		return this.ostack[ostacktop];
+//		ostacktop--;
+//		return this.ostack[ostacktop];
+		return null;
 	}
 
 	long pos;
@@ -625,7 +624,7 @@ public class ParsingContext {
 	}
 
 	public final void opRefreshStoredObject() {
-		ostack[ostacktop-1] = this.left;
+//		ostack[ostacktop-1] = this.left;
 	}
 
 	public final void opTagging(ParsingTag tag) {
@@ -700,7 +699,7 @@ public class ParsingContext {
 
 	public void opDebug(ParsingExpression inner) {
 		this.opDropStoredObject();
-		ParsingObject left = this.ostack[ostacktop];
+//		ParsingObject left = this.ostack[ostacktop];
 		this.opUpdateFailurePosition();
 		long fpos = this.lstack[lstacktop];
 		this.opCommitPosition();

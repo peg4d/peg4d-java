@@ -1,7 +1,12 @@
 package org.peg4d;
 
-public class ParsingType {
 
+
+class ParsingType {
+	
+	int log;
+	
+	
 	PConstructor constructor = null;
 	ParsingTag tag = null;
 	ParsingType unionType = null;
@@ -129,8 +134,5 @@ public class ParsingType {
 		// TODO Auto-generated method stub
 		
 	}
-
-
-
 
 }

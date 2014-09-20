@@ -3,14 +3,14 @@ package org.peg4d;
 class ParsingRule {
 	public final static int LexicalRule   = 0;
 	public final static int ObjectRule    = 1;
-	public final static int OperationRule = 2;
-	public final static int ReservedRule  = 3;
+	public final static int OperationRule = 1 << 1;
+	public final static int ReservedRule  = 1 << 15;
 	
 	Grammar  peg;
 	String ruleName;
 
 	ParsingObject po;
-	ParsingType type;
+	int type;
 	ParsingExpression expr;
 	
 	int minlen = -1;
@@ -21,6 +21,7 @@ class ParsingRule {
 		this.po = po;
 		this.ruleName = ruleName;
 		this.expr = e;
+		this.type = ParsingRule.typeOf(ruleName);
 	}
 	
 	final String getUniqueName() {
@@ -90,7 +91,7 @@ class ParsingRule {
 	}
 	
 	boolean isObjectType() {
-		return this.type.isObjectType();
+		return this.type == ParsingRule.ObjectRule;
 	}
 
 	public final static int typeOf(String ruleName) {
@@ -106,40 +107,4 @@ class ParsingRule {
 		return firstUpperCase ? LexicalRule : ReservedRule;
 	}
 	
-	void typeCheck() {
-		boolean firstUpperCase = Character.isUpperCase(this.ruleName.charAt(0));
-		boolean containUpperCase = false;
-		boolean containLowerCase = false;
-		for(int i = 1; i < this.ruleName.length(); i++) {
-			if(Character.isUpperCase(this.ruleName.charAt(i))) {
-				containUpperCase = true;
-			}
-			if(Character.isLowerCase(this.ruleName.charAt(i))) {
-				containLowerCase = true;
-			}
-		}
-		if(firstUpperCase) {
-			if(containLowerCase) { // CamelStyle
-				if(!this.type.isObjectType()) {
-					this.report(ReportLevel.warning, this.ruleName + " must be a production rule");
-				}
-			}
-			else {
-				if(!this.type.isEmpty()) {
-					this.report(ReportLevel.warning, this.ruleName + " must be a lexical rule");
-				}
-			}
-		}
-		else {
-			if(containUpperCase) {
-				if(this.type.isObjectType() || !this.type.isEmpty()) {
-					this.report(ReportLevel.warning, this.ruleName + " must be an operation rule");
-				}
-			}
-			else {
-				
-			}
-		}
-		
-	}
 }

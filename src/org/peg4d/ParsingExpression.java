@@ -31,18 +31,20 @@ public abstract class ParsingExpression implements Matcher {
 	abstract ParsingExpression dup();
 	protected abstract void visit(ExpressionVisitor visitor);
 
-	static int cc = 0;
-	static UList<ParsingExpression> dstack = new UList<ParsingExpression>(new ParsingExpression[1024]);
+//	static int cc = 0;
+//	static UList<ParsingExpression> dstack = new UList<ParsingExpression>(new ParsingExpression[1024]);
 	
 	public final boolean debugMatch(ParsingContext c) {
 //		int d = cc; cc++;
 //		int dpos = dstack.size();
-//		int pos = (int)c.getPosition();
-//		System.out.println("" + d + "["+pos+"] calling: " + this + " @" + this.getClass());
+		int pos = (int)c.getPosition() ;
+		if(pos % (1024 * 1024) == 0) {
+			System.out.println("["+(pos/(1024 * 1024))+"] calling: " + this + " mark=" + c.markObjectStack() + " free" + Runtime.getRuntime().freeMemory());
+		}
 //		dstack.add(this);
 		boolean b = this.matcher.simpleMatch(c);
+		//System.out.println("["+pos+"] called: " + this);
 //		dstack.clear(dpos);
-//		System.out.println("" + d + "["+pos+"] called: " + this + " @" + this.getClass());
 //		if(pos > 12717) {
 //			System.out.println(dstack);
 //		}
@@ -102,7 +104,7 @@ public abstract class ParsingExpression implements Matcher {
 			Main._PrintLine(po.formatSourceMessage(level.toString(), msg));
 		}
 		else {
-			System.out.println("" + level.toString() + ": " + msg);
+			System.out.println("" + level.toString() + ": " + msg + " in " + this);
 		}
 	}
 	
@@ -145,7 +147,8 @@ public abstract class ParsingExpression implements Matcher {
 					ParsingRule r = ne.getRule();
 					e.set(LeftRecursion);
 					//System.out.println(uName + " minlen=" + minlen + " @@ " + stack);
-					e.report(ReportLevel.error, "left recursion: " + ne.ruleName);
+					e.report(ReportLevel.error, "left recursion: " + r);
+					r.peg.foundError = true;
 				}
 				if(!checkRecursion(n, stack)) {
 					int pos = stack.size();
@@ -201,116 +204,230 @@ public abstract class ParsingExpression implements Matcher {
 		minlen += e.minlen;
 		return minlen;
 	}
+	
+	static int ObjectContext    = 1 << 0;
+	static int OperationContext = 1 << 1;
+	static int FirstTransition  = 1 << 2;
 
-	static ParsingType typeCheck(ParsingExpression e, UList<String> stack, ParsingType leftType, ParsingExpression stopped) {
-		if(e == null || e == stopped) {
-			return leftType;
-		}
-		if(e instanceof ParsingConnector) {
-			ParsingType rightType = typeCheck(((ParsingConnector) e).inner, stack, new ParsingType(), e.flowNext);
-// FIXME:
-//			if(!rightType.isObjectType() && !e.is(HasTypeError)) {
-//				e.set(HasTypeError);
-//				e.report(ReportLevel.warning, "nothing is connected: in " + e);
-//			}
-			leftType.set(((ParsingConnector) e).index, rightType, (ParsingConnector)e);
-			return typeCheck(e.flowNext, stack, leftType, stopped);
+	private static final boolean isStatus(int status, int uflag) {
+		return ((status & uflag) == uflag);
+	}
+
+	private static final int setStatus(int status, int uflag) {
+		return status | uflag;
+	}
+
+	static int typeCheck(ParsingExpression e, int status) {
+		if(e instanceof PNonTerminal) {
+			ParsingRule r = ((PNonTerminal) e).getRule();
+			int ruleType = r.type;
+			if(ruleType == ParsingRule.ObjectRule) {
+				if(isStatus(status, FirstTransition) && !e.is(HasTypeError)) {
+					e.set(HasTypeError);
+					e.report(ReportLevel.warning, "unexpected non-terminal transition");
+				}
+				status = setStatus(status, FirstTransition);
+			}
+			if(ruleType == ParsingRule.OperationRule) {
+				if(!isStatus(status, OperationContext)) {
+					e.report(ReportLevel.warning, "unexpected non-terminal operation");				
+				}
+				status = setStatus(status, FirstTransition);
+			}
+			return status;
 		}
 		if(e instanceof PConstructor) {
 			boolean LeftJoin = ((PConstructor) e).leftJoin;
-			if(LeftJoin) {
-				if(!leftType.isObjectType() && !e.is(HasTypeError)) {
-					e.set(HasTypeError);
-					e.report(ReportLevel.warning, "type error: unspecific left in " + e);
-				}
-			}
-			else {
-				if(leftType.isObjectType() && !e.is(HasTypeError)) {
-					e.set(HasTypeError);
-					e.report(ReportLevel.warning, "type error: object transition of " + leftType + " before " + e);
-				}
-			}
-			if(((PConstructor) e).type == null) {
-				ParsingType t = leftType.isEmpty() ? leftType : new ParsingType();
-				if(LeftJoin) {
-					t.set(0, leftType);
-				}
-				t.setConstructor((PConstructor)e);
-				((PConstructor) e).type = typeCheck(e.get(0), stack, t, e.flowNext);
-				
+			if(!isStatus(status, ObjectContext) && !e.is(HasTypeError)) {
+				e.set(HasTypeError);
+				e.report(ReportLevel.warning, "unexpected constructor");
 			}
 			if(LeftJoin) {
-				leftType.addUnionType(((PConstructor) e).type.dup());
+				if(!isStatus(status, FirstTransition) && !e.is(HasTypeError)) {
+					e.set(HasTypeError);
+					e.report(ReportLevel.warning, "unspecific left object");
+				}		
 			}
 			else {
-				leftType = ((PConstructor) e).type.dup();
+				if(isStatus(status, FirstTransition) && !e.is(HasTypeError)) {
+					e.set(HasTypeError);
+					e.report(ReportLevel.warning, "unexpected constructor transition");
+				}
 			}
+			int newstatus = OperationContext;
+			for(int i = 0; i < e.size(); i++) {
+				newstatus = typeCheck(e.get(i), newstatus);
+			}
+			status = setStatus(status, FirstTransition);
 		}
-		if(e instanceof ParsingTagging) {
-			leftType.addTagging(((ParsingTagging) e).tag);
+		if(e instanceof ParsingConnector) {
+			if(!isStatus(status, OperationContext)) {
+				e.report(ReportLevel.warning, "unexpected operation");				
+			}
+			int scope = typeCheck(e.get(0), ObjectContext);
+			if(!isStatus(scope, FirstTransition)) {
+				e.report(ReportLevel.warning, "nothing is connected");
+			}
+			return status;
 		}
-		if(e instanceof PNonTerminal) {
-			ParsingRule r = ((PNonTerminal) e).getRule();
-			if(r.type == null) {
-				String n = ((PNonTerminal) e).getUniqueName();
-				if(!checkRecursion(n, stack)) {
-					int pos = stack.size();
-					stack.add(n);
-					ParsingType t = new ParsingType();
-					r.type = t;
-					r.type = typeCheck(((PNonTerminal) e).calling, stack, t, null);
-					stack.clear(pos);
-				}
-				if(r.type == null) {
-					e.report(ReportLevel.warning, "uninferred NonTerminal: " + n);				
-				}
+		if(e instanceof ParsingTagging || e instanceof ParsingValue) {
+			if(!isStatus(status, OperationContext)) {
+				e.report(ReportLevel.warning, "unexpected operation");				
 			}
-			if(r.type != null) {
-				if(r.type.isObjectType()) {
-					leftType = r.type.dup();
-				}
+			return status;
+		}
+		if(e instanceof ParsingSequence) {
+			for(int i = 0; i < e.size(); i++) {
+				status = typeCheck(e.get(i), status);
 			}
+			return status;
 		}
 		if(e instanceof ParsingChoice) {
-			if(e.size() > 1) {
-				ParsingType rightType = typeCheck(e.get(0), stack, leftType.dup(), e.flowNext);
-				if(leftType.hasTransition(rightType)) {
-					for(int i = 1; i < e.size(); i++) {
-						ParsingType unionType = typeCheck(e.get(i), stack, leftType.dup(), e.flowNext);
-						rightType.addUnionType(unionType);
-					}					
-				}
-				else {
-					for(int i = 1; i < e.size(); i++) {
-						ParsingType lleftType = rightType;
-						lleftType.enableUnionTagging();
-						rightType = typeCheck(e.get(i), stack, lleftType, e.flowNext);
-						if(lleftType.hasTransition(rightType)) {
-							if(!e.get(i).is(HasTypeError)) {
-								e.get(i).set(HasTypeError);
-								//e.report(ReportLevel.warning, "type error: mixed type: " + leftType + "/" + lleftType + "/" + rightType + " at " + e.get(i) + " in " + e);
-							}
-						}
+			int status0 = typeCheck(e.get(0), status);
+			if(!isStatus(status, FirstTransition) && isStatus(status0, FirstTransition)) {
+				for(int i = 1; i < e.size(); i++) {
+					int n = typeCheck(e.get(i), status);
+					if(!isStatus(n, FirstTransition) && !e.is(ParsingExpression.HasTypeError)) {
+						e.set(ParsingExpression.HasTypeError);
+						e.report(ReportLevel.warning, "expected transtion for " + e.get(i));
 					}
-					rightType.disableUnionTagging();
-					//System.out.println("CHOICE: " + e + "\n\t" + rightType);
 				}
-				leftType = rightType;
+				return status0;
+			}
+			else if (!isStatus(status, FirstTransition)) {
+				for(int i = 1; i < e.size(); i++) {
+					int n = typeCheck(e.get(i), status);
+					if(isStatus(n, FirstTransition)&& !e.is(ParsingExpression.HasTypeError)) {
+						e.set(ParsingExpression.HasTypeError );
+						e.report(ReportLevel.warning, "unexpected transtion for " + e.get(i));
+					}
+				}
+				return status;
+			}
+			else {
+				for(int i = 1; i < e.size(); i++) {
+					typeCheck(e.get(i), status);
+				}
+				return status0;
 			}
 		}
 		if(e instanceof ParsingUnary) {
-			leftType = typeCheck(((ParsingUnary) e).inner, stack, leftType, e.flowNext);
+			 return typeCheck(((ParsingUnary) e).inner, status);
 		}
-		if(e instanceof ParsingOperation) {
-			leftType = typeCheck(((ParsingOperation) e).inner, stack, leftType, e.flowNext);
-		}
-		if(e instanceof ParsingSequence) {
-			if(e.size() > 0) {
-				leftType = typeCheck(e.get(0), stack, leftType, e.flowNext);
-			}
-		}
-		return typeCheck(e.flowNext, stack, leftType, stopped);
+		return status;
 	}
+
+//	static ParsingType typeCheck(ParsingExpression e, UList<String> stack, ParsingType leftType, ParsingExpression stopped) {
+//		if(e == null || e == stopped) {
+//			return leftType;
+//		}
+//		if(e instanceof ParsingConnector) {
+//			ParsingType rightType = typeCheck(((ParsingConnector) e).inner, stack, new ParsingType(), e.flowNext);
+//// FIXME:
+////			if(!rightType.isObjectType() && !e.is(HasTypeError)) {
+////				e.set(HasTypeError);
+////				e.report(ReportLevel.warning, "nothing is connected: in " + e);
+////			}
+//			leftType.set(((ParsingConnector) e).index, rightType, (ParsingConnector)e);
+//			return typeCheck(e.flowNext, stack, leftType, stopped);
+//		}
+//		if(e instanceof PConstructor) {
+//			boolean LeftJoin = ((PConstructor) e).leftJoin;
+//			if(LeftJoin) {
+//				if(!leftType.isObjectType() && !e.is(HasTypeError)) {
+//					e.set(HasTypeError);
+//					e.report(ReportLevel.warning, "type error: unspecific left in " + e);
+//				}
+//			}
+//			else {
+//				if(leftType.isObjectType() && !e.is(HasTypeError)) {
+//					e.set(HasTypeError);
+//					e.report(ReportLevel.warning, "type error: object transition of " + leftType + " before " + e);
+//				}
+//			}
+//			if(((PConstructor) e).type == null) {
+//				ParsingType t = leftType.isEmpty() ? leftType : new ParsingType();
+//				if(LeftJoin) {
+//					t.set(0, leftType);
+//				}
+//				t.setConstructor((PConstructor)e);
+//				((PConstructor) e).type = typeCheck(e.get(0), stack, t, e.flowNext);
+//				
+//			}
+//			if(LeftJoin) {
+//				leftType.addUnionType(((PConstructor) e).type.dup());
+//			}
+//			else {
+//				leftType = ((PConstructor) e).type.dup();
+//			}
+//		}
+//		if(e instanceof ParsingTagging) {
+//			leftType.addTagging(((ParsingTagging) e).tag);
+//		}
+//		if(e instanceof PNonTerminal) {
+//			ParsingRule r = ((PNonTerminal) e).getRule();
+//			if(r.type == null) {
+//				String n = ((PNonTerminal) e).getUniqueName();
+//				if(!checkRecursion(n, stack)) {
+//					int pos = stack.size();
+//					stack.add(n);
+//					ParsingType t = new ParsingType();
+//					r.type = t;
+//					r.type = typeCheck(((PNonTerminal) e).calling, stack, t, null);
+//					stack.clear(pos);
+//				}
+//				if(r.type == null) {
+//					e.report(ReportLevel.warning, "uninferred NonTerminal: " + n);				
+//				}
+//			}
+//			if(r.type != null) {
+//				if(r.type.isObjectType()) {
+//					leftType = r.type.dup();
+//				}
+//			}
+//		}
+//		if(e instanceof ParsingChoice) {
+//			if(e.size() > 1) {
+//				ParsingType rightType = typeCheck(e.get(0), stack, leftType.dup(), e.flowNext);
+//				if(leftType.hasTransition(rightType)) {
+//					for(int i = 1; i < e.size(); i++) {
+//						ParsingType unionType = typeCheck(e.get(i), stack, leftType.dup(), e.flowNext);
+//						rightType.addUnionType(unionType);
+//					}					
+//				}
+//				else {
+//					for(int i = 1; i < e.size(); i++) {
+//						ParsingType lleftType = rightType;
+//						lleftType.enableUnionTagging();
+//						rightType = typeCheck(e.get(i), stack, lleftType, e.flowNext);
+//						if(lleftType.hasTransition(rightType)) {
+//							if(!e.get(i).is(HasTypeError)) {
+//								e.get(i).set(HasTypeError);
+//								//e.report(ReportLevel.warning, "type error: mixed type: " + leftType + "/" + lleftType + "/" + rightType + " at " + e.get(i) + " in " + e);
+//							}
+//						}
+//					}
+//					rightType.disableUnionTagging();
+//					//System.out.println("CHOICE: " + e + "\n\t" + rightType);
+//				}
+//				leftType = rightType;
+//			}
+//		}
+//		if(e instanceof ParsingUnary) {
+//			leftType = typeCheck(((ParsingUnary) e).inner, stack, leftType, e.flowNext);
+//		}
+//		if(e instanceof ParsingOperation) {
+//			leftType = typeCheck(((ParsingOperation) e).inner, stack, leftType, e.flowNext);
+//		}
+//		if(e instanceof ParsingSequence) {
+//			if(e.size() > 0) {
+//				leftType = typeCheck(e.get(0), stack, leftType, e.flowNext);
+//			}
+//		}
+//		return typeCheck(e.flowNext, stack, leftType, stopped);
+//	}
+
+	
 	
 	// factory
 	
