@@ -35,6 +35,7 @@ public abstract class ParsingExpression implements Matcher {
 //	
 //	public final static int NoMemo            = 1 << 20;
 	
+	public final static int LeftRecursion     = 1 << 20;
 	public final static int HasSyntaxError    = 1 << 26;
 	public final static int HasTypeError      = 1 << 27;
 
@@ -251,11 +252,11 @@ public abstract class ParsingExpression implements Matcher {
 			ne.checkReference();
 			String n = ne.getUniqueName();
 			if(n.equals(uName)) {
-				if(minlen == 0 && !e.is(HasSyntaxError)) {
+				if(minlen == 0 && !e.is(LeftRecursion)) {
 					ParsingRule r = ne.getRule();
-					e.set(HasSyntaxError);
-					System.out.println(uName + " minlen=" + minlen + " @@ " + stack);
-					e.report(ReportLevel.error, "left recursion: " + ne.getRule());
+					e.set(LeftRecursion);
+					//System.out.println(uName + " minlen=" + minlen + " @@ " + stack);
+					e.report(ReportLevel.error, "left recursion: " + r);
 				}
 			}
 			if(!checkRecursion(n, stack)) {
@@ -1016,7 +1017,7 @@ class PNonTerminal extends ParsingExpression {
 		visitor.visitNonTerminal(this);
 	}
 	@Override short acceptByte(int ch) {
-		if(this.calling != null) {
+		if(this.calling != null && !this.is(LeftRecursion)) {
 			return this.calling.acceptByte(ch);
 		}
 		return WeakAccept;
