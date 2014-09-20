@@ -36,10 +36,10 @@ public abstract class ParsingExpression implements Matcher {
 	public final boolean debugMatch(ParsingContext c) {
 //		int d = cc; cc++;
 //		int dpos = dstack.size();
-		int pos = (int)c.getPosition() ;
-		if(pos % (1024 * 1024) == 0) {
-			System.out.println("["+(pos/(1024 * 1024))+"] calling: " + this + " mark=" + c.markObjectStack() + " free" + Runtime.getRuntime().freeMemory());
-		}
+//		int pos = (int)c.getPosition() ;
+//		if(pos % (1024 * 1024) == 0) {
+//			System.out.println("["+(pos/(1024 * 1024))+"] calling: " + this + " mark=" + c.markObjectStack() + " free" + Runtime.getRuntime().freeMemory());
+//		}
 //		dstack.add(this);
 		boolean b = this.matcher.simpleMatch(c);
 		//System.out.println("["+pos+"] called: " + this);
@@ -295,118 +295,6 @@ public abstract class ParsingExpression implements Matcher {
 		}
 		return status;
 	}
-
-//	static ParsingType typeCheck(ParsingExpression e, UList<String> stack, ParsingType leftType, ParsingExpression stopped) {
-//		if(e == null || e == stopped) {
-//			return leftType;
-//		}
-//		if(e instanceof ParsingConnector) {
-//			ParsingType rightType = typeCheck(((ParsingConnector) e).inner, stack, new ParsingType(), e.flowNext);
-//// FIXME:
-////			if(!rightType.isObjectType() && !e.is(HasTypeError)) {
-////				e.set(HasTypeError);
-////				e.report(ReportLevel.warning, "nothing is connected: in " + e);
-////			}
-//			leftType.set(((ParsingConnector) e).index, rightType, (ParsingConnector)e);
-//			return typeCheck(e.flowNext, stack, leftType, stopped);
-//		}
-//		if(e instanceof PConstructor) {
-//			boolean LeftJoin = ((PConstructor) e).leftJoin;
-//			if(LeftJoin) {
-//				if(!leftType.isObjectType() && !e.is(HasTypeError)) {
-//					e.set(HasTypeError);
-//					e.report(ReportLevel.warning, "type error: unspecific left in " + e);
-//				}
-//			}
-//			else {
-//				if(leftType.isObjectType() && !e.is(HasTypeError)) {
-//					e.set(HasTypeError);
-//					e.report(ReportLevel.warning, "type error: object transition of " + leftType + " before " + e);
-//				}
-//			}
-//			if(((PConstructor) e).type == null) {
-//				ParsingType t = leftType.isEmpty() ? leftType : new ParsingType();
-//				if(LeftJoin) {
-//					t.set(0, leftType);
-//				}
-//				t.setConstructor((PConstructor)e);
-//				((PConstructor) e).type = typeCheck(e.get(0), stack, t, e.flowNext);
-//				
-//			}
-//			if(LeftJoin) {
-//				leftType.addUnionType(((PConstructor) e).type.dup());
-//			}
-//			else {
-//				leftType = ((PConstructor) e).type.dup();
-//			}
-//		}
-//		if(e instanceof ParsingTagging) {
-//			leftType.addTagging(((ParsingTagging) e).tag);
-//		}
-//		if(e instanceof PNonTerminal) {
-//			ParsingRule r = ((PNonTerminal) e).getRule();
-//			if(r.type == null) {
-//				String n = ((PNonTerminal) e).getUniqueName();
-//				if(!checkRecursion(n, stack)) {
-//					int pos = stack.size();
-//					stack.add(n);
-//					ParsingType t = new ParsingType();
-//					r.type = t;
-//					r.type = typeCheck(((PNonTerminal) e).calling, stack, t, null);
-//					stack.clear(pos);
-//				}
-//				if(r.type == null) {
-//					e.report(ReportLevel.warning, "uninferred NonTerminal: " + n);				
-//				}
-//			}
-//			if(r.type != null) {
-//				if(r.type.isObjectType()) {
-//					leftType = r.type.dup();
-//				}
-//			}
-//		}
-//		if(e instanceof ParsingChoice) {
-//			if(e.size() > 1) {
-//				ParsingType rightType = typeCheck(e.get(0), stack, leftType.dup(), e.flowNext);
-//				if(leftType.hasTransition(rightType)) {
-//					for(int i = 1; i < e.size(); i++) {
-//						ParsingType unionType = typeCheck(e.get(i), stack, leftType.dup(), e.flowNext);
-//						rightType.addUnionType(unionType);
-//					}					
-//				}
-//				else {
-//					for(int i = 1; i < e.size(); i++) {
-//						ParsingType lleftType = rightType;
-//						lleftType.enableUnionTagging();
-//						rightType = typeCheck(e.get(i), stack, lleftType, e.flowNext);
-//						if(lleftType.hasTransition(rightType)) {
-//							if(!e.get(i).is(HasTypeError)) {
-//								e.get(i).set(HasTypeError);
-//								//e.report(ReportLevel.warning, "type error: mixed type: " + leftType + "/" + lleftType + "/" + rightType + " at " + e.get(i) + " in " + e);
-//							}
-//						}
-//					}
-//					rightType.disableUnionTagging();
-//					//System.out.println("CHOICE: " + e + "\n\t" + rightType);
-//				}
-//				leftType = rightType;
-//			}
-//		}
-//		if(e instanceof ParsingUnary) {
-//			leftType = typeCheck(((ParsingUnary) e).inner, stack, leftType, e.flowNext);
-//		}
-//		if(e instanceof ParsingOperation) {
-//			leftType = typeCheck(((ParsingOperation) e).inner, stack, leftType, e.flowNext);
-//		}
-//		if(e instanceof ParsingSequence) {
-//			if(e.size() > 0) {
-//				leftType = typeCheck(e.get(0), stack, leftType, e.flowNext);
-//			}
-//		}
-//		return typeCheck(e.flowNext, stack, leftType, stopped);
-//	}
-
-	
 	
 	// factory
 	
@@ -767,11 +655,12 @@ public abstract class ParsingExpression implements Matcher {
 		if(e.uniqueId == 0) {
 			ParsingExpression u = uniqueMap.get(key);
 			if(u == null) {
+				u = e;
 				e.po = null;
 				e.uniqueId = uniqueMap.size() + 1;
 				uniqueMap.put(key, e);
-				u = e;
 			}
+			assert(u.getClass() == e.getClass());
 			return u;
 		}
 		return e;
@@ -1428,9 +1317,9 @@ class PConstructor extends ParsingList {
 	@Override
 	ParsingExpression uniquefy() {
 		if(leftJoin) {
-			return ParsingExpression.uniquefy("{@}\b" + this.uniqueId, this);
+			return ParsingExpression.uniquefy("{@}\b" + this.uniqueKey(), this);
 		}
-		return ParsingExpression.uniquefy("{}\b" + this.uniqueId, this);
+		return ParsingExpression.uniquefy("{}\b" + this.uniqueKey(), this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {

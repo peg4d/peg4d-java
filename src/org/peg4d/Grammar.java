@@ -167,7 +167,9 @@ public class Grammar {
 		Optimizer2.enableOptimizer();
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
+//			System.out.println("before: " + rule.expr);
 			rule.expr = rule.expr.uniquefy();
+//			System.out.println("after: " + rule.expr.uniqueId + " " + rule.expr + "\n");
 		}
 
 		Optimizer2.enableOptimizer();
