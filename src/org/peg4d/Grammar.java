@@ -161,6 +161,15 @@ public class Grammar {
 			rule.minlen = ParsingExpression.checkLeftRecursion(rule.expr, uName, 0, 0, stack);
 			ParsingExpression.typeCheck(rule.expr, rule.type);
 		}
+		if(this.foundError) {
+			Main._Exit(1, "PegError found");
+		}
+		Optimizer2.enableOptimizer();
+		for(int i = 0; i < nameList.size(); i++) {
+			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
+			rule.expr = rule.expr.uniquefy();
+		}
+
 		Optimizer2.enableOptimizer();
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);

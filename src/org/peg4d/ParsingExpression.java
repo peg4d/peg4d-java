@@ -27,7 +27,7 @@ public abstract class ParsingExpression implements Matcher {
 		return (this.matcher != this);
 	}
 
-	abstract ParsingExpression dup();
+	abstract ParsingExpression uniquefy();
 	protected abstract void visit(ExpressionVisitor visitor);
 
 //	static int cc = 0;
@@ -710,7 +710,7 @@ public abstract class ParsingExpression implements Matcher {
 	
 	public final static UList<ParsingExpression> toSequenceList(ParsingExpression e) {
 		if(e instanceof ParsingSequence) {
-			return ((ParsingSequence) e).list;
+			return ((ParsingSequence) e).inners;
 		}
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[1]);
 		l.add(e);
@@ -761,6 +761,22 @@ public abstract class ParsingExpression implements Matcher {
 		return new ParsingBlock(e);
 	}
 
+	public final static UMap<ParsingExpression> uniqueMap = new UMap<ParsingExpression>();
+	
+	public static ParsingExpression uniquefy(String key, ParsingExpression e) {
+		if(e.uniqueId == 0) {
+			ParsingExpression u = uniqueMap.get(key);
+			if(u == null) {
+				e.po = null;
+				e.uniqueId = uniqueMap.size() + 1;
+				uniqueMap.put(key, e);
+				u = e;
+			}
+			return u;
+		}
+		return e;
+	}
+
 }
 
 abstract class ParsingAtom extends ParsingExpression {
@@ -783,6 +799,12 @@ abstract class ParsingUnary extends ParsingExpression {
 	public final ParsingExpression get(int index) {
 		return this.inner;
 	}
+	
+	protected final int uniqueKey() {
+		this.inner = inner.uniquefy();
+		return this.inner.uniqueId;
+	}
+
 	@Override
 	short acceptByte(int ch) {
 		return this.inner.acceptByte(ch);
@@ -790,22 +812,33 @@ abstract class ParsingUnary extends ParsingExpression {
 }
 
 abstract class ParsingList extends ParsingExpression {
-	UList<ParsingExpression> list;
+	UList<ParsingExpression> inners;
 	ParsingList(UList<ParsingExpression> list) {
 		super();
-		this.list = list;
+		this.inners = list;
 	}
 	@Override
 	public final int size() {
-		return this.list.size();
+		return this.inners.size();
 	}
 	@Override
 	public final ParsingExpression get(int index) {
-		return this.list.ArrayValues[index];
+		return this.inners.ArrayValues[index];
 	}
 
-	public final void set(int index, ParsingExpression e) {
-		this.list.ArrayValues[index] = e;
+	final void set(int index, ParsingExpression e) {
+		this.inners.ArrayValues[index] = e;
+	}
+
+	protected final String uniqueKey() {
+		StringBuilder sb = new StringBuilder();
+		for(int i = 0; i < this.size(); i++) {
+			ParsingExpression e = this.get(i).uniquefy();
+			set(i, e);
+			sb.append(e.uniqueId);
+			sb.append(":");
+		}
+		return sb.toString();
 	}
 
 	@Override
@@ -848,9 +881,9 @@ abstract class ParsingList extends ParsingExpression {
 //	}
 	
 	public final void swap(int i, int j) {
-		ParsingExpression e = this.list.ArrayValues[i];
-		this.list.ArrayValues[i] = this.list.ArrayValues[j];
-		this.list.ArrayValues[j] = e;
+		ParsingExpression e = this.inners.ArrayValues[i];
+		this.inners.ArrayValues[i] = this.inners.ArrayValues[j];
+		this.inners.ArrayValues[j] = e;
 	}
 }
 
@@ -859,8 +892,8 @@ class ParsingEmpty extends ParsingExpression {
 		super();
 		this.minlen = 0;
 	}
-	@Override ParsingExpression dup() { 
-		return new ParsingEmpty();
+	@Override ParsingExpression uniquefy() {
+		return ParsingExpression.uniquefy("\b", this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -879,7 +912,7 @@ class ParsingFailure extends ParsingExpression {
 		this.dead = dead;
 	}
 	@Override
-	ParsingExpression dup() {
+	ParsingExpression uniquefy() {
 		return new ParsingFailure(dead);
 	}
 	@Override
@@ -904,10 +937,11 @@ class ParsingByte extends ParsingExpression {
 		this.byteChar = ch;
 		this.minlen = 1;
 	}
-	@Override ParsingExpression dup() { 
-		ParsingByte n = new ParsingByte(byteChar);
-		n.errorToken = errorToken;
-		return n;
+	@Override ParsingExpression uniquefy() { 
+		if(this.errorToken == null) {
+			return ParsingExpression.uniquefy("'\b" + byteChar, this);
+		}
+		return ParsingExpression.uniquefy("'\b" + this.errorToken + "\b" + byteChar, this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -933,7 +967,9 @@ class ParsingAny extends ParsingExpression {
 		super();
 		this.minlen = 1;
 	}
-	@Override ParsingExpression dup() { return new ParsingAny(); }
+	@Override ParsingExpression uniquefy() { 
+		return ParsingExpression.uniquefy(".\b", this);
+	}
 	@Override 
 	short acceptByte(int ch) {
 		return Accept;
@@ -964,8 +1000,8 @@ class PNonTerminal extends ParsingExpression {
 		this.ruleName = ruleName;
 	}
 	@Override
-	ParsingExpression dup() {
-		return new PNonTerminal(peg, ruleName);
+	ParsingExpression uniquefy() {
+		return ParsingExpression.uniquefy(getUniqueName(), this);
 	}
 	String getUniqueName() {
 		return this.peg.uniqueRuleName(this.ruleName);
@@ -1033,8 +1069,8 @@ class PString extends ParsingAtom {
 		}
 	}
 	@Override
-	ParsingExpression dup() { 
-		return new PString(text, utf8); 
+	ParsingExpression uniquefy() { 
+		return ParsingExpression.uniquefy("''\b" + text, this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1069,8 +1105,8 @@ class ParsingByteRange extends ParsingExpression {
 		this.minlen = 1;
 	}
 	@Override 
-	ParsingExpression dup() { 
-		return new ParsingByteRange(startByteChar, endByteChar);
+	ParsingExpression uniquefy() { 
+		return ParsingExpression.uniquefy("[\b" + startByteChar + "-" + endByteChar, this);
 	}
 	void setCount(int[] count) {
 		for(int c = startByteChar; c <= endByteChar; c++) {
@@ -1102,8 +1138,8 @@ class ParsingOption extends ParsingUnary {
 	ParsingOption(ParsingExpression e) {
 		super(e);
 	}
-	@Override ParsingExpression dup() { 
-		return new ParsingOption(inner); 
+	@Override ParsingExpression uniquefy() { 
+		return ParsingExpression.uniquefy("?\b" + this.uniqueKey(), this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1133,8 +1169,8 @@ class ParsingRepetition extends ParsingUnary {
 	ParsingRepetition(ParsingExpression e) {
 		super(e);
 	}
-	@Override ParsingExpression dup() { 
-		return new ParsingRepetition(inner/*, atleast*/); 
+	@Override ParsingExpression uniquefy() { 
+		return ParsingExpression.uniquefy("*\b" + this.uniqueKey(), this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1170,8 +1206,8 @@ class ParsingAnd extends ParsingUnary {
 	ParsingAnd(ParsingExpression e) {
 		super(e);
 	}
-	@Override ParsingExpression dup() { 
-		return new ParsingAnd(inner); 
+	@Override ParsingExpression uniquefy() { 
+		return ParsingExpression.uniquefy("&\b" + this.uniqueKey(), this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1198,8 +1234,8 @@ class ParsingNot extends ParsingUnary {
 	ParsingNot(ParsingExpression e) {
 		super(e);
 	}
-	@Override ParsingExpression dup() { 
-		return new ParsingNot(inner); 
+	@Override ParsingExpression uniquefy() { 
+		return ParsingExpression.uniquefy("!\b" + this.uniqueKey(), this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1240,8 +1276,8 @@ class ParsingSequence extends ParsingList {
 		super(l);
 	}
 	@Override
-	ParsingExpression dup() {
-		return new ParsingSequence(list);
+	ParsingExpression uniquefy() {
+		return ParsingExpression.uniquefy(" \b" + this.uniqueKey(), this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1267,8 +1303,8 @@ class ParsingChoice extends ParsingList {
 		super(list);
 	}
 	@Override
-	ParsingExpression dup() {
-		return new ParsingChoice(list);
+	ParsingExpression uniquefy() {
+		return ParsingExpression.uniquefy("|\b" + this.uniqueKey(), this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1311,8 +1347,11 @@ class ParsingConnector extends ParsingUnary {
 		this.index = index;
 	}
 	@Override
-	ParsingExpression dup() {
-		return new ParsingConnector(inner, index);
+	ParsingExpression uniquefy() {
+		if(index != -1) {
+			return ParsingExpression.uniquefy("@" + index + "\b" + this.uniqueKey(), this);
+		}
+		return ParsingExpression.uniquefy("@\b" + this.uniqueKey(), this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1339,8 +1378,8 @@ class ParsingTagging extends ParsingExpression {
 		this.tag = tag;
 	}
 	@Override
-	ParsingExpression dup() {
-		return new ParsingTagging(tag);
+	ParsingExpression uniquefy() {
+		return ParsingExpression.uniquefy("#\b" + this.tag.key(), this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1362,8 +1401,8 @@ class ParsingValue extends ParsingExpression {
 		this.value = value;
 	}
 	@Override
-	ParsingExpression dup() {
-		return new ParsingValue(value);
+	ParsingExpression uniquefy() {
+		return ParsingExpression.uniquefy("`\b" + this.value, this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1387,8 +1426,11 @@ class PConstructor extends ParsingList {
 		this.leftJoin = leftJoin;
 	}
 	@Override
-	ParsingExpression dup() {
-		return new PConstructor(leftJoin, list);
+	ParsingExpression uniquefy() {
+		if(leftJoin) {
+			return ParsingExpression.uniquefy("{@}\b" + this.uniqueId, this);
+		}
+		return ParsingExpression.uniquefy("{}\b" + this.uniqueId, this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1449,13 +1491,18 @@ abstract class ParsingFunction extends ParsingExpression {
 		super();
 		this.funcName = funcName;
 	}
+	String getParameters() {
+		return "";
+	}
+	@Override final ParsingExpression uniquefy() {
+		return 	ParsingExpression.uniquefy("<"+this.funcName+this.getParameters(), this);
+	}
+
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitParsingFunction(this);
 	}
-	String getParameters() {
-		return "";
-	}
+
 }
 
 abstract class ParsingOperation extends ParsingUnary {
@@ -1465,6 +1512,12 @@ abstract class ParsingOperation extends ParsingUnary {
 		this.funcName = funcName;
 		this.inner = inner;
 	}
+	@Override final ParsingExpression uniquefy() {
+		return 	ParsingExpression.uniquefy("<"+this.funcName+this.getParameters()+"+"+this.uniqueId, this);
+	}
+	public String getParameters() {
+		return "";
+	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitParsingOperation(this);
@@ -1473,17 +1526,11 @@ abstract class ParsingOperation extends ParsingUnary {
 	public ParsingExpression getExpression() {
 		return this.inner;
 	}
-	public String getParameters() {
-		return "";
-	}
 }
 
 class ParsingIndent extends ParsingFunction {
 	ParsingIndent() {
 		super("indent");
-	}
-	@Override ParsingExpression dup() {
-		return this;
 	}
 	@Override
 	short acceptByte(int ch) {
@@ -1505,9 +1552,6 @@ class ParsingFail extends ParsingFunction {
 		super("fail");
 		this.message = message;
 	}
-	@Override ParsingExpression dup() {
-		return new ParsingFail(message);
-	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opFailure(this.message);
@@ -1523,9 +1567,6 @@ class ParsingCatch extends ParsingFunction {
 	ParsingCatch() {
 		super("catch");
 	}
-	@Override ParsingExpression dup() {
-		return this;
-	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opCatch();
@@ -1539,7 +1580,7 @@ class ParsingExport extends ParsingUnary {
 		super(e);
 	}
 	@Override
-	ParsingExpression dup() {
+	ParsingExpression uniquefy() {
 		return new ParsingExport(inner);
 	}
 	@Override
@@ -1564,11 +1605,7 @@ class ParsingMemo extends ParsingOperation {
 		super("memo", inner);
 		this.memoId = memoId;
 	}
-
-	@Override ParsingExpression dup() {
-		return new ParsingMemo(0, inner);
-	}
-
+	
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		if(!this.enableMemo) {
@@ -1636,9 +1673,6 @@ class ParsingMatch extends ParsingOperation {
 	ParsingMatch(ParsingExpression inner) {
 		super("match", inner);
 	}
-	@Override ParsingExpression dup() {
-		return new ParsingMatch(inner);
-	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		boolean oldMode = context.setRecognitionMode(true);
@@ -1657,9 +1691,6 @@ class ParsingBlock extends ParsingOperation {
 	ParsingBlock(ParsingExpression e) {
 		super("block", e);
 	}
-	@Override ParsingExpression dup() {
-		return new ParsingBlock(inner);
-	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opPushIndent();
@@ -1674,9 +1705,6 @@ class ParsingIf extends ParsingFunction {
 	ParsingIf(String flagName) {
 		super("if");
 		this.flagName = flagName;
-	}
-	@Override ParsingExpression dup() {
-		return new ParsingIf(flagName);
 	}
 	@Override
 	public String getParameters() {
@@ -1699,9 +1727,6 @@ class ParsingWithFlag extends ParsingOperation {
 	public String getParameters() {
 		return " " + this.flagName;
 	}
-	@Override ParsingExpression dup() {
-		return new ParsingWithFlag(flagName, inner);
-	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opEnableFlag(this.flagName);
@@ -1721,9 +1746,6 @@ class ParsingWithoutFlag extends ParsingOperation {
 	public String getParameters() {
 		return " " + this.flagName;
 	}
-	@Override ParsingExpression dup() {
-		return new ParsingWithoutFlag(flagName, inner);
-	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opDisableFlag(this.flagName);
@@ -1736,9 +1758,6 @@ class ParsingWithoutFlag extends ParsingOperation {
 class ParsingDebug extends ParsingOperation {
 	protected ParsingDebug(ParsingExpression inner) {
 		super("debug", inner);
-	}
-	@Override ParsingExpression dup() {
-		return new ParsingDebug(inner);
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -1754,9 +1773,6 @@ class ParsingDebug extends ParsingOperation {
 class ParsingApply extends ParsingOperation {
 	ParsingApply(ParsingExpression inner) {
 		super("|apply", inner);
-	}
-	@Override ParsingExpression dup() {
-		return new ParsingApply(inner);
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
