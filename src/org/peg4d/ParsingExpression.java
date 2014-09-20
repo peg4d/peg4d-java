@@ -9,32 +9,6 @@ interface Matcher {
 }
 
 public abstract class ParsingExpression implements Matcher {
-//	public final static int CyclicRule       = 1;
-//	public final static int HasNonTerminal    = 1 << 1;
-//	public final static int HasString         = 1 << 2;
-//	public final static int HasCharacter      = 1 << 3;
-//	public final static int HasAny            = 1 << 4;
-//	public final static int HasRepetition     = 1 << 5;
-//	public final static int HasOptional       = 1 << 6;
-//	public final static int HasChoice         = 1 << 7;
-//	public final static int HasAnd            = 1 << 8;
-//	public final static int HasNot            = 1 << 9;
-//	
-//	public final static int HasConstructor    = 1 << 10;
-//	public final static int HasConnector      = 1 << 11;
-//	public final static int HasTagging        = 1 << 12;
-//	public final static int HasMessage        = 1 << 13;
-//	public final static int HasContext        = 1 << 14;
-//	public final static int HasReserved       = 1 << 15;
-//	public final static int hasReserved2       = 1 << 16;
-//	public final static int Mask = HasNonTerminal | HasString | HasCharacter | HasAny
-//	                             | HasRepetition | HasOptional | HasChoice | HasAnd | HasNot
-//	                             | HasConstructor | HasConnector | HasTagging | HasMessage 
-//	                             | HasReserved | hasReserved2 | HasContext;
-//	public final static int HasLazyNonTerminal = Mask;
-//	
-//	public final static int NoMemo            = 1 << 20;
-	
 	public final static int LeftRecursion     = 1 << 20;
 	public final static int HasSyntaxError    = 1 << 26;
 	public final static int HasTypeError      = 1 << 27;
@@ -86,15 +60,6 @@ public abstract class ParsingExpression implements Matcher {
 	public void set(int uflag) {
 		this.flag = this.flag | uflag;
 	}
-
-////
-////	protected void derived(ParsingExpression e) {
-////		this.flag |= (e.flag & ParsingExpression.Mask);
-////	}
-//	
-//	public final boolean isUnique() {
-//		return this.uniqueId > 0;
-//	}
 	
 	public int size() {
 		return 0;
@@ -160,92 +125,6 @@ public abstract class ParsingExpression implements Matcher {
 		return false;
 	}
 
-//	static int checkLeftRecursion(ParsingExpression e, String uName, int minlen, UList<String> stack, ParsingExpression stopped) {
-//		if(e == null || e == stopped) {
-//			return minlen;
-//		}
-//		if(e instanceof PNonTerminal) {
-//			PNonTerminal ne = (PNonTerminal) e;
-//			ne.checkReference();
-//			ParsingRule r = ne.getRule();
-//			String n = ne.getUniqueName();
-//			if(n.equals(uName) && minlen == 0 && !e.is(HasSyntaxError)) {
-//				e.set(HasSyntaxError);
-//				System.out.println(uName + " @@ " + stack);
-//				e.report(ReportLevel.error, "left recursion: " + r);
-//			}
-//		}
-//		if(e.minlen == -1) {
-//			if(e instanceof PNonTerminal) {
-//				PNonTerminal ne = (PNonTerminal) e;
-//				ne.checkReference();
-//				ParsingRule r = ne.getRule();
-//				String n = ne.getUniqueName();
-//				if(r.minlen != -1) {
-//					e.minlen = r.minlen;
-//				}
-//				else {
-//					if(!checkRecursion(n, stack)) {
-//						int pos = stack.size();
-//						stack.add(n);
-//						int nc = checkLeftRecursion(ne.calling, uName, minlen, stack, null);
-//						e.minlen = nc - minlen;
-//						stack.clear(pos);
-//					}
-//					else {
-////						System.out.println(uName + " @@ " + stack);
-//						e.minlen = 1; // assuming no left recursion
-//					}
-//				}
-//			}
-//			else if(e instanceof ParsingList) {
-//				if(e instanceof ParsingChoice) {
-////					if(uName.equals("Constructor_")) {
-////						System.out.println("choice: " + e + " flowNext=" + e.flowNext);
-////					}
-//					int lmin = Integer.MAX_VALUE;
-//					for(int i = 0; i < e.size(); i++) {
-//						int nc = checkLeftRecursion(e.get(i), uName, minlen, stack, e.flowNext);
-//						if(nc < lmin) {
-//							lmin = nc;
-//						}
-//					}
-//					e.minlen = lmin - minlen;
-//				}
-//				else {
-//					int nc = minlen;
-//					e.minlen = 0;
-//					for(int i = 0; i < e.size(); i++) {
-//						ParsingExpression eN = e.get(i);
-//						nc = checkLeftRecursion(eN, uName, nc, stack, eN.flowNext);
-//					}
-//					e.minlen = nc - minlen;
-//				}
-////				if(e.minlen == 0) {
-////					System.out.println("debug: e.minlen=0 " + e);
-////				}
-//			}
-//			else if(e instanceof ParsingUnary) {
-//				int lmin = checkLeftRecursion(((ParsingUnary) e).inner, uName, minlen, stack, e.flowNext); // skip count
-//				if(e instanceof ParsingOption || e instanceof ParsingRepetition || e instanceof ParsingNot || e instanceof ParsingAnd ) {
-//					e.minlen = 0;
-//				}
-//				else {
-//					e.minlen = lmin - minlen;
-//				}
-//			}
-//			else {
-//				e.minlen = 0;
-//			}
-//		}
-////		if(e.minlen == -1) {
-////			System.out.println("remaining: " + e);
-////		}
-//		assert(e.minlen != -1);
-//		minlen += e.minlen;
-//		return checkLeftRecursion(e.flowNext, uName, minlen, stack, stopped);
-//	}
-
 	static int checkLeftRecursion(ParsingExpression e, String uName, int start, int minlen, UList<String> stack) {
 		if(e instanceof PNonTerminal) {
 			PNonTerminal ne = (PNonTerminal) e;
@@ -256,7 +135,7 @@ public abstract class ParsingExpression implements Matcher {
 					ParsingRule r = ne.getRule();
 					e.set(LeftRecursion);
 					//System.out.println(uName + " minlen=" + minlen + " @@ " + stack);
-					e.report(ReportLevel.error, "left recursion: " + r);
+					e.report(ReportLevel.error, "left recursion: " + ne.ruleName);
 				}
 			}
 			if(!checkRecursion(n, stack)) {
@@ -271,40 +150,38 @@ public abstract class ParsingExpression implements Matcher {
 				e.minlen = 1; // assuming no left recursion
 			}
 		}
-//		if(e.minlen == -1) {
-			if(e instanceof ParsingChoice) {
-				int lmin = Integer.MAX_VALUE;
-				for(int i = 0; i < e.size(); i++) {
-					int nc = checkLeftRecursion(e.get(i), uName, start, minlen, stack);
-					if(nc < lmin) {
-						lmin = nc;
-					}
+		if(e instanceof ParsingChoice) {
+			int lmin = Integer.MAX_VALUE;
+			for(int i = 0; i < e.size(); i++) {
+				int nc = checkLeftRecursion(e.get(i), uName, start, minlen, stack);
+				if(nc < lmin) {
+					lmin = nc;
 				}
-				e.minlen = lmin - minlen;
 			}
-			else if(e instanceof ParsingSequence || e instanceof PConstructor) {
-				int nc = minlen;
-				for(int i = 0; i < e.size(); i++) {
-					ParsingExpression eN = e.get(i);
-					nc = checkLeftRecursion(eN, uName, start, nc, stack);
-				}
-				e.minlen = nc - minlen;
+			e.minlen = lmin - minlen;
+		}
+		else if(e instanceof ParsingSequence || e instanceof PConstructor) {
+			int nc = minlen;
+			for(int i = 0; i < e.size(); i++) {
+				ParsingExpression eN = e.get(i);
+				nc = checkLeftRecursion(eN, uName, start, nc, stack);
 			}
-			else if(e instanceof ParsingUnary) {
-				int lmin = checkLeftRecursion(((ParsingUnary) e).inner, uName, start, minlen, stack); // skip count
-				if(e instanceof ParsingOption || e instanceof ParsingRepetition || e instanceof ParsingNot || e instanceof ParsingAnd ) {
-					e.minlen = 0;
-				}
-				else {
-					e.minlen = lmin - minlen;
-				}
+			e.minlen = nc - minlen;
+		}
+		else if(e instanceof ParsingUnary) {
+			int lmin = checkLeftRecursion(((ParsingUnary) e).inner, uName, start, minlen, stack); // skip count
+			if(e instanceof ParsingOption || e instanceof ParsingRepetition || e instanceof ParsingNot || e instanceof ParsingAnd ) {
+				e.minlen = 0;
 			}
 			else {
-				if(e.minlen == -1) {
-					e.minlen = 0;
-				}
+				e.minlen = lmin - minlen;
 			}
-//		}
+		}
+		else {
+			if(e.minlen == -1) {
+				e.minlen = 0;
+			}
+		}
 		if(e.minlen == -1) {
 			System.out.println("@@@@ " + uName + "," + e);
 		}

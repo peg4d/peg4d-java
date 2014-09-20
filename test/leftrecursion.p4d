@@ -9,3 +9,11 @@ Expr
 	/ { [0-9]+ #number } 
 	/ '(' Expr ')'
 
+Value
+	= {[0-9]+} / '(' Expr2 ')'
+Product
+	= Expr2 {@ (('*' / '/') Expr2)}*
+Sum
+	= Expr2 {@ (('+' / '-') Expr2)}*
+Expr2
+	= Product / Sum / Value
