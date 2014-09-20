@@ -1,5 +1,13 @@
+// PEG4d Test file
+// ===============
+// This rule always fails in order to test [example]
+// and [bad-example] annotation.
 
-Chunk
+A
+	[bad-example: a]
+	= 'a'
+
+B
 	[example: a]
 	= 'b'
 

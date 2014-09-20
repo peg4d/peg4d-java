@@ -1,8 +1,10 @@
-// PEG Test
+// PEG Test File
+// =============
+// The following rules are defined to test basic
+// PEG operators
 
-CHUNK
-	= STRING
-	/ CHAR
+File
+	= { #Empty } // dummy for test/empty
 
 CHAR
         [example: A]
@@ -49,6 +51,16 @@ CHARSET
 	[example: 9]
 	[bad-example: 0]
 	= [1-9]
+
+NOT
+	[example: b]
+	[bad-example: aab]
+	= !STRING 'b'
+
+AND
+	[example: aaa]
+	[bad-example: aab]
+	= &STRING 'aaa'
 
 OPTION
 	[example: Ab]

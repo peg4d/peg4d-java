@@ -31,13 +31,23 @@ public abstract class ParsingExpression implements Matcher {
 	abstract ParsingExpression dup();
 	protected abstract void visit(ExpressionVisitor visitor);
 
-	public final boolean fastMatch1(ParsingContext c) {
-//		int pos = (int)context.getPosition();
-//		boolean b = this.matcher.simpleMatch(context);
-//		assert(context.isFailure() == !b);
-//		System.out.println("["+pos+"] return: " + b + " by " + this);
-//		return b;
-		return this.matcher.simpleMatch(c);
+	static int cc = 0;
+	static UList<ParsingExpression> dstack = new UList<ParsingExpression>(new ParsingExpression[1024]);
+	
+	public final boolean debugMatch(ParsingContext c) {
+//		int d = cc; cc++;
+//		int dpos = dstack.size();
+//		int pos = (int)c.getPosition();
+//		System.out.println("" + d + "["+pos+"] calling: " + this + " @" + this.getClass());
+//		dstack.add(this);
+		boolean b = this.matcher.simpleMatch(c);
+//		dstack.clear(dpos);
+//		System.out.println("" + d + "["+pos+"] called: " + this + " @" + this.getClass());
+//		if(pos > 12717) {
+//			System.out.println(dstack);
+//		}
+//		//assert(c.isFailure() == !b);
+		return b;
 	}
 	
 	public final static short Reject        = 0;
@@ -129,25 +139,27 @@ public abstract class ParsingExpression implements Matcher {
 		if(e instanceof PNonTerminal) {
 			PNonTerminal ne = (PNonTerminal) e;
 			ne.checkReference();
-			String n = ne.getUniqueName();
-			if(n.equals(uName)) {
-				if(minlen == 0 && !e.is(LeftRecursion)) {
+			if(minlen == 0) {
+				String n = ne.getUniqueName();
+				if(n.equals(uName) && !e.is(LeftRecursion)) {
 					ParsingRule r = ne.getRule();
 					e.set(LeftRecursion);
 					//System.out.println(uName + " minlen=" + minlen + " @@ " + stack);
 					e.report(ReportLevel.error, "left recursion: " + ne.ruleName);
 				}
+				if(!checkRecursion(n, stack)) {
+					int pos = stack.size();
+					stack.add(n);
+					int nc = checkLeftRecursion(ne.calling, uName, start, minlen, stack);
+					e.minlen = nc - minlen;
+					stack.clear(pos);
+				}
+				if(e.minlen == -1) {
+					e.minlen = 1; // FIXME: assuming no left recursion
+				}
 			}
-			if(!checkRecursion(n, stack)) {
-				int pos = stack.size();
-				stack.add(n);
-				int nc = checkLeftRecursion(ne.calling, uName, start, minlen, stack);
-				e.minlen = nc - minlen;
-				stack.clear(pos);
-			}
-			else {
-				//						System.out.println(uName + " @@ " + stack);
-				e.minlen = 1; // assuming no left recursion
+			else if(e.minlen == -1) {
+				e.minlen = 0;
 			}
 		}
 		if(e instanceof ParsingChoice) {
@@ -182,9 +194,9 @@ public abstract class ParsingExpression implements Matcher {
 				e.minlen = 0;
 			}
 		}
-		if(e.minlen == -1) {
-			System.out.println("@@@@ " + uName + "," + e);
-		}
+//		if(e.minlen == -1) {
+//			System.out.println("@@@@ " + uName + "," + e);
+//		}
 		assert(e.minlen != -1);
 		minlen += e.minlen;
 		return minlen;
@@ -629,37 +641,28 @@ public abstract class ParsingExpression implements Matcher {
 		return new ParsingFail(message);
 	}
 
-	private static ParsingExpression catchExpression = null;
-
 	public final static ParsingExpression newCatch() {
-		if(catchExpression == null) {
-			catchExpression = new ParsingCatch();
-		}
-		return catchExpression;
+		return new ParsingCatch();
 	}
 	
-	public final static ParsingExpression newFlag(String flagName) {
-		return new ParsingIfFlag(flagName);
+	public final static ParsingExpression newIf(String flagName) {
+		return new ParsingIf(flagName);
 	}
 
-	public final static ParsingExpression newEnableFlag(String flagName, ParsingExpression e) {
+	public final static ParsingExpression newWithFlag(String flagName, ParsingExpression e) {
 		return new ParsingWithFlag(flagName, e);
 	}
 
-	public final static ParsingExpression newDisableFlag(String flagName, ParsingExpression e) {
+	public final static ParsingExpression newWithoutFlag(String flagName, ParsingExpression e) {
 		return new ParsingWithoutFlag(flagName, e);
 	}
 
-	private static ParsingExpression indentExpression = null;
+	public final static ParsingExpression newIndent() {
+		return new ParsingIndent();
+	}
 
-	public final static ParsingExpression newIndent(ParsingExpression e) {
-		if(e == null) {
-			if(indentExpression == null) {
-				indentExpression = new ParsingIndent();
-			}
-			return indentExpression;
-		}
-		return new ParsingStackIndent(e);
+	public final static ParsingExpression newBlock(ParsingExpression e) {
+		return new ParsingBlock(e);
 	}
 
 }
@@ -879,7 +882,7 @@ class PNonTerminal extends ParsingExpression {
 			ParsingRule r = this.getRule();
 			if(r == null) {
 				this.report(ReportLevel.error, "undefined rule: " + this.ruleName);
-				r = new ParsingRule(this.peg, this.ruleName, null, new ParsingIfFlag(this.ruleName));
+				r = new ParsingRule(this.peg, this.ruleName, null, new ParsingIf(this.ruleName));
 				this.peg.setRule(this.ruleName, r);
 			}
 			if(r.minlen != -1) {
@@ -901,13 +904,12 @@ class PNonTerminal extends ParsingExpression {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-//		System.out.println("calling " + this.ruleName);
-		if(this.calling == null) {
-			System.out.println("Null Reference remains: " + this.ruleName + " next=" + this.flowNext);
-			//assert(this.calling != null);
-			this.checkReference();
-		}
-		return this.calling.matcher.simpleMatch(context);
+//		if(this.calling == null) {
+//			System.out.println("Null Reference remains: " + this.ruleName + " next=" + this.flowNext);
+//			//assert(this.calling != null);
+//			this.checkReference();
+//		}
+		return this.calling.debugMatch(context);
 	}
 }
 
@@ -1023,7 +1025,7 @@ class ParsingOption extends ParsingUnary {
 	public boolean simpleMatch(ParsingContext context) {
 		long f = context.rememberFailure();
 		ParsingObject left = context.left;
-		if(!this.inner.matcher.simpleMatch(context)) {
+		if(!this.inner.debugMatch(context)) {
 			context.left = left;
 			context.forgetFailure(f);
 		}
@@ -1056,7 +1058,7 @@ class ParsingRepetition extends ParsingUnary {
 		long f = context.rememberFailure();
 		while(ppos < pos) {
 			ParsingObject left = context.left;
-			if(!this.inner.matcher.simpleMatch(context)) {
+			if(!this.inner.debugMatch(context)) {
 				context.left = left;
 				break;
 			}
@@ -1090,7 +1092,7 @@ class ParsingAnd extends ParsingUnary {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		long pos = context.getPosition();
-		this.inner.matcher.simpleMatch(context);
+		this.inner.debugMatch(context);
 		context.rollback(pos);
 		return !context.isFailure();
 	}
@@ -1123,7 +1125,7 @@ class ParsingNot extends ParsingUnary {
 		long pos = context.getPosition();
 		long f   = context.rememberFailure();
 		ParsingObject left = context.left;
-		if(this.inner.matcher.simpleMatch(context)) {
+		if(this.inner.debugMatch(context)) {
 			context.rollback(pos);
 			context.opFailure(this);
 			return false;
@@ -1154,7 +1156,7 @@ class ParsingSequence extends ParsingList {
 		long pos = context.getPosition();
 		int mark = context.markObjectStack();
 		for(int i = 0; i < this.size(); i++) {
-			if(!(this.get(i).matcher.simpleMatch(context))) {
+			if(!(this.get(i).debugMatch(context))) {
 				context.abortLinkLog(mark);
 				context.rollback(pos);
 				return false;
@@ -1196,7 +1198,7 @@ class ParsingChoice extends ParsingList {
 		ParsingObject left = context.left;
 		for(int i = 0; i < this.size(); i++) {
 			context.left = left;
-			if(this.get(i).matcher.simpleMatch(context)) {
+			if(this.get(i).debugMatch(context)) {
 				context.forgetFailure(f);
 				return true;
 			}
@@ -1223,7 +1225,7 @@ class ParsingConnector extends ParsingUnary {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		ParsingObject left = context.left;
-		if(!this.inner.matcher.simpleMatch(context)) {
+		if(!this.inner.debugMatch(context)) {
 			return false;
 		}
 		if(context.canTransCapture() && context.left != left) {
@@ -1304,7 +1306,7 @@ class PConstructor extends ParsingList {
 			ParsingObject newone = context.newParsingObject(startIndex, this);
 			context.left = newone;
 			for(int i = 0; i < this.size(); i++) {
-				if(!this.get(i).matcher.simpleMatch(context)) {
+				if(!this.get(i).debugMatch(context)) {
 					context.rollback(startIndex);
 					return false;
 				}
@@ -1314,7 +1316,7 @@ class PConstructor extends ParsingList {
 		}
 		else {
 			for(int i = 0; i < this.prefetchIndex; i++) {
-				if(!this.get(i).matcher.simpleMatch(context)) {
+				if(!this.get(i).debugMatch(context)) {
 					context.rollback(startIndex);
 					return false;
 				}
@@ -1326,7 +1328,7 @@ class PConstructor extends ParsingList {
 				context.logLink(newnode, -1, left);
 			}
 			for(int i = this.prefetchIndex; i < this.size(); i++) {
-				if(!this.get(i).matcher.simpleMatch(context)) {
+				if(!this.get(i).debugMatch(context)) {
 					context.abortLinkLog(mark);
 					context.rollback(startIndex);
 					return false;
@@ -1474,7 +1476,7 @@ class ParsingMemo extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		if(!this.enableMemo) {
-			return this.inner.matcher.simpleMatch(context);
+			return this.inner.debugMatch(context);
 		}
 		long pos = context.getPosition();
 		ParsingObject left = context.left;
@@ -1487,7 +1489,7 @@ class ParsingMemo extends ParsingOperation {
 			}
 			return !(context.isFailure());
 		}
-		this.inner.matcher.simpleMatch(context);
+		this.inner.debugMatch(context);
 		int length = (int)(context.getPosition() - pos);
 		context.setMemo(pos, this, (context.left == left) ? NonTransition : context.left, length);
 		this.memoMiss += 1;
@@ -1545,7 +1547,7 @@ class ParsingMatch extends ParsingOperation {
 	public boolean simpleMatch(ParsingContext context) {
 		boolean oldMode = context.setRecognitionMode(true);
 		ParsingObject left = context.left;
-		if(this.inner.matcher.simpleMatch(context)) {
+		if(this.inner.debugMatch(context)) {
 			context.setRecognitionMode(oldMode);
 			context.left = left;
 			return true;
@@ -1555,30 +1557,30 @@ class ParsingMatch extends ParsingOperation {
 	}
 }
 
-class ParsingStackIndent extends ParsingOperation {
-	ParsingStackIndent(ParsingExpression e) {
-		super("indent", e);
+class ParsingBlock extends ParsingOperation {
+	ParsingBlock(ParsingExpression e) {
+		super("block", e);
 	}
 	@Override ParsingExpression dup() {
-		return new ParsingStackIndent(inner);
+		return new ParsingBlock(inner);
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opPushIndent();
-		this.inner.matcher.simpleMatch(context);
+		this.inner.debugMatch(context);
 		context.opPopIndent();
 		return !(context.isFailure());
 	}
 }
 
-class ParsingIfFlag extends ParsingFunction {
+class ParsingIf extends ParsingFunction {
 	String flagName;
-	ParsingIfFlag(String flagName) {
+	ParsingIf(String flagName) {
 		super("if");
 		this.flagName = flagName;
 	}
 	@Override ParsingExpression dup() {
-		return new ParsingIfFlag(flagName);
+		return new ParsingIf(flagName);
 	}
 	@Override
 	public String getParameters() {
@@ -1607,7 +1609,7 @@ class ParsingWithFlag extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opEnableFlag(this.flagName);
-		this.inner.matcher.simpleMatch(context);
+		this.inner.debugMatch(context);
 		context.opPopFlag(this.flagName);
 		return !(context.isFailure());
 	}
@@ -1629,7 +1631,7 @@ class ParsingWithoutFlag extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opDisableFlag(this.flagName);
-		this.inner.matcher.simpleMatch(context);
+		this.inner.debugMatch(context);
 		context.opPopFlag(this.flagName);
 		return !(context.isFailure());
 	}
@@ -1647,7 +1649,7 @@ class ParsingDebug extends ParsingOperation {
 		context.opRememberPosition();
 		context.opRememberFailurePosition();
 		context.opStoreObject();
-		this.inner.matcher.simpleMatch(context);
+		this.inner.debugMatch(context);
 		context.opDebug(this.inner);
 		return !(context.isFailure());
 	}
@@ -1664,11 +1666,11 @@ class ParsingApply extends ParsingOperation {
 	public boolean simpleMatch(ParsingContext context) {
 //		ParsingContext s = new ParsingContext(context.left);
 //		
-//		this.inner.matcher.simpleMatch(s);
+//		this.inner.debugMatch(s);
 //		context.opRememberPosition();
 //		context.opRememberFailurePosition();
 //		context.opStoreObject();
-//		this.inner.matcher.simpleMatch(context);
+//		this.inner.debugMatch(context);
 //		context.opDebug(this.inner);
 		return !(context.isFailure());
 

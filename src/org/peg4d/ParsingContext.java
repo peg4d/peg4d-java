@@ -58,7 +58,7 @@ public class ParsingContext {
 			long ppos = this.getPosition();
 			po.setSourcePosition(this.pos);
 			this.left = po;
-			start.simpleMatch(this);
+			start.debugMatch(this);
 			if(this.isFailure() || ppos == this.getPosition()) {
 				if(fpos == -1) {
 					fpos = this.fpos;
@@ -95,7 +95,7 @@ public class ParsingContext {
 		this.emptyTag = peg.newStartTag();
 		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
 		this.left = po;
-		start.simpleMatch(this);
+		start.debugMatch(this);
 		checkUnusedText(po);
 		return this.left;
 	}

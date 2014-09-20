@@ -6,14 +6,15 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.TreeMap;
 
 import org.peg4d.ext.Generator;
 
 public class Main {
 	public final static String  ProgName  = "PEG4d";
 	public final static String  CodeName  = "yokohama";
-	public final static int     MajorVersion = 1;
-	public final static int     MinerVersion = 0;
+	public final static int     MajorVersion = 0;
+	public final static int     MinerVersion = 1;
 	public final static int     PatchLevel   = 0;
 	public final static String  Version = "" + MajorVersion + "." + MinerVersion + "." + PatchLevel;
 	public final static String  Copyright = "Copyright (c) 2014, Konoha4e project authors";
@@ -245,7 +246,7 @@ public class Main {
 		System.out.println("  -p <FILE>                 Specify PEG file  default: PEG4d grammar");
 		System.out.println("  -s | --start <NAME>       Specify Non-Terminal as the starting point. default: TopLevel");
 		System.out.println("  -t <type>                 Specify output type. default: pego");
-		System.out.println("     pego|none|json|csv");
+		System.out.println("     tag|pego|none|json|csv");
 		System.out.println("  -c                        Invoke as checker (without output generation). Exit 1 when failed");
 		System.out.println("  -f | --format<type>       Specify PEG formatter");
 		System.out.println("  --packrat                 Packrat Parser");
@@ -293,32 +294,6 @@ public class Main {
 		return d;
 	}
 	
-//	private static SimpleGrammarFormatter loadSimpleDriverImpl(String driverName) {
-//		try {
-//			return (SimpleGrammarFormatter) driverMap.get(driverName).newInstance();
-//		}
-//		catch(Exception e) {
-//		}
-//		return null;
-//	}
-//	
-//	private static SimpleGrammarFormatter loadSimpleFormatter(String driverName) {
-//		SimpleGrammarFormatter d = loadSimpleDriverImpl(driverName);
-//		if(d == null) {
-//			System.out.println("Supported formatter list:");
-//			UList<String> driverList = driverMap.keys();
-//			for(int i = 0; i < driverList.size(); i++) {
-//				String k = driverList.ArrayValues[i];
-//				d = loadSimpleDriverImpl(k);
-//				if(d != null) {
-//					System.out.println("\t" + k + " - " + d.getDesc());
-//				}
-//			}
-//			Main._Exit(1, "undefined formatter: " + driverName);
-//		}
-//		return d;
-//	}
-
 	private synchronized static void loadInputFile(Grammar peg, String fileName) {
 		String startPoint = StartingPoint;
 		Main.printVerbose("FileName", fileName);
@@ -361,6 +336,10 @@ public class Main {
 			context.recordStat(pego);
 			return;
 		}
+		if(OutputType.equalsIgnoreCase("tag")) {
+			outputMap(pego);
+			return;
+		}
 		if(OutputType.equalsIgnoreCase("pego")) {
 			new Generator(OutputFileName).writePego(pego);
 		}
@@ -372,6 +351,30 @@ public class Main {
 		}
 	}
 
+	private static void outputMap(ParsingObject po) {
+		TreeMap<String,Integer> m = new TreeMap<String,Integer>();
+		tagCount(po, m);
+		for(String k : m.keySet()) {
+			System.out.print("#" + k + ":" + m.get(k));
+		}
+		System.out.println("");
+	}
+
+	private static void tagCount(ParsingObject po, TreeMap<String,Integer> m) {
+		for(int i = 0; i < po.size(); i++) {
+			tagCount(po.get(i), m);
+		}
+		String key = po.getTag().toString();
+		Integer n = m.get(key);
+		if(n == null) {
+			m.put(key, 1);
+		}
+		else {
+			m.put(key, n+1);
+		}
+	}
+	
+	
 	private final static void displayShellVersion(Grammar peg) {
 		Main._PrintLine(ProgName + "-" + Version + " (" + CodeName + ") on " + Main._GetPlatform());
 		Main._PrintLine(Copyright);

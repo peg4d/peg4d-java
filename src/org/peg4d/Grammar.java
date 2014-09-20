@@ -165,7 +165,6 @@ public class Grammar {
 				rule.type = ParsingExpression.typeCheck(rule.expr, stack, rule.type, null);
 			}
 			rule.typeCheck();
-			//System.out.println("@Verify " + rule);
 		}
 		Optimizer2.enableOptimizer();
 		for(int i = 0; i < nameList.size(); i++) {
@@ -175,7 +174,7 @@ public class Grammar {
 		if(this.foundError) {
 			Main._Exit(1, "PegError found");
 		}
-		this.memoRemover = new MemoRemover(this);
+//		this.memoRemover = new MemoRemover(this);
 		ParsingContext context = new ParsingContext(null);
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);

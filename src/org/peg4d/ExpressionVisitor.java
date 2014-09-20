@@ -84,7 +84,7 @@ class ExpressionVisitor {
 	public void visitParsingOperation(ParsingOperation e) {
 		e.inner.visit(this);
 	}
-	public void visitParsingIfFlag(ParsingIfFlag e) {
+	public void visitParsingIfFlag(ParsingIf e) {
 	}
 }
 

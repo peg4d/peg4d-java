@@ -17,8 +17,8 @@ public class Pattern {
 
 //		
 //		Grammar peg = factory.newGrammar("name");
-//		peg.importGramamr("file");
-//		peg.importGramamr("file");
+//		peg.importGramamr("File");
+//		peg.importGramamr("File");
 //		peg.updateGrammar("Name = name");
 //
 //		s = ParsingSource.newInputstream(in);

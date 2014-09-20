@@ -10,10 +10,10 @@ class Optimizer2 {
 	public static boolean PredictedChoice   = false;
 	
 	static void enableOptimizer() {
-		InlineNonTerminal = true;
-		CharacterChoice   = true;
-		StringChoice      = true;
-		PredictedChoice   = true;  // Don't enable. it bugs
+//		InlineNonTerminal = true;
+//		CharacterChoice   = true;
+//		StringChoice      = true;
+//		PredictedChoice   = true;  // Don't enable. it bugs
 	}
 
 	public static int countOptimizedNonTerminal = 0;

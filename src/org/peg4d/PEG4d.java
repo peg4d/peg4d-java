@@ -114,9 +114,7 @@ public class PEG4d extends ParsingBuilder {
 	
 	ParsingExpression toParsingExpression(ParsingObject po) {
 		ParsingExpression e = (ParsingExpression)this.build(po);
-		if(e != null) {
-			e.po = po;
-		}
+		e.po = po;
 		return e;
 	}
 
@@ -129,7 +127,8 @@ public class PEG4d extends ParsingBuilder {
 //				return e;  // FIXME
 //			}
 //		}
-		if(symbol.length() > 0 && !symbol.endsWith("_") && !peg.hasRule(symbol) && GrammarFactory.Grammar.hasRule(symbol)) { // comment
+		if(symbol.length() > 0 && !symbol.endsWith("_") && !peg.hasRule(symbol)
+				&& GrammarFactory.Grammar.hasRule(symbol)) { // comment
 			Main.printVerbose("implicit importing", symbol);
 			peg.setRule(symbol, GrammarFactory.Grammar.getRule(symbol));
 		}
@@ -211,7 +210,7 @@ public class PEG4d extends ParsingBuilder {
 		return ParsingExpression.newNot(toParsingExpression(po.get(0)));
 	}
 
-	ParsingExpression toAnd(ParsingObject po) {
+	public ParsingExpression toAnd(ParsingObject po) {
 		return ParsingExpression.newAnd(toParsingExpression(po.get(0)));
 	}
 
@@ -270,74 +269,40 @@ public class PEG4d extends ParsingBuilder {
 
 	//PEG4d Function
 	
+	public ParsingExpression toDebug(ParsingObject po) {
+		return ParsingExpression.newDebug(toParsingExpression(po.get(0)));
+	}
+
 	public ParsingExpression toMatch(ParsingObject po) {
 		return ParsingExpression.newMatch(toParsingExpression(po.get(0)));
 	}
 
+	public ParsingExpression toCatch(ParsingObject po) {
+		return ParsingExpression.newCatch();
+	}
+
+	public ParsingExpression toFail(ParsingObject po) {
+		return ParsingExpression.newFail(ParsingCharset.unquoteString(po.textAt(0, "")));
+	}
+
 	public ParsingExpression toWith(ParsingObject po) {
-		return ParsingExpression.newEnableFlag(po.textAt(0, ""), toParsingExpression(po.get(1)));
+		return ParsingExpression.newWithFlag(po.textAt(0, ""), toParsingExpression(po.get(1)));
 	}
 
 	public ParsingExpression toWithout(ParsingObject po) {
-		return ParsingExpression.newDisableFlag(po.textAt(0, ""), toParsingExpression(po.get(1)));
+		return ParsingExpression.newWithoutFlag(po.textAt(0, ""), toParsingExpression(po.get(1)));
 	}
-//
-//	private static public ParsingExpression toParsingExpressionImpl(Grammar peg, String ruleName, ParsingObject po) {
-//		if(po.is(org.peg4d.PEG4d.ParsingMatch)) {
-//			return ParsingExpression.newMatch(toParsingExpression(po.get(0)));
-//		}
-//		if(po.is(org.peg4d.PEG4d.ParsingWithFlag)) {
-//		}
-//		if(po.is(org.peg4d.PEG4d.ParsingWithoutFlag)) {
-//			return ParsingExpression.newDisableFlag(po.textAt(0, ""), toParsingExpression(po.get(1)));
-//		}
-//		if(po.is(org.peg4d.PEG4d.ParsingIfFlag)) {
-//			return ParsingExpression.newFlag(po.textAt(0, ""));
-//		}
-//		if(po.is(org.peg4d.PEG4d.ParsingIndent)) {
-//			if(po.size() == 0) {
-//				return ParsingExpression.newIndent(null);
-//			}
-//			return ParsingExpression.newIndent(toParsingExpression(po.get(0)));
-//		}
-//		
-//		if(po.is(org.peg4d.PEG4d.ParsingDebug)) {
-//			return ParsingExpression.newDebug(toParsingExpression(po.get(0)));
-//		}
-//		if(po.is(org.peg4d.PEG4d.ParsingFail)) {
-//			return ParsingExpression.newFail(ParsingCharset.unquoteString(po.textAt(0, "")));
-//		}
-//		if(po.is(org.peg4d.PEG4d.ParsingCatch)) {
-//			return ParsingExpression.newCatch();
-//		}
-////		if(po.is(PEG4dGrammar.ParsingApply)) {
-////			return ParsingExpression.newApply(toParsingExpression(loading, ruleName, po.get(0)));
-////		}
-////		if(po.is(PEG4dGrammar.ParsingStringfy)) {
-////			return ParsingExpression.newStringfy();
-////		}
-////		if(pego.is("PExport")) {
-////		Peg seq = toParsingExpression(loadingGrammar, ruleName, pego.get(0));
-////		Peg o = loadingGrammar.newConstructor(ruleName, seq);
-////		return new PegExport(loadingGrammar, 0, o);
-////	}
-////	if(pego.is("PSetter")) {
-////		int index = -1;
-////		String indexString = pego.getText();
-////		if(indexString.length() > 0) {
-////			index = UCharset.parseInt(indexString, -1);
-////		}
-////		return loadingGrammar.newConnector(toParsingExpression(loadingGrammar, ruleName, pego.get(0)), index);
-////	}
-////		if(node.is("pipe")) {
-////			return new PegPipe(node.getText());
-////		}
-////		if(node.is("catch")) {
-////			return new PegCatch(null, toPeg(node.get(0)));
-////		}
-//		Main._Exit(1, "undefined peg: " + po);
-//		return null;
-//	}
 
+	public ParsingExpression toIf(ParsingObject po) {
+		return ParsingExpression.newIf(po.textAt(0, ""));
+	}
+
+	public ParsingExpression toBlock(ParsingObject po) {
+		return ParsingExpression.newBlock(toParsingExpression(po.get(0)));
+	}
+
+	public ParsingExpression toIndent(ParsingObject po) {
+		return ParsingExpression.newIndent();
+	}
 
 }

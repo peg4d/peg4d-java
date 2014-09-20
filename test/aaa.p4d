@@ -3,6 +3,9 @@
 // @test aaa
 // @test! aaaaa
 
+File
+	= { #Empty } // dummy
+
 A
 	[example: a]
 	[example: aaa]
