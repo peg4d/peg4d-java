@@ -13,10 +13,9 @@ public abstract class ParsingExpression implements Matcher {
 	public final static int HasSyntaxError    = 1 << 26;
 	public final static int HasTypeError      = 1 << 27;
 
-	int        flag       = 0;
-	int        uniqueId   = 0;
+	int           flag       = 0;
+	int           uniqueId   = 0;
 	ParsingObject po      = null;
-	ParsingExpression flowNext  = null;
 	int        minlen = -1;
 	Matcher matcher;
 		
@@ -108,26 +107,6 @@ public abstract class ParsingExpression implements Matcher {
 		}
 	}
 	
-	public static ParsingExpression makeFlow(ParsingExpression e, ParsingExpression tail) {
-		e.flowNext = tail;
-		if(e instanceof ParsingChoice) {
-			for(int i = 0; i < e.size(); i++) {
-				makeFlow(e.get(i), tail);
-			}
-			return e;
-		}
-		if(e instanceof ParsingSequence || e instanceof PConstructor) {
-			for(int i = e.size() - 1; i >=0; i--) {
-				tail = makeFlow(e.get(i), tail);
-			}
-			return e;
-		}
-		if(e instanceof ParsingUnary) {
-			tail = makeFlow(((ParsingUnary) e).inner, tail);
-		}
-		return e;
-	}
-
 	private static boolean checkRecursion(String uName, UList<String> stack) {
 		for(int i = 0; i < stack.size() - 1; i++) {
 			if(uName.equals(stack.ArrayValues[i])) {

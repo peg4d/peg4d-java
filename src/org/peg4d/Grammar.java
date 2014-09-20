@@ -125,7 +125,6 @@ public class Grammar {
 //	}
 
 	public final void setRule(String ruleName, ParsingRule rule) {
-		ParsingExpression.makeFlow(rule.expr, null);
 		if(!this.hasRule(ruleName)) {
 			this.nameList.add(ruleName);
 		}
