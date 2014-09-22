@@ -300,6 +300,10 @@ public abstract class ParsingExpression implements Matcher {
 				return status0;
 			}
 		}
+		if(e instanceof ParsingMatch) {
+			((ParsingMatch) e).inner = ((ParsingMatch) e).inner.reduceOperation();
+			return typeCheck(((ParsingMatch) e).inner, status);
+		}
 //		if(e instanceof ParsingNot) {
 //			((ParsingNot) e).inner = ((ParsingNot) e).inner.reduceOperation();
 //			return status;

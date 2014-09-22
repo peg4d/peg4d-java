@@ -1,0 +1,40 @@
+// PEG4d Object Testing
+
+File
+	= { #Text } // dummy
+
+Num
+	[example: 42]
+	[bad-example: 42km]
+	= { DIGIT+ }
+
+Number
+	[example: 42]
+	[bad-example: 42km]
+	= { DIGIT+ #Number }
+
+Length
+	[example: 42km]
+	= { @Number 'km' #Length }
+
+addUnit
+	[example: km]
+	= 'km' #ISO / 'feet' #US
+
+LengthUnit
+	[example: 42feet]
+	= { @Number addUnit }
+
+KeyValue
+	[example: 42]
+	= { @[1]Number @[0]{`Length` #Key} #KeyValue }
+
+KeyValueKm
+	[example: 42km]
+	= KeyValue 'km'
+
+LeftJoined
+	[example: 42]
+	[example: 42km]
+	= Number {@ addUnit }?
+
