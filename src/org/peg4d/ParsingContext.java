@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.peg4d.ParsingContextMemo.ObjectMemo;
+import org.peg4d.ParsingContextMemo.MemoEntry;
 
 public class ParsingContext {
 	ParsingObject left;
@@ -317,7 +317,7 @@ public class ParsingContext {
 		this.memoMap = new NoMemo();
 	}
 
-	final ObjectMemo getMemo(ParsingExpression e, long keypos) {
+	final MemoEntry getMemo(ParsingExpression e, long keypos) {
 		return this.memoMap.getMemo(e, keypos);
 	}
 
@@ -731,24 +731,24 @@ abstract class ParsingContextMemo {
 	int MemoSize = 0;
 //	int statMemoSlotCount = 0;
 
-	public final class ObjectMemo {
-		ObjectMemo next;
+	public final class MemoEntry {
+		MemoEntry next;
 		ParsingExpression  keypeg;
 		ParsingObject generated;
 		int  consumed;
 		long key;
 	}
 
-	private ObjectMemo UnusedMemo = null;
+	private MemoEntry UnusedMemo = null;
 
-	protected final ObjectMemo newMemo() {
+	protected final MemoEntry newMemo() {
 		if(UnusedMemo != null) {
-			ObjectMemo m = this.UnusedMemo;
+			MemoEntry m = this.UnusedMemo;
 			this.UnusedMemo = m.next;
 			return m;
 		}
 		else {
-			ObjectMemo m = new ObjectMemo();
+			MemoEntry m = new MemoEntry();
 //			this.memoSize += 1;
 			return m;
 		}
@@ -758,19 +758,19 @@ abstract class ParsingContextMemo {
 		return keypos;
 	}
 
-	protected final void unusedMemo(ObjectMemo m) {
+	protected final void unusedMemo(MemoEntry m) {
 		this.appendMemo2(m, UnusedMemo);
 		UnusedMemo = m;
 	}
 
-	protected final ObjectMemo findTail(ObjectMemo m) {
+	protected final MemoEntry findTail(MemoEntry m) {
 		while(m.next != null) {
 			m = m.next;
 		}
 		return m;
 	}			
 
-	private void appendMemo2(ObjectMemo m, ObjectMemo n) {
+	private void appendMemo2(MemoEntry m, MemoEntry n) {
 		while(m.next != null) {
 			m = m.next;
 		}
@@ -778,16 +778,16 @@ abstract class ParsingContextMemo {
 	}			
 
 	protected abstract void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed);
-	protected abstract ObjectMemo getMemo(ParsingExpression keypeg, long keypos);
+	protected abstract MemoEntry getMemo(ParsingExpression keypeg, long keypos);
 
 //	public final static long makekey(long pos, Peg keypeg) {
 //		return (pos << 24) | keypeg.uniqueId;
 //	}
 	
-	class FifoMap extends LinkedHashMap<Long, ObjectMemo> {
+	class FifoMap extends LinkedHashMap<Long, MemoEntry> {
 		private static final long serialVersionUID = 6725894996600788028L;
 		@Override
-		protected boolean removeEldestEntry(Map.Entry<Long, ObjectMemo> eldest)  {
+		protected boolean removeEldestEntry(Map.Entry<Long, MemoEntry> eldest)  {
 			if(this.size() < FifoSize) {
 				unusedMemo(eldest.getValue());
 				return true;			
@@ -796,13 +796,13 @@ abstract class ParsingContextMemo {
 		}
 	}
 
-	class AdaptiveLengthMap extends LinkedHashMap<Long, ObjectMemo> {
+	class AdaptiveLengthMap extends LinkedHashMap<Long, MemoEntry> {
 		private static final long serialVersionUID = 6725894996600788028L;
 		long lastPosition = 0;
 		int worstLength = 0;
 		
 		@Override
-		protected boolean removeEldestEntry(Map.Entry<Long, ObjectMemo> eldest)  {
+		protected boolean removeEldestEntry(Map.Entry<Long, MemoEntry> eldest)  {
 			long diff = this.lastPosition - getpos(eldest.getKey());
 			if(diff > worstLength) {
 				unusedMemo(eldest.getValue());
@@ -811,7 +811,7 @@ abstract class ParsingContextMemo {
 			return false;
 		}
 		@Override
-		public ObjectMemo put(Long key, ObjectMemo value) {
+		public MemoEntry put(Long key, MemoEntry value) {
 			long pos = getpos(key);
 			if(this.lastPosition < pos) {
 				this.lastPosition = pos;
@@ -833,23 +833,23 @@ class NoMemo extends ParsingContextMemo {
 	}
 
 	@Override
-	protected ObjectMemo getMemo(ParsingExpression keypeg, long keypos) {
+	protected MemoEntry getMemo(ParsingExpression keypeg, long keypos) {
 		this.MemoMiss += 1;
 		return null;
 	}
 }
 
 class PackratMemo extends ParsingContextMemo {
-	protected Map<Long, ObjectMemo> memoMap;
-	protected PackratMemo(Map<Long, ObjectMemo> memoMap) {
+	protected Map<Long, MemoEntry> memoMap;
+	protected PackratMemo(Map<Long, MemoEntry> memoMap) {
 		this.memoMap = memoMap;
 	}
 	public PackratMemo(int initSize) {
-		this(new HashMap<Long, ObjectMemo>(initSize));
+		this(new HashMap<Long, MemoEntry>(initSize));
 	}
 	@Override
 	protected final void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed) {
-		ObjectMemo m = null;
+		MemoEntry m = null;
 		m = newMemo();
 		m.keypeg = keypeg;
 		m.generated = generated;
@@ -858,8 +858,8 @@ class PackratMemo extends ParsingContextMemo {
 		this.memoMap.put(keypos, m);
 	}
 	@Override
-	protected final ObjectMemo getMemo(ParsingExpression keypeg, long keypos) {
-		ObjectMemo m = this.memoMap.get(keypos);
+	protected final MemoEntry getMemo(ParsingExpression keypeg, long keypos) {
+		MemoEntry m = this.memoMap.get(keypos);
 		while(m != null) {
 			if(m.keypeg == keypeg) {
 				this.MemoHit += 1;
@@ -874,14 +874,14 @@ class PackratMemo extends ParsingContextMemo {
 
 
 class FifoMemo extends ParsingContextMemo {
-	protected Map<Long, ObjectMemo> memoMap;
+	protected Map<Long, MemoEntry> memoMap;
 	protected long farpos = 0;
 	
 	protected FifoMemo(int slot) {
-		this.memoMap = new LinkedHashMap<Long, ObjectMemo>(slot) {  //FIFO
+		this.memoMap = new LinkedHashMap<Long, MemoEntry>(slot) {  //FIFO
 			private static final long serialVersionUID = 6725894996600788028L;
 			@Override
-			protected boolean removeEldestEntry(Map.Entry<Long, ObjectMemo> eldest)  {
+			protected boolean removeEldestEntry(Map.Entry<Long, MemoEntry> eldest)  {
 				long pos = ParsingUtils.getpos(eldest.getKey());
 				//System.out.println("diff="+(farpos - pos));
 				if(farpos - pos > 256) {
@@ -895,7 +895,7 @@ class FifoMemo extends ParsingContextMemo {
 
 	@Override
 	protected final void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed) {
-		ObjectMemo m = null;
+		MemoEntry m = null;
 		m = newMemo();
 		long key = ParsingUtils.memoKey(keypos, keypeg);
 		m.key = key;
@@ -909,8 +909,8 @@ class FifoMemo extends ParsingContextMemo {
 	}
 
 	@Override
-	protected final ObjectMemo getMemo(ParsingExpression keypeg, long keypos) {
-		ObjectMemo m = this.memoMap.get(ParsingUtils.memoKey(keypos, keypeg));
+	protected final MemoEntry getMemo(ParsingExpression keypeg, long keypos) {
+		MemoEntry m = this.memoMap.get(ParsingUtils.memoKey(keypos, keypeg));
 		if(m != null) {
 			this.MemoHit += 1;
 		}
@@ -922,14 +922,14 @@ class FifoMemo extends ParsingContextMemo {
 }
 
 class OpenFifoMemo extends ParsingContextMemo {
-	private ObjectMemo[] memoArray;
+	private MemoEntry[] memoArray;
 	private long statSetCount = 0;
 	private long statExpireCount = 0;
 
 	OpenFifoMemo(int slotSize) {
-		this.memoArray = new ObjectMemo[slotSize * 111 + 1];
+		this.memoArray = new MemoEntry[slotSize * 111 + 1];
 		for(int i = 0; i < this.memoArray.length; i++) {
-			this.memoArray[i] = new ObjectMemo();
+			this.memoArray[i] = new MemoEntry();
 		}
 	}
 	
@@ -937,7 +937,7 @@ class OpenFifoMemo extends ParsingContextMemo {
 	protected final void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed) {
 		long key = ParsingUtils.memoKey(keypos, keypeg);
 		int hash =  (Math.abs((int)key) % memoArray.length);
-		ObjectMemo m = this.memoArray[hash];
+		MemoEntry m = this.memoArray[hash];
 //		if(m.key != 0) {
 //			long diff = keypos - PEGUtils.getpos(m.key);
 //			if(diff > 0 && diff < 80) {
@@ -951,10 +951,10 @@ class OpenFifoMemo extends ParsingContextMemo {
 	}
 
 	@Override
-	protected final ObjectMemo getMemo(ParsingExpression keypeg, long keypos) {
+	protected final MemoEntry getMemo(ParsingExpression keypeg, long keypos) {
 		long key = ParsingUtils.memoKey(keypos, keypeg);
 		int hash =  (Math.abs((int)key) % memoArray.length);
-		ObjectMemo m = this.memoArray[hash];
+		MemoEntry m = this.memoArray[hash];
 		if(m.key == key) {
 			//System.out.println("GET " + key + "/"+ hash + " kp: " + keypeg.uniqueId);
 			this.MemoHit += 1;
@@ -985,9 +985,9 @@ class DebugMemo extends ParsingContextMemo {
 		this.m2.setMemo(keypos, keypeg, generated, consumed);
 	}
 	@Override
-	protected final ObjectMemo getMemo(ParsingExpression keypeg, long keypos) {
-		ObjectMemo o1 = this.m1.getMemo(keypeg, keypos);
-		ObjectMemo o2 = this.m2.getMemo(keypeg, keypos);
+	protected final MemoEntry getMemo(ParsingExpression keypeg, long keypos) {
+		MemoEntry o1 = this.m1.getMemo(keypeg, keypos);
+		MemoEntry o2 = this.m2.getMemo(keypeg, keypos);
 		if(o1 == null && o2 == null) {
 			return null;
 		}

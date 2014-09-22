@@ -279,88 +279,88 @@ class Optimizer extends ExpressionVisitor {
 	}
 }
 
-class MemoRemover extends ExpressionVisitor {
-	UList<ParsingExpression> pegList;
-	int cutMiss = -1;
-	int RemovedCount = 0;
-	
-	MemoRemover(Grammar peg) {
-		UList<String> nameList = peg.ruleMap.keys();
-		this.pegList = new UList<ParsingExpression>(new ParsingExpression[nameList.size()]);
-		for(int i = 0; i < nameList.size(); i++) {
-			String ruleName = nameList.ArrayValues[i];
-			this.pegList.add(peg.getExpression(ruleName));
-		}
-	}
-
-	void removeDisabled() {
-		this.cutMiss = -1;
-		for(int i = 0; i < pegList.size(); i++) {
-			pegList.ArrayValues[i].visit(this);
-		}
-	}
-
-	void remove(int cutMiss) {
-		this.cutMiss = cutMiss;
-		for(int i = 0; i < pegList.size(); i++) {
-			pegList.ArrayValues[i].visit(this);
-		}
-	}
-
-	final boolean isRemoved(ParsingMemo pm) {
-		if(pm.memoMiss < this.cutMiss) {
-			return true;
-		}
-		return !(pm.enableMemo);
-	}
-	
-	ParsingExpression removeMemo(ParsingExpression e) {
-		if(e instanceof ParsingMemo) {
-			ParsingMemo pm = (ParsingMemo)e;
-			if(this.isRemoved(pm)) {
-				this.RemovedCount += 1;
-				return pm.inner;
-			}
-		}
-		return e;
-	}
-	
-	@Override
-	public void visitNonTerminal(PNonTerminal e) {
-		if(e.calling != null) {
-			e.calling = this.removeMemo(e.calling);
-		}
-	}
-
-	@Override
-	public void visitUnary(ParsingUnary e) {
-		e.inner = this.removeMemo(e.inner);
-		e.inner.visit(this);
-	}
-
-	@Override
-	public void visitList(ParsingList e) {
-		for(int i = 0; i < e.size(); i++) {
-			ParsingExpression se = this.removeMemo(e.get(i));
-			e.set(i, se);
-			se.visit(this);
-		}
-	}
-	
-	@Override
-	public void visitChoice(ParsingChoice e) {
-		this.visitList(e);
-//		if(e instanceof PegSelectiveChoice) {
-//			for(int i = 0; i < UCharset.MAX; i++) {
-//				if(e.caseOf[i] != null) {
-//					Peg se = this.removeMemo(e.caseOf[i]);
-//					e.caseOf[i] = se;
-//					se.visit(this);
-//				}
+//class MemoRemover extends ExpressionVisitor {
+//	UList<ParsingExpression> pegList;
+//	int cutMiss = -1;
+//	int RemovedCount = 0;
+//	
+//	MemoRemover(Grammar peg) {
+//		UList<String> nameList = peg.ruleMap.keys();
+//		this.pegList = new UList<ParsingExpression>(new ParsingExpression[nameList.size()]);
+//		for(int i = 0; i < nameList.size(); i++) {
+//			String ruleName = nameList.ArrayValues[i];
+//			this.pegList.add(peg.getExpression(ruleName));
+//		}
+//	}
+//
+//	void removeDisabled() {
+//		this.cutMiss = -1;
+//		for(int i = 0; i < pegList.size(); i++) {
+//			pegList.ArrayValues[i].visit(this);
+//		}
+//	}
+//
+//	void remove(int cutMiss) {
+//		this.cutMiss = cutMiss;
+//		for(int i = 0; i < pegList.size(); i++) {
+//			pegList.ArrayValues[i].visit(this);
+//		}
+//	}
+//
+//	final boolean isRemoved(ParsingMemo pm) {
+//		if(pm.memoMiss < this.cutMiss) {
+//			return true;
+//		}
+//		return !(pm.enableMemo);
+//	}
+//	
+//	ParsingExpression removeMemo(ParsingExpression e) {
+//		if(e instanceof ParsingMemo) {
+//			ParsingMemo pm = (ParsingMemo)e;
+//			if(this.isRemoved(pm)) {
+//				this.RemovedCount += 1;
+//				return pm.inner;
 //			}
 //		}
-	}
-}
+//		return e;
+//	}
+//	
+//	@Override
+//	public void visitNonTerminal(PNonTerminal e) {
+//		if(e.calling != null) {
+//			e.calling = this.removeMemo(e.calling);
+//		}
+//	}
+//
+//	@Override
+//	public void visitUnary(ParsingUnary e) {
+//		e.inner = this.removeMemo(e.inner);
+//		e.inner.visit(this);
+//	}
+//
+//	@Override
+//	public void visitList(ParsingList e) {
+//		for(int i = 0; i < e.size(); i++) {
+//			ParsingExpression se = this.removeMemo(e.get(i));
+//			e.set(i, se);
+//			se.visit(this);
+//		}
+//	}
+//	
+//	@Override
+//	public void visitChoice(ParsingChoice e) {
+//		this.visitList(e);
+////		if(e instanceof PegSelectiveChoice) {
+////			for(int i = 0; i < UCharset.MAX; i++) {
+////				if(e.caseOf[i] != null) {
+////					Peg se = this.removeMemo(e.caseOf[i]);
+////					e.caseOf[i] = se;
+////					se.visit(this);
+////				}
+////			}
+////		}
+//	}
+//}
 
 //class ObjectRemover extends ParsingExpressionVisitor {
 //	ObjectRemover() {

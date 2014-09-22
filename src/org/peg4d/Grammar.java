@@ -13,8 +13,6 @@ public class Grammar {
 	UMap<String>         objectLabelMap = null;
 	public boolean       foundError = false;
 
-	MemoRemover memoRemover = null;
-
 	int memoFactor;
 	int optimizationLevel;
 	int LexicalOptimization       = 0;
@@ -254,7 +252,7 @@ public class Grammar {
 
 //		stat.setCount("ActivatedMemo", this.EnabledMemo);
 //		stat.setCount("DisabledMemo", this.DisabledMemo);
-		stat.setCount("RemovedMemo", this.memoRemover.RemovedCount);
+//		stat.setCount("RemovedMemo", this.memoRemover.RemovedCount);
 		stat.setCount("LexicalOptimization", this.LexicalOptimization);
 		stat.setCount("InterTerminalOptimization", this.InterTerminalOptimization);
 		stat.setCount("PredictionOptimization", this.PredictionOptimization);
