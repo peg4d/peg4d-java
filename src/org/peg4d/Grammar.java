@@ -112,6 +112,23 @@ public class Grammar {
 		return this.ruleMap.get(ruleName);
 	}
 
+	public final ParsingRule getLexicalRule(String ruleName) {
+		ParsingRule r = this.getRule(ruleName);
+		if(ParsingRule.isLexicalName(ruleName) || r == null) {
+			return r;
+		}
+		String lexName = ParsingRule.toLexicalName(ruleName);
+		ParsingRule r2 = this.getRule(lexName);
+		if(r2 == null) {
+			ParsingExpression e = r.expr.reduceOperation().uniquefy();
+			r2 = new ParsingRule(this, lexName, null, e);
+			this.setRule(lexName, r);
+			r2.type = ParsingRule.LexicalRule;
+			System.out.println("producing lexical rule: " + r2);
+		}
+		return r2;
+	}
+
 	public final ParsingExpression getExpression(String ruleName) {
 		ParsingRule rule = this.getRule(ruleName);
 		if(rule != null) {
@@ -321,7 +338,7 @@ class PEG4dGrammar extends Grammar {
 		return newNonTerminal(ruleName);
 	}
 	private final ParsingExpression Optional(ParsingExpression e) {
-		return ParsingExpression.newOptional(e);
+		return ParsingExpression.newOption(e);
 	}
 	private final ParsingExpression ZeroMore(ParsingExpression e) {
 		return ParsingExpression.newRepetition(e);

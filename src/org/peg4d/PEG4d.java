@@ -215,7 +215,7 @@ public class PEG4d extends ParsingBuilder {
 	}
 
 	public ParsingExpression toOptional(ParsingObject po) {
-		return ParsingExpression.newOptional(toParsingExpression(po.get(0)));
+		return ParsingExpression.newOption(toParsingExpression(po.get(0)));
 	}
 
 	public ParsingExpression toOneMoreRepetition(ParsingObject po) {

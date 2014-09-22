@@ -4,6 +4,9 @@ package org.peg4d;
 
 class Optimizer2 {
 	
+	
+	
+	
 	public static boolean InlineNonTerminal = false;
 	public static boolean CharacterChoice   = false;
 	public static boolean StringChoice      = false;
@@ -24,7 +27,7 @@ class Optimizer2 {
 	final static void optimize(ParsingExpression e) {
 		if(!e.isOptimized()) {
 			if(e instanceof PNonTerminal) {
-				optimizeChoice((PNonTerminal)e);
+				optimizeNonTerminal((PNonTerminal)e);
 			}
 		}
 		for(int i = 0; i < e.size(); i++) {
@@ -37,7 +40,7 @@ class Optimizer2 {
 		}
 	}
 
-	final static void optimizeChoice(PNonTerminal ne) {
+	final static void optimizeNonTerminal(PNonTerminal ne) {
 		if(!ne.calling.isUnique()) {
 			ParsingRule r = ne.getRule();
 			ne.calling = r.expr;
@@ -86,6 +89,7 @@ class Optimizer2 {
 				}
 				else {
 					//System.out.println("|2 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
+					matchCase[ch] = matchCase[ch].uniquefy();
 					if(matchCase[ch] instanceof ParsingChoice) {
 						optimizeChoice((ParsingChoice)matchCase[ch]);
 					}
@@ -102,6 +106,7 @@ class Optimizer2 {
 			//System.out.println("Optimized3: " + choice);
 			for(int ch = 0; ch < 256; ch++) {
 				matchCase[ch] = selectChoice(choice, ch, matchCase[256]);
+				matchCase[ch] = matchCase[ch].uniquefy();
 //				if(matchCase[ch] != matchCase[256]) {
 //					System.out.println("|3 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
 //				}
@@ -267,6 +272,7 @@ class StringChoiceMatcher implements Matcher {
 		context.rollback(pos);
 		return false;
 	}
+	
 }
 
 class MappedChoiceMatcher implements Matcher {

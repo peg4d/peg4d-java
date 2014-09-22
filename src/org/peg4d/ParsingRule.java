@@ -106,5 +106,23 @@ class ParsingRule {
 		}
 		return firstUpperCase ? LexicalRule : ReservedRule;
 	}
+
+	public static boolean isLexicalName(String ruleName) {
+		if(ruleName.endsWith("'")) {
+			return true;
+		}
+		return typeOf(ruleName) == ParsingRule.LexicalRule;
+	}
+
+	public static String toLexicalName(String ruleName) {
+		if(typeOf(ruleName) != ParsingRule.LexicalRule) {
+			return ruleName+"'";
+		}
+		return ruleName;
+	}
+	
+	public ParsingExpression resolveNonTerminal() {
+		return this.expr;
+	}
 	
 }
