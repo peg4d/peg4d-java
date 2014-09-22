@@ -1,7 +1,5 @@
 package org.peg4d;
 
-import java.util.HashMap;
-
 import org.peg4d.ParsingContextMemo.ObjectMemo;
 
 interface Matcher {
@@ -25,6 +23,10 @@ public abstract class ParsingExpression implements Matcher {
 	
 	public final boolean isOptimized() {
 		return (this.matcher != this);
+	}
+
+	public final boolean isUnique() {
+		return (this.uniqueId > 0);
 	}
 
 	abstract ParsingExpression uniquefy();
@@ -301,17 +303,6 @@ public abstract class ParsingExpression implements Matcher {
 	private static boolean Conservative = false;
 	private static boolean StringSpecialization = true;
 	private static boolean CharacterChoice      = true;
-
-	private static HashMap<String, Integer> idMap = new HashMap<String, Integer>();
-	public final static int issueId(ParsingExpression e, String key) {
-		key = e.getClass().getSimpleName() + "@" + key;
-		Integer n = idMap.get(key);
-		if(n == null) {
-			n = idMap.size() + 1;
-			idMap.put(key, n);
-		}
-		return n;
-	}
 	
 	public final static ParsingEmpty newEmpty() {
 		return new ParsingEmpty();

@@ -10,9 +10,9 @@ class Optimizer2 {
 	public static boolean PredictedChoice   = false;
 	
 	static void enableOptimizer() {
-//		InlineNonTerminal = true;
-//		CharacterChoice   = true;
-//		StringChoice      = true;
+		InlineNonTerminal = true;
+		CharacterChoice   = true;
+		StringChoice      = true;
 //		PredictedChoice   = true;  // Don't enable. it bugs
 	}
 
@@ -38,9 +38,15 @@ class Optimizer2 {
 	}
 
 	final static void optimizeChoice(PNonTerminal ne) {
-		ParsingExpression e = resolveNonTerminal(ne);
-		ne.matcher = e.matcher;
-		countOptimizedNonTerminal += 1;
+		if(!ne.calling.isUnique()) {
+			ParsingRule r = ne.getRule();
+			ne.calling = r.expr;
+		}
+		if(InlineNonTerminal) {
+			ParsingExpression e = resolveNonTerminal(ne);
+			ne.matcher = e.matcher;
+			countOptimizedNonTerminal += 1;
+		}
 		//ne.report(ReportLevel.notice, "inlining " + e);
 	}
 	

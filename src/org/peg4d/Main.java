@@ -37,6 +37,9 @@ public class Main {
 
 	// -c
 	public static boolean RecognitionOnlyMode = false;
+	
+	// -W
+	public static int WarningLevel = 1;
 
 	// --find
 	private static int FindFileIndex = -1;
@@ -62,7 +65,8 @@ public class Main {
 	// --verbose:stat
 	public static int     StatLevel = -1;
 
-	// --static => false
+	// --memo:no
+	// --memo:no
 	public static String  ParserName = null;
 	public static boolean TracingMemo = true;
 	public static boolean UseFifo = false;
@@ -99,21 +103,6 @@ public class Main {
 			fmt.formatFooter(sb);
 			System.out.println(sb.toString());
 		}
-//		if(PEGFormatter != null) {
-//			GrammarFormatter fmt = loadSimpleFormatter(PEGFormatter);
-//			peg.simpleFormatAll(fmt);
-//			ParsingSource source = Main.loadSource(peg, InputFileName);
-//			ParsingObject emptyObject = new ParsingObject(peg.getModelTag("empty"), source, 0);
-//			SimpleVmParsingContext c = new SimpleVmParsingContext(emptyObject, source, 0);
-//			SimpleVirtualMachine.run(c, 1, ((SimpleCodeGenerator) fmt).opList.ArrayValues);
-//			if(c.left != null) {
-//				System.out.println(c.left.toString());
-//			}
-//			else {
-//				System.out.println("Failer: pos" + c.fpos);
-//			}
-//			return;
-//		}
 		if(InputFileName != null) {
 			loadInputFile(peg, InputFileName);
 		}
@@ -154,6 +143,9 @@ public class Main {
 			}
 			else if (argument.startsWith("-O")) {
 				OptimizationLevel = ParsingCharset.parseInt(argument.substring(2), 2);
+			}
+			else if (argument.startsWith("-W")) {
+				WarningLevel = ParsingCharset.parseInt(argument.substring(2), 2);
 			}
 			else if (argument.equals("-i")) {
 				Main.OptimizationLevel = 0;
@@ -249,8 +241,11 @@ public class Main {
 		System.out.println("     tag|pego|none|json|csv");
 		System.out.println("  -c                        Invoke as checker (without output generation). Exit 1 when failed");
 		System.out.println("  -f | --format<type>       Specify PEG formatter");
-		System.out.println("  --packrat                 Packrat Parser");
-		System.out.println("  -M<num>                   Memo Factor -M0 => No Memo");
+		System.out.println("  -W<num>                   Warning Level (default:1)");
+		System.out.println("  -O<num>                   Optimization Level (default:2)");
+		System.out.println("  --memo:x                  Memo configuration");
+		System.out.println("     no|packrat|fifo");
+		System.out.println("  -M<num>                   Memo factor (default: 100)");
 		System.out.println("  --verbose                 Printing Debug infomation");
 		System.out.println("  --verbose:peg             Printing Peg/Debug infomation");
 		Main._Exit(0, Message);

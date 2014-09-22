@@ -164,21 +164,17 @@ public class Grammar {
 		if(this.foundError) {
 			Main._Exit(1, "PegError found");
 		}
-		Optimizer2.enableOptimizer();
+
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
-//			System.out.println("before: " + rule.expr);
 			rule.expr = rule.expr.uniquefy();
-//			System.out.println("after: " + rule.expr.uniqueId + " " + rule.expr + "\n");
 		}
 
 		Optimizer2.enableOptimizer();
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
 			Optimizer2.optimize(rule.expr);
-		}
-		if(this.foundError) {
-			Main._Exit(1, "PegError found");
+		
 		}
 //		this.memoRemover = new MemoRemover(this);
 		ParsingContext context = new ParsingContext(null);
@@ -609,7 +605,7 @@ class PEG4dGrammar extends Grammar {
 			t("import"), 
 			Tag(PEG4d.Import), 
 			P("S"), 
-			Choice(Link(P("SingleQuotedString")), P("DotName")), 
+			Link(Choice(P("SingleQuotedString"), P("DotName"))), 
 			Optional(
 				Sequence(P("S"), t("as"), P("S"), Link(P("Name")))
 			)
