@@ -118,7 +118,9 @@ public class Grammar {
 	}
 
 	public final void setRule(String ruleName, PExpression e) {
-		this.ruleMap.put(ruleName, new PegRule(null, 0, ruleName, e));
+		PegRule rule = new PegRule(null, 0, ruleName, e);
+		this.ruleList.add(rule);
+		this.ruleMap.put(ruleName, rule);
 	}
 
 	public final void setRule(String ruleName, PegRule rule) {
