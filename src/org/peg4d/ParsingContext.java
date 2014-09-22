@@ -1,10 +1,6 @@
 package org.peg4d;
 
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import org.peg4d.ParsingContextMemo.MemoEntry;
 
 public class ParsingContext {
 	ParsingObject left;
@@ -13,13 +9,13 @@ public class ParsingContext {
 	ParsingTag    emptyTag;	
 	ParsingStat          stat   = null;
 
-	public ParsingContext(ParsingSource s, long pos, int stacksize, ParsingContextMemo memo) {
+	public ParsingContext(ParsingSource s, long pos, int stacksize, ParsingMemo memo) {
 		this.left = null;
 		this.source = s;
 		//this.lstack = new long[stacksize*8];
 		//this.ostack = new ParsingObject[stacksize];
 		this.resetSource(s, pos);
-		this.memoMap = memo != null ? memo : new NoMemo();
+		this.memoMap = memo != null ? memo : new NoParsingMemo();
 	}
 
 	public ParsingContext(ParsingSource s) {
@@ -309,20 +305,6 @@ public class ParsingContext {
 			}
 		}
 		o = null;
-	}
-
-	protected ParsingContextMemo memoMap = null;
-	public void initMemo() {
-//		this.memoMap = new DebugMemo(new PackratMemo(4096), new OpenFifoMemo(100));
-		this.memoMap = new NoMemo();
-	}
-
-	final MemoEntry getMemo(ParsingExpression e, long keypos) {
-		return this.memoMap.getMemo(e, keypos);
-	}
-
-	final void setMemo(long keypos, ParsingExpression e, ParsingObject po, int length) {
-		this.memoMap.setMemo(keypos, e, po, length);
 	}
 
 	public final void opRememberPosition() {
@@ -720,318 +702,22 @@ public class ParsingContext {
 		}
 		System.out.println(source.formatPositionLine("debug", pos, "pass in " + inner));
 	}
-}
-
-abstract class ParsingContextMemo {
-	protected final static int FifoSize = 64;
-	long AssuredLength = Integer.MAX_VALUE;
-
-	int MemoHit = 0;
-	int MemoMiss = 0;
-	int MemoSize = 0;
-//	int statMemoSlotCount = 0;
-
-	public final class MemoEntry {
-		MemoEntry next;
-		ParsingExpression  keypeg;
-		ParsingObject generated;
-		int  consumed;
-		long key;
-	}
-
-	private MemoEntry UnusedMemo = null;
-
-	protected final MemoEntry newMemo() {
-		if(UnusedMemo != null) {
-			MemoEntry m = this.UnusedMemo;
-			this.UnusedMemo = m.next;
-			return m;
-		}
-		else {
-			MemoEntry m = new MemoEntry();
-//			this.memoSize += 1;
-			return m;
-		}
-	}
 	
-	protected long getpos(long keypos) {
-		return keypos;
+	protected ParsingMemo memoMap = null;
+
+	public void initMemo() {
+//		this.memoMap = new DebugMemo(new PackratMemo(4096), new OpenFifoMemo(100));
+		this.memoMap = new NoParsingMemo();
 	}
 
-	protected final void unusedMemo(MemoEntry m) {
-		this.appendMemo2(m, UnusedMemo);
-		UnusedMemo = m;
+	final MemoEntry getMemo(long keypos, ParsingExpression e) {
+		return this.memoMap.getMemo(keypos, e);
 	}
 
-	protected final MemoEntry findTail(MemoEntry m) {
-		while(m.next != null) {
-			m = m.next;
-		}
-		return m;
-	}			
+	final void setMemo(long keypos, ParsingExpression e, ParsingObject result, int length) {
+		this.memoMap.setMemo(keypos, e, result, length);
+	}
 
-	private void appendMemo2(MemoEntry m, MemoEntry n) {
-		while(m.next != null) {
-			m = m.next;
-		}
-		m.next = n;
-	}			
-
-	protected abstract void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed);
-	protected abstract MemoEntry getMemo(ParsingExpression keypeg, long keypos);
-
-//	public final static long makekey(long pos, Peg keypeg) {
-//		return (pos << 24) | keypeg.uniqueId;
-//	}
 	
-	class FifoMap extends LinkedHashMap<Long, MemoEntry> {
-		private static final long serialVersionUID = 6725894996600788028L;
-		@Override
-		protected boolean removeEldestEntry(Map.Entry<Long, MemoEntry> eldest)  {
-			if(this.size() < FifoSize) {
-				unusedMemo(eldest.getValue());
-				return true;			
-			}
-			return false;
-		}
-	}
-
-	class AdaptiveLengthMap extends LinkedHashMap<Long, MemoEntry> {
-		private static final long serialVersionUID = 6725894996600788028L;
-		long lastPosition = 0;
-		int worstLength = 0;
-		
-		@Override
-		protected boolean removeEldestEntry(Map.Entry<Long, MemoEntry> eldest)  {
-			long diff = this.lastPosition - getpos(eldest.getKey());
-			if(diff > worstLength) {
-				unusedMemo(eldest.getValue());
-				return true;			
-			}
-			return false;
-		}
-		@Override
-		public MemoEntry put(Long key, MemoEntry value) {
-			long pos = getpos(key);
-			if(this.lastPosition < pos) {
-				this.lastPosition = pos;
-			}
-			return super.put(key, value);
-		}
-	}
-	
-	protected void stat(ParsingStat stat) {
-		stat.setCount("MemoHit", this.MemoHit);
-		stat.setCount("MemoMiss", this.MemoMiss);
-		stat.setRatio("Hit/Miss", this.MemoHit, this.MemoMiss);
-	}
 }
-
-class NoMemo extends ParsingContextMemo {
-	@Override
-	protected void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed) {
-	}
-
-	@Override
-	protected MemoEntry getMemo(ParsingExpression keypeg, long keypos) {
-		this.MemoMiss += 1;
-		return null;
-	}
-}
-
-class PackratMemo extends ParsingContextMemo {
-	protected Map<Long, MemoEntry> memoMap;
-	protected PackratMemo(Map<Long, MemoEntry> memoMap) {
-		this.memoMap = memoMap;
-	}
-	public PackratMemo(int initSize) {
-		this(new HashMap<Long, MemoEntry>(initSize));
-	}
-	@Override
-	protected final void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed) {
-		MemoEntry m = null;
-		m = newMemo();
-		m.keypeg = keypeg;
-		m.generated = generated;
-		m.consumed = consumed;
-		m.next = this.memoMap.get(keypos);
-		this.memoMap.put(keypos, m);
-	}
-	@Override
-	protected final MemoEntry getMemo(ParsingExpression keypeg, long keypos) {
-		MemoEntry m = this.memoMap.get(keypos);
-		while(m != null) {
-			if(m.keypeg == keypeg) {
-				this.MemoHit += 1;
-				return m;
-			}
-			m = m.next;
-		}
-		this.MemoMiss += 1;
-		return m;
-	}
-}
-
-
-class FifoMemo extends ParsingContextMemo {
-	protected Map<Long, MemoEntry> memoMap;
-	protected long farpos = 0;
-	
-	protected FifoMemo(int slot) {
-		this.memoMap = new LinkedHashMap<Long, MemoEntry>(slot) {  //FIFO
-			private static final long serialVersionUID = 6725894996600788028L;
-			@Override
-			protected boolean removeEldestEntry(Map.Entry<Long, MemoEntry> eldest)  {
-				long pos = ParsingUtils.getpos(eldest.getKey());
-				//System.out.println("diff="+(farpos - pos));
-				if(farpos - pos > 256) {
-					unusedMemo(eldest.getValue());
-					return true;		
-				}
-				return false;
-			}
-		};
-	}
-
-	@Override
-	protected final void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed) {
-		MemoEntry m = null;
-		m = newMemo();
-		long key = ParsingUtils.memoKey(keypos, keypeg);
-		m.key = key;
-		m.keypeg = keypeg;
-		m.generated = generated;
-		m.consumed = consumed;
-		this.memoMap.put(key, m);
-		if(keypos > this.farpos) {
-			this.farpos = keypos;
-		}
-	}
-
-	@Override
-	protected final MemoEntry getMemo(ParsingExpression keypeg, long keypos) {
-		MemoEntry m = this.memoMap.get(ParsingUtils.memoKey(keypos, keypeg));
-		if(m != null) {
-			this.MemoHit += 1;
-		}
-		else {
-			this.MemoMiss += 1;
-		}
-		return m;
-	}
-}
-
-class OpenFifoMemo extends ParsingContextMemo {
-	private MemoEntry[] memoArray;
-	private long statSetCount = 0;
-	private long statExpireCount = 0;
-
-	OpenFifoMemo(int slotSize) {
-		this.memoArray = new MemoEntry[slotSize * 111 + 1];
-		for(int i = 0; i < this.memoArray.length; i++) {
-			this.memoArray[i] = new MemoEntry();
-		}
-	}
-	
-	@Override
-	protected final void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed) {
-		long key = ParsingUtils.memoKey(keypos, keypeg);
-		int hash =  (Math.abs((int)key) % memoArray.length);
-		MemoEntry m = this.memoArray[hash];
-//		if(m.key != 0) {
-//			long diff = keypos - PEGUtils.getpos(m.key);
-//			if(diff > 0 && diff < 80) {
-//				this.statExpireCount += 1;
-//			}
-//		}
-		m.key = key;
-		m.keypeg = keypeg;
-		m.generated = generated;
-		m.consumed = consumed;
-	}
-
-	@Override
-	protected final MemoEntry getMemo(ParsingExpression keypeg, long keypos) {
-		long key = ParsingUtils.memoKey(keypos, keypeg);
-		int hash =  (Math.abs((int)key) % memoArray.length);
-		MemoEntry m = this.memoArray[hash];
-		if(m.key == key) {
-			//System.out.println("GET " + key + "/"+ hash + " kp: " + keypeg.uniqueId);
-			this.MemoHit += 1;
-			return m;
-		}
-		this.MemoMiss += 1;
-		return null;
-	}
-
-	@Override
-	protected final void stat(ParsingStat stat) {
-		super.stat(stat);
-		stat.setCount("MemoSize", this.memoArray.length);
-		stat.setRatio("MemoCollision80", this.statExpireCount, this.statSetCount);
-	}
-}
-
-class DebugMemo extends ParsingContextMemo {
-	ParsingContextMemo m1;
-	ParsingContextMemo m2;
-	protected DebugMemo(ParsingContextMemo m1, ParsingContextMemo m2) {
-		this.m1 = m1;
-		this.m2 = m2;
-	}
-	@Override
-	protected final void setMemo(long keypos, ParsingExpression keypeg, ParsingObject generated, int consumed) {
-		this.m1.setMemo(keypos, keypeg, generated, consumed);
-		this.m2.setMemo(keypos, keypeg, generated, consumed);
-	}
-	@Override
-	protected final MemoEntry getMemo(ParsingExpression keypeg, long keypos) {
-		MemoEntry o1 = this.m1.getMemo(keypeg, keypos);
-		MemoEntry o2 = this.m2.getMemo(keypeg, keypos);
-		if(o1 == null && o2 == null) {
-			return null;
-		}
-		if(o1 != null && o2 == null) {
-			System.out.println("diff: 1 null " + "pos=" + keypos + ", e=" + keypeg);
-		}
-		if(o1 == null && o2 != null) {
-			System.out.println("diff: 2 null " + "pos=" + keypos + ", e=" + keypeg);
-		}
-		if(o1 != null && o2 != null) {
-			if(o1.generated != o2.generated) {
-				System.out.println("diff: generaetd " + "pos1=" + keypos + ", p1=" + keypeg);
-			}
-			if(o1.consumed != o2.consumed) {
-				System.out.println("diff: consumed " + "pos1=" + keypos + ", p1=" + keypeg);
-			}
-		}
-		return o1;
-	}
-}
-
-////@Override
-//public void initMemo2() {
-//if(memo < 0) {
-//	int initSize = 512 * 1024;
-//	if(source.length() < 512 * 1024) {
-//		initSize = (int)source.length();
-//	}
-//	this.memoMap = new PackratMemo(initSize);
-////	this.memoMap = new DebugMemo(new PackratMemo(initSize), new OpenHashMemo(100));
-////	this.memoMap = new DebugMemo(new OpenHashMemo(256), new OpenHashMemo(256));
-//	Main.printVerbose("memo", "packrat-style");
-//}
-//else if(memo == 0) {
-//	this.memoMap = new NoMemo(); //new PackratMemo(this.source.length());
-//}
-//else {
-//	if(Main.UseFifo) {
-//		this.memoMap = new FifoMemo(memo);
-//	}
-//	else {
-//		this.memoMap = new OpenFifoMemo(memo);
-//	}
-//}
-//}
-
 
