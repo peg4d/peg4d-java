@@ -118,11 +118,13 @@ public class Grammar {
 		String lexName = ParsingRule.toLexicalName(ruleName);
 		ParsingRule r2 = this.getRule(lexName);
 		if(r2 == null) {
-			ParsingExpression e = r.expr.reduceOperation().uniquefy();
-			r2 = new ParsingRule(this, lexName, null, e);
-			this.setRule(lexName, r);
+			r2 = new ParsingRule(this, lexName, null, null);
+			this.setRule(lexName, r2);
+			r2.expr = r.expr.reduceOperation().uniquefy();
 			r2.type = ParsingRule.LexicalRule;
-			System.out.println("producing lexical rule: " + r2);
+			r2.minlen = r.minlen;
+			r2.refc = r.refc;
+			//System.out.println("producing lexical rule: " + r2);
 		}
 		return r2;
 	}
@@ -174,7 +176,6 @@ public class Grammar {
 			stack.clear(0);
 			stack.add(uName);
 			rule.minlen = ParsingExpression.checkLeftRecursion(rule.expr, uName, 0, 0, stack);
-			ParsingExpression.typeCheck(rule.expr, rule.type);
 		}
 		if(this.foundError) {
 			Main._Exit(1, "PegError found");
@@ -182,6 +183,7 @@ public class Grammar {
 
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
+			ParsingExpression.typeCheck(rule.expr, rule.type);
 			rule.expr = rule.expr.uniquefy();
 		}
 
@@ -528,17 +530,17 @@ class PEG4dGrammar extends Grammar {
 				), 
 				P("SuffixTerm_")
 		));
-		this.setRule("NotRule_", Not(Choice(P("Rule_"), P("Import_"))));
+		this.setRule("NOTRULE_", Not(Choice(P("Rule_"), P("Import_"))));
 		this.setRule("Sequence_", Sequence(
 				P("Predicate_"), 
 				Optional(
 					LeftJoin(
 						P("_"), 
-						P("NotRule_"),
+						P("NOTRULE_"),
 						Link(P("Predicate_")),
 						ZeroMore(
 							P("_"), 
-							P("NotRule_"),
+							P("NOTRULE_"),
 							Link(P("Predicate_"))
 						),
 						Tag(PEG4d.Sequence) 

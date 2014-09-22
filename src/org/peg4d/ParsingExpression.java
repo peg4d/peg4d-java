@@ -13,8 +13,8 @@ public abstract class ParsingExpression implements Matcher {
 	int           flag       = 0;
 	int           uniqueId   = 0;
 	ParsingObject po      = null;
-	int        minlen = -1;
-	Matcher matcher;
+	int           minlen = -1;
+	Matcher       matcher;
 		
 	protected ParsingExpression() {
 		this.matcher = this;
@@ -141,7 +141,7 @@ public abstract class ParsingExpression implements Matcher {
 				if(!checkRecursion(n, stack)) {
 					int pos = stack.size();
 					stack.add(n);
-					int nc = checkLeftRecursion(ne.calling, uName, start, minlen, stack);
+					int nc = checkLeftRecursion(ne.deReference(), uName, start, minlen, stack);
 					e.minlen = nc - minlen;
 					stack.clear(pos);
 				}
@@ -196,6 +196,7 @@ public abstract class ParsingExpression implements Matcher {
 	static int ObjectContext    = 1 << 0;
 	static int OperationContext = 1 << 1;
 	static int FirstTransition  = 1 << 2;
+
 
 	private static final boolean isStatus(int status, int uflag) {
 		return ((status & uflag) == uflag);
@@ -299,8 +300,12 @@ public abstract class ParsingExpression implements Matcher {
 				return status0;
 			}
 		}
+//		if(e instanceof ParsingNot) {
+//			((ParsingNot) e).inner = ((ParsingNot) e).inner.reduceOperation();
+//			return status;
+//		}
 		if(e instanceof ParsingUnary) {
-			 return typeCheck(((ParsingUnary) e).inner, status);
+			return typeCheck(((ParsingUnary) e).inner, status);
 		}
 		return status;
 	}
@@ -894,7 +899,7 @@ class ParsingAny extends ParsingExpression {
 class PNonTerminal extends ParsingExpression {
 	Grammar peg;
 	String  ruleName;
-	ParsingExpression    calling = null;
+	private ParsingExpression    calling = null;
 	PNonTerminal(Grammar base, String ruleName) {
 		super();
 		this.peg = base;
@@ -909,9 +914,8 @@ class PNonTerminal extends ParsingExpression {
 		if(!ParsingRule.isLexicalName(this.ruleName)) {
 			String lexName = ParsingRule.toLexicalName(this.ruleName);
 			PNonTerminal ne = this.peg.newNonTerminal(lexName);
-			if(ne.calling == null) {
-				ParsingRule r = this.peg.getLexicalRule(this.ruleName);
-				ne.calling = r.resolveNonTerminal();
+			if(ne.deReference() == null) {
+				this.peg.getLexicalRule(this.ruleName);
 			}
 			return ne;
 		}
@@ -924,28 +928,30 @@ class PNonTerminal extends ParsingExpression {
 	final ParsingRule getRule() {
 		return this.peg.getRule(this.ruleName);
 	}
+	
+	final ParsingExpression deReference() {
+		return this.peg.getExpression(this.ruleName);
+	}
+	
 	void checkReference() {
-		if(this.calling == null) {
-			ParsingRule r = this.getRule();
-			if(r == null) {
-				this.report(ReportLevel.error, "undefined rule: " + this.ruleName);
-				r = new ParsingRule(this.peg, this.ruleName, null, new ParsingIf(this.ruleName));
-				this.peg.setRule(this.ruleName, r);
-			}
-			if(r.minlen != -1) {
-				this.minlen = r.minlen;
-			}
-			r.refc += 1;
-			this.calling = r.expr;
+		ParsingRule r = this.getRule();
+		if(r == null) {
+			this.report(ReportLevel.error, "undefined rule: " + this.ruleName);
+			r = new ParsingRule(this.peg, this.ruleName, null, new ParsingIf(this.ruleName));
+			this.peg.setRule(this.ruleName, r);
 		}
+		if(r.minlen != -1) {
+			this.minlen = r.minlen;
+		}
+		r.refc += 1;
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitNonTerminal(this);
 	}
 	@Override short acceptByte(int ch) {
-		if(this.calling != null && !this.is(LeftRecursion)) {
-			return this.calling.acceptByte(ch);
+		if(this.deReference() != null && !this.is(LeftRecursion)) {
+			return this.deReference().acceptByte(ch);
 		}
 		return WeakAccept;
 	}
@@ -956,7 +962,7 @@ class PNonTerminal extends ParsingExpression {
 //			//assert(this.calling != null);
 //			this.checkReference();
 //		}
-		return this.calling.matcher.simpleMatch(context);
+		return this.deReference().matcher.simpleMatch(context);
 	}
 }
 

@@ -41,10 +41,6 @@ class Optimizer2 {
 	}
 
 	final static void optimizeNonTerminal(PNonTerminal ne) {
-		if(!ne.calling.isUnique()) {
-			ParsingRule r = ne.getRule();
-			ne.calling = r.expr;
-		}
 		if(InlineNonTerminal) {
 			ParsingExpression e = resolveNonTerminal(ne);
 			ne.matcher = e.matcher;
@@ -56,7 +52,7 @@ class Optimizer2 {
 	final static ParsingExpression resolveNonTerminal(ParsingExpression e) {
 		while(e instanceof PNonTerminal) {
 			PNonTerminal nterm = (PNonTerminal) e;
-			e = nterm.calling;
+			e = nterm.deReference();
 		}
 		return e;
 	}

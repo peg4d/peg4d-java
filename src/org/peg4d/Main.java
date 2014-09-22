@@ -305,7 +305,7 @@ public class Main {
 				context.pos = 0;
 			}
 			context.setRecognitionMode(false);
-			context.initMemo();
+			context.initMemo(null);
 			System.gc();
 			try{
 				Thread.sleep(500);
@@ -612,10 +612,10 @@ public class Main {
 	
 	public final static void _Exit(int status, String message) {
 		if(Main.VerboseMode) {
-			System.err.println("EXIT " + Main._GetStackInfo(3) + " " + message);
+			System.out.println("EXIT " + Main._GetStackInfo(3) + " " + message);
 		}
 		else {
-			System.err.println("EXIT " + message);
+			System.out.println("EXIT " + message);
 		}
 		System.exit(status);
 	}

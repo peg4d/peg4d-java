@@ -41,7 +41,7 @@ public class ParsingContext {
 	}
 		
 	public final ParsingObject parseChunk(Grammar peg, String startPoint) {
-		this.initMemo();
+		this.initMemo(null);
 		ParsingExpression start = peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
@@ -82,8 +82,8 @@ public class ParsingContext {
 		return this.parseChunk(peg, "Chunk");
 	}
 
-	public final ParsingObject parse(Grammar peg, String startPoint) {
-		this.initMemo();
+	public final ParsingObject parse(Grammar peg, String startPoint, ParsingMemoConfigure conf) {
+		this.initMemo(conf);
 		ParsingExpression start = peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
@@ -94,6 +94,10 @@ public class ParsingContext {
 		start.debugMatch(this);
 		checkUnusedText(po);
 		return this.left;
+	}
+
+	public final ParsingObject parse(Grammar peg, String startPoint) {
+		return this.parse(peg, startPoint, null);
 	}
 
 	public final void initStat(ParsingStat stat) {
@@ -705,9 +709,8 @@ public class ParsingContext {
 	
 	protected ParsingMemo memoMap = null;
 
-	public void initMemo() {
-//		this.memoMap = new DebugMemo(new PackratMemo(4096), new OpenFifoMemo(100));
-		this.memoMap = new NoParsingMemo();
+	public void initMemo(ParsingMemoConfigure conf) {
+		this.memoMap = (conf == null) ? new NoParsingMemo() : conf.newMemo();
 	}
 
 	final MemoEntry getMemo(long keypos, ParsingExpression e) {
@@ -717,7 +720,6 @@ public class ParsingContext {
 	final void setMemo(long keypos, ParsingExpression e, ParsingObject result, int length) {
 		this.memoMap.setMemo(keypos, e, result, length);
 	}
-
 	
 }
 

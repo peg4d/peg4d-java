@@ -95,8 +95,14 @@ class ParsingRule {
 	}
 
 	public final static int typeOf(String ruleName) {
-		boolean firstUpperCase = Character.isUpperCase(ruleName.charAt(0));
-		for(int i = 1; i < ruleName.length(); i++) {
+		int start = 0;
+		for(;ruleName.charAt(start) == '_'; start++) {
+			if(start + 1 == ruleName.length()) {
+				return LexicalRule;
+			}
+		}
+		boolean firstUpperCase = Character.isUpperCase(ruleName.charAt(start));
+		for(int i = start+1; i < ruleName.length(); i++) {
 			if(Character.isUpperCase(ruleName.charAt(i)) && !firstUpperCase) {
 				return OperationRule;
 			}
@@ -108,15 +114,12 @@ class ParsingRule {
 	}
 
 	public static boolean isLexicalName(String ruleName) {
-		if(ruleName.endsWith("'")) {
-			return true;
-		}
 		return typeOf(ruleName) == ParsingRule.LexicalRule;
 	}
 
 	public static String toLexicalName(String ruleName) {
 		if(typeOf(ruleName) != ParsingRule.LexicalRule) {
-			return ruleName+"'";
+			return "__" + ruleName.toUpperCase();
 		}
 		return ruleName;
 	}
