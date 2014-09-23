@@ -120,7 +120,8 @@ public class Grammar {
 		if(r2 == null) {
 			r2 = new ParsingRule(this, lexName, null, null);
 			this.setRule(lexName, r2);
-			r2.expr = r.expr.reduceOperation().uniquefy();
+			r2.expr = ParsingExpression.newDebug(r.expr.reduceOperation());
+			r2.expr = r.expr.reduceOperation();
 			r2.type = ParsingRule.LexicalRule;
 			r2.minlen = r.minlen;
 			r2.refc = r.refc;
@@ -180,11 +181,13 @@ public class Grammar {
 		if(this.foundError) {
 			Main._Exit(1, "PegError found");
 		}
-
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
-			ParsingExpression.typeCheck(rule.expr, rule.type);
 			rule.expr = rule.expr.uniquefy();
+		}
+		for(int i = 0; i < nameList.size(); i++) {
+			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
+			ParsingExpression.typeCheck(rule);
 		}
 
 		Optimizer2.enableOptimizer();

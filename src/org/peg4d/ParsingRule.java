@@ -72,7 +72,7 @@ class ParsingRule {
 				boolean ok = true;
 				ParsingSource s = ParsingObjectUtils.newStringSource(a.value);
 				context.resetSource(s, 0);
-				context.parse(peg, this.ruleName);
+				context.parse(peg, this.ruleName, null);
 //				System.out.println("@@ " + context.isFailure() + " " + context.hasByteChar() + " " + isExample + " " + isBadExample);
 				if(context.isFailure() || context.hasByteChar()) {
 					if(isExample) ok = false;

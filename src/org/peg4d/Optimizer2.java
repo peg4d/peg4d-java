@@ -4,9 +4,6 @@ package org.peg4d;
 
 class Optimizer2 {
 	
-	
-	
-	
 	public static boolean InlineNonTerminal = false;
 	public static boolean CharacterChoice   = false;
 	public static boolean StringChoice      = false;
@@ -76,16 +73,17 @@ class Optimizer2 {
 		}
 		if(StringChoice && checkStringChoice(choice, c)) {
 			ParsingExpression[] matchCase = new ParsingExpression[257];
-			makeStringChoice(choice, matchCase, new ParsingEmpty());
-			ParsingExpression f = new ParsingFailure(choice);
-			//System.out.println("Optimized2: " + choice);
+			ParsingExpression empty = ParsingExpression.newEmpty();
+			makeStringChoice(choice, matchCase, empty, empty);
+			ParsingExpression f = new ParsingFailure(choice).uniquefy();
+//			System.out.println("StringChoice: " + choice);
 			for(int ch = 0; ch < matchCase.length; ch++) {
 				if(matchCase[ch] == null) {
 					matchCase[ch] = f;
 				}
 				else {
-					//System.out.println("|2 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
 					matchCase[ch] = matchCase[ch].uniquefy();
+//					System.out.println("|2 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
 					if(matchCase[ch] instanceof ParsingChoice) {
 						optimizeChoice((ParsingChoice)matchCase[ch]);
 					}
@@ -174,9 +172,9 @@ class Optimizer2 {
 		return true;
 	}
 
-	final static void makeStringChoice(ParsingChoice choice, ParsingExpression[] matchCase, ParsingExpression empty) {
+	final static void makeStringChoice(ParsingChoice choice, ParsingExpression[] matchCase, ParsingExpression empty, ParsingExpression value) {
 		for(int i = 0; i < choice.size(); i++) {
-			appendCaseChoice(choice.get(i), matchCase, empty, empty);
+			appendCaseChoice(choice.get(i), matchCase, empty, value);
 		}
 	}
 	
@@ -192,11 +190,14 @@ class Optimizer2 {
 			}
 		}
 		if(e instanceof ParsingChoice) {
-			makeStringChoice((ParsingChoice)e, matchCase, empty);
+			makeStringChoice((ParsingChoice)e, matchCase, empty, value);
 		}
 		if(e instanceof ParsingSequence) {
 			ParsingExpression e0 = e.get(0);
 			ParsingExpression e1 = newLastSequence(e, empty);
+//			System.out.println("sequence="+e);
+//			System.out.println("         "+e0 + " as " + e0.getClass());
+//			System.out.println("         "+e1);
 			appendCaseChoice(e0, matchCase, empty, e1);
 		}
 	}

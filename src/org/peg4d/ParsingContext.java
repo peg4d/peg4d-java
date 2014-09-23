@@ -82,6 +82,10 @@ public class ParsingContext {
 		return this.parseChunk(peg, "Chunk");
 	}
 
+	public final ParsingObject parse(Grammar peg, String startPoint) {
+		return this.parse(peg, startPoint, null);
+	}
+
 	public final ParsingObject parse(Grammar peg, String startPoint, ParsingMemoConfigure conf) {
 		this.initMemo(conf);
 		ParsingExpression start = peg.getExpression(startPoint);
@@ -96,10 +100,21 @@ public class ParsingContext {
 		return this.left;
 	}
 
-	public final ParsingObject parse(Grammar peg, String startPoint) {
-		return this.parse(peg, startPoint, null);
+	public final boolean match(Grammar peg, String startPoint, ParsingMemoConfigure conf) {
+		this.initMemo(conf);
+		ParsingExpression start = peg.getExpression(startPoint);
+		if(start == null) {
+			Main._Exit(1, "undefined start rule: " + startPoint );
+		}
+		ParsingRule r = peg.getLexicalRule(startPoint);
+		start = r.expr;
+		this.emptyTag = peg.newStartTag();
+		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
+		this.left = po;
+		return start.debugMatch(this);
 	}
 
+	
 	public final void initStat(ParsingStat stat) {
 		this.stat = stat;
 		if(stat != null) {

@@ -319,6 +319,14 @@ public class Main {
 		if(OutputType.equalsIgnoreCase("stat")) {
 			context.initStat(new ParsingStat(peg, source));
 		}
+		if(Main.RecognitionOnlyMode) {
+			boolean res = context.match(peg, startPoint, null);
+//			if(OutputType.equalsIgnoreCase("stat")) {
+//				context.recordStat(null);
+//				return;
+//			}
+			System.exit(res ? 0 : 1);
+		}
 		ParsingObject pego = context.parse(peg, startPoint);
 		if(context.isFailure()) {
 			System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));

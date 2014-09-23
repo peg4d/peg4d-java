@@ -28,8 +28,24 @@ public abstract class ParsingExpression implements Matcher {
 		return (this.uniqueId > 0);
 	}
 
-	abstract ParsingExpression uniquefy();
+	ParsingExpression uniquefy() {
+		ParsingExpression e = this.uniquefyImpl();
+		assert(e.getClass() == this.getClass());
+//		if(e.getClass() != this.getClass()) {
+//			System.out.println("@@@@ " + this.getClass() + " " + this);
+//		}
+		return e;
+	}
+	abstract ParsingExpression uniquefyImpl();
 	ParsingExpression reduceOperation() {
+		ParsingExpression reduced = this.reduceOperationImpl();
+//		if(reduced.getClass() != this.getClass()) {
+//			System.out.println("@ " + this.getClass().getSimpleName() + " " + this + "\n\t=> " + reduced.getClass().getSimpleName() + " " + reduced);
+//		}
+		return reduced;
+	}
+	
+	ParsingExpression reduceOperationImpl() {
 		return this;
 	}
 	protected abstract void visit(ExpressionVisitor visitor);
@@ -40,13 +56,15 @@ public abstract class ParsingExpression implements Matcher {
 	public final boolean debugMatch(ParsingContext c) {
 //		int d = cc; cc++;
 //		int dpos = dstack.size();
-//		int pos = (int)c.getPosition() ;
+		int pos = (int)c.getPosition() ;
 //		if(pos % (1024 * 1024) == 0) {
 //			System.out.println("["+(pos/(1024 * 1024))+"] calling: " + this + " mark=" + c.markObjectStack() + " free" + Runtime.getRuntime().freeMemory());
 //		}
 //		dstack.add(this);
 		boolean b = this.matcher.simpleMatch(c);
-		//System.out.println("["+pos+"] called: " + this);
+		if(this instanceof PNonTerminal) {
+//			System.out.println("["+pos+"] called: " + b + " "+ this);
+		}
 //		dstack.clear(dpos);
 //		if(pos > 12717) {
 //			System.out.println(dstack);
@@ -197,7 +215,6 @@ public abstract class ParsingExpression implements Matcher {
 	static int OperationContext = 1 << 1;
 	static int FirstTransition  = 1 << 2;
 
-
 	private static final boolean isStatus(int status, int uflag) {
 		return ((status & uflag) == uflag);
 	}
@@ -205,8 +222,8 @@ public abstract class ParsingExpression implements Matcher {
 	private static final int setStatus(int status, int uflag) {
 		return status | uflag;
 	}
-
-	static int typeCheck(ParsingExpression e, int status) {
+	
+	static int typeCheckImpl(ParsingExpression e, int status) {
 		if(e instanceof PNonTerminal) {
 			ParsingRule r = ((PNonTerminal) e).getRule();
 			int ruleType = r.type;
@@ -245,7 +262,7 @@ public abstract class ParsingExpression implements Matcher {
 			}
 			int newstatus = OperationContext;
 			for(int i = 0; i < e.size(); i++) {
-				newstatus = typeCheck(e.get(i), newstatus);
+				newstatus = typeCheckImpl(e.get(i), newstatus);
 			}
 			status = setStatus(status, FirstTransition);
 		}
@@ -253,7 +270,7 @@ public abstract class ParsingExpression implements Matcher {
 			if(!isStatus(status, OperationContext)) {
 				e.report(ReportLevel.warning, "unexpected operation");				
 			}
-			int scope = typeCheck(e.get(0), ObjectContext);
+			int scope = typeCheckImpl(e.get(0), ObjectContext);
 			if(!isStatus(scope, FirstTransition)) {
 				e.report(ReportLevel.warning, "nothing is connected");
 			}
@@ -267,15 +284,15 @@ public abstract class ParsingExpression implements Matcher {
 		}
 		if(e instanceof ParsingSequence) {
 			for(int i = 0; i < e.size(); i++) {
-				status = typeCheck(e.get(i), status);
+				status = typeCheckImpl(e.get(i), status);
 			}
 			return status;
 		}
 		if(e instanceof ParsingChoice) {
-			int status0 = typeCheck(e.get(0), status);
+			int status0 = typeCheckImpl(e.get(0), status);
 			if(!isStatus(status, FirstTransition) && isStatus(status0, FirstTransition)) {
 				for(int i = 1; i < e.size(); i++) {
-					int n = typeCheck(e.get(i), status);
+					int n = typeCheckImpl(e.get(i), status);
 					if(!isStatus(n, FirstTransition) && !e.is(ParsingExpression.HasTypeError)) {
 						e.set(ParsingExpression.HasTypeError);
 						e.report(ReportLevel.warning, "expected transtion for " + e.get(i));
@@ -285,8 +302,8 @@ public abstract class ParsingExpression implements Matcher {
 			}
 			else if (!isStatus(status, FirstTransition)) {
 				for(int i = 1; i < e.size(); i++) {
-					int n = typeCheck(e.get(i), status);
-					if(isStatus(n, FirstTransition)&& !e.is(ParsingExpression.HasTypeError)) {
+					int n = typeCheckImpl(e.get(i), status);
+					if(isStatus(n, FirstTransition) && !e.is(ParsingExpression.HasTypeError)) {
 						e.set(ParsingExpression.HasTypeError );
 						e.report(ReportLevel.warning, "unexpected transtion for " + e.get(i));
 					}
@@ -295,23 +312,37 @@ public abstract class ParsingExpression implements Matcher {
 			}
 			else {
 				for(int i = 1; i < e.size(); i++) {
-					typeCheck(e.get(i), status);
+					typeCheckImpl(e.get(i), status);
 				}
 				return status0;
 			}
 		}
-		if(e instanceof ParsingMatch) {
-			((ParsingMatch) e).inner = ((ParsingMatch) e).inner.reduceOperation();
-			return typeCheck(((ParsingMatch) e).inner, status);
-		}
-//		if(e instanceof ParsingNot) {
-//			((ParsingNot) e).inner = ((ParsingNot) e).inner.reduceOperation();
+//		if(e instanceof ParsingMatch) {
+//			((ParsingMatch) e).inner = ((ParsingMatch) e).inner.reduceOperation();
+//			typeCheckImpl(((ParsingMatch) e).inner, 0);
 //			return status;
 //		}
+		if(e instanceof ParsingNot || e instanceof ParsingMatch) {
+			ParsingExpression reduced = ((ParsingNot) e).get(0).reduceOperation().uniquefy();
+			if(reduced != e.get(0)) {
+				((ParsingNot) e).inner = reduced;
+			}
+			typeCheckImpl(e.get(0), 0);
+			return status;
+		}
 		if(e instanceof ParsingUnary) {
-			return typeCheck(((ParsingUnary) e).inner, status);
+			return typeCheckImpl(((ParsingUnary) e).inner, status);
 		}
 		return status;
+	}
+	
+	static void typeCheck(ParsingRule rule) {
+		int result = typeCheckImpl(rule.expr, rule.type);
+		if(rule.type == ParsingRule.ObjectRule) {
+			if(!isStatus(result, FirstTransition)) {
+				rule.report(ReportLevel.warning, "no constructor");
+			}
+		}
 	}
 	
 	// factory
@@ -339,6 +370,9 @@ public abstract class ParsingExpression implements Matcher {
 	}
 
 	public final static ParsingExpression newSequence(UList<ParsingExpression> l) {
+		if(l.size() == 0) {
+			return newEmpty();
+		}
 		if(l.size() == 1) {
 			return l.ArrayValues[0];
 		}
@@ -380,6 +414,9 @@ public abstract class ParsingExpression implements Matcher {
 
 	public static final ParsingExpression newString(String text) {
 		byte[] utf8 = ParsingCharset.toUtf8(text);
+		if(utf8.length == 0) {
+			return newEmpty();
+		}
 		if(Conservative) {
 			return new PString(text, utf8);	
 		}
@@ -396,7 +433,6 @@ public abstract class ParsingExpression implements Matcher {
 		}
 		return newSequence(l);
 	}
-	
 
 	public final static ParsingExpression newUnicodeRange(int c, int c2, String token) {
 		byte[] b = ParsingCharset.toUtf8(String.valueOf((char)c));
@@ -630,7 +666,11 @@ public abstract class ParsingExpression implements Matcher {
 	}
 	
 	public final static ParsingExpression newDebug(ParsingExpression e) {
-		return new ParsingDebug(e);
+		ParsingExpression e2 = new ParsingDebug(e);
+		if(e.isUnique()) {
+			e2 = e2.uniquefy();
+		}
+		return e2;
 	}
 
 	public final static ParsingExpression newFail(String message) {
@@ -741,7 +781,7 @@ abstract class ParsingList extends ParsingExpression {
 	}
 
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
 		for(int i = 0; i < this.size(); i++) {
 			ParsingExpression e = get(i).reduceOperation();
@@ -802,7 +842,7 @@ class ParsingEmpty extends ParsingExpression {
 		this.minlen = 0;
 	}
 	
-	@Override ParsingExpression uniquefy() {
+	@Override ParsingExpression uniquefyImpl() {
 		return ParsingExpression.uniquefy("\b", this);
 	}
 	@Override
@@ -822,7 +862,7 @@ class ParsingFailure extends ParsingExpression {
 		this.dead = dead;
 	}
 	@Override
-	ParsingExpression uniquefy() {
+	ParsingExpression uniquefyImpl() {
 		return new ParsingFailure(dead);
 	}
 	@Override
@@ -847,7 +887,7 @@ class ParsingByte extends ParsingExpression {
 		this.byteChar = ch;
 		this.minlen = 1;
 	}
-	@Override ParsingExpression uniquefy() { 
+	@Override ParsingExpression uniquefyImpl() { 
 		if(this.errorToken == null) {
 			return ParsingExpression.uniquefy("'\b" + byteChar, this);
 		}
@@ -877,7 +917,7 @@ class ParsingAny extends ParsingExpression {
 		super();
 		this.minlen = 1;
 	}
-	@Override ParsingExpression uniquefy() { 
+	@Override ParsingExpression uniquefyImpl() { 
 		return ParsingExpression.uniquefy(".\b", this);
 	}
 	@Override 
@@ -910,11 +950,11 @@ class PNonTerminal extends ParsingExpression {
 		this.ruleName = ruleName;
 	}
 	@Override
-	ParsingExpression uniquefy() {
+	ParsingExpression uniquefyImpl() {
 		return ParsingExpression.uniquefy(getUniqueName(), this);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		if(!ParsingRule.isLexicalName(this.ruleName)) {
 			String lexName = ParsingRule.toLexicalName(this.ruleName);
 			PNonTerminal ne = this.peg.newNonTerminal(lexName);
@@ -966,7 +1006,7 @@ class PNonTerminal extends ParsingExpression {
 //			//assert(this.calling != null);
 //			this.checkReference();
 //		}
-		return this.deReference().matcher.simpleMatch(context);
+		return this.deReference().debugMatch(context);
 	}
 }
 
@@ -994,7 +1034,7 @@ class PString extends ParsingAtom {
 		}
 	}
 	@Override
-	ParsingExpression uniquefy() { 
+	ParsingExpression uniquefyImpl() { 
 		return ParsingExpression.uniquefy("''\b" + text, this);
 	}
 	@Override
@@ -1030,7 +1070,7 @@ class ParsingByteRange extends ParsingExpression {
 		this.minlen = 1;
 	}
 	@Override 
-	ParsingExpression uniquefy() { 
+	ParsingExpression uniquefyImpl() { 
 		return ParsingExpression.uniquefy("[\b" + startByteChar + "-" + endByteChar, this);
 	}
 	void setCount(int[] count) {
@@ -1062,11 +1102,11 @@ class ParsingOption extends ParsingUnary {
 	ParsingOption(ParsingExpression e) {
 		super(e);
 	}
-	@Override ParsingExpression uniquefy() { 
+	@Override ParsingExpression uniquefyImpl() { 
 		return ParsingExpression.uniquefy("?\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		ParsingExpression e = inner.reduceOperation();
 		if(e == inner) {
 			return this;
@@ -1089,7 +1129,7 @@ class ParsingOption extends ParsingUnary {
 	public boolean simpleMatch(ParsingContext context) {
 		long f = context.rememberFailure();
 		ParsingObject left = context.left;
-		if(!this.inner.matcher.simpleMatch(context)) {
+		if(!this.inner.debugMatch(context)) {
 			context.left = left;
 			context.forgetFailure(f);
 		}
@@ -1102,11 +1142,11 @@ class ParsingRepetition extends ParsingUnary {
 	ParsingRepetition(ParsingExpression e) {
 		super(e);
 	}
-	@Override ParsingExpression uniquefy() { 
+	@Override ParsingExpression uniquefyImpl() { 
 		return ParsingExpression.uniquefy("*\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		ParsingExpression e = inner.reduceOperation();
 		if(e == inner) {
 			return this;
@@ -1131,7 +1171,7 @@ class ParsingRepetition extends ParsingUnary {
 		long f = context.rememberFailure();
 		while(ppos < pos) {
 			ParsingObject left = context.left;
-			if(!this.inner.matcher.simpleMatch(context)) {
+			if(!this.inner.debugMatch(context)) {
 				context.left = left;
 				left = null;
 				break;
@@ -1149,11 +1189,11 @@ class ParsingAnd extends ParsingUnary {
 	ParsingAnd(ParsingExpression e) {
 		super(e);
 	}
-	@Override ParsingExpression uniquefy() { 
+	@Override ParsingExpression uniquefyImpl() { 
 		return ParsingExpression.uniquefy("&\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		ParsingExpression e = inner.reduceOperation();
 		if(e == inner) {
 			return this;
@@ -1175,7 +1215,7 @@ class ParsingAnd extends ParsingUnary {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		long pos = context.getPosition();
-		this.inner.matcher.simpleMatch(context);
+		this.inner.debugMatch(context);
 		context.rollback(pos);
 		return !context.isFailure();
 	}
@@ -1185,11 +1225,11 @@ class ParsingNot extends ParsingUnary {
 	ParsingNot(ParsingExpression e) {
 		super(e);
 	}
-	@Override ParsingExpression uniquefy() { 
+	@Override ParsingExpression uniquefyImpl() { 
 		return ParsingExpression.uniquefy("!\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		ParsingExpression e = inner.reduceOperation();
 		if(e == inner) {
 			return this;
@@ -1216,7 +1256,7 @@ class ParsingNot extends ParsingUnary {
 		long pos = context.getPosition();
 		long f   = context.rememberFailure();
 		ParsingObject left = context.left;
-		if(this.inner.matcher.simpleMatch(context)) {
+		if(this.inner.debugMatch(context)) {
 			context.rollback(pos);
 			context.opFailure(this);
 			left = null;
@@ -1237,7 +1277,7 @@ class ParsingSequence extends ParsingList {
 		super(l);
 	}
 	@Override
-	ParsingExpression uniquefy() {
+	ParsingExpression uniquefyImpl() {
 		return ParsingExpression.uniquefy(" \b" + this.uniqueKey(), this);
 	}
 
@@ -1250,7 +1290,7 @@ class ParsingSequence extends ParsingList {
 		long pos = context.getPosition();
 		int mark = context.markObjectStack();
 		for(int i = 0; i < this.size(); i++) {
-			if(!(this.get(i).matcher.simpleMatch(context))) {
+			if(!(this.get(i).debugMatch(context))) {
 				context.abortLinkLog(mark);
 				context.rollback(pos);
 				return false;
@@ -1265,11 +1305,11 @@ class ParsingChoice extends ParsingList {
 		super(list);
 	}
 	@Override
-	ParsingExpression uniquefy() {
+	ParsingExpression uniquefyImpl() {
 		return ParsingExpression.uniquefy("|\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
 		for(int i = 0; i < this.size(); i++) {
 			ParsingExpression e = get(i).reduceOperation();
@@ -1301,7 +1341,7 @@ class ParsingChoice extends ParsingList {
 		ParsingObject left = context.left;
 		for(int i = 0; i < this.size(); i++) {
 			context.left = left;
-			if(this.get(i).matcher.simpleMatch(context)) {
+			if(this.get(i).debugMatch(context)) {
 				context.forgetFailure(f);
 				left = null;
 				return true;
@@ -1320,14 +1360,14 @@ class ParsingConnector extends ParsingUnary {
 		this.index = index;
 	}
 	@Override
-	ParsingExpression uniquefy() {
+	ParsingExpression uniquefyImpl() {
 		if(index != -1) {
 			return ParsingExpression.uniquefy("@" + index + "\b" + this.uniqueKey(), this);
 		}
 		return ParsingExpression.uniquefy("@\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		return this.inner.reduceOperation();
 	}
 	@Override
@@ -1337,7 +1377,7 @@ class ParsingConnector extends ParsingUnary {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		ParsingObject left = context.left;
-		if(!this.inner.matcher.simpleMatch(context)) {
+		if(!this.inner.debugMatch(context)) {
 			return false;
 		}
 		if(context.canTransCapture() && context.left != left) {
@@ -1356,11 +1396,11 @@ class ParsingTagging extends ParsingExpression {
 		this.tag = tag;
 	}
 	@Override
-	ParsingExpression uniquefy() {
+	ParsingExpression uniquefyImpl() {
 		return ParsingExpression.uniquefy("#\b" + this.tag.key(), this);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		return new ParsingEmpty();
 	}
 	@Override
@@ -1383,11 +1423,11 @@ class ParsingValue extends ParsingExpression {
 		this.value = value;
 	}
 	@Override
-	ParsingExpression uniquefy() {
+	ParsingExpression uniquefyImpl() {
 		return ParsingExpression.uniquefy("`\b" + this.value, this);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		return new ParsingEmpty();
 	}
 	@Override
@@ -1412,7 +1452,7 @@ class PConstructor extends ParsingList {
 		this.leftJoin = leftJoin;
 	}
 	@Override
-	ParsingExpression uniquefy() {
+	ParsingExpression uniquefyImpl() {
 		if(leftJoin) {
 			return ParsingExpression.uniquefy("{@}\b" + this.uniqueKey(), this);
 		}
@@ -1429,7 +1469,7 @@ class PConstructor extends ParsingList {
 			ParsingObject newone = context.newParsingObject(startIndex, this);
 			context.left = newone;
 			for(int i = 0; i < this.size(); i++) {
-				if(!this.get(i).matcher.simpleMatch(context)) {
+				if(!this.get(i).debugMatch(context)) {
 					context.rollback(startIndex);
 					return false;
 				}
@@ -1440,7 +1480,7 @@ class PConstructor extends ParsingList {
 		else {
 			ParsingObject left = context.left;
 			for(int i = 0; i < this.prefetchIndex; i++) {
-				if(!this.get(i).matcher.simpleMatch(context)) {
+				if(!this.get(i).debugMatch(context)) {
 					context.rollback(startIndex);
 					left = null;
 					return false;
@@ -1453,7 +1493,7 @@ class PConstructor extends ParsingList {
 				context.logLink(newnode, -1, left);
 			}
 			for(int i = this.prefetchIndex; i < this.size(); i++) {
-				if(!this.get(i).matcher.simpleMatch(context)) {
+				if(!this.get(i).debugMatch(context)) {
 					context.abortLinkLog(mark);
 					context.rollback(startIndex);
 					left = null;
@@ -1483,7 +1523,7 @@ abstract class ParsingFunction extends ParsingExpression {
 	String getParameters() {
 		return "";
 	}
-	@Override final ParsingExpression uniquefy() {
+	@Override final ParsingExpression uniquefyImpl() {
 		return 	ParsingExpression.uniquefy("<"+this.funcName+this.getParameters(), this);
 	}
 	@Override
@@ -1499,7 +1539,7 @@ abstract class ParsingOperation extends ParsingUnary {
 		this.funcName = funcName;
 		this.inner = inner;
 	}
-	@Override final ParsingExpression uniquefy() {
+	@Override final ParsingExpression uniquefyImpl() {
 		return 	ParsingExpression.uniquefy("<"+this.funcName+this.getParameters()+"+"+this.uniqueId, this);
 	}
 	public String getParameters() {
@@ -1566,11 +1606,11 @@ class ParsingExport extends ParsingUnary {
 		super(e);
 	}
 	@Override
-	ParsingExpression uniquefy() {
+	ParsingExpression uniquefyImpl() {
 		return new ParsingExport(inner);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		return inner.reduceOperation();
 	}
 	@Override
@@ -1596,7 +1636,7 @@ class ParsingExport extends ParsingUnary {
 //	}
 //
 //	@Override
-//	ParsingExpression reduceOperation() {
+//	ParsingExpression reduceOperation_() {
 //		ParsingExpression e = inner.reduceOperation();
 //		if(e == inner) {
 //			return this;
@@ -1608,7 +1648,7 @@ class ParsingExport extends ParsingUnary {
 //	@Override
 //	public boolean simpleMatch(ParsingContext context) {
 //		if(!this.enableMemo) {
-//			return this.inner.matcher.simpleMatch(context);
+//			return this.inner.debugMatch(context);
 //		}
 //		long pos = context.getPosition();
 //		MemoEntry m = context.getMemo(this, pos);
@@ -1621,7 +1661,7 @@ class ParsingExport extends ParsingUnary {
 //			return !(context.isFailure());
 //		}
 //		ParsingObject left = context.left;
-//		this.inner.matcher.simpleMatch(context);
+//		this.inner.debugMatch(context);
 //		int length = (int)(context.getPosition() - pos);
 //		context.setMemo(pos, this, (context.left == left) ? NonTransition : context.left, length);
 //		this.memoMiss += 1;
@@ -1674,14 +1714,14 @@ class ParsingMatch extends ParsingOperation {
 		super("match", inner);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		return inner.reduceOperation();
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		boolean oldMode = context.setRecognitionMode(true);
 		ParsingObject left = context.left;
-		if(this.inner.matcher.simpleMatch(context)) {
+		if(this.inner.debugMatch(context)) {
 			context.setRecognitionMode(oldMode);
 			context.left = left;
 			left = null;
@@ -1698,7 +1738,7 @@ class ParsingBlock extends ParsingOperation {
 		super("block", e);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		ParsingExpression e = inner.reduceOperation();
 		if(e == inner) {
 			return this;
@@ -1709,7 +1749,7 @@ class ParsingBlock extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opPushIndent();
-		this.inner.matcher.simpleMatch(context);
+		this.inner.debugMatch(context);
 		context.opPopIndent();
 		return !(context.isFailure());
 	}
@@ -1739,7 +1779,7 @@ class ParsingWithFlag extends ParsingOperation {
 		this.flagName = flagName;
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		ParsingExpression e = inner.reduceOperation();
 		if(e == inner) {
 			return this;
@@ -1754,7 +1794,7 @@ class ParsingWithFlag extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opEnableFlag(this.flagName);
-		this.inner.matcher.simpleMatch(context);
+		this.inner.debugMatch(context);
 		context.opPopFlag(this.flagName);
 		return !(context.isFailure());
 	}
@@ -1767,7 +1807,7 @@ class ParsingWithoutFlag extends ParsingOperation {
 		this.flagName = flagName;
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		ParsingExpression e = inner.reduceOperation();
 		if(e == inner) {
 			return this;
@@ -1781,7 +1821,7 @@ class ParsingWithoutFlag extends ParsingOperation {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.opDisableFlag(this.flagName);
-		this.inner.matcher.simpleMatch(context);
+		this.inner.debugMatch(context);
 		context.opPopFlag(this.flagName);
 		return !(context.isFailure());
 	}
@@ -1792,7 +1832,7 @@ class ParsingDebug extends ParsingOperation {
 		super("debug", inner);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		ParsingExpression e = inner.reduceOperation();
 		if(e == inner) {
 			return this;
@@ -1803,9 +1843,10 @@ class ParsingDebug extends ParsingOperation {
 	public boolean simpleMatch(ParsingContext context) {
 		long pos = context.getPosition();
 		ParsingObject left = context.left;
-		this.inner.matcher.simpleMatch(context);
+		this.inner.debugMatch(context);
 		if(context.isFailure()) {
-			System.out.println(context.source.formatPositionLine("debug", context.getPosition(), "failure in " + inner));
+			assert(pos == context.getPosition());
+			System.out.println(context.source.formatPositionLine("debug", context.getPosition(), "failure at pos=" + pos  + " in " + inner));
 			left = null;
 			return false;
 		}
@@ -1819,7 +1860,7 @@ class ParsingDebug extends ParsingOperation {
 				"consumed pos=" + pos + " => " + context.getPosition() + " in " + inner));
 		}
 		else {
-			System.out.println(context.source.formatPositionLine("debug", pos, "pass in " + inner));
+			System.out.println(context.source.formatPositionLine("debug", pos, "pass and unconsumed at pos=" + pos + " in " + inner));
 		}
 		left = null;
 		return true;
@@ -1831,7 +1872,7 @@ class ParsingApply extends ParsingOperation {
 		super("|apply", inner);
 	}
 	@Override
-	ParsingExpression reduceOperation() {
+	ParsingExpression reduceOperationImpl() {
 		//TODO;
 		return null;
 	}
@@ -1839,11 +1880,11 @@ class ParsingApply extends ParsingOperation {
 	public boolean simpleMatch(ParsingContext context) {
 //		ParsingContext s = new ParsingContext(context.left);
 //		
-//		this.inner.matcher.simpleMatch(s);
+//		this.inner.debugMatch(s);
 //		context.opRememberPosition();
 //		context.opRememberFailurePosition();
 //		context.opStoreObject();
-//		this.inner.matcher.simpleMatch(context);
+//		this.inner.debugMatch(context);
 //		context.opDebug(this.inner);
 		return !(context.isFailure());
 
