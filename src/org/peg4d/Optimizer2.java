@@ -12,7 +12,9 @@ class Optimizer2 {
 	static void enableOptimizer() {
 		InlineNonTerminal = true;
 		CharacterChoice   = true;
-		StringChoice      = true;
+		if(Main.OptimizationLevel > 0) {
+			StringChoice      = true;
+		}
 //		PredictedChoice   = true;  // Don't enable. it bugs
 	}
 

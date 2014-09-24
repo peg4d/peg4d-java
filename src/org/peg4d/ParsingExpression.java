@@ -1,5 +1,6 @@
 package org.peg4d;
 
+
 interface Matcher {
 	boolean simpleMatch(ParsingContext context);
 }
@@ -1500,24 +1501,6 @@ abstract class ParsingOperation extends ParsingUnary {
 	}
 }
 
-class ParsingIndent extends ParsingFunction {
-	ParsingIndent() {
-		super("indent");
-	}
-	@Override
-	short acceptByte(int ch) {
-		if (ch == '\t' || ch == ' ') {
-			return Accept;
-		}
-		return CheckNextFlow;
-	}
-	@Override
-	public boolean simpleMatch(ParsingContext context) {
-		context.opIndent();
-		return !context.isFailure();
-	}
-}
-
 class ParsingFail extends ParsingFunction {
 	String message;
 	ParsingFail(String message) {
@@ -1693,12 +1676,31 @@ class ParsingBlock extends ParsingOperation {
 
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		context.opPushIndent();
-		this.inner.debugMatch(context);
-		context.opPopIndent();
-		return !(context.isFailure());
+		String indent = context.source.getIndentText(context.pos);
+		int stackTop = context.pushTokenStack(PEG4d.Indent, indent);
+		boolean b = this.inner.debugMatch(context);
+		context.popTokenStack(stackTop);
+		return b;
 	}
 }
+
+class ParsingIndent extends ParsingFunction {
+	ParsingIndent() {
+		super("indent");
+	}
+	@Override
+	short acceptByte(int ch) {
+		if (ch == '\t' || ch == ' ') {
+			return Accept;
+		}
+		return CheckNextFlow;
+	}
+	@Override
+	public boolean simpleMatch(ParsingContext context) {
+		return context.matchTokenStackTop(PEG4d.Indent);
+	}
+}
+
 
 class ParsingIf extends ParsingFunction {
 	String flagName;

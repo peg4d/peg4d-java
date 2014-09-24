@@ -38,3 +38,6 @@ LeftJoined
 	[example: 42km]
 	= Number {@ addUnit }?
 
+EmptyObject
+	= {}
+

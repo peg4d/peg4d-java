@@ -35,6 +35,7 @@ public class PEG4d extends ParsingBuilder {
 	static final int Fail        = ParsingTag.tagId("Fail");
 
 
+	static final int Block      = ParsingTag.tagId("Block");
 	static final int Indent      = ParsingTag.tagId("Indent");
 	static final int Without     = ParsingTag.tagId("Without");
 	static final int With        = ParsingTag.tagId("With");

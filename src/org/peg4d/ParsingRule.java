@@ -30,8 +30,15 @@ class ParsingRule {
 	
 	@Override
 	public String toString() {
-		return type + " " + this.ruleName + "[" + this.minlen + "]" + "=" + this.expr;
+		String t = "";
+		switch(this.type) {
+		case LexicalRule:   t = "boolean "; break;
+		case ObjectRule:    t = "Object "; break;
+		case OperationRule: t = "void "; break;
+		}
+		return t + this.ruleName + "[" + this.minlen + "]" + "=" + this.expr;
 	}
+	
 	
 	final void report(ReportLevel level, String msg) {
 		if(this.po != null) {

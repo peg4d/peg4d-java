@@ -92,11 +92,17 @@ public class ParsingContext {
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
+		if(conf != null) {
+			conf.exploitMemo(start);
+		}
 		this.emptyTag = peg.newStartTag();
 		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
 		this.left = po;
 		start.debugMatch(this);
 		checkUnusedText(po);
+		if(conf != null) {
+			conf.show();
+		}
 		return this.left;
 	}
 
@@ -661,38 +667,76 @@ public class ParsingContext {
 	
 	// <indent Expr>  <indent>
 	
-	private class IndentStack {
-		String indent;
+	private class StringStack {
+		int tagId;
+		String token;
 		byte[] utf8;
-		IndentStack prev;
-		IndentStack(String indent, IndentStack prev) {
-			this.indent = indent;
+		StringStack(int tagId, String indent) {
+			this.tagId = tagId;
+			this.token = indent;
 			this.utf8 = indent.getBytes();
-			this.prev = prev;
-		}
-		IndentStack pop() {
-			return this.prev;
 		}
 	}
 	
-	private IndentStack indentStack = null;
+	private UList<StringStack> tokenStack = new UList<StringStack>(new StringStack[4]);
 	
-	public final void opPushIndent() {
-		String s = this.source.getIndentText(this.pos);
-		//System.out.println("Push indent: '"+s+"'");
-		this.indentStack = new IndentStack(s, this.indentStack);
+	public final int pushTokenStack(int tagId, String s) {
+		int stackTop = this.tokenStack.size();
+		this.tokenStack.add(new StringStack(tagId, s));
+		return stackTop;
 	}
 
-	public final void opPopIndent() {
-		this.indentStack = this.indentStack.pop();
+	public final void popTokenStack(int stackTop) {
+		this.tokenStack.clear(stackTop);
 	}
-	
-	public final void opIndent() {
-		if(indentStack != null) {
-			this.opMatchText(indentStack.utf8);
-			//System.out.println("indent isFailure? " + this.isFailure() + " indent=" + indentStack.utf8.length + " '" + "'" + " left=" + this.left);
+
+	public final boolean matchTokenStackTop(int tagId) {
+		for(int i = tokenStack.size() - 1; i >= 0; i--) {
+			StringStack s = tokenStack.ArrayValues[i];
+			if(s.tagId == tagId) {
+				if(this.source.match(this.pos, s.utf8)) {
+					this.consume(s.utf8.length);
+					return true;
+				}
+				break;
+			}
 		}
+		this.opFailure();
+		return false;
 	}
+
+	public final boolean matchTokenStack(int tagId) {
+		for(int i = tokenStack.size() - 1; i >= 0; i--) {
+			StringStack s = tokenStack.ArrayValues[i];
+			if(s.tagId == tagId) {
+				if(this.source.match(this.pos, s.utf8)) {
+					this.consume(s.utf8.length);
+					return true;
+				}
+			}
+		}
+		this.opFailure();
+		return false;
+	}
+
+	
+	
+//	public final void opPushIndent() {
+//		String s = this.source.getIndentText(this.pos);
+//		//System.out.println("Push indent: '"+s+"'");
+//		this.pushTokenStack(PEG4d.Indent, s);
+//	}
+//
+//	public final void opPopIndent() {
+//		this.tokenStack = this.tokenStack.pop();
+//	}
+//	
+//	public final void opIndent() {
+//		if(tokenStack != null) {
+//			this.opMatchText(tokenStack.utf8);
+//			//System.out.println("indent isFailure? " + this.isFailure() + " indent=" + indentStack.utf8.length + " '" + "'" + " left=" + this.left);
+//		}
+//	}
 	
 	public final ParsingObject getResult() {
 		return this.left;

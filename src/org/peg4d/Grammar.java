@@ -474,8 +474,7 @@ class PEG4dGrammar extends Grammar {
 				Tag(PEG4d.Constructor)
 			), 
 			P("_"), 
-			Link(P("Expr_")), 
-			P("_"),
+			Optional(Sequence(Link(P("Expr_")), P("_"))),
 			ConstructorEnd
 		));
 		setRule("PIPE_", Optional(t("|")));
@@ -490,7 +489,8 @@ class PEG4dGrammar extends Grammar {
 					Sequence(t("if"), P("S"), Optional(t("!")), Link(P("Name")), Tag(PEG4d.If)),
 					Sequence(t("with"),  P("S"), Link(P("Name")), P("S"), Link(P("Expr_")), Tag(PEG4d.With)),
 					Sequence(t("without"), P("S"), Link(P("Name")), P("S"), Link(P("Expr_")), Tag(PEG4d.Without)),
-					Sequence(t("indent"), Optional(Sequence(P("S"), Link(P("Expr_")))), Tag(PEG4d.Indent)),
+					Sequence(t("block"), Optional(Sequence(P("S"), Link(P("Expr_")))), Tag(PEG4d.Block)),
+					Sequence(t("indent"), Tag(PEG4d.Indent)),
 					Sequence(t("choice"), Tag(PEG4d.Choice)),
 					Sequence(P("PIPE_"), t("append-choice"), Tag(PEG4d.Choice)),
 					Sequence(P("PIPE_"), t("stringfy"), Tag(PEG4d.Stringfy)),

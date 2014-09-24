@@ -5,7 +5,7 @@ File
 	= { (_ NL / @Statement)* #File}
 
 Block
-	= { <indent ':' _ NL (_ NL / @IndentStatement)+ > #Block}
+	= { <block ':' _ NL (_ NL / @IndentStatement)+ > #Block}
 
 IndentStatement
 	= <indent> S+ Statement
