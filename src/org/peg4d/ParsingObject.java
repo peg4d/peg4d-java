@@ -112,7 +112,7 @@ public class ParsingObject {
 	boolean compactAST() {
 		if(this.AST != null) {
 			ParsingExpression e = this.getSourceExpression();
-			if(e instanceof PConstructor && !((PConstructor) e).leftJoin) {
+			if(e instanceof ParsingConstructor && !((ParsingConstructor) e).leftJoin) {
 				this.AST = LazyAST;
 				return true;				
 			}

@@ -1,0 +1,52 @@
+// PEG4d Choice
+// ============
+// These rules are defined to test choice optimization
+
+File
+        = { #Empty } // dummy for test/empty
+
+A
+	= 'A'
+B	
+	= 'B' / 'b'
+
+CHARSET
+        [example: a]
+        [example: A]
+        [example: 0]
+        [bad-example: C]
+        = 'a' / 'A' / [0-9]
+
+CHARSET2
+	[example: a]
+	[example: A]
+	[example: b]
+	[example: 0]
+	[bad-example: C]
+	= 'a' / A / B / [0-9]
+
+KEYWORD
+	[example: void]
+	[example: volatile]
+	[example: while]
+	[bad-example: voi]
+	= 'auto' / 'break' / 'case' / 'char' / 'const' / 'continue' / 'default' 
+	/ 'double' / 'do' / 'else' / 'enum' / 'extern' / 'float' / 'for' 
+	/ 'goto' / 'if' / 'int' / 'inline' / 'long' / 'register' / 'restrict' 
+	/ 'return' / 'short' / 'signed' / 'sizeof' / 'static' / 'struct' 
+	/ 'switch' / 'typedef' / 'union' / 'unsigned' / 'void' / 'volatile' 
+	/ 'while' / '_Bool' / '_Complex' / '_Imaginary' / '_stdcall' 
+	/ '__declspec' / '__attribute__' / '__asm'
+
+VOID
+	= 'void'
+V
+	= 'var' / VOID / 'volatile'
+
+KEYWORD2
+	[example: void]
+        [example: volatile]
+	= 'auto' / 'break' / A / V / 'inline'
+ 
+
+

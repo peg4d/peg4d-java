@@ -7,7 +7,7 @@ class ParsingType {
 	int log;
 	
 	
-	PConstructor constructor = null;
+	ParsingConstructor constructor = null;
 	ParsingTag tag = null;
 	ParsingType unionType = null;
 	
@@ -63,7 +63,7 @@ class ParsingType {
 		return t;
 	}
 	
-	public void setConstructor(PConstructor e) {
+	public void setConstructor(ParsingConstructor e) {
 		this.constructor = e;
 	}
 

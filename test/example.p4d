@@ -1,0 +1,10 @@
+// PEG4d Test file
+// ===============
+// This rule always fails in order to test [example]
+// and [bad-example] annotation.
+
+B
+	[example: a]
+	= 'b'
+
+

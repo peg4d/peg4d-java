@@ -64,7 +64,7 @@ class GrammarFormatter extends ExpressionVisitor {
 		sb.append(ruleName);
 	}
 	@Override
-	public void visitNonTerminal(PNonTerminal e) {
+	public void visitNonTerminal(NonTerminal e) {
 		this.formatRuleName(e.ruleName, e);
 	}
 
@@ -94,7 +94,7 @@ class GrammarFormatter extends ExpressionVisitor {
 	}
 
 	@Override
-	public void visitString(PString e) {
+	public void visitString(ParsingString e) {
 		char quote = '\'';
 		sb.append(ParsingCharset.quoteString(quote, e.text, quote));
 	}
@@ -143,7 +143,7 @@ class GrammarFormatter extends ExpressionVisitor {
 		if(prefix != null) {
 			sb.append(prefix);
 		}
-		if(e.inner instanceof ParsingAtom || e.inner instanceof PNonTerminal || e.inner instanceof PConstructor) {
+		if(e.inner instanceof ParsingString || e.inner instanceof NonTerminal || e.inner instanceof ParsingConstructor) {
 			e.inner.visit(this);
 		}
 		else {
@@ -242,7 +242,7 @@ class GrammarFormatter extends ExpressionVisitor {
 	}
 
 	@Override
-	public void visitConstructor(PConstructor e) {
+	public void visitConstructor(ParsingConstructor e) {
 		if(e.leftJoin) {
 			sb.append("{@ ");
 		}
@@ -353,12 +353,12 @@ class CodeGenerator extends ExpressionVisitor {
 	}
 	
 	@Override
-	public void visitNonTerminal(PNonTerminal e) {
+	public void visitNonTerminal(NonTerminal e) {
 		this.writeCode(Instruction2.CALL, 0, uniqueRuleName(e.peg, e.ruleName));
 	}
 	
 	@Override
-	public void visitString(PString e) {
+	public void visitString(ParsingString e) {
 		int labelFAIL = newLabel();
 		int labelEXIT = newLabel();
 		this.writeCode(Instruction2.TEXT, e.utf8.length, e.utf8);
@@ -510,7 +510,7 @@ class CodeGenerator extends ExpressionVisitor {
 	}
 
 	@Override
-	public void visitConstructor(PConstructor e) {
+	public void visitConstructor(ParsingConstructor e) {
 		int labelFAIL = newLabel();
 		int labelEXIT = newLabel();
 		writeCode(Instruction2.PUSHp); //-3

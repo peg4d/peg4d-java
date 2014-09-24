@@ -1,0 +1,7 @@
+// PEG4d Testing
+// This test is written for testing the rule termination
+
+A = 'a'
+B
+	= 'b'
+

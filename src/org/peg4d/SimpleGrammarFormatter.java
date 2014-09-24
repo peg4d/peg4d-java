@@ -102,11 +102,11 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 	}
 	
 	@Override
-	public void visitNonTerminal(PNonTerminal e) {
+	public void visitNonTerminal(NonTerminal e) {
 		this.writeCode(MachineInstruction.CALL, e.ruleName);
 	}
 	@Override
-	public void visitString(PString e) {
+	public void visitString(ParsingString e) {
 		this.writeCode(MachineInstruction.opMatchText, ParsingCharset.quoteString('\'', e.text, '\''));
 	}
 	@Override
@@ -255,7 +255,7 @@ class SimpleCodeGenerator extends SimpleGrammarFormatter {
 	}
 
 	@Override
-	public void visitConstructor(PConstructor e) {
+	public void visitConstructor(ParsingConstructor e) {
 		int labelF = newLabel();
 		int labelE = newLabel();
 		if(e.leftJoin) {

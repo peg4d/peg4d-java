@@ -327,7 +327,7 @@ public class Main {
 //			}
 			System.exit(res ? 0 : 1);
 		}
-		ParsingObject pego = context.parse(peg, startPoint);
+		ParsingObject pego = context.parse(peg, startPoint, new ParsingMemoConfigure());
 		if(context.isFailure()) {
 			System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
 			return;

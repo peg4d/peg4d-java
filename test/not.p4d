@@ -1,0 +1,6 @@
+// PEG4d Testing Not unification
+
+A
+	[example: bb]
+	[bad-example: bc]
+	= !'ba' !'bc' !'a' 'b' .

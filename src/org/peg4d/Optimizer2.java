@@ -23,8 +23,8 @@ class Optimizer2 {
 	
 	final static void optimize(ParsingExpression e) {
 		if(!e.isOptimized()) {
-			if(e instanceof PNonTerminal) {
-				optimizeNonTerminal((PNonTerminal)e);
+			if(e instanceof NonTerminal) {
+				optimizeNonTerminal((NonTerminal)e);
 			}
 		}
 		for(int i = 0; i < e.size(); i++) {
@@ -37,7 +37,7 @@ class Optimizer2 {
 		}
 	}
 
-	final static void optimizeNonTerminal(PNonTerminal ne) {
+	final static void optimizeNonTerminal(NonTerminal ne) {
 		if(InlineNonTerminal) {
 			ParsingExpression e = resolveNonTerminal(ne);
 			ne.matcher = e.matcher;
@@ -47,8 +47,8 @@ class Optimizer2 {
 	}
 	
 	final static ParsingExpression resolveNonTerminal(ParsingExpression e) {
-		while(e instanceof PNonTerminal) {
-			PNonTerminal nterm = (PNonTerminal) e;
+		while(e instanceof NonTerminal) {
+			NonTerminal nterm = (NonTerminal) e;
 			e = nterm.deReference();
 		}
 		return e;

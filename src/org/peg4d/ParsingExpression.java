@@ -1,6 +1,5 @@
 package org.peg4d;
 
-
 interface Matcher {
 	boolean simpleMatch(ParsingContext context);
 }
@@ -62,7 +61,7 @@ public abstract class ParsingExpression implements Matcher {
 //		}
 //		dstack.add(this);
 		boolean b = this.matcher.simpleMatch(c);
-		if(this instanceof PNonTerminal) {
+		if(this instanceof NonTerminal) {
 //			System.out.println("["+pos+"] called: " + b + " "+ this);
 		}
 //		dstack.clear(dpos);
@@ -144,8 +143,8 @@ public abstract class ParsingExpression implements Matcher {
 	}
 
 	static int checkLeftRecursion(ParsingExpression e, String uName, int start, int minlen, UList<String> stack) {
-		if(e instanceof PNonTerminal) {
-			PNonTerminal ne = (PNonTerminal) e;
+		if(e instanceof NonTerminal) {
+			NonTerminal ne = (NonTerminal) e;
 			ne.checkReference();
 			if(minlen == 0) {
 				String n = ne.getUniqueName();
@@ -181,7 +180,7 @@ public abstract class ParsingExpression implements Matcher {
 			}
 			e.minlen = lmin - minlen;
 		}
-		else if(e instanceof ParsingSequence || e instanceof PConstructor) {
+		else if(e instanceof ParsingSequence || e instanceof ParsingConstructor) {
 			int nc = minlen;
 			for(int i = 0; i < e.size(); i++) {
 				ParsingExpression eN = e.get(i);
@@ -224,8 +223,8 @@ public abstract class ParsingExpression implements Matcher {
 	}
 	
 	static int typeCheckImpl(ParsingExpression e, int status) {
-		if(e instanceof PNonTerminal) {
-			ParsingRule r = ((PNonTerminal) e).getRule();
+		if(e instanceof NonTerminal) {
+			ParsingRule r = ((NonTerminal) e).getRule();
 			int ruleType = r.type;
 			if(ruleType == ParsingRule.ObjectRule) {
 				if(isStatus(status, FirstTransition) && !e.is(HasTypeError)) {
@@ -242,8 +241,8 @@ public abstract class ParsingExpression implements Matcher {
 			}
 			return status;
 		}
-		if(e instanceof PConstructor) {
-			boolean LeftJoin = ((PConstructor) e).leftJoin;
+		if(e instanceof ParsingConstructor) {
+			boolean LeftJoin = ((ParsingConstructor) e).leftJoin;
 			if(!isStatus(status, ObjectContext) && !e.is(HasTypeError)) {
 				e.set(HasTypeError);
 				e.report(ReportLevel.warning, "unexpected constructor");
@@ -418,7 +417,7 @@ public abstract class ParsingExpression implements Matcher {
 			return newEmpty();
 		}
 		if(Conservative) {
-			return new PString(text, utf8);	
+			return new ParsingString(text, utf8);	
 		}
 		if(utf8.length == 1) {
 			return newByte(utf8[0]);
@@ -533,39 +532,6 @@ public abstract class ParsingExpression implements Matcher {
 		}
 		return newChoice(l);
 	}
-
-//	@Deprecated
-//	public final static ParsingExpression newCharacter(ParsingCharset u) {
-//		if(u instanceof UnicodeRange) {
-//			return newUnicodeRange(((UnicodeRange) u).beginChar, ((UnicodeRange) u).endChar, u.key());
-//		}
-//		ByteCharset bc = (ByteCharset)u;
-//		ParsingExpression e = null;
-//		int c = bc.size();
-//		if(c > 1) {
-//			e = new ParsingByteRange(0, u);
-//		}
-//		else if(c == 1) {
-//			for(c = 0; c < 256; c++) {
-//				if(bc.bitMap[c]) {
-//					break;
-//				}
-//			}
-//			e = newByte(c);
-//		}
-//		if(bc.unicodeRangeList != null) {
-//			UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[2]);
-//			if(e != null) {
-//				l.add(e);
-//			}
-//			for(int i = 0; i < bc.unicodeRangeList.size(); i++) {
-//				UnicodeRange ur = bc.unicodeRangeList.ArrayValues[i];
-//				addChoice(l, newUnicodeRange(ur.beginChar, ur.endChar, ur.key()));
-//			}
-//			return newChoice(l);
-//		}
-//		return e;
-//	}
 	
 	public final static ParsingExpression newOption(ParsingExpression p) {
 //		if(StringSpecialization) {
@@ -635,12 +601,12 @@ public abstract class ParsingExpression implements Matcher {
 	}
 	
 	public final static ParsingExpression newConstructor(ParsingExpression p) {
-		ParsingExpression e = new PConstructor(false, toSequenceList(p));
+		ParsingExpression e = new ParsingConstructor(false, toSequenceList(p));
 		return e;
 	}
 
 	public final static ParsingExpression newJoinConstructor(ParsingExpression p) {
-		ParsingExpression e = new PConstructor(true, toSequenceList(p));
+		ParsingExpression e = new ParsingConstructor(true, toSequenceList(p));
 		return e;
 	}
 	
@@ -716,13 +682,6 @@ public abstract class ParsingExpression implements Matcher {
 			return u;
 		}
 		return e;
-	}
-
-}
-
-abstract class ParsingAtom extends ParsingExpression {
-	ParsingAtom () {
-		super();
 	}
 }
 
@@ -940,11 +899,11 @@ class ParsingAny extends ParsingExpression {
 	}
 }
 
-class PNonTerminal extends ParsingExpression {
+class NonTerminal extends ParsingExpression {
 	Grammar peg;
 	String  ruleName;
 	private ParsingExpression    calling = null;
-	PNonTerminal(Grammar base, String ruleName) {
+	NonTerminal(Grammar base, String ruleName) {
 		super();
 		this.peg = base;
 		this.ruleName = ruleName;
@@ -957,7 +916,7 @@ class PNonTerminal extends ParsingExpression {
 	ParsingExpression reduceOperationImpl() {
 		if(!ParsingRule.isLexicalName(this.ruleName)) {
 			String lexName = ParsingRule.toLexicalName(this.ruleName);
-			PNonTerminal ne = this.peg.newNonTerminal(lexName);
+			NonTerminal ne = this.peg.newNonTerminal(lexName);
 			if(ne.deReference() == null) {
 				this.peg.getLexicalRule(this.ruleName);
 			}
@@ -1010,28 +969,14 @@ class PNonTerminal extends ParsingExpression {
 	}
 }
 
-class PString extends ParsingAtom {
+class ParsingString extends ParsingExpression {
 	String text;
 	byte[] utf8;
-	PString(String text, byte[] utf8) {
+	ParsingString(String text, byte[] utf8) {
 		super();
 		this.text = text;
 		this.utf8 = utf8;
 		this.minlen = utf8.length;
-	}
-	PString(int flag, String text) {
-		this(text, ParsingCharset.toUtf8(text));
-	}
-	PString(int flag, int ch) {
-		super();
-		utf8 = new byte[1];
-		utf8[0] = (byte)ch;
-		if(ch >= ' ' && ch < 127) {
-			this.text = String.valueOf((char)ch);
-		}
-		else {
-			this.text = String.format("0x%x", ch);
-		}
 	}
 	@Override
 	ParsingExpression uniquefyImpl() { 
@@ -1443,11 +1388,11 @@ class ParsingValue extends ParsingExpression {
 	}
 }
 
-class PConstructor extends ParsingList {
+class ParsingConstructor extends ParsingList {
 	boolean leftJoin = false;
 	int prefetchIndex = 0;
 	ParsingType type;
-	PConstructor(boolean leftJoin, UList<ParsingExpression> list) {
+	ParsingConstructor(boolean leftJoin, UList<ParsingExpression> list) {
 		super(list);
 		this.leftJoin = leftJoin;
 	}

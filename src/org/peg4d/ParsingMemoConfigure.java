@@ -6,7 +6,7 @@ import java.util.Map;
 
 public class ParsingMemoConfigure {
 	public final static ParsingObject NonTransition = new ParsingObject(null, null, 0);
-	UMap<PNonTerminal> memoMap = new UMap<PNonTerminal>();
+	UMap<NonTerminal> memoMap = new UMap<NonTerminal>();
 	
 	ParsingMemoConfigure() {
 	}
@@ -15,12 +15,13 @@ public class ParsingMemoConfigure {
 		for(int i = 0; i < e.size(); i++) {
 			exploitMemo(e.get(i));
 		}
-		if(e instanceof PNonTerminal) {
-			PNonTerminal ne = (PNonTerminal)e;
+		if(e instanceof NonTerminal) {
+			NonTerminal ne = (NonTerminal)e;
 			assert(e.isUnique());
 			String un = ne.getUniqueName();
-			PNonTerminal memoed = memoMap.get(un);
+			NonTerminal memoed = memoMap.get(un);
 			if(memoed == null) {
+				System.out.println("memo: " + un);
 				memoMap.put(un, ne);
 				embedMemo(ne);
 				exploitMemo(ne.getRule().expr);
@@ -28,7 +29,7 @@ public class ParsingMemoConfigure {
 		}
 	}
 	
-	void embedMemo(PNonTerminal ne) {
+	void embedMemo(NonTerminal ne) {
 //		ne.calling = Optimizer2.dereferenceNonTerminal(ne);
 //		ne.matcher = ne.calling.matcher; // inlining
 //		ne.matcher = new NonTerminalMemoMatcher(ne);
@@ -38,7 +39,7 @@ public class ParsingMemoConfigure {
 	void show() {
 		UList<String> nameList = this.memoMap.keys();
 		for(int i = 0; i < nameList.size(); i++) {
-			PNonTerminal ne = this.memoMap.get(nameList.ArrayValues[i]);
+			NonTerminal ne = this.memoMap.get(nameList.ArrayValues[i]);
 			System.out.println(ne.matcher);
 		}
 	}
@@ -49,13 +50,13 @@ public class ParsingMemoConfigure {
 }
 
 class NonTerminalMemoMatcher implements Matcher {
-	PNonTerminal inner;
+	NonTerminal inner;
 	Matcher matchRef;
 	boolean enableMemo = true;
 	int memoHit = 0;
 	int memoMiss = 0;
 
-	NonTerminalMemoMatcher(PNonTerminal inner) {
+	NonTerminalMemoMatcher(NonTerminal inner) {
 		this.inner = inner;
 		this.matchRef = inner.matcher;
 	}

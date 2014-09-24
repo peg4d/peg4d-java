@@ -43,8 +43,8 @@ public class Grammar {
 		return this.name + ":" + ruleName;
 	}
 	
-	final PNonTerminal newNonTerminal(String text) {
-		return new PNonTerminal(this, text);
+	final NonTerminal newNonTerminal(String text) {
+		return new NonTerminal(this, text);
 	}
 	
 	final boolean loadGrammarFile(String fileName) {
@@ -222,8 +222,8 @@ public class Grammar {
 	}
 
 	private void appendExportRuleList(UList<ParsingRule> l, ParsingExpression e) {
-		if(e instanceof PNonTerminal) {
-			ParsingRule rule = this.getRule(((PNonTerminal) e).ruleName);
+		if(e instanceof NonTerminal) {
+			ParsingRule rule = this.getRule(((NonTerminal) e).ruleName);
 			l.add(rule);
 			Main.printVerbose("export", rule.ruleName);
 		}

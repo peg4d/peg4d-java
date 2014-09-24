@@ -18,7 +18,7 @@ class ExpressionVisitor {
 			this.visitedMap.clear();
 		}
 	}
-	public void visitNonTerminal(PNonTerminal e) {
+	public void visitNonTerminal(NonTerminal e) {
 		if(!this.isVisited(e.ruleName)) {
 			visited(e.ruleName);
 			e.peg.getExpression(e.ruleName).visit(this);
@@ -30,7 +30,7 @@ class ExpressionVisitor {
 	}
 	public void visitByteRange(ParsingByteRange e) {
 	}
-	public void visitString(PString e) {
+	public void visitString(ParsingString e) {
 	}
 	public void visitAny(ParsingAny e) {
 	}
@@ -74,7 +74,7 @@ class ExpressionVisitor {
 	public void visitChoice(ParsingChoice e) {
 		this.visitList(e);
 	}
-	public void visitConstructor(PConstructor e) {
+	public void visitConstructor(ParsingConstructor e) {
 		this.visitList(e);
 	}
 
@@ -150,7 +150,7 @@ class ListMaker extends ExpressionVisitor {
 		next.visit(this);
 	}
 	@Override
-	public void visitNonTerminal(PNonTerminal e) {
+	public void visitNonTerminal(NonTerminal e) {
 		if(	e.peg == peg && !this.isVisited(e.ruleName)) {
 			this.visitImpl(e.ruleName);
 		}
@@ -259,7 +259,7 @@ class Optimizer extends ExpressionVisitor {
 //	}
 
 	@Override
-	public void visitConstructor(PConstructor e) {
+	public void visitConstructor(ParsingConstructor e) {
 		this.visitList(e);
 		int prefetchIndex = 0;
 		for(int i = 0; i < e.size(); i++) {

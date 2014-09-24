@@ -219,7 +219,7 @@ public class ParsingContext {
 		return b;
 	}
 	
-	final ParsingObject newParsingObject(long pos, PConstructor created) {
+	final ParsingObject newParsingObject(long pos, ParsingConstructor created) {
 		if(this.isRecognitionMode()) {
 			this.successResult.setSourcePosition(pos);
 			return this.successResult;
@@ -594,7 +594,7 @@ public class ParsingContext {
 		}
 	}
 	
-	public void opNewObject(PConstructor e) {
+	public void opNewObject(ParsingConstructor e) {
 		if(this.canTransCapture()) {
 			lpush(this.markObjectStack());
 			this.left = new ParsingObject(this.emptyTag, this.source, this.pos, e);
@@ -602,7 +602,7 @@ public class ParsingContext {
 		opush(this.left);
 	}
 
-	public void opLeftJoinObject(PConstructor e) {
+	public void opLeftJoinObject(ParsingConstructor e) {
 		if(this.canTransCapture()) {
 			lpush(this.markObjectStack());
 			ParsingObject left = new ParsingObject(this.emptyTag, this.source, this.pos, e);

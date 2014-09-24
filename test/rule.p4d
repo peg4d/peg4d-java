@@ -1,0 +1,14 @@
+// PEG Test File
+// =============
+// The followings are defined to test predefined rules
+
+File
+	= { #Empty } // dummy for test/empty
+
+DIGIT_TEST
+	[example: 0]
+	[example: 9]
+	[bad-example: a]
+	= DIGIT
+
+
