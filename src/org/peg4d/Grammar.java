@@ -183,12 +183,13 @@ public class Grammar {
 		}
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
+			ParsingExpression.typeCheck(rule);
 			rule.expr = rule.expr.uniquefy();
 		}
-		for(int i = 0; i < nameList.size(); i++) {
-			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
-			ParsingExpression.typeCheck(rule);
-		}
+//		for(int i = 0; i < nameList.size(); i++) {
+//			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
+//			rule.expr = rule.expr.uniquefy();
+//		}
 
 		Optimizer2.enableOptimizer();
 		for(int i = 0; i < nameList.size(); i++) {
