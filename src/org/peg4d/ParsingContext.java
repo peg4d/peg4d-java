@@ -718,25 +718,6 @@ public class ParsingContext {
 		this.opFailure();
 		return false;
 	}
-
-	
-	
-//	public final void opPushIndent() {
-//		String s = this.source.getIndentText(this.pos);
-//		//System.out.println("Push indent: '"+s+"'");
-//		this.pushTokenStack(PEG4d.Indent, s);
-//	}
-//
-//	public final void opPopIndent() {
-//		this.tokenStack = this.tokenStack.pop();
-//	}
-//	
-//	public final void opIndent() {
-//		if(tokenStack != null) {
-//			this.opMatchText(tokenStack.utf8);
-//			//System.out.println("indent isFailure? " + this.isFailure() + " indent=" + indentStack.utf8.length + " '" + "'" + " left=" + this.left);
-//		}
-//	}
 	
 	public final ParsingObject getResult() {
 		return this.left;

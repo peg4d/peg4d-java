@@ -376,7 +376,7 @@ public abstract class ParsingExpression implements Matcher {
 		if(l.size() == 1) {
 			return l.ArrayValues[0];
 		}
-		return new ParsingSequence(l);
+		return checkUnique(new ParsingSequence(l), isUnique(l));
 	}
 	
 	public final static void addSequence(UList<ParsingExpression> l, ParsingExpression e) {
@@ -393,7 +393,6 @@ public abstract class ParsingExpression implements Matcher {
 			ParsingExpression pe = l.ArrayValues[l.size()-1];
 			if(e instanceof ParsingNot && pe instanceof ParsingNot) {
 				((ParsingNot) pe).inner = appendAsChoice(((ParsingNot) pe).inner, ((ParsingNot) e).inner);
-				Main.printVerbose("merging", pe);
 				return;
 			}
 			if(pe instanceof ParsingFailure && pe instanceof ParsingFail) {
@@ -546,22 +545,22 @@ public abstract class ParsingExpression implements Matcher {
 //				return new POptionalString(0, (PString)p);
 //			}
 //		}
-		return new ParsingOption(p);
+		return checkUnique(new ParsingOption(p), p.isUnique());
 	}
 	
 	public final static ParsingExpression newMatch(ParsingExpression p) {
-		return new ParsingMatch(p);
+		return checkUnique(new ParsingMatch(p), p.isUnique());
 	}
 		
 	public final static ParsingExpression newRepetition(ParsingExpression p) {
 //		if(p instanceof PCharacter) {
 //			return new PZeroMoreCharacter(0, (PCharacter)p);
 //		}
-		return new ParsingRepetition(p);
+		return checkUnique(new ParsingRepetition(p), p.isUnique());
 	}
 
 	public final static ParsingExpression newAnd(ParsingExpression p) {
-		return new ParsingAnd(p);
+		return checkUnique(new ParsingAnd(p), p.isUnique());
 	}
 	
 	public final static ParsingExpression newNot(ParsingExpression p) {
@@ -579,17 +578,16 @@ public abstract class ParsingExpression implements Matcher {
 //		if(p instanceof ParsingOperation) {
 //			p = ((ParsingOperation)p).inner;
 //		}
-		return new ParsingNot(p);
+		return checkUnique(new ParsingNot(p), p.isUnique());
 	}
 		
 	public final static ParsingExpression newChoice(UList<ParsingExpression> l) {
 		if(l.size() == 1) {
 			return l.ArrayValues[0];
 		}
-		return new ParsingChoice(l);
+		return checkUnique(new ParsingChoice(l), isUnique(l));
 	}
 
-	
 	public final static void addChoice(UList<ParsingExpression> l, ParsingExpression e) {
 		if(e instanceof ParsingChoice) {
 			for(int i = 0; i < e.size(); i++) {
@@ -600,15 +598,24 @@ public abstract class ParsingExpression implements Matcher {
 			l.add(e);
 		}
 	}
+
+	final static boolean isUnique(UList<ParsingExpression> l) {
+		for(int i = 0; i < l.size(); i++) {
+			if(!l.ArrayValues[i].isUnique()) {
+				return false;
+			}
+		}
+		return true;
+	}
 	
 	public final static ParsingExpression newConstructor(ParsingExpression p) {
-		ParsingExpression e = new ParsingConstructor(false, toSequenceList(p));
-		return e;
+		UList<ParsingExpression> l = toSequenceList(p);
+		return checkUnique(new ParsingConstructor(false, l), isUnique(l));
 	}
 
 	public final static ParsingExpression newJoinConstructor(ParsingExpression p) {
-		ParsingExpression e = new ParsingConstructor(true, toSequenceList(p));
-		return e;
+		UList<ParsingExpression> l = toSequenceList(p);
+		return checkUnique(new ParsingConstructor(true, l), isUnique(l));
 	}
 	
 	public final static UList<ParsingExpression> toSequenceList(ParsingExpression e) {
@@ -621,7 +628,7 @@ public abstract class ParsingExpression implements Matcher {
 	}
 		
 	public final static ParsingExpression newConnector(ParsingExpression p, int index) {
-		return new ParsingConnector(p, index);
+		return checkUnique(new ParsingConnector(p, index), p.isUnique());
 	}
 
 	public final static ParsingExpression newTagging(ParsingTag tag) {
@@ -633,11 +640,7 @@ public abstract class ParsingExpression implements Matcher {
 	}
 	
 	public final static ParsingExpression newDebug(ParsingExpression e) {
-		ParsingExpression e2 = new ParsingDebug(e);
-		if(e.isUnique()) {
-			e2 = e2.uniquefy();
-		}
-		return e2;
+		return checkUnique(new ParsingDebug(e), e.isUnique());
 	}
 
 	public final static ParsingExpression newFail(String message) {
@@ -653,20 +656,29 @@ public abstract class ParsingExpression implements Matcher {
 	}
 
 	public final static ParsingExpression newWithFlag(String flagName, ParsingExpression e) {
-		return new ParsingWithFlag(flagName, e);
+		return checkUnique(new ParsingWithFlag(flagName, e), e.isUnique());
 	}
 
 	public final static ParsingExpression newWithoutFlag(String flagName, ParsingExpression e) {
-		return new ParsingWithoutFlag(flagName, e);
+		return checkUnique(new ParsingWithoutFlag(flagName, e), e.isUnique());
+	}
+
+	public final static ParsingExpression newBlock(ParsingExpression e) {
+		return checkUnique(new ParsingBlock(e), e.isUnique());
 	}
 
 	public final static ParsingExpression newIndent() {
 		return new ParsingIndent();
 	}
 
-	public final static ParsingExpression newBlock(ParsingExpression e) {
-		return new ParsingBlock(e);
+	public static ParsingExpression newName(int tagId, ParsingExpression e) {
+		return checkUnique(new ParsingName(tagId, e), e.isUnique());
 	}
+
+	public static ParsingExpression newIsa(int tagId) {
+		return new ParsingIsa(tagId);
+	}
+
 
 	public final static UMap<ParsingExpression> uniqueMap = new UMap<ParsingExpression>();
 	
@@ -684,6 +696,14 @@ public abstract class ParsingExpression implements Matcher {
 		}
 		return e;
 	}
+
+	private static ParsingExpression checkUnique(ParsingExpression e, boolean unique) {
+		if(unique) {
+			e = e.uniquefy();
+		}
+		return e;
+	}
+	
 }
 
 abstract class ParsingUnary extends ParsingExpression {
@@ -1698,6 +1718,54 @@ class ParsingIndent extends ParsingFunction {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		return context.matchTokenStackTop(PEG4d.Indent);
+	}
+}
+
+class ParsingName extends ParsingOperation {
+	int tagId;
+	ParsingName(int tagId, ParsingExpression inner) {
+		super("name", inner);
+		this.tagId = tagId; //ParsingTag.tagId(flagName);
+	}
+	@Override
+	ParsingExpression reduceOperationImpl() {
+		ParsingExpression e = inner.reduceOperation();
+		if(e == inner) {
+			return this;
+		}
+		return ParsingExpression.newName(tagId, e);
+	}
+
+	@Override
+	public String getParameters() {
+		return " " + ParsingTag.tagName(this.tagId);
+	}
+	@Override
+	public boolean simpleMatch(ParsingContext context) {
+		long startIndex = context.getPosition();
+		if(this.inner.debugMatch(context)) {
+			long endIndex = context.getPosition();
+			String s = context.source.substring(startIndex, endIndex);
+			context.pushTokenStack(tagId, s);
+			return true;
+		}
+		return false;
+	}
+}
+
+class ParsingIsa extends ParsingFunction {
+	int tagId;
+	ParsingIsa(int tagId) {
+		super("if");
+		this.tagId = tagId;
+	}
+	@Override
+	public String getParameters() {
+		return " " + ParsingTag.tagName(this.tagId);
+	}
+	@Override
+	public boolean simpleMatch(ParsingContext context) {
+		return context.matchTokenStack(tagId);
 	}
 }
 

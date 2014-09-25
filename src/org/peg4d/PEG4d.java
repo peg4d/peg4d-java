@@ -243,12 +243,12 @@ public class PEG4d extends ParsingBuilder {
 	// PEG4d TransCapturing
 
 	public ParsingExpression toConstructor(ParsingObject po) {
-		ParsingExpression seq = toParsingExpression(po.get(0));
+		ParsingExpression seq = (po.size() == 0) ? ParsingExpression.newEmpty() : toParsingExpression(po.get(0));
 		return ParsingExpression.newConstructor(seq);
 	}
 
 	public ParsingExpression toLeftJoin(ParsingObject po) {
-		ParsingExpression seq = toParsingExpression(po.get(0));
+		ParsingExpression seq = (po.size() == 0) ? ParsingExpression.newEmpty() : toParsingExpression(po.get(0));
 		return ParsingExpression.newJoinConstructor(seq);
 	}
 

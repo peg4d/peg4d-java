@@ -20,6 +20,7 @@ public class ParsingBuilder {
 				e.printStackTrace();
 			} catch (InvocationTargetException e) {
 				// TODO Auto-generated catch block
+				System.err.println(po);
 				e.printStackTrace();
 			}
 		}
