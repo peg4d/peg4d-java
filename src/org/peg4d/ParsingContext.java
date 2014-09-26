@@ -237,7 +237,7 @@ public class ParsingContext {
 			return "syntax error";
 		}
 		if(errorInfo instanceof ParsingExpression) {
-			return "syntax error: unrecognized by " + errorInfo;
+			return "syntax error: expecting " + errorInfo;
 		}
 		return errorInfo.toString();
 	}
