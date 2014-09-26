@@ -229,7 +229,7 @@ class Optimizer2 {
 	}
 }
 
-class ByteChoiceMatcher implements Matcher {
+class ByteChoiceMatcher extends Matcher {
 	boolean bitMap[];
 
 	ByteChoiceMatcher(int[] c) {
@@ -248,12 +248,12 @@ class ByteChoiceMatcher implements Matcher {
 			context.consume(1);
 			return true;
 		}
-		context.failure(null);
+		context.failure(this);
 		return false;
 	}
 }
 
-class StringChoiceMatcher implements Matcher {
+class StringChoiceMatcher extends Matcher {
 	ParsingExpression[] matchCase;
 
 	StringChoiceMatcher(ParsingExpression[] matchCase) {
@@ -274,7 +274,7 @@ class StringChoiceMatcher implements Matcher {
 	
 }
 
-class MappedChoiceMatcher implements Matcher {
+class MappedChoiceMatcher extends Matcher {
 	ParsingExpression[] matchCase;
 
 	MappedChoiceMatcher(ParsingExpression[] matchCase) {

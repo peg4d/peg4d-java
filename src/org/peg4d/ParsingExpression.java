@@ -1,11 +1,11 @@
 package org.peg4d;
 
 
-interface Matcher {
-	boolean simpleMatch(ParsingContext context);
+abstract class Matcher {
+	abstract boolean simpleMatch(ParsingContext context);
 }
 
-public abstract class ParsingExpression implements Matcher {
+public abstract class ParsingExpression extends Matcher {
 	public final static int LeftRecursion     = 1 << 20;
 	public final static int HasSyntaxError    = 1 << 26;
 	public final static int HasTypeError      = 1 << 27;

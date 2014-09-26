@@ -205,9 +205,11 @@ public class ParsingContext {
 		return this.fpos;
 	}
 	
-	final void forgetFailure(long f) {
-		//System.out.println("forget fpos: " + this.fpos + " <- " + f);
-		this.fpos = f;
+	final void forgetFailure(long fpos) {
+		if(this.fpos != fpos) {
+			this.removeErrorInfo(this.fpos);
+		}
+		this.fpos = fpos;
 	}
 	
 	private Object getErrorInfo(long fpos) {
@@ -254,7 +256,7 @@ public class ParsingContext {
 //	}
 	
 	
-	public final void failure(ParsingExpression errorInfo) {
+	public final void failure(Matcher errorInfo) {
 		if(this.pos > fpos) {  // adding error location
 			this.fpos = this.pos;
 			//System.out.println("fpos: " + this.fpos + " -> " + this.pos + " " + errorInfo);		
