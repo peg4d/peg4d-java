@@ -1,8 +1,9 @@
 package org.peg4d;
 
 import java.lang.reflect.Array;
+import java.util.AbstractList;
 
-public class UList<T> {
+public class UList<T> extends AbstractList<T> {
 	private int    currentSize;
 	public T[] ArrayValues;
 
@@ -31,6 +32,7 @@ public class UList<T> {
 		return Value.toString();
 	}
 
+	@Override
 	public final int size() {
 		return this.currentSize;
 	}
@@ -54,24 +56,12 @@ public class UList<T> {
 		this.ArrayValues = this.newArray(this.currentSize, newCapacity);
 	}
 
-	public final void add(T Value) {
-		this.reserve(this.currentSize + 1);
-		this.ArrayValues[this.currentSize] = Value;
-		this.currentSize = this.currentSize + 1;
-	}
-
+	@Override
 	public final void add(int index, T Value) {
 		this.reserve(this.currentSize + 1);
 		System.arraycopy(this.ArrayValues, index, this.ArrayValues, index+1, this.currentSize - index);
 		this.ArrayValues[index] = Value;
 		this.currentSize = this.currentSize + 1;
-	}
-
-	public final void remove(int index) {
-		if(this.currentSize > 1) {
-			System.arraycopy(this.ArrayValues, index+1, this.ArrayValues, index, this.currentSize - 1);
-		}
-		this.currentSize = this.currentSize - 1;
 	}
 
 	public final void clear(int index) {
@@ -97,6 +87,29 @@ public class UList<T> {
 	//	public static void ThrowOutOfArrayIndex(int Size, long Index) {
 	//		throw new SoftwareFault("out of array index " + Index + " < " + Size);
 	//	}
+
+	@Override
+	public boolean add(T e) {
+		this.reserve(this.currentSize + 1);
+		this.ArrayValues[this.currentSize] = e;
+		this.currentSize = this.currentSize + 1;
+		return true;
+	}
+
+	@Override
+	public T remove(int index) {
+		T e = this.get(index);
+		if(this.currentSize > 1) {
+			System.arraycopy(this.ArrayValues, index+1, this.ArrayValues, index, this.currentSize - 1);
+		}
+		this.currentSize = this.currentSize - 1;
+		return e;
+	}
+
+	@Override
+	public T get(int index) {
+		return this.ArrayValues[index];
+	}
 
 
 }

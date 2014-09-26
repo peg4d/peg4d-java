@@ -35,11 +35,13 @@ public class PEG4d extends ParsingBuilder {
 	static final int Fail        = ParsingTag.tagId("Fail");
 
 
-	static final int Block      = ParsingTag.tagId("Block");
+	static final int Block       = ParsingTag.tagId("Block");
 	static final int Indent      = ParsingTag.tagId("Indent");
 	static final int Without     = ParsingTag.tagId("Without");
 	static final int With        = ParsingTag.tagId("With");
 	static final int If          = ParsingTag.tagId("If");
+	static final int Name        = ParsingTag.tagId("Name");
+	static final int Isa         = ParsingTag.tagId("Isa");
 
 	static final int Stringfy    = ParsingTag.tagId("Stringfy");
 	static final int Apply       = ParsingTag.tagId("Apply");
@@ -304,6 +306,16 @@ public class PEG4d extends ParsingBuilder {
 
 	public ParsingExpression toIndent(ParsingObject po) {
 		return ParsingExpression.newIndent();
+	}
+
+	public ParsingExpression toName(ParsingObject po) {
+		int tagId = ParsingTag.tagId(po.textAt(0, ""));
+		return ParsingExpression.newName(tagId, toParsingExpression(po.get(1)));
+	}
+
+	public ParsingExpression toIsa(ParsingObject po) {
+		int tagId = ParsingTag.tagId(po.textAt(0, ""));
+		return ParsingExpression.newIsa(tagId);
 	}
 
 }

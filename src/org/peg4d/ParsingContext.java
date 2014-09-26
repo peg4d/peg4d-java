@@ -723,28 +723,25 @@ public class ParsingContext {
 		return this.left;
 	}
 
-	public void opDebug(ParsingExpression inner) {
-		this.opDropStoredObject();
-//		ParsingObject left = this.ostack[ostacktop];
-		this.opUpdateFailurePosition();
-		long fpos = this.lstack[lstacktop];
-		this.opCommitPosition();
-		long pos = this.lstack[lstacktop];
-		if(this.isFailure()) {
-			System.out.println(source.formatPositionLine("debug", this.pos, "failure in " + inner));
-			return;
+	UList<String> terminalStack = new UList<String>(new String[8]);
+	
+	public int pushCallStack(String uniqueName) {
+		int pos = this.terminalStack.size();
+		this.terminalStack.add(uniqueName);
+		return pos;
+	}
+
+	public void popCallStack(int stacktop) {
+		this.terminalStack.clear(stacktop);
+	}
+
+	public void dumpCallStack(String header) {
+		System.out.print(header);
+		for(String t : this.terminalStack) {
+			System.out.print(" ");
+			System.out.print(t);
 		}
-		if(this.left != left) {
-			System.out.println(source.formatPositionLine("debug", pos,
-				"transition #" + this.left.getTag() + " => #" + left.getTag() + " in " + inner));
-			return;
-		}
-		if(this.pos != pos) {
-			System.out.println(source.formatPositionMessage("debug", pos,
-				"consumed pos=" + pos + " => " + this.pos + " in " + inner));
-			return;
-		}
-		System.out.println(source.formatPositionLine("debug", pos, "pass in " + inner));
+		System.out.println();
 	}
 	
 	protected ParsingMemo memoMap = null;
@@ -760,6 +757,6 @@ public class ParsingContext {
 	final void setMemo(long keypos, ParsingExpression e, ParsingObject result, int length) {
 		this.memoMap.setMemo(keypos, e, result, length);
 	}
-	
+
 }
 

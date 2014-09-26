@@ -49,9 +49,6 @@ public abstract class ParsingExpression implements Matcher {
 		return this;
 	}
 	protected abstract void visit(ExpressionVisitor visitor);
-
-//	static int cc = 0;
-//	static UList<ParsingExpression> dstack = new UList<ParsingExpression>(new ParsingExpression[1024]);
 	
 	public final boolean debugMatch(ParsingContext c) {
 //		int d = cc; cc++;
@@ -63,7 +60,7 @@ public abstract class ParsingExpression implements Matcher {
 //		dstack.add(this);
 		boolean b = this.matcher.simpleMatch(c);
 		if(this instanceof NonTerminal) {
-//			System.out.println("["+pos+"] called: " + b + " "+ this);
+//			c.dumpCallStack("["+pos+"] called: " + b + " ");
 		}
 //		dstack.clear(dpos);
 //		if(pos > 12717) {
@@ -923,11 +920,12 @@ class ParsingAny extends ParsingExpression {
 class NonTerminal extends ParsingExpression {
 	Grammar peg;
 	String  ruleName;
-	private ParsingExpression    calling = null;
+	String  uniqueName;
 	NonTerminal(Grammar base, String ruleName) {
 		super();
 		this.peg = base;
 		this.ruleName = ruleName;
+		this.uniqueName = this.peg.uniqueRuleName(this.ruleName);
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
@@ -946,9 +944,10 @@ class NonTerminal extends ParsingExpression {
 		return this;
 	}
 
-	String getUniqueName() {
-		return this.peg.uniqueRuleName(this.ruleName);
+	final String getUniqueName() {
+		return this.uniqueName;
 	}
+	
 	final ParsingRule getRule() {
 		return this.peg.getRule(this.ruleName);
 	}
@@ -981,12 +980,11 @@ class NonTerminal extends ParsingExpression {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-//		if(this.calling == null) {
-//			System.out.println("Null Reference remains: " + this.ruleName + " next=" + this.flowNext);
-//			//assert(this.calling != null);
-//			this.checkReference();
-//		}
-		return this.deReference().debugMatch(context);
+		int stackTop = context.pushCallStack(this.uniqueName);
+		boolean b = this.deReference().debugMatch(context);
+		context.dumpCallStack("["+context.getPosition()+"] called: " + b + ": ");
+		context.popCallStack(stackTop);
+		return b;
 	}
 }
 
@@ -1570,92 +1568,6 @@ class ParsingExport extends ParsingUnary {
 		return true;
 	}
 }
-
-//class ParsingMemo extends ParsingOperation {
-//	static ParsingObject NonTransition = new ParsingObject(null, null, 0);
-//	boolean enableMemo = true;
-//	int memoId;
-//	int memoHit = 0;
-//	int memoMiss = 0;
-//
-//	ParsingMemo(int memoId, ParsingExpression inner) {
-//		super("memo", inner);
-//		this.memoId = memoId;
-//	}
-//
-//	@Override
-//	ParsingExpression reduceOperation_() {
-//		ParsingExpression e = inner.reduceOperation();
-//		if(e == inner) {
-//			return this;
-//		}
-//		System.out.println("TODO: memo");
-//		return e;
-//	}
-//	
-//	@Override
-//	public boolean simpleMatch(ParsingContext context) {
-//		if(!this.enableMemo) {
-//			return this.inner.debugMatch(context);
-//		}
-//		long pos = context.getPosition();
-//		MemoEntry m = context.getMemo(this, pos);
-//		if(m != null) {
-//			this.memoHit += 1;
-//			context.setPosition(pos + m.consumed);
-//			if(m.generated != NonTransition) {
-//				context.left = m.generated;
-//			}
-//			return !(context.isFailure());
-//		}
-//		ParsingObject left = context.left;
-//		this.inner.debugMatch(context);
-//		int length = (int)(context.getPosition() - pos);
-//		context.setMemo(pos, this, (context.left == left) ? NonTransition : context.left, length);
-//		this.memoMiss += 1;
-//		this.tryTracing();
-//		left = null;
-//		return !(context.isFailure());
-//	}
-//
-//	private void tryTracing() {
-//		if(Main.TracingMemo) {
-//			if(this.memoMiss == 32) {
-//				if(this.memoHit < 2) {
-//					disabledMemo();
-//					return;
-//				}
-//			}
-//			if(this.memoMiss % 64 == 0) {
-//				if(this.memoHit == 0) {
-//					disabledMemo();
-//					return;
-//				}
-//				if(this.memoMiss / this.memoHit > 10) {
-//					disabledMemo();
-//					return;
-//				}
-//			}
-//		}		
-//	}
-//	
-//	private void disabledMemo() {
-//		//this.show();
-//		this.enableMemo = false;
-////		this.base.DisabledMemo += 1;
-////		int factor = this.base.EnabledMemo / 10;
-////		if(factor != 0 && this.base.DisabledMemo % factor == 0) {
-////			this.base.memoRemover.removeDisabled();
-////		}
-//	}
-//
-//	void show() {
-//		if(Main.VerboseMode) {
-//			double f = (double)this.memoHit / this.memoMiss;
-//			System.out.println(this.inner.getClass().getSimpleName() + " #h/m=" + this.memoHit + "," + this.memoMiss + ", f=" + f + " " + this.inner);
-//		}
-//	}
-//}
 
 class ParsingMatch extends ParsingOperation {
 	ParsingMatch(ParsingExpression inner) {

@@ -207,9 +207,6 @@ public class Grammar {
 		}
 	}
 	
-	
-	
-
 	final UList<ParsingRule> getExportRuleList() {
 		if(this.exportedRuleList == null) {
 			UList<ParsingRule> l = new UList<ParsingRule>(new ParsingRule[4]);
@@ -492,7 +489,9 @@ class PEG4dGrammar extends Grammar {
 					Sequence(t("without"), P("S"), Link(P("Name")), P("S"), Link(P("Expr_")), Tag(PEG4d.Without)),
 					Sequence(t("block"), Optional(Sequence(P("S"), Link(P("Expr_")))), Tag(PEG4d.Block)),
 					Sequence(t("indent"), Tag(PEG4d.Indent)),
-					Sequence(t("choice"), Tag(PEG4d.Choice)),
+//					Sequence(t("choice"), Tag(PEG4d.Choice)),
+					Sequence(t("isa"), P("S"), Link(P("Name")), Tag(PEG4d.Isa)),
+					Sequence(t("name"),  P("S"), Link(P("Name")), P("S"), Link(P("Expr_")), Tag(PEG4d.Name)),
 					Sequence(P("PIPE_"), t("append-choice"), Tag(PEG4d.Choice)),
 					Sequence(P("PIPE_"), t("stringfy"), Tag(PEG4d.Stringfy)),
 					Sequence(P("PIPE_"), t("apply"), P("S"), Link(P("Expr_")), Tag(PEG4d.Apply))
