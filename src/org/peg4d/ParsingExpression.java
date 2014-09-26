@@ -1542,7 +1542,10 @@ class ParsingCatch extends ParsingFunction {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		context.opCatch();
+		if(context.canTransCapture()) {
+			context.left.setSourcePosition(context.fpos);
+			context.left.setValue(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
+		}
 		return true;
 	}
 }
