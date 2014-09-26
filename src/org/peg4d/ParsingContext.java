@@ -194,7 +194,7 @@ public class ParsingContext {
 	}
 
 	long fpos = 0;
-	Object[] errorbuf = new Object[256];
+	Matcher[] errorbuf = new Matcher[512];
 	long[] posbuf = new long[errorbuf.length];
 
 	public final boolean isFailure() {
@@ -212,7 +212,7 @@ public class ParsingContext {
 		this.fpos = fpos;
 	}
 	
-	private Object getErrorInfo(long fpos) {
+	private Matcher getErrorInfo(long fpos) {
 		int index = (int)this.pos/errorbuf.length;
 		if(posbuf[index] == fpos) {
 			return errorbuf[index];
@@ -220,61 +220,36 @@ public class ParsingContext {
 		return null;
 	}
 
-	private void setErrorInfo(Object errorInfo) {
+	private void setErrorInfo(Matcher errorInfo) {
 		int index = (int)this.pos/errorbuf.length;
 		errorbuf[index] = errorInfo;
 		posbuf[index] = this.pos;
+		//System.out.println("push " + this.pos + " @" + errorInfo);
 	}
 
 	private void removeErrorInfo(long fpos) {
 		int index = (int)this.pos/errorbuf.length;
 		if(posbuf[index] == fpos) {
+			//System.out.println("pop " + fpos + " @" + errorbuf[index]);
 			errorbuf[index] = null;
 		}
 	}
 
 	String getErrorMessage() {
-		Object errorInfo = this.getErrorInfo(this.fpos);
+		Matcher errorInfo = this.getErrorInfo(this.fpos);
 		if(errorInfo == null) {
 			return "syntax error";
 		}
-		if(errorInfo instanceof ParsingExpression) {
-			return "syntax error: expecting " + errorInfo;
-		}
-		return errorInfo.toString();
+		return "syntax error: expecting " + errorInfo.expectedToken() + " <- Never believe this";
 	}
-
-//	public final void failure() {
-//		if(this.pos > fpos) {  // adding error location
-//			//System.out.println("fpos: " + this.fpos + " -> " + this.pos);
-//			this.fpos = this.pos;
-////			if(Main.VerboseMode) {
-////				this.dumpCallStack(this.source.formatPositionMessage("debug", this.pos, "failure pos=" + this.pos));
-////			}
-//		}
-//		this.left = null;
-//	}
-	
 	
 	public final void failure(Matcher errorInfo) {
 		if(this.pos > fpos) {  // adding error location
 			this.fpos = this.pos;
-			//System.out.println("fpos: " + this.fpos + " -> " + this.pos + " " + errorInfo);		
 			this.setErrorInfo(errorInfo);
 		}
 		this.left = null;
 	}
-
-//	public final void failure(String errorInfo) {
-//		if(this.pos > fpos) {  // adding error location
-//			this.fpos = this.pos;
-//			//System.out.println("fpos: " + this.fpos + " -> " + this.pos + " " + errorInfo);
-//			this.setErrorInfo(errorInfo);
-//		}
-//		this.left = null;
-//	}
-
-	
 	
 	boolean isMatchingOnly = false;
 	ParsingObject successResult = new ParsingObject(this.emptyTag, this.source, 0);

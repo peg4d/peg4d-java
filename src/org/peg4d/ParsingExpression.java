@@ -3,6 +3,9 @@ package org.peg4d;
 
 abstract class Matcher {
 	abstract boolean simpleMatch(ParsingContext context);
+	String expectedToken() {
+		return toString();
+	}
 }
 
 public abstract class ParsingExpression extends Matcher {
@@ -869,6 +872,13 @@ class ParsingByte extends ParsingExpression {
 			return ParsingExpression.uniquefy("'\b" + byteChar, this);
 		}
 		return ParsingExpression.uniquefy("'\b" + this.errorToken + "\b" + byteChar, this);
+	}
+	@Override
+	String expectedToken() {
+		if(this.errorToken != null) {
+			return this.errorToken;
+		}
+		return this.toString();
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {

@@ -1,0 +1,12 @@
+
+
+HereDoc
+	= <block HERE>
+
+HereDoc
+	= '<<' EOF &(SKIPTOEOS HereDocBody) SKIPHEREDOC
+
+HereDocBody
+	= { &EOF / (!NL .)* NL } EOF NL
+
+

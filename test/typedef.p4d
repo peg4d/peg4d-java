@@ -1,0 +1,17 @@
+// PEG4d typedef testing
+// 
+
+File 
+	= {}
+
+NAME
+	= W+
+
+_
+	= S*
+
+TYPEDEF
+	[example: typedef int int_t; int_t]
+	= 'typedef' S NAME S <name T NAME> _ ';' _ <isa T>
+
+
