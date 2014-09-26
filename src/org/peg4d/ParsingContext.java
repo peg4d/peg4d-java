@@ -194,7 +194,9 @@ public class ParsingContext {
 	}
 
 	long fpos = 0;
-	
+	Object[] errorbuf = new Object[256];
+	long[] posbuf = new long[errorbuf.length];
+
 	public final boolean isFailure() {
 		return this.left == null;
 	}
@@ -207,7 +209,71 @@ public class ParsingContext {
 		//System.out.println("forget fpos: " + this.fpos + " <- " + f);
 		this.fpos = f;
 	}
-		
+	
+	private Object getErrorInfo(long fpos) {
+		int index = (int)this.pos/errorbuf.length;
+		if(posbuf[index] == fpos) {
+			return errorbuf[index];
+		}
+		return null;
+	}
+
+	private void setErrorInfo(Object errorInfo) {
+		int index = (int)this.pos/errorbuf.length;
+		errorbuf[index] = errorInfo;
+		posbuf[index] = this.pos;
+	}
+
+	private void removeErrorInfo(long fpos) {
+		int index = (int)this.pos/errorbuf.length;
+		if(posbuf[index] == fpos) {
+			errorbuf[index] = null;
+		}
+	}
+
+	String getErrorMessage() {
+		Object errorInfo = this.getErrorInfo(this.fpos);
+		if(errorInfo == null) {
+			return "syntax error";
+		}
+		if(errorInfo instanceof ParsingExpression) {
+			return "syntax error: unrecognized by " + errorInfo;
+		}
+		return errorInfo.toString();
+	}
+
+//	public final void failure() {
+//		if(this.pos > fpos) {  // adding error location
+//			//System.out.println("fpos: " + this.fpos + " -> " + this.pos);
+//			this.fpos = this.pos;
+////			if(Main.VerboseMode) {
+////				this.dumpCallStack(this.source.formatPositionMessage("debug", this.pos, "failure pos=" + this.pos));
+////			}
+//		}
+//		this.left = null;
+//	}
+	
+	
+	public final void failure(ParsingExpression errorInfo) {
+		if(this.pos > fpos) {  // adding error location
+			this.fpos = this.pos;
+			//System.out.println("fpos: " + this.fpos + " -> " + this.pos + " " + errorInfo);		
+			this.setErrorInfo(errorInfo);
+		}
+		this.left = null;
+	}
+
+//	public final void failure(String errorInfo) {
+//		if(this.pos > fpos) {  // adding error location
+//			this.fpos = this.pos;
+//			//System.out.println("fpos: " + this.fpos + " -> " + this.pos + " " + errorInfo);
+//			this.setErrorInfo(errorInfo);
+//		}
+//		this.left = null;
+//	}
+
+	
+	
 	boolean isMatchingOnly = false;
 	ParsingObject successResult = new ParsingObject(this.emptyTag, this.source, 0);
 	
@@ -365,58 +431,6 @@ public class ParsingContext {
 		this.rollback(this.lstack[this.lstacktop]);
 	}
 
-	public final void opFailure() {
-		if(this.pos > fpos) {  // adding error location
-			//System.out.println("fpos: " + this.fpos + " -> " + this.pos);
-			this.fpos = this.pos;
-//			if(Main.VerboseMode) {
-//				this.dumpCallStack(this.source.formatPositionMessage("debug", this.pos, "failure pos=" + this.pos));
-//			}
-		}
-		this.left = null;
-	}
-
-	HashMap<Long, Object> errorMap = new HashMap<Long, Object>();
-	private void setErrorInfo(Object errorInfo) {
-		Long key = this.pos;
-//		if(!this.errorMap.containsKey(key)) {
-//			this.errorMap.put(key, errorInfo);
-//		}
-	}
-
-	private void removeErrorInfo() {
-		Long key = this.pos;
-		this.errorMap.remove(key);
-	}
-
-	String getErrorMessage() {
-		Object errorInfo = this.errorMap.get(this.fpos);
-		if(errorInfo == null) {
-			return "syntax error";
-		}
-		if(errorInfo instanceof ParsingExpression) {
-			return "syntax error: unrecognized " + errorInfo;
-		}
-		return errorInfo.toString();
-	}
-	
-	public final void opFailure(ParsingExpression errorInfo) {
-		if(this.pos > fpos) {  // adding error location
-			this.fpos = this.pos;
-			//System.out.println("fpos: " + this.fpos + " -> " + this.pos + " " + errorInfo);		
-			this.setErrorInfo(errorInfo);
-		}
-		this.left = null;
-	}
-
-	public final void opFailure(String errorInfo) {
-		if(this.pos > fpos) {  // adding error location
-			this.fpos = this.pos;
-			//System.out.println("fpos: " + this.fpos + " -> " + this.pos + " " + errorInfo);
-			this.setErrorInfo(errorInfo);
-		}
-		this.left = null;
-	}
 
 	public final void opRememberFailurePosition() {
 		lpush(this.fpos);
@@ -439,135 +453,133 @@ public class ParsingContext {
 		}
 	}
 
-	
-	
-	public final void opMatchText(byte[] t) {
-		if(this.source.match(this.pos, t)) {
-			this.consume(t.length);
-		}
-		else {
-			this.opFailure();
-		}
-	}
-
-	public final void opMatchByteChar(int c) {
-		if(this.source.byteAt(this.pos) == c) {
-			this.consume(1);
-		}
-		else {
-			this.opFailure();
-		}
-	}
-
-	public final void opMatchCharset(ParsingCharset u) {
-		int consume = u.consume(this.source, pos);
-		if(consume > 0) {
-			this.consume(consume);
-		}
-		else {
-			this.opFailure();
-		}
-	}
-
-	public final void opMatchAnyChar() {
-		if(this.source.charAt(this.pos) != -1) {
-			int len = this.source.charLength(this.pos);
-			this.consume(len);
-		}
-		else {
-			this.opFailure();
-		}
-	}
-
-	public final void opMatchTextNot(byte[] t) {
-		if(this.source.match(this.pos, t)) {
-			this.opFailure();
-		}
-	}
-
-	public final void opMatchByteCharNot(int c) {
-		if(this.source.byteAt(this.pos) == c) {
-			this.opFailure();
-		}
-	}
-
-	public final void opMatchCharsetNot(ParsingCharset u) {
-		int consume = u.consume(this.source, pos);
-		if(consume > 0) {
-			this.opFailure();
-		}
-	}
-
-	public final void opMatchOptionalText(byte[] t) {
-		if(this.source.match(this.pos, t)) {
-			this.consume(t.length);
-		}
-	}
-
-	public final void opMatchOptionalByteChar(int c) {
-		if(this.source.byteAt(this.pos) == c) {
-			this.consume(1);
-		}
-	}
-
-	public final void opMatchOptionalCharset(ParsingCharset u) {
-		int consume = u.consume(this.source, pos);
-		this.consume(consume);
-	}
-
-
-	public final void opStoreObject() {
-		this.opush(this.left);
-	}
-
-	public final void opDropStoredObject() {
-		this.opop();
-	}
-
-	public final void opRestoreObject() {
-		this.left = this.opop();
-	}
-
-	public final void opRestoreObjectIfFailure() {
-		if(this.isFailure()) {
-			this.left = opop();
-		}
-		else {
-			this.opop();
-		}
-	}
-
-	public final void opRestoreNegativeObject() {
-		if(this.isFailure()) {
-			this.left = this.opop();
-		}
-		else {
-			this.opop();
-			this.opFailure();
-		}
-	}
-
-	public void opConnectObject(int index) {
-		ParsingObject parent = this.opop();
-		if(!this.isFailure()) {
-			if(this.canTransCapture() && parent != this.left) {
-				this.logLink(parent, index, this.left);
-			}
-			this.left = parent;
-		}
-	}
-
-	public final void opDisableTransCapture() {
-		this.opStoreObject();
-		lpush(this.isRecognitionMode() ? 1 : 0);
-		this.setRecognitionMode(true);
-	}
-
-	public final void opEnableTransCapture() {
-		lpop();
-		this.setRecognitionMode((this.lstack[lstacktop] == 1));
-		this.opRestoreObjectIfFailure();
-	}
+//	public final void opMatchText(byte[] t) {
+//		if(this.source.match(this.pos, t)) {
+//			this.consume(t.length);
+//		}
+//		else {
+//			this.failure();
+//		}
+//	}
+//
+//	public final void opMatchByteChar(int c) {
+//		if(this.source.byteAt(this.pos) == c) {
+//			this.consume(1);
+//		}
+//		else {
+//			this.failure();
+//		}
+//	}
+//
+//	public final void opMatchCharset(ParsingCharset u) {
+//		int consume = u.consume(this.source, pos);
+//		if(consume > 0) {
+//			this.consume(consume);
+//		}
+//		else {
+//			this.failure();
+//		}
+//	}
+//
+//	public final void opMatchAnyChar() {
+//		if(this.source.charAt(this.pos) != -1) {
+//			int len = this.source.charLength(this.pos);
+//			this.consume(len);
+//		}
+//		else {
+//			this.failure();
+//		}
+//	}
+//
+//	public final void opMatchTextNot(byte[] t) {
+//		if(this.source.match(this.pos, t)) {
+//			this.failure();
+//		}
+//	}
+//
+//	public final void opMatchByteCharNot(int c) {
+//		if(this.source.byteAt(this.pos) == c) {
+//			this.failure();
+//		}
+//	}
+//
+//	public final void opMatchCharsetNot(ParsingCharset u) {
+//		int consume = u.consume(this.source, pos);
+//		if(consume > 0) {
+//			this.failure();
+//		}
+//	}
+//
+//	public final void opMatchOptionalText(byte[] t) {
+//		if(this.source.match(this.pos, t)) {
+//			this.consume(t.length);
+//		}
+//	}
+//
+//	public final void opMatchOptionalByteChar(int c) {
+//		if(this.source.byteAt(this.pos) == c) {
+//			this.consume(1);
+//		}
+//	}
+//
+//	public final void opMatchOptionalCharset(ParsingCharset u) {
+//		int consume = u.consume(this.source, pos);
+//		this.consume(consume);
+//	}
+//
+//
+//	public final void opStoreObject() {
+//		this.opush(this.left);
+//	}
+//
+//	public final void opDropStoredObject() {
+//		this.opop();
+//	}
+//
+//	public final void opRestoreObject() {
+//		this.left = this.opop();
+//	}
+//
+//	public final void opRestoreObjectIfFailure() {
+//		if(this.isFailure()) {
+//			this.left = opop();
+//		}
+//		else {
+//			this.opop();
+//		}
+//	}
+//
+//	public final void opRestoreNegativeObject() {
+//		if(this.isFailure()) {
+//			this.left = this.opop();
+//		}
+//		else {
+//			this.opop();
+//			this.failure();
+//		}
+//	}
+//
+//	public void opConnectObject(int index) {
+//		ParsingObject parent = this.opop();
+//		if(!this.isFailure()) {
+//			if(this.canTransCapture() && parent != this.left) {
+//				this.logLink(parent, index, this.left);
+//			}
+//			this.left = parent;
+//		}
+//	}
+//
+//	public final void opDisableTransCapture() {
+//		this.opStoreObject();
+//		lpush(this.isRecognitionMode() ? 1 : 0);
+//		this.setRecognitionMode(true);
+//	}
+//
+//	public final void opEnableTransCapture() {
+//		lpop();
+//		this.setRecognitionMode((this.lstack[lstacktop] == 1));
+//		this.opRestoreObjectIfFailure();
+//	}
 
 	private HashMap<String,Boolean> flagMap = new HashMap<String,Boolean>();
 	
@@ -599,7 +611,7 @@ public class ParsingContext {
 	public final void opCheckFlag(String flag) {
 		Boolean f = this.flagMap.get(flag);
 		if(!isFlag(f)) {
-			this.opFailure();
+			this.failure(null);
 		}
 	}
 	
@@ -704,7 +716,7 @@ public class ParsingContext {
 				break;
 			}
 		}
-		this.opFailure();
+		this.failure(null);
 		return false;
 	}
 
@@ -718,7 +730,7 @@ public class ParsingContext {
 				}
 			}
 		}
-		this.opFailure();
+		this.failure(null);
 		return false;
 	}
 	

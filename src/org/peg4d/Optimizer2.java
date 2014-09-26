@@ -248,7 +248,7 @@ class ByteChoiceMatcher implements Matcher {
 			context.consume(1);
 			return true;
 		}
-		context.opFailure();
+		context.failure(null);
 		return false;
 	}
 }

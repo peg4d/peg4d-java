@@ -848,7 +848,7 @@ class ParsingFailure extends ParsingExpression {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		context.opFailure(dead);
+		context.failure(dead);
 		return false;
 	}
 	@Override
@@ -884,7 +884,7 @@ class ParsingByte extends ParsingExpression {
 			context.consume(1);
 			return true;
 		}
-		context.opFailure(this.errorToken);
+		context.failure(this);
 		return false;
 	}
 }
@@ -912,7 +912,7 @@ class ParsingAny extends ParsingExpression {
 			context.consume(len);
 			return true;
 		}
-		context.opFailure();
+		context.failure(this);
 		return false;
 	}
 }
@@ -1020,7 +1020,7 @@ class ParsingString extends ParsingExpression {
 			return true;
 		}
 		else {
-			context.opFailure();
+			context.failure(this);
 			return false;
 		}
 	}
@@ -1059,7 +1059,7 @@ class ParsingByteRange extends ParsingExpression {
 			context.consume(1);
 			return true;
 		}
-		context.opFailure();
+		context.failure(this);
 		return false;
 	}
 }
@@ -1224,7 +1224,7 @@ class ParsingNot extends ParsingUnary {
 		ParsingObject left = context.left;
 		if(this.inner.debugMatch(context)) {
 			context.rollback(pos);
-			context.opFailure(this);
+			context.failure(this);
 			left = null;
 			return false;
 		}
@@ -1529,7 +1529,7 @@ class ParsingFail extends ParsingFunction {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		context.opFailure(this.message);
+		context.failure(this);
 		return false;
 	}
 	@Override
