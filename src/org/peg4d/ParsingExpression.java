@@ -53,15 +53,15 @@ public abstract class ParsingExpression implements Matcher {
 	public final boolean debugMatch(ParsingContext c) {
 //		int d = cc; cc++;
 //		int dpos = dstack.size();
-		int pos = (int)c.getPosition() ;
+//		int pos = (int)c.getPosition() ;
 //		if(pos % (1024 * 1024) == 0) {
 //			System.out.println("["+(pos/(1024 * 1024))+"] calling: " + this + " mark=" + c.markObjectStack() + " free" + Runtime.getRuntime().freeMemory());
 //		}
 //		dstack.add(this);
 		boolean b = this.matcher.simpleMatch(c);
-		if(this instanceof NonTerminal) {
-//			c.dumpCallStack("["+pos+"] called: " + b + " ");
-		}
+//		if(this instanceof NonTerminal) {
+////			c.dumpCallStack("["+pos+"] called: " + b + " ");
+//		}
 //		dstack.clear(dpos);
 //		if(pos > 12717) {
 //			System.out.println(dstack);
@@ -982,7 +982,9 @@ class NonTerminal extends ParsingExpression {
 	public boolean simpleMatch(ParsingContext context) {
 		int stackTop = context.pushCallStack(this.uniqueName);
 		boolean b = this.deReference().debugMatch(context);
-		context.dumpCallStack("["+context.getPosition()+"] called: " + b + ": ");
+		if(Main.VerboseMode && !b && this.peg != GrammarFactory.Grammar) {
+			context.dumpCallStack("["+context.getPosition()+"] failure: ");
+		}
 		context.popCallStack(stackTop);
 		return b;
 	}

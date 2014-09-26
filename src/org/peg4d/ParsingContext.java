@@ -369,6 +369,9 @@ public class ParsingContext {
 		if(this.pos > fpos) {  // adding error location
 			//System.out.println("fpos: " + this.fpos + " -> " + this.pos);
 			this.fpos = this.pos;
+//			if(Main.VerboseMode) {
+//				this.dumpCallStack(this.source.formatPositionMessage("debug", this.pos, "failure pos=" + this.pos));
+//			}
 		}
 		this.left = null;
 	}
