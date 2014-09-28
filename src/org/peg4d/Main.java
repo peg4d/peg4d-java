@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 import java.util.TreeMap;
 
 import org.peg4d.ext.Generator;
+import org.peg4d.data.RelationBuilder;;
 
 public class Main {
 	public final static String  ProgName  = "PEG4d";
@@ -64,6 +65,9 @@ public class Main {
 	
 	// --verbose:stat
 	public static int     StatLevel = -1;
+	
+	// --relation
+	public static boolean Relation = false;
 
 	// --memo:no
 	// --memo:no
@@ -156,6 +160,9 @@ public class Main {
 			}
 			else if (argument.equals("-a")) {
 				DiskMode = true;
+			}
+			else if (argument.equals("--relation")) {
+				Relation = true;
 			}
 			else if(argument.startsWith("--test")) {
 				TestMode = true;
@@ -328,6 +335,11 @@ public class Main {
 			System.exit(res ? 0 : 1);
 		}
 		ParsingObject pego = context.parse(peg, startPoint, new ParsingMemoConfigure());
+		if(Relation) {
+			RelationBuilder RBuilder = new RelationBuilder();
+			RBuilder.build(pego);
+		}
+		
 		if(context.isFailure()) {
 			System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
 			return;
