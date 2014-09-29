@@ -1,6 +1,8 @@
 package org.peg4d;
 
-public class ParsingObject {
+import java.util.AbstractList;
+
+public class ParsingObject extends AbstractList<ParsingObject> {
 	private ParsingSource    source = null;
 	private long             pospeg = 0;
 	private int              length = 0;
@@ -114,13 +116,13 @@ public class ParsingObject {
 			ParsingExpression e = this.getSourceExpression();
 			if(e instanceof ParsingConstructor && !((ParsingConstructor) e).leftJoin) {
 				this.AST = LazyAST;
-				return true;				
+				return true;
 			}
 		}
 		return this.AST == LazyAST;
 	}
 
-	
+	@Override
 	public final int size() {
 		checkLazyAST();
 		if(this.AST == null) {
@@ -129,6 +131,7 @@ public class ParsingObject {
 		return this.AST.length;
 	}
 
+	@Override
 	public final ParsingObject get(int index) {
 		checkLazyAST();
 		return this.AST[index];
@@ -141,7 +144,9 @@ public class ParsingObject {
 		return defaultValue;
 	}
 
-	public final void set(int index, ParsingObject node) {
+	@Override
+	public final ParsingObject set(int index, ParsingObject node) {
+		ParsingObject oldValue = null;
 		if(index == -1) {
 			this.append(node);
 		}
@@ -149,14 +154,19 @@ public class ParsingObject {
 			if(!(index < this.size())){
 				this.expandAstToSize(index+1);
 			}
+			oldValue = this.AST[index];
 			this.AST[index] = node;
 			node.parent = this;
 		}
+		return oldValue;
 	}
 	
 	private void resizeAst(int size) {
 		if(this.AST == null && size > 0) {
 			this.AST = new ParsingObject[size];
+		}
+		else if(size == 0){
+			this.AST = null;
 		}
 		else if(this.AST.length != size) {
 			ParsingObject[] newast = new ParsingObject[size];
@@ -183,7 +193,6 @@ public class ParsingObject {
 		return defaultValue;
 	}
 
-	
 	public final void append(ParsingObject childNode) {
 		int size = this.size();
 		this.expandAstToSize(size+1);
@@ -210,6 +219,19 @@ public class ParsingObject {
 		}
 	}
 
+	// To implement List<T> interface
+	@Override
+	public final void add(int index, ParsingObject element) {
+		this.insert(index, element);
+	}
+
+	// To implement List<T> interface
+	@Override
+	public final boolean add(ParsingObject element) {
+		this.append(element);
+		return true;
+	}
+
 	public final void removeAt(int index) {
 		int oldsize = this.size();
 		if(oldsize > 1) {
@@ -226,7 +248,52 @@ public class ParsingObject {
 			this.AST = null;
 		}
 	}
-	
+
+	// To implement List<T> interface
+	@Override
+	public final ParsingObject remove(int index) {
+		ParsingObject removedObject = null;
+		if(index < this.size()){
+			removedObject = this.get(index);
+		}
+		this.removeAt(index);
+		return removedObject;
+	}
+
+	// To implement List<T> interface
+	@Override
+	protected final void removeRange(int fromIndex, int toIndex) {
+		if(fromIndex >= toIndex){
+			return;
+		}
+		final int oldSize = this.size();
+		if(fromIndex < 0){
+			fromIndex = 0;
+		}
+		if(toIndex > oldSize){
+			toIndex = oldSize;
+		}
+		if(fromIndex == 0 && toIndex == oldSize){
+			this.AST = null;
+			return;
+		}
+		final int newSize = oldSize - (toIndex - fromIndex);
+		ParsingObject[] newast = new ParsingObject[newSize];
+		if(fromIndex > 0) {
+			System.arraycopy(this.AST, 0, newast, 0, fromIndex);
+		}
+		if(oldSize - toIndex > 1) {
+			System.arraycopy(this.AST, toIndex, newast, fromIndex, oldSize - toIndex - 1);
+		}
+		this.AST = newast;
+	}
+
+	// To implement List<T> interface
+	@Override
+	public final void clear() {
+		this.AST = null;
+	}
+
 	public void replace(ParsingObject oldone, ParsingObject newone) {
 		for(int i = 0; i < this.size(); i++) {
 			if(this.AST[i] == oldone) {
@@ -235,7 +302,6 @@ public class ParsingObject {
 			}
 		}
 	}
-	
 
 	@Override
 	public String toString() {
@@ -370,5 +436,6 @@ public class ParsingObject {
 		}
 		return null;
 	}
+
 }
 
