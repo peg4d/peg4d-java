@@ -9,9 +9,13 @@ abstract class Matcher {
 }
 
 public abstract class ParsingExpression extends Matcher {
+
 	public final static int LeftRecursion     = 1 << 20;
 	public final static int HasSyntaxError    = 1 << 26;
 	public final static int HasTypeError      = 1 << 27;
+
+	public final static int DisabledOperation = 1 << 28;
+	public final static int ExpectedConnector = 1 << 29;
 
 	int           flag       = 0;
 	int           uniqueId   = 0;
@@ -213,73 +217,65 @@ public abstract class ParsingExpression extends Matcher {
 	
 	static int ObjectContext    = 1 << 0;
 	static int OperationContext = 1 << 1;
-	static int FirstTransition  = 1 << 2;
-
-	private static final boolean isStatus(int status, int uflag) {
-		return ((status & uflag) == uflag);
-	}
-
-	private static final int setStatus(int status, int uflag) {
-		return status | uflag;
-	}
 	
+	private static void checkObjectConstruction(ParsingExpression e, int status) {
+		if(status == OperationContext) {
+			e.set(HasTypeError);
+			e.set(ExpectedConnector);
+			e.report(ReportLevel.warning, "expected @ connector");			
+		}
+		else if(status != ObjectContext) {
+			e.set(HasTypeError);
+			e.set(DisabledOperation);
+			e.report(ReportLevel.warning, "unexpected new object");						
+		}
+	}
+
+	private static void checkObjectOperation(ParsingExpression e, int status) {
+		if(status != OperationContext) {
+			e.set(HasTypeError);
+			e.set(DisabledOperation);
+			e.report(ReportLevel.warning, "unspecific left object");
+		}
+	}
+
 	static int typeCheckImpl(ParsingExpression e, int status) {
 		if(e instanceof NonTerminal) {
 			ParsingRule r = ((NonTerminal) e).getRule();
 			int ruleType = r.type;
 			if(ruleType == ParsingRule.ObjectRule) {
-				if(isStatus(status, FirstTransition) && !e.is(HasTypeError)) {
-					e.set(HasTypeError);
-					e.report(ReportLevel.warning, "unexpected non-terminal transition");
-				}
-				status = setStatus(status, FirstTransition);
+				checkObjectConstruction(e, status);
+				return OperationContext;
 			}
 			if(ruleType == ParsingRule.OperationRule) {
-				if(!isStatus(status, OperationContext)) {
-					e.report(ReportLevel.warning, "unexpected non-terminal operation");				
-				}
-				status = setStatus(status, FirstTransition);
+				checkObjectOperation(e, status);
 			}
 			return status;
 		}
 		if(e instanceof ParsingConstructor) {
 			boolean LeftJoin = ((ParsingConstructor) e).leftJoin;
-			if(!isStatus(status, ObjectContext) && !e.is(HasTypeError)) {
-				e.set(HasTypeError);
-				e.report(ReportLevel.warning, "unexpected constructor");
-			}
 			if(LeftJoin) {
-				if(!isStatus(status, FirstTransition) && !e.is(HasTypeError)) {
-					e.set(HasTypeError);
-					e.report(ReportLevel.warning, "unspecific left object");
-				}		
+				checkObjectOperation(e, status);
 			}
 			else {
-				if(isStatus(status, FirstTransition) && !e.is(HasTypeError)) {
-					e.set(HasTypeError);
-					e.report(ReportLevel.warning, "unexpected constructor transition");
-				}
+				checkObjectConstruction(e, status);
 			}
 			int newstatus = OperationContext;
 			for(int i = 0; i < e.size(); i++) {
 				newstatus = typeCheckImpl(e.get(i), newstatus);
 			}
-			status = setStatus(status, FirstTransition);
+			return OperationContext;
 		}
 		if(e instanceof ParsingConnector) {
-			if(!isStatus(status, OperationContext)) {
-				e.report(ReportLevel.warning, "unexpected operation");				
-			}
+			checkObjectOperation(e, status);
 			int scope = typeCheckImpl(e.get(0), ObjectContext);
-			if(!isStatus(scope, FirstTransition)) {
+			if(scope != OperationContext) {
 				e.report(ReportLevel.warning, "nothing is connected");
 			}
 			return status;
 		}
 		if(e instanceof ParsingTagging || e instanceof ParsingValue) {
-			if(!isStatus(status, OperationContext)) {
-				e.report(ReportLevel.warning, "unexpected operation");				
-			}
+			checkObjectOperation(e, status);
 			return status;
 		}
 		if(e instanceof ParsingSequence) {
@@ -289,39 +285,15 @@ public abstract class ParsingExpression extends Matcher {
 			return status;
 		}
 		if(e instanceof ParsingChoice) {
-			int status0 = typeCheckImpl(e.get(0), status);
-			if(!isStatus(status, FirstTransition) && isStatus(status0, FirstTransition)) {
-				for(int i = 1; i < e.size(); i++) {
-					int n = typeCheckImpl(e.get(i), status);
-					if(!isStatus(n, FirstTransition) && !e.is(ParsingExpression.HasTypeError)) {
-						e.set(ParsingExpression.HasTypeError);
-						e.report(ReportLevel.warning, "expected transtion for " + e.get(i));
-					}
+			int first = typeCheckImpl(e.get(0), status);
+			for(int i = 1; i < e.size(); i++) {
+				int r = typeCheckImpl(e.get(i), status);
+				if(r != first) {
+					e.get(i).report(ReportLevel.warning, "mismatched choice");
 				}
-				return status0;
 			}
-			else if (!isStatus(status, FirstTransition)) {
-				for(int i = 1; i < e.size(); i++) {
-					int n = typeCheckImpl(e.get(i), status);
-					if(isStatus(n, FirstTransition) && !e.is(ParsingExpression.HasTypeError)) {
-						e.set(ParsingExpression.HasTypeError );
-						e.report(ReportLevel.warning, "unexpected transtion for " + e.get(i));
-					}
-				}
-				return status;
-			}
-			else {
-				for(int i = 1; i < e.size(); i++) {
-					typeCheckImpl(e.get(i), status);
-				}
-				return status0;
-			}
+			return first;
 		}
-//		if(e instanceof ParsingMatch) {
-//			((ParsingMatch) e).inner = ((ParsingMatch) e).inner.reduceOperation();
-//			typeCheckImpl(((ParsingMatch) e).inner, 0);
-//			return status;
-//		}
 		if(e instanceof ParsingNot || e instanceof ParsingMatch) {
 			ParsingExpression reduced = ((ParsingNot) e).get(0).reduceOperation().uniquefy();
 			if(reduced != e.get(0)) {
@@ -335,12 +307,12 @@ public abstract class ParsingExpression extends Matcher {
 		}
 		return status;
 	}
-	
+
 	static void typeCheck(ParsingRule rule) {
 		int result = typeCheckImpl(rule.expr, rule.type);
 		if(rule.type == ParsingRule.ObjectRule) {
-			if(!isStatus(result, FirstTransition)) {
-				rule.report(ReportLevel.warning, "no constructor");
+			if(result != OperationContext) {
+				rule.report(ReportLevel.warning, "object construction is expected: " + rule);
 			}
 		}
 	}
