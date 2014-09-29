@@ -96,9 +96,15 @@ public class ParsingContext {
 			conf.exploitMemo(start);
 		}
 		this.emptyTag = peg.newStartTag();
+		
 		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
 		this.left = po;
-		start.debugMatch(this);
+		if(start.debugMatch(this)) {
+			this.commitLinkLog(0, this.left);
+		}
+		else {
+			this.abortLinkLog(0);
+		}
 		checkUnusedText(po);
 		if(conf != null) {
 			conf.show();
@@ -317,6 +323,9 @@ public class ParsingContext {
 			disposeLog(l);
 		}
 		assert(mark == this.stackSize);
+		if(mark == 0) {
+			this.unusedLog = null;
+		}
 	}
 	
 	final void logLink(ParsingObject parent, int index, ParsingObject child) {
@@ -331,8 +340,57 @@ public class ParsingContext {
 		parent = null; // for GC
 		child = null;  // for GC
 	}
+	
+	void lazyCommit(ParsingObject left) {
+		LinkLog l = this.newLog();
+		l.childNode  = left;
+		l.index = -9;
+		l.next = this.logStack;
+		this.logStack = l;
+		this.stackSize += 1;
+		left = null;
+	}
 
-	final void commitLinkLog(ParsingObject newnode, long startIndex, int mark) {
+//	final void capture(ParsingObject newnode, long startIndex) {
+//		newnode.setLength((int)(this.getPosition() - startIndex));
+//		newnode = null;
+//	}
+//
+//	final void commitLinkLog2(ParsingObject newnode, long startIndex, int mark) {
+//		assert(!this.isRecognitionMode());
+//		LinkLog first = null;
+//		int objectSize = 0;
+//		while(mark < this.stackSize) {
+//			LinkLog cur = this.logStack;
+//			this.logStack = this.logStack.next;
+//			this.stackSize--;
+//			if(cur.childNode.parent == newnode) {
+//				cur.next = first;
+//				first = cur;
+//				objectSize += 1;
+//			}
+//			else {
+//				disposeLog(cur);
+//			}
+//		}
+//		if(objectSize > 0) {
+//			newnode.expandAstToSize(objectSize);
+//			for(int i = 0; i < objectSize; i++) {
+//				LinkLog cur = first;
+//				first = first.next;
+//				if(cur.index == -1) {
+//					cur.index = i;
+//				}
+//				newnode.set(cur.index, cur.childNode);
+//				this.disposeLog(cur);
+//			}
+//			checkNullEntry(newnode);
+//		}
+//		newnode.setLength((int)(this.getPosition() - startIndex));
+//		newnode = null;
+//	}
+
+	final void commitLinkLog(int mark, ParsingObject newnode) {
 		assert(!this.isRecognitionMode());
 		LinkLog first = null;
 		int objectSize = 0;
@@ -340,6 +398,11 @@ public class ParsingContext {
 			LinkLog cur = this.logStack;
 			this.logStack = this.logStack.next;
 			this.stackSize--;
+			if(cur.index == -9) { // lazyCommit
+				commitLinkLog(mark, cur.childNode);
+				disposeLog(cur);
+				break;
+			}
 			if(cur.childNode.parent == newnode) {
 				cur.next = first;
 				first = cur;
@@ -362,10 +425,9 @@ public class ParsingContext {
 			}
 			checkNullEntry(newnode);
 		}
-		newnode.setLength((int)(this.getPosition() - startIndex));
 		newnode = null;
 	}
-	
+
 	private final void checkNullEntry(ParsingObject o) {
 		for(int i = 0; i < o.size(); i++) {
 			if(o.get(i) == null) {
@@ -592,51 +654,51 @@ public class ParsingContext {
 		}
 	}
 	
-	public void opNewObject(ParsingConstructor e) {
-		if(this.canTransCapture()) {
-			lpush(this.markObjectStack());
-			this.left = new ParsingObject(this.emptyTag, this.source, this.pos, e);
-		}
-		opush(this.left);
-	}
-
-	public void opLeftJoinObject(ParsingConstructor e) {
-		if(this.canTransCapture()) {
-			lpush(this.markObjectStack());
-			ParsingObject left = new ParsingObject(this.emptyTag, this.source, this.pos, e);
-			this.logLink(left, 0, this.left);
-			this.left = left;
-		}
-		opush(this.left);
-	}
-
-	public void opCommitObject() {
-		ParsingObject left = this.opop();
-		if(!this.isFailure()) {
-			this.left = left;
-			if(this.canTransCapture()) {
-				this.lpop();
-				int mark = (int)this.lstack[this.lstacktop];
-				this.commitLinkLog(this.left, this.left.getSourcePosition(), mark);
-			}
-		}
-	}
-
-	public final void opRefreshStoredObject() {
-//		ostack[ostacktop-1] = this.left;
-	}
-
-	public final void opTagging(ParsingTag tag) {
-		if(this.canTransCapture()) {
-			this.left.setTag(tag);
-		}
-	}
-
-	public final void opValue(Object value) {
-		if(this.canTransCapture()) {
-			this.left.setValue(value);
-		}
-	}
+//	public void opNewObject(ParsingConstructor e) {
+//		if(this.canTransCapture()) {
+//			lpush(this.markObjectStack());
+//			this.left = new ParsingObject(this.emptyTag, this.source, this.pos, e);
+//		}
+//		opush(this.left);
+//	}
+//
+//	public void opLeftJoinObject(ParsingConstructor e) {
+//		if(this.canTransCapture()) {
+//			lpush(this.markObjectStack());
+//			ParsingObject left = new ParsingObject(this.emptyTag, this.source, this.pos, e);
+//			this.logLink(left, 0, this.left);
+//			this.left = left;
+//		}
+//		opush(this.left);
+//	}
+//
+//	public void opCommitObject() {
+//		ParsingObject left = this.opop();
+//		if(!this.isFailure()) {
+//			this.left = left;
+//			if(this.canTransCapture()) {
+//				this.lpop();
+//				int mark = (int)this.lstack[this.lstacktop];
+//				this.commitLinkLog(this.left, this.left.getSourcePosition(), mark);
+//			}
+//		}
+//	}
+//
+//	public final void opRefreshStoredObject() {
+////		ostack[ostacktop-1] = this.left;
+//	}
+//
+//	public final void opTagging(ParsingTag tag) {
+//		if(this.canTransCapture()) {
+//			this.left.setTag(tag);
+//		}
+//	}
+//
+//	public final void opValue(Object value) {
+//		if(this.canTransCapture()) {
+//			this.left.setValue(value);
+//		}
+//	}
 	
 	public final void opStringfy() {
 		if(this.canTransCapture()) {
@@ -749,6 +811,7 @@ public class ParsingContext {
 	final void setMemo(long keypos, ParsingExpression e, ParsingObject result, int length) {
 		this.memoMap.setMemo(keypos, e, result, length);
 	}
+
 
 }
 

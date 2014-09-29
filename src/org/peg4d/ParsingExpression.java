@@ -1152,14 +1152,6 @@ class ParsingAnd extends ParsingUnary {
 	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitAnd(this);
 	}
-//	@Override
-//	short acceptByte(int ch) {
-//		short r = this.inner.acceptByte(ch);
-//		if(r == Reject) {
-//			return Reject;
-//		}
-//		return CheckNextFlow;
-//	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		long pos = context.getPosition();
@@ -1325,15 +1317,29 @@ class ParsingConnector extends ParsingUnary {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		ParsingObject left = context.left;
-		if(!this.inner.debugMatch(context)) {
+		if(context.canTransCapture()) {
+			int mark = context.markObjectStack();
+			if(this.inner.debugMatch(context)) {
+				if(context.left != left) {
+					context.commitLinkLog(mark, context.left);
+					context.logLink(left, this.index, context.left);
+				}
+				context.left = left;
+				left = null;
+				return true;
+			}
+			context.abortLinkLog(mark);			
 			return false;
 		}
-		if(context.canTransCapture() && context.left != left) {
-			context.logLink(left, this.index, context.left);
+		else {
+			if(this.inner.debugMatch(context)) {
+				context.left = left;
+				left = null;
+				return true;			
+			}				
 		}
-		context.left = left;
 		left = null;
-		return true;
+		return false;
 	}
 }
 
@@ -1435,10 +1441,13 @@ class ParsingConstructor extends ParsingList {
 				}
 			}
 			int mark = context.markObjectStack();
+			if(this.leftJoin) {
+				context.lazyCommit(left);
+			}
 			ParsingObject newnode = context.newParsingObject(startIndex, this);
 			context.left = newnode;
 			if(this.leftJoin) {
-				context.logLink(newnode, -1, left);
+				context.logLink(newnode, 0, left);
 			}
 			for(int i = this.prefetchIndex; i < this.size(); i++) {
 				if(!this.get(i).debugMatch(context)) {
@@ -1448,10 +1457,8 @@ class ParsingConstructor extends ParsingList {
 					return false;
 				}
 			}
-			context.commitLinkLog(newnode, startIndex, mark);
-			if(context.stat != null) {
-				context.stat.countObjectCreation();
-			}
+			newnode.setLength((int)(context.getPosition() - startIndex));
+			//context.commitLinkLog2(newnode, startIndex, mark);
 			context.left = newnode;
 			left = null;
 			return true;
