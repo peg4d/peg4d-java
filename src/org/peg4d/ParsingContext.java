@@ -200,7 +200,7 @@ public class ParsingContext {
 	}
 
 	long fpos = 0;
-	Matcher[] errorbuf = new Matcher[512];
+	ParsingMatcher[] errorbuf = new ParsingMatcher[512];
 	long[] posbuf = new long[errorbuf.length];
 
 	public final boolean isFailure() {
@@ -218,7 +218,7 @@ public class ParsingContext {
 		this.fpos = fpos;
 	}
 	
-	private Matcher getErrorInfo(long fpos) {
+	private ParsingMatcher getErrorInfo(long fpos) {
 		int index = (int)this.pos/errorbuf.length;
 		if(posbuf[index] == fpos) {
 			return errorbuf[index];
@@ -226,7 +226,7 @@ public class ParsingContext {
 		return null;
 	}
 
-	private void setErrorInfo(Matcher errorInfo) {
+	private void setErrorInfo(ParsingMatcher errorInfo) {
 		int index = (int)this.pos/errorbuf.length;
 		errorbuf[index] = errorInfo;
 		posbuf[index] = this.pos;
@@ -242,14 +242,14 @@ public class ParsingContext {
 	}
 
 	String getErrorMessage() {
-		Matcher errorInfo = this.getErrorInfo(this.fpos);
+		ParsingMatcher errorInfo = this.getErrorInfo(this.fpos);
 		if(errorInfo == null) {
 			return "syntax error";
 		}
 		return "syntax error: expecting " + errorInfo.expectedToken() + " <- Never believe this";
 	}
 	
-	public final void failure(Matcher errorInfo) {
+	public final void failure(ParsingMatcher errorInfo) {
 		if(this.pos > fpos) {  // adding error location
 			this.fpos = this.pos;
 			this.setErrorInfo(errorInfo);

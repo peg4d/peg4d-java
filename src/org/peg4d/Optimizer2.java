@@ -229,7 +229,7 @@ class Optimizer2 {
 	}
 }
 
-class ByteChoiceMatcher extends Matcher {
+class ByteChoiceMatcher extends ParsingMatcher {
 	boolean bitMap[];
 
 	ByteChoiceMatcher(int[] c) {
@@ -253,7 +253,7 @@ class ByteChoiceMatcher extends Matcher {
 	}
 }
 
-class StringChoiceMatcher extends Matcher {
+class StringChoiceMatcher extends ParsingMatcher {
 	ParsingExpression[] matchCase;
 
 	StringChoiceMatcher(ParsingExpression[] matchCase) {
@@ -274,7 +274,7 @@ class StringChoiceMatcher extends Matcher {
 	
 }
 
-class MappedChoiceMatcher extends Matcher {
+class MappedChoiceMatcher extends ParsingMatcher {
 	ParsingExpression[] matchCase;
 
 	MappedChoiceMatcher(ParsingExpression[] matchCase) {

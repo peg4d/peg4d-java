@@ -63,9 +63,9 @@ public class ParsingMemoConfigure {
 		return new OpenFifoMemo(100);
 	}
 	
-	class NonTerminalMemoMatcher extends Matcher {
+	class NonTerminalMemoMatcher extends ParsingMatcher {
 		NonTerminal inner;
-		Matcher matchRef;
+		ParsingMatcher matchRef;
 		boolean enableMemo = true;
 		int memoHit = 0;
 		long hitLength = 0;

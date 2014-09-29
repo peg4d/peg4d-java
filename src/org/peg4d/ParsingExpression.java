@@ -1,14 +1,14 @@
 package org.peg4d;
 
 
-abstract class Matcher {
+abstract class ParsingMatcher {
 	abstract boolean simpleMatch(ParsingContext context);
 	String expectedToken() {
 		return toString();
 	}
 }
 
-public abstract class ParsingExpression extends Matcher {
+public abstract class ParsingExpression extends ParsingMatcher {
 
 	public final static int LeftRecursion     = 1 << 20;
 	public final static int HasSyntaxError    = 1 << 26;
@@ -16,12 +16,13 @@ public abstract class ParsingExpression extends Matcher {
 
 	public final static int DisabledOperation = 1 << 28;
 	public final static int ExpectedConnector = 1 << 29;
+	public final static int NothingConnected  = 1 << 30;
 
 	int           flag       = 0;
 	int           uniqueId   = 0;
 	ParsingObject po      = null;
 	int           minlen = -1;
-	Matcher       matcher;
+	ParsingMatcher       matcher;
 		
 	protected ParsingExpression() {
 		this.matcher = this;
@@ -35,6 +36,18 @@ public abstract class ParsingExpression extends Matcher {
 		return (this.uniqueId > 0);
 	}
 
+	final boolean isExpectedConnector() {
+		return (this.uniqueId == 0 && this.is(ExpectedConnector));
+	}
+
+	final boolean isNothingConnected() {
+		return (this.uniqueId == 0 && this.is(NothingConnected));
+	}
+
+	final boolean isRemovedOperation() {
+		return (this.uniqueId == 0 && this.is(DisabledOperation));
+	}
+	
 	ParsingExpression uniquefy() {
 		ParsingExpression e = this.uniquefyImpl();
 		assert(e.getClass() == this.getClass());
@@ -44,6 +57,7 @@ public abstract class ParsingExpression extends Matcher {
 		return e;
 	}
 	abstract ParsingExpression uniquefyImpl();
+	
 	ParsingExpression reduceOperation() {
 		ParsingExpression reduced = this.reduceOperationImpl();
 //		if(reduced.getClass() != this.getClass()) {
@@ -218,20 +232,27 @@ public abstract class ParsingExpression extends Matcher {
 	static int ObjectContext    = 1 << 0;
 	static int OperationContext = 1 << 1;
 	
-	private static void checkObjectConstruction(ParsingExpression e, int status) {
+	private static int checkObjectConstruction(ParsingExpression e, int status) {
+		if(status == ParsingRule.ReservedRule) {
+			return status;
+		}
 		if(status == OperationContext) {
-			e.set(HasTypeError);
 			e.set(ExpectedConnector);
-			e.report(ReportLevel.warning, "expected @ connector");			
+			e.report(ReportLevel.warning, "expected @");			
 		}
 		else if(status != ObjectContext) {
 			e.set(HasTypeError);
 			e.set(DisabledOperation);
-			e.report(ReportLevel.warning, "unexpected new object");						
+			e.report(ReportLevel.warning, "unexpected object construction");
+			return status;
 		}
+		return OperationContext;
 	}
 
 	private static void checkObjectOperation(ParsingExpression e, int status) {
+		if(status == ParsingRule.ReservedRule) {
+			return;
+		}
 		if(status != OperationContext) {
 			e.set(HasTypeError);
 			e.set(DisabledOperation);
@@ -244,8 +265,7 @@ public abstract class ParsingExpression extends Matcher {
 			ParsingRule r = ((NonTerminal) e).getRule();
 			int ruleType = r.type;
 			if(ruleType == ParsingRule.ObjectRule) {
-				checkObjectConstruction(e, status);
-				return OperationContext;
+				return checkObjectConstruction(e, status);
 			}
 			if(ruleType == ParsingRule.OperationRule) {
 				checkObjectOperation(e, status);
@@ -258,18 +278,19 @@ public abstract class ParsingExpression extends Matcher {
 				checkObjectOperation(e, status);
 			}
 			else {
-				checkObjectConstruction(e, status);
+				status = checkObjectConstruction(e, status);
 			}
 			int newstatus = OperationContext;
 			for(int i = 0; i < e.size(); i++) {
 				newstatus = typeCheckImpl(e.get(i), newstatus);
 			}
-			return OperationContext;
+			return status;
 		}
 		if(e instanceof ParsingConnector) {
 			checkObjectOperation(e, status);
 			int scope = typeCheckImpl(e.get(0), ObjectContext);
 			if(scope != OperationContext) {
+				e.set(NothingConnected);
 				e.report(ReportLevel.warning, "nothing is connected");
 			}
 			return status;
@@ -289,7 +310,7 @@ public abstract class ParsingExpression extends Matcher {
 			for(int i = 1; i < e.size(); i++) {
 				int r = typeCheckImpl(e.get(i), status);
 				if(r != first) {
-					e.get(i).report(ReportLevel.warning, "mismatched choice");
+					e.get(i).report(ReportLevel.warning, "mixed choice");
 				}
 			}
 			return first;
@@ -909,9 +930,15 @@ class NonTerminal extends ParsingExpression {
 		this.ruleName = ruleName;
 		this.uniqueName = this.peg.uniqueRuleName(this.ruleName);
 	}
+	
 	@Override
 	ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniquefy(getUniqueName(), this);
+		boolean expectedConnector = this.isExpectedConnector();
+		ParsingExpression e = ParsingExpression.uniquefy(getUniqueName(), this);
+		if(expectedConnector) {
+			e = ParsingExpression.newConnector(e, -1);
+		}
+		return e;
 	}
 	@Override
 	ParsingExpression reduceOperationImpl() {
@@ -1116,7 +1143,7 @@ class ParsingRepetition extends ParsingUnary {
 	public boolean simpleMatch(ParsingContext context) {
 		long ppos = -1;
 		long pos = context.getPosition();
-		long f = context.rememberFailure();
+//		long f = context.rememberFailure();
 		while(ppos < pos) {
 			ParsingObject left = context.left;
 			if(!this.inner.debugMatch(context)) {
@@ -1128,7 +1155,7 @@ class ParsingRepetition extends ParsingUnary {
 			pos = context.getPosition();
 			left = null;
 		}
-		context.forgetFailure(f);
+//		context.forgetFailure(f);
 		return true;
 	}
 }
@@ -1301,6 +1328,12 @@ class ParsingConnector extends ParsingUnary {
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
+		if(this.isRemovedOperation()) {
+			return this.inner.uniquefy().reduceOperation();
+		}
+		if(this.isNothingConnected()) {
+			return this.inner.uniquefy();
+		}
 		if(index != -1) {
 			return ParsingExpression.uniquefy("@" + index + "\b" + this.uniqueKey(), this);
 		}
@@ -1351,6 +1384,9 @@ class ParsingTagging extends ParsingExpression {
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
+		if(this.isRemovedOperation()) {
+			return this.reduceOperation();
+		}
 		return ParsingExpression.uniquefy("#\b" + this.tag.key(), this);
 	}
 	@Override
@@ -1378,6 +1414,9 @@ class ParsingValue extends ParsingExpression {
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
+		if(this.isRemovedOperation()) {
+			return this.reduceOperation();
+		}
 		return ParsingExpression.uniquefy("`\b" + this.value, this);
 	}
 	@Override
@@ -1410,7 +1449,12 @@ class ParsingConstructor extends ParsingList {
 		if(leftJoin) {
 			return ParsingExpression.uniquefy("{@}\b" + this.uniqueKey(), this);
 		}
-		return ParsingExpression.uniquefy("{}\b" + this.uniqueKey(), this);
+		boolean expectedConnector = this.isExpectedConnector();
+		ParsingExpression e = ParsingExpression.uniquefy("{}\b" + this.uniqueKey(), this);
+		if(expectedConnector) {
+			e = ParsingExpression.newConnector(e, -1);
+		}
+		return e;
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
