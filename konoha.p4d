@@ -1,0 +1,519 @@
+// Konoha Grammar
+// ===============
+
+export
+	= Statement
+	/ Expression
+	/ CInteger
+	/ CFloat
+	/ CString
+	/ CChar
+
+File
+	= _ { ( @TopLevel / _ )* #Source } EOT
+
+Chunk
+	= File
+	/ Statement
+	/ Expression
+	/ Type
+_
+	= (S / BLOCKCOMMENT / LINECOMMENT )*
+
+S
+	= [ \n\r\t\u000B\u000C]
+
+BLOCKCOMMENT
+	= '/*' (!'*/' .)* '*/'
+
+LINECOMMENT
+	= '//' (!'\n' .)*
+
+EOL
+	= ('\r'? '\n' / !.)
+
+W
+	= [a-zA-Z0-9_]
+
+EOT	= !.
+
+
+C      = ''   /* CStyle */
+PYTHON = ''  /* Python-Style */
+SCALA  = ''   /* SCALA */
+
+Name
+	= { NAME #Name } _ 
+
+NAME
+	= !DIGIT !(KEYWORD !W) W+
+
+KEYWORD
+	= 'auto' / 'break' / 'case' / 'char' / 'const' / 'continue' / 'default' 
+	/ 'double' / 'do' / 'else' / 'enum' / 'extern' / 'float' / 'for' 
+	/ 'goto' / 'if' / 'int' / 'inline' / 'long' / 'register' / 'restrict' 
+	/ 'return' / 'short' / 'signed' / 'sizeof' / 'static' / 'struct' 
+	/ 'switch' / 'typedef' / 'union' / 'unsigned' / 'void' / 'volatile' 
+	/ 'while' 
+
+"void"      = 'void'     !W
+"char"      = 'char'     !W
+"short"     = 'short'    !W
+"int"       = 'int'      !W
+"long"      = 'long'     !W
+"float"     = 'float'    !W
+"double"    = 'double'   !W
+"class"     = 'class'    !W
+"var"       = 'var'      !W
+"enum"	    = 'enum'     !W
+"function"	= 'function' !W
+"func"      = 'func'     !W
+"def"       = 'def'      !W
+
+"if"	= 'if' !W
+"else"	= 'else' !W
+"switch"	= 'switch' !W
+"case"	= 'case' !W
+"default"	= 'default' !W
+"while"	= 'while' !W
+"do"	= 'do' !W
+"for"	= 'for' !W
+"continue"	= 'continue' !W
+"break"	= 'break' !W
+"return"	= 'return' !W
+
+"try"	= 'try' !W
+"catch"	= 'catch' !W
+"finally"	= 'finally' !W
+
+// C
+
+"extern"	= 'extern' !W _
+"static"	= 'static' !W _
+"const"     = 'const'  !W _
+
+"public"	= 'public' !W _
+"private"	= 'private' !W _
+"protected"	= 'protected' !W _
+"final"	    = 'final' !W _
+
+
+"*="	= '*=' _
+"/="	= '/=' _
+"%="	= '%=' _
+"+="	= '+=' _
+"-="	= '-=' _
+"<<="	= '<<=' _
+">>="	= '>>=' _
+"&="	= '&=' _
+"^="	= '^=' _
+"|="	= '|=' _
+"="	    = '=' !'=' _
+"."	= '.' _
+"("	= '(' _
+")"	= ')' _
+"#"	= '#' _
+"++"     = '++' _
+"--"     = '--' _
+"&"      = '&' !'&' _
+"*"      = '*' !'=' _
+"+"      = '+' ![+=] _
+"-"      = '-' !('-' / [=>]) _
+"~"      = '~' _
+"!"      = '!' !'=' _
+"{"      = '{' _
+"["      = '[' _
+"]"      = ']' _
+","	     = ',' _
+"@"      = '@' _
+"..."	 = '...' _
+":"	     = ':' ![>] _
+"/"	     = '/' !'=' _
+"%"	     = '%' ![=>] _
+"<<"	 = '<<' !'=' _
+">>"	 = '>>' !'=' _
+"<="	 = '<=' _
+">="	 = '>=' _
+"<"	     = '<' ![=] _
+">"	     = '>' ![=] _
+"=="	 = '==' _
+"!="	 = '!=' _
+"^"	     = '^' ![=] _
+"|"	     = '|' ![=] _
+"&&"	 = '&&' _
+"||"	 = '||' _
+"?"	     = '?' _
+";"	     = (';' _ / EOL)  /* this is for debug */
+"}"	     = '}' _
+
+
+//TopLevel
+//========
+
+TopLevel
+	= Declaration
+	/ Statement
+
+Declaration
+	= VarDecl
+	/ FuncDecl
+	/ ClassDecl
+
+// Annotation
+// ==========
+
+Annotation
+	= { (@AnnotationEntry)*  #List } _
+
+AnnotationEntry
+	= "@" { @Name @AnnotationValue #KeyValue } _
+	/ "extern"     { @{`extern`    #Key } @DefaultAnnotationValue  #KeyValue } _
+	/ "static"     { @{`static`    #Key } @DefaultAnnotationValue  #KeyValue } _
+	/ "final"      { @{`final`     #Key } @DefaultAnnotationValue  #KeyValue } _
+	/ "public"     { @{`public`    #Key } @DefaultAnnotationValue  #KeyValue } _
+	/ "protected"  { @{`protected` #Key } @DefaultAnnotationValue  #KeyValue } _
+	/ "private"    { @{`private`   #Key } @DefaultAnnotationValue  #KeyValue } _
+
+AnnotationValue
+	= '(' { (!')' .)+ #Value } ')'
+	/ DefaultAnnotationValue
+
+DefaultAnnotationValue
+	= { `true` #Value }
+
+//Type
+//====
+
+Type
+	[example: int]
+	= GenericType {@ "[" "]" #TArray}*
+	/ GenericType {@ _ '*' _ #TPointer}*
+
+GenericType
+	= PrimaryType {@ "<" @Type ("," Type)* ">" #TGeneric}?
+	/* Scala Style */
+	/ SCALA PrimaryType {@ "[" @Type ("," Type)* "]" #TGeneric}?
+
+PrimaryType
+	= { "void"    #TVoid } _
+	/ { "boolean" #TBoolean } _
+	/ { "int"     #TInt } _
+	/ { "float"   #TFloat } _
+	/ { "double"  #TFloat } _
+	/ { "String"  #TString } _
+	/ { "Object"  #TObject } _
+	/ Name
+
+Untyped
+	= { `var` #Untyped }
+
+// Variable Declaration
+// ====================
+
+VarDecl
+	[example: var a = 1]
+	[example: int n, a = 1]
+	= { @[0]Annotation "var" _ @[2]Name @[1](':' Type / Untyped) "=" @[3]Expression ";"?   #VarDecl }
+	/ C { @[0]Annotation @[1]Type @VarDeclList !'(' ";"?  #CStyleVarDecl }
+
+VarDeclList
+	= { @CVarDecl ("," @CVarDecl)* #List }
+
+CVarDecl
+	[example: a = 1]
+	= { @CVarName ("=" @Expression)? #CVarDecl } 
+
+CVarName
+	[example: a]
+	[example: **a]
+	[example: a[100]]
+	= { '*' _ @CVarName #PointerName } _
+    / Name {@ "[" (@Constant)? "]" #ArrayName}* _
+
+// Function Declaration
+// ====================
+
+FuncDecl
+	[example: function f() {}]
+	[example: int f(int n) {return 1;}]
+	= { @[0]Annotation FUNCTION @[2]Name "(" @[3]FuncParamList ")" @[1](":" Type / Untyped) @[4]Block #FuncDecl }
+	/ C { @[0]Annotation @[1]Type @[2]Name "(" @[3]FuncParamList ")" @[4]Block #FuncDecl }
+
+FUNCTION
+	= ("function" / "func" / "def") _
+
+FuncParamList
+	= { ( @FuncParam ("," @FuncParam)* )? #List } 
+
+FuncParam
+	= { @[0]Annotation @[2]Name @[1](":" Type / Untyped) #Param } _
+	/ C { @[0]Annotation @[1]Type @[2]Name #Param} _
+
+
+ClassDecl
+	= { @[0]Annotation "class" _ @[1]Name addExtends? addImplements? @[2]ClassBlock #ClassDecl }
+
+addExtends
+	= ( "extend" _ @[3]Name )
+
+addImplements
+	= ("implements" _ @[4]{ @Name ("," @Name)* #List} )
+
+ClassBlock
+	= { "{" (@FieldDecl / @MethodDecl / _ )* "}" #Block }
+	
+FieldDecl
+	= { @Annotation @Name "=" @Expression ";"? #VarDecl}
+
+ConstructorDecl
+	= { @Annotation "constructor" "(" @FuncParamList ")" @Block #ConstructorDecl }
+
+MethodDecl
+	= { @Name "(" @FuncParamList ")" @Block #MethodDecl }
+
+// Block, Statement
+//===================
+
+Block
+	= { "{" (@Statement / @VarDecl / _ (";" _)? )* "}" #Block }
+	/ PYTHON IndentBlock
+
+IndentBlock
+        = { <block ':' S* (EOL (S* EOL / @IndentStatement)+ / @Statement) > #Block}
+
+IndentStatement
+        = <indent> S+ Statement
+
+Statement
+	= Block
+	/ { "if" _  "(" @Expression ")" @Statement ("else" _ @Statement)? #If }
+	/ { "return" _ (@Expression)?  ";"? #Return }
+	/ { "continue" _ ";"? #Continue }
+	/ { "break" _ ";"? #Break }
+	/ { "while" _ "(" @Expression ")" @Statement #While }
+	/ { "for" _ "(" (@Expression)? ";" (@Expression)? ";"? (@Expression)? ")" @Statement #For }
+	/ { "for" _ "(" @Declaration (@Expression)? ";" (@Expression)? ";" @Statement #For }
+	/ { "do" _ @Statement "while" _ "(" @Expression ")" ";"? #DoWhile }
+	/ TryStatement
+	/ SwitchStatement
+	/ Expression {@ "," @Expression #CammaExpression }* ";"?
+
+TryStatement
+	= { "try" _ @Statement @Catch ("finally" _ @Statement)? #Try }
+
+Catch
+	= { "catch" "(" @Untyped @Name ")" @Statement #Catch }
+	/ { (@JavaCatch)* #List }
+
+JavaCatch
+	= { "catch" "(" @Name @Name ")" @Statement #Catch }
+
+SwitchStatement
+	= { "switch" _ "(" @Expression ")" @CSwitchBlock #Switch }
+
+CSwitchBlock
+	= { "{" (@CSwitchBlockStatement / _ (";" _)? )* "}" #Block }
+
+CSwitchBlockStatement
+	= { "case" _ @Constant ":" (!"case" !"default" @Statement)* #SwitchCase }
+	/ { "default" _ ":" (!"case" @Statement)* #SwitchDefault }
+
+
+Constant
+	= ConditionalExpression
+
+//Expression
+//==========
+
+Expression
+	[example: 1]
+	[example: a]
+	= AssignmentExpression /** {@ "," @AssignmentExpression #Expression }*  **/
+
+AssignmentExpression
+	= { @UnaryExpression addAssignmentOperator @AssignmentExpression }
+	/ ConditionalExpression
+
+addAssignmentOperator
+	= "="     #Assign
+	/ "*="    #AssignMul
+	/ "/="    #AssignDiv
+	/ "%="    #AssignMod
+	/ "+="    #AssignAdd
+	/ "-="    #AssignSub
+	/ "<<="   #AssignLeftShift
+	/ ">>="   #AssignRightShift
+	/ "&="    #AssignBitwiseAnd
+	/ "^="    #AssignBitwiseXOr 
+	/ "|="    #AssignBitwiseOr
+	
+ConditionalExpression
+	= LogicalORExpression {@ "?"  @Expression ":" @LogicalORExpression #Trinary }*
+
+LogicalORExpression
+	= LogicalANDExpression {@ ("||" / "or" _) @LogicalANDExpression #Or }*
+
+LogicalANDExpression
+	= InclusiveORExpression {@ ("&&" / "and" _) @InclusiveORExpression #And }*
+
+InclusiveORExpression
+	= ExclusiveORExpression {@ "|" @ExclusiveORExpression #BitwiseOr }*
+
+ExclusiveORExpression
+	= ANDExpression {@ "^" @ANDExpression #BitwiseXor }*
+
+ANDExpression
+	= EqualityExpression {@ "&" @EqualityExpression #BitwiseAnd }*
+
+EqualityExpression
+	= RelationalExpression {@ ( "==" #Equals / "!=" #NotEquals ) @RelationalExpression }*
+	
+RelationalExpression
+	= ShiftExpression {@ ( "<=" #LessThanEquals / ">=" #GreaterThanEquals / "<" #LessThan / ">" #GreaterThan ) @ShiftExpression }*
+	
+ShiftExpression
+	= AdditiveExpression {@ ( "<<" #LeftShift / ">>" #RightShift ) @AdditiveExpression }*
+	
+AdditiveExpression
+	= MultiplicativeExpression {@ ( "+" #Add / "-" #Sub ) @MultiplicativeExpression }*
+	
+MultiplicativeExpression
+	= CastExpression {@ ( "*" #Mul / "/" #Div / "%" #Mod / "mod" #Mod _) @CastExpression }*
+
+UnaryExpression
+	= PostfixExpression
+	/ { "++"    @UnaryExpression #PrefixInc }
+	/ { "--"    @UnaryExpression #PrefixDec }
+	/ { "&"    @CastExpression #Address }
+	/ { "*"   @CastExpression #Star }
+	/ { "+"   @CastExpression #Plus }
+	/ { "-"  @CastExpression #Minus }
+	/ { "~"  @CastExpression #Compl }
+	/ { "!"   @CastExpression #Not }
+	/ { "sizeof"  ( @UnaryExpression / "(" @Type ")" ) #SizeOf }
+
+CastExpression
+	= { "(" @Type ")" @CastExpression #Cast }
+	/ UnaryExpression
+
+PostfixExpression
+	= PrimaryExpression {@ (addFunctionCall / addIndex / addField / addInc / addDec) }*
+
+addFunctionCall
+	= @{ "(" addArgumentExpressionList? ")" #List} #Apply
+
+addArgumentExpressionList
+	= (@AssignmentExpression ("," @AssignmentExpression)*)
+
+addIndex
+	= "[" @Expression "]" #Index
+
+addField
+	= "." @Name #Field
+
+addInc
+	= "++" #Inc
+
+addDec
+	= "--" #Dec
+
+PrimaryExpression
+	= "(" Expression ")"
+	/ Array
+	/ Dictionary
+	/ Literal
+	/ Regex
+	/ Name
+
+Array
+	= "[" { ( @Expression ("," @Expression)* )? ","? #Array } "]"	
+
+Dictionary
+	= "{" { ( @DictEntry ("," @DictEntry)* )? ","? #Dictionary } "}"	
+
+DictEntry
+	= String {@ (":" @Expression) #KeyValue }
+
+Function
+	= { "function" _ "(" @FuncParamList ")" @Block #Function }
+
+Regex
+	= '/' { ('\\/' / !'/' .)+ #Regex } '/'
+	
+
+
+//Literal
+//=======
+
+Literal
+	= CFloat
+	/ CInteger
+	/ CString
+	/ CChar
+
+CFloat
+	= { ( DECIMAL_FLOAT / HEX_FLOAT )  #Float } [fF]? _
+
+DECIMAL_FLOAT
+	= FRACTION EXPONENT?
+	/ DIGIT+ EXPONENT
+
+FRACTION
+	= DIGIT* '.' DIGIT+
+	/ DIGIT+ '.'
+
+EXPONENT
+	= [eE] [+\-]? DIGIT+
+
+HEX_FLOAT
+	= HEX_PREFIX HEX_FRACTION BINARY_EXPONENT?
+	/ HEX_PREFIX HEX+ BINARY_EXPONENT
+
+HEX_PREFIX
+	= '0' [xX]
+
+HEX_FRACTION
+	= HEX* '.' HEX+
+	/ HEX+ '.'
+
+BINARY_EXPONENT
+	= [pP] [+\-]? DIGIT+
+
+FLOAT_SUFFIX
+	= [fF]
+
+CInteger
+	= { ( DECIMAL / HEXICAL / OCTAL ) #Integer } _
+
+DECIMAL
+	= [1-9] DIGIT*
+
+HEXICAL
+	= HEX_PREFIX HEX+
+
+OCTAL
+	= '0' [0-7]*
+
+CString
+	=  '"' { STRING_CONTENT* #String } '"' _
+
+STRING_CONTENT
+	= ESCAPE
+	/ (&'\\\n' . . / ![\"\n\\] .)
+
+CChar
+	= "'" ({ CHAR_CONTENT #Character } / { STRING_CONTENT* #String }) '"' _
+	
+CHAR_CONTENT
+	= ESCAPE
+	/ !['\n\r] .
+
+ESCAPE
+	= SIMPLE_ESCAPE
+	/ UCHAR_ESCAPE
+
+SIMPLE_ESCAPE
+	= '\\' ['\"?\\abfnrtv]
+	
+UCHAR_ESCAPE
+	= '\\u' HEX HEX HEX HEX
