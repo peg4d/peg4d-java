@@ -18,7 +18,7 @@ public class Main {
 	public final static int     MinerVersion = 2;
 	public final static int     PatchLevel   = 1;
 	public final static String  Version = "" + MajorVersion + "." + MinerVersion + "." + PatchLevel;
-	public final static String  Copyright = "Copyright (c) 2014, Konoha4e project authors";
+	public final static String  Copyright = "Copyright (c) 2014, Konoha project authors";
 	public final static String  License = "BSD-Style Open Source";
 
 	// -p konoha.peg

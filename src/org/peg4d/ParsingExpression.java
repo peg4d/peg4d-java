@@ -48,6 +48,10 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return (this.uniqueId == 0 && this.is(DisabledOperation));
 	}
 	
+	boolean hasObjectOperation() {
+		return false;
+	}
+	
 	ParsingExpression uniquefy() {
 		ParsingExpression e = this.uniquefyImpl();
 		assert(e.getClass() == this.getClass());
@@ -716,7 +720,11 @@ abstract class ParsingUnary extends ParsingExpression {
 	protected final int uniqueKey() {
 		this.inner = inner.uniquefy();
 		return this.inner.uniqueId;
-	}	
+	}
+	@Override
+	boolean hasObjectOperation() {
+		return this.hasObjectOperation();
+	}
 	@Override
 	short acceptByte(int ch) {
 		return this.inner.acceptByte(ch);
@@ -737,11 +745,9 @@ abstract class ParsingList extends ParsingExpression {
 	public final ParsingExpression get(int index) {
 		return this.inners.ArrayValues[index];
 	}
-
 	final void set(int index, ParsingExpression e) {
 		this.inners.ArrayValues[index] = e;
 	}
-
 	protected final String uniqueKey() {
 		StringBuilder sb = new StringBuilder();
 		for(int i = 0; i < this.size(); i++) {
@@ -761,6 +767,16 @@ abstract class ParsingList extends ParsingExpression {
 			ParsingExpression.addSequence(l, e);
 		}
 		return ParsingExpression.newSequence(l);
+	}
+
+	@Override
+	boolean hasObjectOperation() {
+		for(int i = 0; i < this.size(); i++) {
+			if(this.get(i).hasObjectOperation()) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override
@@ -930,7 +946,13 @@ class NonTerminal extends ParsingExpression {
 		this.ruleName = ruleName;
 		this.uniqueName = this.peg.uniqueRuleName(this.ruleName);
 	}
-	
+
+	@Override
+	boolean hasObjectOperation() {
+		ParsingRule r = this.getRule();
+		return r.type == ParsingRule.OperationRule;
+	}
+
 	@Override
 	ParsingExpression uniquefyImpl() {
 		boolean expectedConnector = this.isExpectedConnector();
@@ -1247,7 +1269,6 @@ class ParsingSequence extends ParsingList {
 	ParsingExpression uniquefyImpl() {
 		return ParsingExpression.uniquefy(" \b" + this.uniqueKey(), this);
 	}
-
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
 		visitor.visitSequence(this);
@@ -1327,6 +1348,10 @@ class ParsingConnector extends ParsingUnary {
 		this.index = index;
 	}
 	@Override
+	boolean hasObjectOperation() {
+		return true;
+	}
+	@Override
 	ParsingExpression uniquefyImpl() {
 		if(this.isRemovedOperation()) {
 			return this.inner.uniquefy().reduceOperation();
@@ -1383,6 +1408,10 @@ class ParsingTagging extends ParsingExpression {
 		this.tag = tag;
 	}
 	@Override
+	boolean hasObjectOperation() {
+		return true;
+	}
+	@Override
 	ParsingExpression uniquefyImpl() {
 		if(this.isRemovedOperation()) {
 			return this.reduceOperation();
@@ -1411,6 +1440,10 @@ class ParsingValue extends ParsingExpression {
 	ParsingValue(String value) {
 		super();
 		this.value = value;
+	}
+	@Override
+	boolean hasObjectOperation() {
+		return true;
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
@@ -1443,6 +1476,10 @@ class ParsingConstructor extends ParsingList {
 	ParsingConstructor(boolean leftJoin, UList<ParsingExpression> list) {
 		super(list);
 		this.leftJoin = leftJoin;
+	}
+	@Override
+	boolean hasObjectOperation() {
+		return true;
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
@@ -1834,7 +1871,11 @@ class ParsingDebug extends ParsingOperation {
 
 class ParsingApply extends ParsingOperation {
 	ParsingApply(ParsingExpression inner) {
-		super("|apply", inner);
+		super("apply", inner);
+	}
+	@Override
+	boolean hasObjectOperation() {
+		return true;
 	}
 	@Override
 	ParsingExpression reduceOperationImpl() {
