@@ -155,7 +155,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 			System.out.println("" + level.toString() + ": " + msg + " in " + this);
 		}
 	}
-	
+		
 	private static boolean checkRecursion(String uName, UList<String> stack) {
 		for(int i = 0; i < stack.size() - 1; i++) {
 			if(uName.equals(stack.ArrayValues[i])) {
@@ -306,6 +306,13 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		if(e instanceof ParsingSequence) {
 			for(int i = 0; i < e.size(); i++) {
 				status = typeCheckImpl(e.get(i), status);
+			}
+			return status;
+		}
+		if(e instanceof ParsingOption || e instanceof ParsingRepetition) {
+			int r = typeCheckImpl(((ParsingUnary) e).inner, status);
+			if(r != status) {
+				e.report(ReportLevel.warning, "mixed results");
 			}
 			return status;
 		}

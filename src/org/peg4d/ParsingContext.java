@@ -88,7 +88,7 @@ public class ParsingContext {
 
 	public final ParsingObject parse(Grammar peg, String startPoint, ParsingMemoConfigure conf) {
 		this.initMemo(conf);
-		ParsingExpression start = peg.getExpression(startPoint);
+		ParsingRule start = peg.getRule(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
@@ -99,15 +99,16 @@ public class ParsingContext {
 		
 		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
 		this.left = po;
-		if(start.debugMatch(this)) {
+		if(start.expr.debugMatch(this)) {
 			this.commitLinkLog(0, this.left);
 		}
 		else {
 			this.abortLinkLog(0);
+			this.unusedLog = null;
 		}
 		checkUnusedText(po);
-		if(conf != null) {
-			conf.show();
+		if(conf != null && this.stat != null) {
+			conf.show(this.stat);
 		}
 		return this.left;
 	}
@@ -219,7 +220,7 @@ public class ParsingContext {
 	}
 	
 	private ParsingMatcher getErrorInfo(long fpos) {
-		int index = (int)this.pos/errorbuf.length;
+		int index = (int)this.pos % errorbuf.length;
 		if(posbuf[index] == fpos) {
 			return errorbuf[index];
 		}
@@ -227,14 +228,14 @@ public class ParsingContext {
 	}
 
 	private void setErrorInfo(ParsingMatcher errorInfo) {
-		int index = (int)this.pos/errorbuf.length;
+		int index = (int)this.pos % errorbuf.length;
 		errorbuf[index] = errorInfo;
 		posbuf[index] = this.pos;
 		//System.out.println("push " + this.pos + " @" + errorInfo);
 	}
 
 	private void removeErrorInfo(long fpos) {
-		int index = (int)this.pos/errorbuf.length;
+		int index = (int)this.pos % errorbuf.length;
 		if(posbuf[index] == fpos) {
 			//System.out.println("pop " + fpos + " @" + errorbuf[index]);
 			errorbuf[index] = null;
@@ -323,9 +324,6 @@ public class ParsingContext {
 			disposeLog(l);
 		}
 		assert(mark == this.stackSize);
-		if(mark == 0) {
-			this.unusedLog = null;
-		}
 	}
 	
 	final void logLink(ParsingObject parent, int index, ParsingObject child) {

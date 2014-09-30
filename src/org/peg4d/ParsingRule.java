@@ -135,4 +135,27 @@ class ParsingRule {
 		return this.expr;
 	}
 	
+	UList<ParsingRule> subRule() {
+		UMap<ParsingRule> visitedMap = new UMap<ParsingRule>();
+		visitedMap.put(this.getUniqueName(), this);
+		makeSubRule(this.expr, visitedMap);
+		return visitedMap.values(new ParsingRule[visitedMap.size()]);
+	}
+
+	private void makeSubRule(ParsingExpression e, UMap<ParsingRule>  visitedMemo) {
+		for(int i = 0; i < e.size(); i++) {
+			makeSubRule(e.get(i), visitedMemo);
+		}
+		if(e instanceof NonTerminal) {
+			NonTerminal ne = (NonTerminal)e;
+			assert(e.isUnique());
+			String un = ne.getUniqueName();
+			ParsingRule memoed = visitedMemo.get(un);
+			if(memoed == null) {
+				memoed = ne.getRule();
+				visitedMemo.put(un, memoed);
+				makeSubRule(memoed.expr, visitedMemo);
+			}
+		}
+	}
 }

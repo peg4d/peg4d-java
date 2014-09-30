@@ -55,6 +55,13 @@ public final class UMap <T> {
 		}
 		return a;
 	}
+	public final UList<T> values(T[] aa) {
+		UList<T> a = new UList<T>(aa);
+		for(T v : this.m.values()) {
+			a.add(v);
+		}
+		return a;
+	}
 	public final int size() {
 		return this.m.size();
 	}

@@ -6,81 +6,85 @@ import java.util.Map;
 
 public class ParsingMemoConfigure {
 	public final static ParsingObject NonTransition = new ParsingObject(null, null, 0);
-	boolean enableTracing = true;
+	boolean enableTracing = false;
 	
-	UMap<NonTerminal> memoMap = new UMap<NonTerminal>();
+	UList<MemoMatcher> memoList = new UList<MemoMatcher>(new MemoMatcher[16]);
 	
 	ParsingMemoConfigure() {
 	}
 	
-	void exploitMemo(ParsingExpression e) {
+	void exploitMemo1(ParsingExpression e) {
 		for(int i = 0; i < e.size(); i++) {
-			exploitMemo(e.get(i));
+			exploitMemo1(e.get(i));
 		}
-		if(e instanceof NonTerminal) {
-			NonTerminal ne = (NonTerminal)e;
-			assert(e.isUnique());
-			String un = ne.getUniqueName();
-			NonTerminal memoed = memoMap.get(un);
-			if(memoed == null) {
-				//System.out.println("memo: " + un);
-				memoMap.put(un, ne);
-				embedMemo(ne);
-				exploitMemo(ne.getRule().expr);
+		if(!(e.matcher instanceof MemoMatcher)) {
+//			System.out.println("e: " + e);
+			if(e instanceof ParsingConnector) {
+				ParsingConnector ne = (ParsingConnector)e;
+				assert(e.isUnique());
+				MemoMatcher m = new ConnectorMemoMatcher(ne);
+				memoList.add(m);
+				ne.matcher = m;
 			}
-		}
-	}
-	
-	void embedMemo(NonTerminal ne) {
-		ne.matcher = new NonTerminalMemoMatcher(ne);
-	}
-
-	void show() {
-		UList<String> nameList = this.memoMap.keys();
-		UList<NonTerminalMemoMatcher> mList = new UList<NonTerminalMemoMatcher>(new NonTerminalMemoMatcher[nameList.size()]);
-		for(int i = 0; i < nameList.size(); i++) {
-			NonTerminal ne = this.memoMap.get(nameList.ArrayValues[i]);
-			if(ne.matcher instanceof NonTerminalMemoMatcher) {
-				mList.add((NonTerminalMemoMatcher)ne.matcher);
-			}
-			//System.out.println(ne.matcher);
-		}
-		for(int i = 0; i < mList.size() - 1; i++) {
-			for(int j = i + 1; j < mList.size(); j++) {
-				if(mList.ArrayValues[i].ratio() > mList.ArrayValues[j].ratio()) {
-					NonTerminalMemoMatcher m = mList.ArrayValues[i];
-					mList.ArrayValues[i] = mList.ArrayValues[j];
-					mList.ArrayValues[j] = m;
+			if(e instanceof NonTerminal) {
+				NonTerminal ne = (NonTerminal)e;
+				assert(e.isUnique());
+				if(ne.getRule().type == ParsingRule.LexicalRule) {
+					MemoMatcher m = new NonTerminalMemoMatcher(ne);
+					memoList.add(m);
+					ne.matcher = m;
 				}
 			}
 		}
-		for(int i = 0; i < mList.size(); i++) {
-			//System.out.println(mList.ArrayValues[i]);
+	}
+
+	void exploitMemo(ParsingRule rule) {
+		for(ParsingRule r : rule.subRule()) {
+			exploitMemo1(r.expr);
 		}
+	}
+
+	void show(ParsingStat stat) {
+		for(int i = 0; i < memoList.size() - 1; i++) {
+			for(int j = i + 1; j < memoList.size(); j++) {
+				if(memoList.ArrayValues[i].ratio() > memoList.ArrayValues[j].ratio()) {
+					MemoMatcher m = memoList.ArrayValues[i];
+					memoList.ArrayValues[i] = memoList.ArrayValues[j];
+					memoList.ArrayValues[j] = m;
+				}
+				if(memoList.ArrayValues[i].ratio() == memoList.ArrayValues[j].ratio() && memoList.ArrayValues[i].count() > memoList.ArrayValues[j].count()) {
+					MemoMatcher m = memoList.ArrayValues[i];
+					memoList.ArrayValues[i] = memoList.ArrayValues[j];
+					memoList.ArrayValues[j] = m;
+				}
+			}
+		}
+		int hit = 0;
+		int miss = 0;
+		for(MemoMatcher m : memoList) {
+			System.out.println(m);
+			hit += m.memoHit;
+			miss += m.memoMiss;
+		}
+		System.out.println("Total: " + ((double)hit / miss) + " WorstCaseBackTrack=" + stat.WorstBacktrackSize);
 	}
 	
 	ParsingMemo newMemo() {
-		return new OpenFifoMemo(100);
+		//return new FifoPackratParsingMemo(512);
+		return new PackratParsingMemo(512);
 	}
 	
-	class NonTerminalMemoMatcher extends ParsingMatcher {
-		NonTerminal inner;
-		ParsingMatcher matchRef;
+	abstract class MemoMatcher extends ParsingMatcher {
+		ParsingExpression holder = null;
+		ParsingMatcher matchRef = null;
 		boolean enableMemo = true;
 		int memoHit = 0;
 		long hitLength = 0;
 		int memoMiss = 0;
 
-		NonTerminalMemoMatcher(NonTerminal inner) {
-			this.inner = inner;
-			ParsingExpression deref = Optimizer2.resolveNonTerminal(inner);
-			this.matchRef = deref.matcher;
-		}
-		
-		@Override
-		public boolean simpleMatch(ParsingContext context) {
+		final boolean memoMatch(ParsingContext context, ParsingMatcher ma) {
 			long pos = context.getPosition();
-			MemoEntry m = context.getMemo(pos, inner);
+			MemoEntry m = context.getMemo(pos, holder);
 			if(m != null) {
 				this.memoHit += 1;
 				this.hitLength += m.consumed;
@@ -91,9 +95,9 @@ public class ParsingMemoConfigure {
 				return !(context.isFailure());
 			}
 			ParsingObject left = context.left;
-			boolean b = this.matchRef.simpleMatch(context);
+			boolean b = ma.simpleMatch(context);
 			int length = (int)(context.getPosition() - pos);
-			context.setMemo(pos, inner, (context.left == left) ? ParsingMemoConfigure.NonTransition : context.left, length);
+			context.setMemo(pos, holder, (context.left == left) ? ParsingMemoConfigure.NonTransition : context.left, length);
 			this.memoMiss += 1;
 			if(enableTracing) {
 				this.tryTracing();
@@ -102,7 +106,11 @@ public class ParsingMemoConfigure {
 			return b;
 		}
 
-		private void tryTracing() {
+		public int count() {
+			return this.memoMiss + this.memoHit;
+		}
+
+		protected void tryTracing() {
 			if(this.memoMiss == 32) {
 				if(this.memoHit < 2) {
 					disabledMemo();
@@ -122,29 +130,100 @@ public class ParsingMemoConfigure {
 		}
 		
 		private void disabledMemo() {
-			this.inner.matcher = new DisabledMemoMatcher(this);
+			this.holder.matcher = new DisabledMemoMatcher(this);
 		}
 		
 		final double ratio() {
+			if(this.memoMiss == 0.0) return 0.0;
 			return (double)this.memoHit / this.memoMiss;
 		}
 		
 		@Override
 		public String toString() {
 			StringBuilder sb = new StringBuilder();
-			double f = (double)this.memoHit / this.memoMiss;
-			ParsingRule r = this.inner.getRule();
-			sb.append("MEMO[" + this.enableMemo + "]" + f);
-			sb.append(" #" + (this.memoMiss + this.memoHit) + " len=" + ((double)this.hitLength / this.memoHit) + " ref=" + r.refc);
-			sb.append("\n\t" + r);
+			double f = (this.memoHit == 0) ? 0.0 : (double)this.hitLength / this.memoHit;
+			sb.append("MEMO[" + this.enableMemo + "] r=" + this.ratio());
+			sb.append(" #" + (this.memoMiss + this.memoHit) + " len=" + f );
+			sb.append(" " + holder);
 			return sb.toString();
 		}
-		
+	}
+	
+	class ConnectorMemoMatcher extends MemoMatcher {
+		int index;
+		ConnectorMemoMatcher(ParsingConnector inner) {
+			this.holder = inner;
+			this.matchRef = inner.matcher;
+			this.index = inner.index;
+		}
+				
+		@Override
+		public boolean simpleMatch(ParsingContext context) {
+			ParsingObject left = context.left;
+			if(context.canTransCapture()) {
+				int mark = context.markObjectStack();
+				if(this.memoMatch(context, this.matchRef)) {
+					if(context.left != left) {
+						context.commitLinkLog(mark, context.left);
+						context.logLink(left, this.index, context.left);
+					}
+					context.left = left;
+					left = null;
+					return true;
+				}
+				context.abortLinkLog(mark);			
+				return false;
+			}
+			else {
+				if(this.memoMatch(context, this.matchRef)) {
+					context.left = left;
+					left = null;
+					return true;			
+				}				
+			}
+			left = null;
+			return false;
+		}
 	}
 
-	class DisabledMemoMatcher extends NonTerminalMemoMatcher {
-		DisabledMemoMatcher(NonTerminalMemoMatcher m) {
-			super(m.inner);
+	class NonTerminalMemoMatcher extends MemoMatcher {
+		NonTerminalMemoMatcher(NonTerminal inner) {
+			this.holder = inner;
+			ParsingExpression deref = Optimizer2.resolveNonTerminal(inner);
+			this.matchRef = deref.matcher;
+		}
+		
+		@Override
+		public boolean simpleMatch(ParsingContext context) {
+			return memoMatch(context, this.matchRef);
+//			long pos = context.getPosition();
+//			MemoEntry m = context.getMemo(pos, holder);
+//			if(m != null) {
+//				this.memoHit += 1;
+//				this.hitLength += m.consumed;
+//				context.setPosition(pos + m.consumed);
+//				if(m.result != ParsingMemoConfigure.NonTransition) {
+//					context.left = m.result;
+//				}
+//				return !(context.isFailure());
+//			}
+//			ParsingObject left = context.left;
+//			boolean b = this.matchRef.simpleMatch(context);
+//			int length = (int)(context.getPosition() - pos);
+//			context.setMemo(pos, holder, (context.left == left) ? ParsingMemoConfigure.NonTransition : context.left, length);
+//			this.memoMiss += 1;
+//			if(enableTracing) {
+//				this.tryTracing();
+//			}
+//			left = null;
+//			return b;
+		}
+	}
+
+	class DisabledMemoMatcher extends MemoMatcher {
+		DisabledMemoMatcher(MemoMatcher m) {
+			this.holder = m.holder;
+			this.matchRef = m.matchRef;
 			this.enableMemo = false;
 			this.memoHit = m.memoHit;
 			this.memoMiss = m.memoMiss;
@@ -155,7 +234,6 @@ public class ParsingMemoConfigure {
 		public boolean simpleMatch(ParsingContext context) {
 			return this.matchRef.simpleMatch(context);
 		}
-		
 	}
 
 }
@@ -240,7 +318,7 @@ class PackratParsingMemo extends ParsingMemo {
 	protected PackratParsingMemo(Map<Long, MemoEntry> memoMap) {
 		this.memoMap = memoMap;
 	}
-	public PackratParsingMemo(int initSize) {
+	PackratParsingMemo(int initSize) {
 		this(new HashMap<Long, MemoEntry>(initSize));
 	}
 	@Override
@@ -330,7 +408,7 @@ class FifoPackratParsingMemo extends ParsingMemo {
 	
 	@Override
 	protected final void setMemo(long pos, ParsingExpression keypeg, ParsingObject result, int consumed) {
-		int index = (int)(pos / memoArray.length);
+		int index = (int)(pos % memoArray.length);
 		long key = pos;
 		MemoEntry m = this.memoArray[index];
 		if(m.key != key) {
@@ -355,7 +433,7 @@ class FifoPackratParsingMemo extends ParsingMemo {
 
 	@Override
 	protected final MemoEntry getMemo(long pos, ParsingExpression keypeg) {
-		int index = (int)(pos / memoArray.length);
+		int index = (int)(pos % memoArray.length);
 		long key = pos;
 		MemoEntry m = this.memoArray[index];
 		if(m.key == key) {
