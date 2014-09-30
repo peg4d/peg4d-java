@@ -126,7 +126,6 @@ public class ParsingContext {
 		this.left = po;
 		return start.debugMatch(this);
 	}
-
 	
 	public final void initStat(ParsingStat stat) {
 		this.stat = stat;

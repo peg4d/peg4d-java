@@ -1,5 +1,7 @@
 package org.peg4d;
 
+import java.util.TreeMap;
+
 
 abstract class ParsingMatcher {
 	abstract boolean simpleMatch(ParsingContext context);
@@ -10,13 +12,14 @@ abstract class ParsingMatcher {
 
 public abstract class ParsingExpression extends ParsingMatcher {
 
-	public final static int LeftRecursion     = 1 << 20;
-	public final static int HasSyntaxError    = 1 << 26;
-	public final static int HasTypeError      = 1 << 27;
+	public final static int LeftRecursion     = 1 << 10;
+	public final static int HasSyntaxError    = 1 << 16;
+	public final static int HasTypeError      = 1 << 17;
 
-	public final static int DisabledOperation = 1 << 28;
-	public final static int ExpectedConnector = 1 << 29;
-	public final static int NothingConnected  = 1 << 30;
+	public final static int DisabledOperation = 1 << 18;
+	public final static int ExpectedConnector = 1 << 19;
+	public final static int NothingConnected  = 1 << 20;
+	public final static int RedundantUnary    = 1 << 21;
 
 	int           flag       = 0;
 	int           uniqueId   = 0;
@@ -60,19 +63,20 @@ public abstract class ParsingExpression extends ParsingMatcher {
 //		}
 		return e;
 	}
-	abstract ParsingExpression uniquefyImpl();
+	ParsingExpression uniquefyImpl() { return null; }
 	
-	ParsingExpression reduceOperation() {
-		ParsingExpression reduced = this.reduceOperationImpl();
-//		if(reduced.getClass() != this.getClass()) {
-//			System.out.println("@ " + this.getClass().getSimpleName() + " " + this + "\n\t=> " + reduced.getClass().getSimpleName() + " " + reduced);
-//		}
-		return reduced;
-	}
+//	ParsingExpression reduceOperation() {
+//		ParsingExpression reduced = this.normalizeImpl(true, null, null);
+////		if(reduced.getClass() != this.getClass()) {
+////			System.out.println("@ " + this.getClass().getSimpleName() + " " + this + "\n\t=> " + reduced.getClass().getSimpleName() + " " + reduced);
+////		}
+//		return reduced;
+//	}
 	
-	ParsingExpression reduceOperationImpl() {
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
 		return this;
 	}
+	
 	protected abstract void visit(ExpressionVisitor visitor);
 	
 	public final boolean debugMatch(ParsingContext c) {
@@ -165,7 +169,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return false;
 	}
 
-	static int checkLeftRecursion(ParsingExpression e, String uName, int start, int minlen, UList<String> stack) {
+	static int checkLeftRecursion(ParsingExpression e, String uName, int start, int minlen, UList<String> stack, UMap<String> flagMap) {
 		if(e instanceof NonTerminal) {
 			NonTerminal ne = (NonTerminal) e;
 			ne.checkReference();
@@ -174,14 +178,13 @@ public abstract class ParsingExpression extends ParsingMatcher {
 				if(n.equals(uName) && !e.is(LeftRecursion)) {
 					ParsingRule r = ne.getRule();
 					e.set(LeftRecursion);
-					//System.out.println(uName + " minlen=" + minlen + " @@ " + stack);
 					e.report(ReportLevel.error, "left recursion: " + r);
 					r.peg.foundError = true;
 				}
 				if(!checkRecursion(n, stack)) {
 					int pos = stack.size();
 					stack.add(n);
-					int nc = checkLeftRecursion(ne.deReference(), uName, start, minlen, stack);
+					int nc = checkLeftRecursion(ne.deReference(), uName, start, minlen, stack, flagMap);
 					e.minlen = nc - minlen;
 					stack.clear(pos);
 				}
@@ -196,7 +199,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		if(e instanceof ParsingChoice) {
 			int lmin = Integer.MAX_VALUE;
 			for(int i = 0; i < e.size(); i++) {
-				int nc = checkLeftRecursion(e.get(i), uName, start, minlen, stack);
+				int nc = checkLeftRecursion(e.get(i), uName, start, minlen, stack, flagMap);
 				if(nc < lmin) {
 					lmin = nc;
 				}
@@ -207,18 +210,23 @@ public abstract class ParsingExpression extends ParsingMatcher {
 			int nc = minlen;
 			for(int i = 0; i < e.size(); i++) {
 				ParsingExpression eN = e.get(i);
-				nc = checkLeftRecursion(eN, uName, start, nc, stack);
+				nc = checkLeftRecursion(eN, uName, start, nc, stack, flagMap);
 			}
 			e.minlen = nc - minlen;
 		}
 		else if(e instanceof ParsingUnary) {
-			int lmin = checkLeftRecursion(((ParsingUnary) e).inner, uName, start, minlen, stack); // skip count
+			int lmin = checkLeftRecursion(((ParsingUnary) e).inner, uName, start, minlen, stack, flagMap); // skip count
 			if(e instanceof ParsingOption || e instanceof ParsingRepetition || e instanceof ParsingNot || e instanceof ParsingAnd ) {
 				e.minlen = 0;
 			}
 			else {
 				e.minlen = lmin - minlen;
 			}
+		}
+		else if(e instanceof ParsingIf) {
+			String n = ((ParsingIf) e).flagName;
+			flagMap.put(n, n);
+			e.minlen = 0;
 		}
 		else {
 			if(e.minlen == -1) {
@@ -231,6 +239,31 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		assert(e.minlen != -1);
 		minlen += e.minlen;
 		return minlen;
+	}
+	
+	static boolean containFlag(ParsingExpression e, String flagName, UMap<String> visited) {
+		for(int i = 0; i < e.size(); i++) {
+			if(containFlag(e.get(i), flagName, visited)) {
+				return true;
+			}
+		}
+		if(e instanceof ParsingIf) {
+			return flagName.equals(((ParsingIf) e).flagName);
+		}
+		if(e instanceof NonTerminal) {
+			NonTerminal ne = (NonTerminal)e;
+			String un = ne.getUniqueName();
+			if(!visited.hasKey(un)) {
+				visited.put(un, un);
+				ParsingRule r = ne.getRule();
+				return containFlag(r.expr, flagName, visited);
+			}
+		}
+		return false;
+	}
+
+	static boolean containFlag(ParsingExpression e, String flagName) {
+		return containFlag(e, flagName, new UMap<String>());
 	}
 	
 	static int ObjectContext    = 1 << 0;
@@ -264,7 +297,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		}
 	}
 
-	static int typeCheckImpl(ParsingExpression e, int status) {
+	static int typeCheckImpl(ParsingExpression e, int status, UMap<String> flagMap) {
 		if(e instanceof NonTerminal) {
 			ParsingRule r = ((NonTerminal) e).getRule();
 			int ruleType = r.type;
@@ -286,13 +319,13 @@ public abstract class ParsingExpression extends ParsingMatcher {
 			}
 			int newstatus = OperationContext;
 			for(int i = 0; i < e.size(); i++) {
-				newstatus = typeCheckImpl(e.get(i), newstatus);
+				newstatus = typeCheckImpl(e.get(i), newstatus, flagMap);
 			}
 			return status;
 		}
 		if(e instanceof ParsingConnector) {
 			checkObjectOperation(e, status);
-			int scope = typeCheckImpl(e.get(0), ObjectContext);
+			int scope = typeCheckImpl(e.get(0), ObjectContext, flagMap);
 			if(scope != OperationContext) {
 				e.set(NothingConnected);
 				e.report(ReportLevel.warning, "nothing is connected");
@@ -305,21 +338,21 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		}
 		if(e instanceof ParsingSequence) {
 			for(int i = 0; i < e.size(); i++) {
-				status = typeCheckImpl(e.get(i), status);
+				status = typeCheckImpl(e.get(i), status, flagMap);
 			}
 			return status;
 		}
 		if(e instanceof ParsingOption || e instanceof ParsingRepetition) {
-			int r = typeCheckImpl(((ParsingUnary) e).inner, status);
+			int r = typeCheckImpl(((ParsingUnary) e).inner, status, flagMap);
 			if(r != status) {
 				e.report(ReportLevel.warning, "mixed results");
 			}
 			return status;
 		}
 		if(e instanceof ParsingChoice) {
-			int first = typeCheckImpl(e.get(0), status);
+			int first = typeCheckImpl(e.get(0), status, flagMap);
 			for(int i = 1; i < e.size(); i++) {
-				int r = typeCheckImpl(e.get(i), status);
+				int r = typeCheckImpl(e.get(i), status, flagMap);
 				if(r != first) {
 					e.get(i).report(ReportLevel.warning, "mixed choice");
 				}
@@ -327,21 +360,37 @@ public abstract class ParsingExpression extends ParsingMatcher {
 			return first;
 		}
 		if(e instanceof ParsingNot || e instanceof ParsingMatch) {
-			ParsingExpression reduced = ((ParsingNot) e).get(0).reduceOperation().uniquefy();
-			if(reduced != e.get(0)) {
-				((ParsingNot) e).inner = reduced;
-			}
-			typeCheckImpl(e.get(0), 0);
+//			ParsingExpression reduced = ((ParsingUnary) e).get(0).reduceOperation().uniquefy();
+//			if(reduced != e.get(0)) {
+//				((ParsingNot) e).inner = reduced;
+//			}
+			int r = typeCheckImpl(e.get(0), ObjectContext, flagMap);
 			return status;
 		}
+		if(e instanceof ParsingWithFlag) {
+			ParsingWithFlag we = (ParsingWithFlag)e;
+			if(!containFlag(we.inner, we.flagName)) {
+				we.report(ReportLevel.warning, "no such a flag: " + we.flagName);
+				we.set(RedundantUnary);
+			}
+			return typeCheckImpl(we.inner, status, flagMap);
+		}
+		if(e instanceof ParsingWithoutFlag) {
+			ParsingWithoutFlag we = (ParsingWithoutFlag)e;
+			if(!containFlag(we.inner, we.flagName)) {
+				we.report(ReportLevel.warning, "no such a flag: " + we.flagName);
+				we.set(RedundantUnary);
+			}
+			return typeCheckImpl(we.inner, status, flagMap);
+		}
 		if(e instanceof ParsingUnary) {
-			return typeCheckImpl(((ParsingUnary) e).inner, status);
+			return typeCheckImpl(((ParsingUnary) e).inner, status, flagMap);
 		}
 		return status;
 	}
 
-	static void typeCheck(ParsingRule rule) {
-		int result = typeCheckImpl(rule.expr, rule.type);
+	static void typeCheck(ParsingRule rule, UMap<String> flagMap) {
+		int result = typeCheckImpl(rule.expr, rule.type, flagMap);
 		if(rule.type == ParsingRule.ObjectRule) {
 			if(result != OperationContext) {
 				rule.report(ReportLevel.warning, "object construction is expected: " + rule);
@@ -358,7 +407,11 @@ public abstract class ParsingExpression extends ParsingMatcher {
 	public final static ParsingEmpty newEmpty() {
 		return new ParsingEmpty();
 	}
-	
+
+	public final static ParsingFailure newFailure(ParsingExpression e) {
+		return new ParsingFailure(e);
+	}
+
 	public final static ParsingByte newByte(int ch) {
 		return new ParsingByte(ch & 0xff);
 	}
@@ -767,10 +820,10 @@ abstract class ParsingList extends ParsingExpression {
 	}
 
 	@Override
-	ParsingExpression reduceOperationImpl() {
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
 		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = get(i).reduceOperation();
+			ParsingExpression e = get(i).normalizeImpl(lexOnly, flagMap, withoutMap);
 			ParsingExpression.addSequence(l, e);
 		}
 		return ParsingExpression.newSequence(l);
@@ -970,14 +1023,12 @@ class NonTerminal extends ParsingExpression {
 		return e;
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		if(!ParsingRule.isLexicalName(this.ruleName)) {
-			String lexName = ParsingRule.toLexicalName(this.ruleName);
-			NonTerminal ne = this.peg.newNonTerminal(lexName);
-			if(ne.deReference() == null) {
-				this.peg.getLexicalRule(this.ruleName);
-			}
-			return ne;
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		ParsingRule rule = this.getRule();
+		String optName = ParsingRule.toOptionName(rule, lexOnly, withoutMap);
+		if(this.peg.getRule(optName) != rule) {
+			this.peg.makeOptionRule(rule, optName, lexOnly, flagMap, withoutMap);
+			return this.peg.newNonTerminal(optName);
 		}
 		return this;
 	}
@@ -1110,8 +1161,8 @@ class ParsingOption extends ParsingUnary {
 		return ParsingExpression.uniquefy("?\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		ParsingExpression e = inner.reduceOperation();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1150,8 +1201,8 @@ class ParsingRepetition extends ParsingUnary {
 		return ParsingExpression.uniquefy("*\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		ParsingExpression e = inner.reduceOperation();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1197,8 +1248,8 @@ class ParsingAnd extends ParsingUnary {
 		return ParsingExpression.uniquefy("&\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		ParsingExpression e = inner.reduceOperation();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1225,8 +1276,8 @@ class ParsingNot extends ParsingUnary {
 		return ParsingExpression.uniquefy("!\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		ParsingExpression e = inner.reduceOperation();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(true, flagMap, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1304,10 +1355,10 @@ class ParsingChoice extends ParsingList {
 		return ParsingExpression.uniquefy("|\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
 		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = get(i).reduceOperation();
+			ParsingExpression e = get(i).normalizeImpl(lexOnly, flagMap, withoutMap);
 			ParsingExpression.addChoice(l, e);
 		}
 		return ParsingExpression.newChoice(l);
@@ -1360,20 +1411,20 @@ class ParsingConnector extends ParsingUnary {
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
-		if(this.isRemovedOperation()) {
-			return this.inner.uniquefy().reduceOperation();
-		}
-		if(this.isNothingConnected()) {
-			return this.inner.uniquefy();
-		}
 		if(index != -1) {
 			return ParsingExpression.uniquefy("@" + index + "\b" + this.uniqueKey(), this);
 		}
 		return ParsingExpression.uniquefy("@\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		return this.inner.reduceOperation();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		if(this.isRemovedOperation()) {
+			lexOnly = true;
+		}
+		if(this.isNothingConnected()) {
+			return this.inner.uniquefy();
+		}
+		return this.inner.normalizeImpl(lexOnly, flagMap, withoutMap);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1420,14 +1471,14 @@ class ParsingTagging extends ParsingExpression {
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
-		if(this.isRemovedOperation()) {
-			return this.reduceOperation();
-		}
 		return ParsingExpression.uniquefy("#\b" + this.tag.key(), this);
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		return new ParsingEmpty();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		if(this.isRemovedOperation()) {
+			return this.normalizeImpl(lexOnly, flagMap, withoutMap);
+		}
+		return ParsingExpression.newEmpty();
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1454,14 +1505,14 @@ class ParsingValue extends ParsingExpression {
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
-		if(this.isRemovedOperation()) {
-			return this.reduceOperation();
-		}
 		return ParsingExpression.uniquefy("`\b" + this.value, this);
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		return new ParsingEmpty();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		if(this.isRemovedOperation()) {
+			return this.normalizeImpl(true, flagMap, withoutMap);
+		}
+		return ParsingExpression.newEmpty();
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1638,8 +1689,8 @@ class ParsingExport extends ParsingUnary {
 		return new ParsingExport(inner);
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		return inner.reduceOperation();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		return inner.normalizeImpl(lexOnly, flagMap, withoutMap);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1656,8 +1707,13 @@ class ParsingMatch extends ParsingOperation {
 		super("match", inner);
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		return inner.reduceOperation();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+//		ParsingExpression e = inner.normalizeImpl(true, flagMap, withoutMap);
+//		if(e == inner) {
+//			return this;
+//		}
+//		return ParsingExpression.newMatch(e);
+		return inner.normalizeImpl(true, flagMap, withoutMap);
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -1680,8 +1736,8 @@ class ParsingBlock extends ParsingOperation {
 		super("block", e);
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		ParsingExpression e = inner.reduceOperation();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1722,8 +1778,8 @@ class ParsingName extends ParsingOperation {
 		this.tagId = tagId; //ParsingTag.tagId(flagName);
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		ParsingExpression e = inner.reduceOperation();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1779,6 +1835,13 @@ class ParsingIf extends ParsingFunction {
 		context.opCheckFlag(this.flagName);
 		return !(context.isFailure());
 	}
+	@Override
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		if(flagMap != null && withoutMap.containsKey(flagName)) {
+			return ParsingExpression.newFailure(this);
+		}
+		return this;
+	}
 }
 
 class ParsingWithFlag extends ParsingOperation {
@@ -1788,14 +1851,21 @@ class ParsingWithFlag extends ParsingOperation {
 		this.flagName = flagName;
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		ParsingExpression e = inner.reduceOperation();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		boolean removeWithout = false;
+		if(flagMap != null && withoutMap.containsKey(flagName)) {
+			withoutMap.remove(flagName);
+			removeWithout = true;
+		}
+		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
+		if(removeWithout) {
+			withoutMap.put(flagName, flagName);
+		}
 		if(e == inner) {
 			return this;
 		}
 		return ParsingExpression.newWithFlag(flagName, e);
 	}
-
 	@Override
 	public String getParameters() {
 		return " " + this.flagName;
@@ -1816,12 +1886,20 @@ class ParsingWithoutFlag extends ParsingOperation {
 		this.flagName = flagName;
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		ParsingExpression e = inner.reduceOperation();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		boolean addWithout = false;
+		if(flagMap != null && !withoutMap.containsKey(flagName)) {
+			withoutMap.put(flagName, flagName);
+			addWithout = true;
+		}
+		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
+		if(addWithout) {
+			withoutMap.remove(flagName);
+		}
 		if(e == inner) {
 			return this;
 		}
-		return ParsingExpression.newWithoutFlag(flagName, e);
+		return ParsingExpression.newWithFlag(flagName, e);
 	}
 	@Override
 	public String getParameters() {
@@ -1841,8 +1919,8 @@ class ParsingDebug extends ParsingOperation {
 		super("debug", inner);
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
-		ParsingExpression e = inner.reduceOperation();
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1885,7 +1963,7 @@ class ParsingApply extends ParsingOperation {
 		return true;
 	}
 	@Override
-	ParsingExpression reduceOperationImpl() {
+	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
 		//TODO;
 		return null;
 	}
@@ -1904,119 +1982,4 @@ class ParsingApply extends ParsingOperation {
 	}
 }
 
-
-// --------------------------------------------------------------------------
-
-//class POptionalString extends POptional {
-//byte[] utf8;
-//POptionalString(int flag, PString e) {
-//	super(e);
-//	this.utf8 = e.utf8;
-//}
-//@Override ParsingExpression dup() { 
-//	return new POptionalString(flag, (PString)inner); 
-//}
-//@Override
-//public boolean simpleMatch(ParsingContext context) {
-//	if(context.source.match(context.pos, this.utf8)) {
-//		context.consume(this.utf8.length);
-//	}
-//}
-//}
-//
-//class POptionalByteChar extends POptional {
-//int byteChar;
-//POptionalByteChar(int flag, ParsingByte e) {
-//	super(e);
-//	this.byteChar = e.byteChar;
-//}
-//@Override ParsingExpression dup() { 
-//	return new POptionalByteChar(flag, (ParsingByte)inner); 
-//}
-//@Override
-//public boolean simpleMatch(ParsingContext context) {
-//	context.opMatchOptionalByteChar(this.byteChar);
-//}
-//}
-//
-//class POptionalCharacter extends POptional {
-//ParsingCharset charset;
-//POptionalCharacter(int flag, PCharacter e) {
-//	super(e);
-//	this.charset = e.charset;
-//}
-//@Override ParsingExpression dup() { 
-//	return new POptionalCharacter(flag, (PCharacter)inner); 
-//}
-//@Override
-//public boolean simpleMatch(ParsingContext context) {
-//	context.opMatchOptionalCharset(this.charset);
-//}
-//}
-//class PZeroMoreCharacter extends PRepetition {
-//	ParsingCharset charset;
-//	PZeroMoreCharacter(int flag, PCharacter e) {
-//		super(flag, e);
-//		this.charset = e.charset;
-//	}
-//	@Override ParsingExpression dup() { 
-//		return new PZeroMoreCharacter(flag, (PCharacter)inner); 
-//	}
-//	@Override
-//	public boolean simpleMatch(ParsingContext context) {
-//		long pos = context.getPosition();
-//		int consumed = 0;
-//		do {
-//			consumed = this.charset.consume(context.source, pos);
-//			pos += consumed;
-//		}
-//		while(consumed > 0);
-//		context.setPosition(pos);
-//	}
-//}
-
-//class PNotString extends PNot {
-//byte[] utf8;
-//PNotString(int flag, PString e) {
-//	super(flag | ParsingExpression.NoMemo, e);
-//	this.utf8 = e.utf8;
-//}
-//@Override ParsingExpression dup() { 
-//	return new PNotString(flag, (PString)inner); 
-//}
-//@Override
-//public boolean simpleMatch(ParsingContext context) {
-//	context.opMatchTextNot(utf8);
-//}
-//}
-//
-//class PNotByteChar extends PNot {
-//int byteChar;
-//PNotByteChar(int flag, ParsingByte e) {
-//	super(flag, e);
-//	this.byteChar = e.byteChar;
-//}
-//@Override ParsingExpression dup() { 
-//	return new PNotByteChar(flag, (ParsingByte)inner); 
-//}
-//@Override
-//public boolean simpleMatch(ParsingContext context) {
-//	context.opMatchByteCharNot(this.byteChar);
-//}
-//}	
-//
-//class PNotCharacter extends PNot {
-//ParsingCharset charset;
-//PNotCharacter(int flag, PCharacter e) {
-//	super(flag | ParsingExpression.NoMemo, e);
-//	this.charset = e.charset;
-//}
-//@Override ParsingExpression dup() { 
-//	return new PNotCharacter(flag, (PCharacter)inner); 
-//}
-//@Override
-//public boolean simpleMatch(ParsingContext context) {
-//	context.opMatchCharsetNot(this.charset);
-//}
-//}
 

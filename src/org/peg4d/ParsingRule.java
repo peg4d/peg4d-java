@@ -1,5 +1,7 @@
 package org.peg4d;
 
+import java.util.TreeMap;
+
 class ParsingRule {
 	public final static int LexicalRule   = 0;
 	public final static int ObjectRule    = 1;
@@ -7,6 +9,7 @@ class ParsingRule {
 	public final static int ReservedRule  = 1 << 15;
 	
 	Grammar  peg;
+	String baseName;
 	String ruleName;
 
 	ParsingObject po;
@@ -19,6 +22,7 @@ class ParsingRule {
 	ParsingRule(Grammar peg, String ruleName, ParsingObject po, ParsingExpression e) {
 		this.peg = peg;
 		this.po = po;
+		this.baseName = ruleName;
 		this.ruleName = ruleName;
 		this.expr = e;
 		this.type = ParsingRule.typeOf(ruleName);
@@ -110,10 +114,12 @@ class ParsingRule {
 		}
 		boolean firstUpperCase = Character.isUpperCase(ruleName.charAt(start));
 		for(int i = start+1; i < ruleName.length(); i++) {
-			if(Character.isUpperCase(ruleName.charAt(i)) && !firstUpperCase) {
+			char ch = ruleName.charAt(i);
+			if(ch == '!') break; // option
+			if(Character.isUpperCase(ch) && !firstUpperCase) {
 				return OperationRule;
 			}
-			if(Character.isLowerCase(ruleName.charAt(i)) && firstUpperCase) {
+			if(Character.isLowerCase(ch) && firstUpperCase) {
 				return ObjectRule;
 			}
 		}
@@ -124,9 +130,16 @@ class ParsingRule {
 		return typeOf(ruleName) == ParsingRule.LexicalRule;
 	}
 
-	public static String toLexicalName(String ruleName) {
-		if(typeOf(ruleName) != ParsingRule.LexicalRule) {
-			return "__" + ruleName.toUpperCase();
+	public static String toOptionName(ParsingRule rule, boolean lexOnly, TreeMap<String,String> withoutMap) {
+		String ruleName = rule.baseName;
+		if(withoutMap != null) {
+			for(String flag : withoutMap.keySet()) {
+				ParsingExpression.containFlag(rule.expr, flag);
+				ruleName += "!" + flag;
+			}
+		}
+		if(lexOnly && typeOf(ruleName) != ParsingRule.LexicalRule) {
+			ruleName = "__" + ruleName.toUpperCase();
 		}
 		return ruleName;
 	}

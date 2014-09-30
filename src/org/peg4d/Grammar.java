@@ -1,5 +1,7 @@
 package org.peg4d;
 
+import java.util.TreeMap;
+
 import org.peg4d.model.ParsingModel;
 
 public class Grammar {
@@ -115,21 +117,25 @@ public class Grammar {
 		if(ParsingRule.isLexicalName(ruleName) || r == null) {
 			return r;
 		}
-		String lexName = ParsingRule.toLexicalName(ruleName);
-		ParsingRule r2 = this.getRule(lexName);
-		if(r2 == null) {
-			r2 = new ParsingRule(this, lexName, null, null);
-			this.setRule(lexName, r2);
-			r2.expr = ParsingExpression.newDebug(r.expr.reduceOperation());
-			r2.expr = r.expr.reduceOperation();
-			r2.type = ParsingRule.LexicalRule;
-			r2.minlen = r.minlen;
-			r2.refc = r.refc;
-			//System.out.println("producing lexical rule: " + r2);
-		}
-		return r2;
+		String lexName = ParsingRule.toOptionName(r, true, null);
+		makeOptionRule(r, lexName, true, null, null);
+		return this.getRule(lexName);
 	}
 
+	public void makeOptionRule(ParsingRule r, String optName, boolean lexOnly, UMap<String> flagMap, TreeMap<String, String> withoutMap) {
+		ParsingRule r2 = this.getRule(optName);
+		if(r2 == null) {
+			r2 = new ParsingRule(this, optName, null, null);
+			this.setRule(optName, r2);
+			r2.type = lexOnly ? ParsingRule.LexicalRule : r.type;
+			r2.baseName = r.baseName;  // important
+			r2.minlen = r.minlen;
+			r2.refc = r.refc;
+			r2.expr = r.expr.normalizeImpl(lexOnly, flagMap, withoutMap).uniquefy();
+			Main.printVerbose("producing lexical rule", r2.ruleName);
+		}
+	}
+	
 	public final ParsingExpression getExpression(String ruleName) {
 		ParsingRule rule = this.getRule(ruleName);
 		if(rule != null) {
@@ -171,25 +177,31 @@ public class Grammar {
 		this.exportedRuleList = null;
 		this.getExportRuleList();
 		UList<String> stack = new UList<String>(new String[64]);
+		UMap<String> flagMap = new UMap<String>();
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
 			String uName = rule.getUniqueName();
 			stack.clear(0);
 			stack.add(uName);
-			rule.minlen = ParsingExpression.checkLeftRecursion(rule.expr, uName, 0, 0, stack);
+			rule.minlen = ParsingExpression.checkLeftRecursion(rule.expr, uName, 0, 0, stack, flagMap);
 		}
 		if(this.foundError) {
 			Main._Exit(1, "PegError found");
 		}
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
-			ParsingExpression.typeCheck(rule);
+			ParsingExpression.typeCheck(rule, flagMap);
 			rule.expr = rule.expr.uniquefy();
 		}
 //		for(int i = 0; i < nameList.size(); i++) {
 //			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
 //			rule.expr = rule.expr.uniquefy();
 //		}
+		TreeMap<String,String> withoutMap = new TreeMap<String,String>();
+		for(String name : nameList) {
+			ParsingRule rule = this.getRule(name);
+			rule.expr.normalizeImpl(false, flagMap, withoutMap);
+		}
 
 		Optimizer2.enableOptimizer();
 		for(int i = 0; i < nameList.size(); i++) {
@@ -197,13 +209,43 @@ public class Grammar {
 			Optimizer2.optimize(rule.expr);
 		
 		}
-//		this.memoRemover = new MemoRemover(this);
 		ParsingContext context = new ParsingContext(null);
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
 			if(rule.getGrammar() == this) {
 				rule.testExample1(this, context);
 			}
+		}
+	}
+	
+	final void expandFlagOption() {
+		UMap<String> nameMap = new UMap<String>();
+		for(String name : nameList) {
+			ParsingRule rule = this.getRule(name);
+			findFlag(rule.expr, nameMap);
+		}
+	}
+
+	final void findFlag(ParsingExpression e, UMap<String> nameMap) {
+		for(int i = 0; i < e.size(); i++) {
+			findFlag(e.get(i), nameMap);
+		}
+		if(e instanceof ParsingIf) {
+			String n = ((ParsingIf) e).flagName;
+			nameMap.put(n, n); 
+		}
+	}
+
+	final void findFlag(ParsingExpression e, UMap<String> nameMap, UMap<String> contextMap) {
+		if(e instanceof ParsingWithoutFlag) {
+			ParsingWithoutFlag we = (ParsingWithoutFlag)e;
+		}
+		for(int i = 0; i < e.size(); i++) {
+			findFlag(e.get(i), nameMap);
+		}
+		if(e instanceof ParsingIf) {
+			String n = ((ParsingIf) e).flagName;
+			nameMap.put(n, n); 
 		}
 	}
 	
