@@ -1,0 +1,28 @@
+// PEG4d ParsingFlag
+
+File
+	= {} // dummy for error
+
+A
+	[example: A]
+	[example: a]
+	= [A-Z]
+	/ <if IncludeLowerCase> [a-z]
+
+UPPER
+	[example: A]
+	[bad-example: a]
+	= <without IncludeLowerCase A>
+	
+B
+	= <with IncludeLowerCase A>
+
+LOWER
+	[example: A]
+	[example: B]
+	= <without IncludeLowerCase B>
+
+WARNING
+	= <with NoSuchFlag A>
+
+
