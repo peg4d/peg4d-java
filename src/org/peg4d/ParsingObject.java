@@ -11,7 +11,7 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 	ParsingObject            parent = null;
 	private ParsingObject    AST[] = null;
 
-	ParsingObject(ParsingTag tag, ParsingSource source, long pospeg) {
+	public ParsingObject(ParsingTag tag, ParsingSource source, long pospeg) {
 		this.tag        = tag;
 		this.source     = source;
 		this.pospeg     = pospeg;

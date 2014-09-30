@@ -1872,9 +1872,10 @@ class ParsingWithFlag extends ParsingOperation {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		context.opEnableFlag(this.flagName);
+		final boolean currentFlag = context.getFlag(this.flagName);
+		context.setFlag(this.flagName, true);
 		this.inner.debugMatch(context);
-		context.opPopFlag(this.flagName);
+		context.setFlag(this.flagName, currentFlag);
 		return !(context.isFailure());
 	}
 }
@@ -1907,9 +1908,10 @@ class ParsingWithoutFlag extends ParsingOperation {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		context.opDisableFlag(this.flagName);
+		final boolean currentFlag = context.getFlag(this.flagName);
+		context.setFlag(this.flagName, false);
 		this.inner.debugMatch(context);
-		context.opPopFlag(this.flagName);
+		context.setFlag(this.flagName, currentFlag);
 		return !(context.isFailure());
 	}
 }
