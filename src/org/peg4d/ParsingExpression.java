@@ -1776,8 +1776,9 @@ class ParsingIf extends ParsingFunction {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		context.opCheckFlag(this.flagName);
-		return !(context.isFailure());
+//		context.opCheckFlag(this.flagName);
+//		return !(context.isFailure());
+		return true;
 	}
 	@Override
 	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
@@ -1816,11 +1817,12 @@ class ParsingWithFlag extends ParsingOperation {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		final boolean currentFlag = context.getFlag(this.flagName);
-		context.setFlag(this.flagName, true);
-		this.inner.debugMatch(context);
-		context.setFlag(this.flagName, currentFlag);
-		return !(context.isFailure());
+//		final boolean currentFlag = context.getFlag(this.flagName);
+//		context.setFlag(this.flagName, true);
+//		this.inner.debugMatch(context);
+//		context.setFlag(this.flagName, currentFlag);
+//		return !(context.isFailure());
+		return this.inner.debugMatch(context);
 	}
 }
 
@@ -1852,11 +1854,12 @@ class ParsingWithoutFlag extends ParsingOperation {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		final boolean currentFlag = context.getFlag(this.flagName);
-		context.setFlag(this.flagName, false);
-		this.inner.debugMatch(context);
-		context.setFlag(this.flagName, currentFlag);
-		return !(context.isFailure());
+//		final boolean currentFlag = context.getFlag(this.flagName);
+//		context.setFlag(this.flagName, false);
+//		this.inner.debugMatch(context);
+//		context.setFlag(this.flagName, currentFlag);
+//		return !(context.isFailure());
+		return this.inner.debugMatch(context);
 	}
 }
 

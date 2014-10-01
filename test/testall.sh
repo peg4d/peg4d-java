@@ -30,3 +30,5 @@ test_match test/object.p4d
 test_match test/not.p4d
 test_match test/choice.p4d
 test_match test/flag.p4d
+test_match test/flag2.p4d
+
