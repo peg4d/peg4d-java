@@ -132,14 +132,14 @@ class ParsingRule {
 
 	public static String toOptionName(ParsingRule rule, boolean lexOnly, TreeMap<String,String> withoutMap) {
 		String ruleName = rule.baseName;
+		if(lexOnly && !isLexicalName(ruleName)) {
+			ruleName = "__" + ruleName.toUpperCase();
+		}
 		if(withoutMap != null) {
 			for(String flag : withoutMap.keySet()) {
 				ParsingExpression.containFlag(rule.expr, flag);
 				ruleName += "!" + flag;
 			}
-		}
-		if(lexOnly && typeOf(ruleName) != ParsingRule.LexicalRule) {
-			ruleName = "__" + ruleName.toUpperCase();
 		}
 		return ruleName;
 	}

@@ -45,8 +45,8 @@ public class Grammar {
 		return this.name + ":" + ruleName;
 	}
 	
-	final NonTerminal newNonTerminal(String text) {
-		return new NonTerminal(this, text);
+	final NonTerminal newNonTerminal(String symbol) {
+		return new NonTerminal(this, symbol);
 	}
 	
 	final boolean loadGrammarFile(String fileName) {
@@ -118,11 +118,11 @@ public class Grammar {
 			return r;
 		}
 		String lexName = ParsingRule.toOptionName(r, true, null);
-		makeOptionRule(r, lexName, true, null, null);
+		makeOptionRule(r, lexName, true, null);
 		return this.getRule(lexName);
 	}
 
-	public void makeOptionRule(ParsingRule r, String optName, boolean lexOnly, UMap<String> flagMap, TreeMap<String, String> withoutMap) {
+	public void makeOptionRule(ParsingRule r, String optName, boolean lexOnly, TreeMap<String, String> withoutMap) {
 		ParsingRule r2 = this.getRule(optName);
 		if(r2 == null) {
 			r2 = new ParsingRule(this, optName, null, null);
@@ -131,8 +131,8 @@ public class Grammar {
 			r2.baseName = r.baseName;  // important
 			r2.minlen = r.minlen;
 			r2.refc = r.refc;
-			r2.expr = r.expr.normalizeImpl(lexOnly, flagMap, withoutMap).uniquefy();
-			Main.printVerbose("producing lexical rule", r2.ruleName);
+			r2.expr = r.expr.normalizeImpl(lexOnly, withoutMap).uniquefy();
+			Main.printVerbose("producing lexical rule", r2);
 		}
 	}
 	
@@ -183,7 +183,7 @@ public class Grammar {
 			String uName = rule.getUniqueName();
 			stack.clear(0);
 			stack.add(uName);
-			rule.minlen = ParsingExpression.checkLeftRecursion(rule.expr, uName, 0, 0, stack, flagMap);
+			rule.minlen = ParsingExpression.checkLeftRecursion(rule.expr, uName, 0, 0, stack);
 		}
 		if(this.foundError) {
 			Main._Exit(1, "PegError found");
@@ -192,15 +192,23 @@ public class Grammar {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
 			ParsingExpression.typeCheck(rule, flagMap);
 			rule.expr = rule.expr.uniquefy();
+			//ParsingExpression.dumpId(rule.ruleName+ " ", rule.expr);
 		}
-//		for(int i = 0; i < nameList.size(); i++) {
-//			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
-//			rule.expr = rule.expr.uniquefy();
-//		}
+		int size = nameList.size();
 		TreeMap<String,String> withoutMap = new TreeMap<String,String>();
-		for(String name : nameList) {
-			ParsingRule rule = this.getRule(name);
-			rule.expr.normalizeImpl(false, flagMap, withoutMap);
+		for(int i = 0; i < size; i++) {
+			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
+			if(rule.getGrammar() == this) {
+				ParsingExpression e = rule.expr.normalizeImpl(false, withoutMap).uniquefy();
+//				if(rule.expr.uniqueId != e.uniqueId) {
+//					System.out.println("RULE; " + rule.ruleName);
+//					System.out.println("\tBEFORE; " + rule.expr);
+//					System.out.println("\tAFTER ; " + e);
+//					ParsingExpression.dumpId("", rule.expr);
+//					ParsingExpression.dumpId("", e);
+//				}
+				rule.expr = e;
+			}
 		}
 
 		Optimizer2.enableOptimizer();

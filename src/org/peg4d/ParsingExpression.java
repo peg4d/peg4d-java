@@ -39,6 +39,15 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return (this.uniqueId > 0);
 	}
 
+	final boolean isAllUnique() {
+		for(int i = 0; i < this.size(); i++) {
+			if(!this.get(i).isUnique()) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
 	final boolean isExpectedConnector() {
 		return (this.uniqueId == 0 && this.is(ExpectedConnector));
 	}
@@ -65,6 +74,13 @@ public abstract class ParsingExpression extends ParsingMatcher {
 	}
 	ParsingExpression uniquefyImpl() { return null; }
 	
+	static void dumpId(String indent, ParsingExpression e) {
+		System.out.println(indent + e.uniqueId + " " + e);
+		for(int i = 0; i < e.size(); i++) {
+			dumpId(indent + " ", e.get(i));
+		}
+	}
+	
 //	ParsingExpression reduceOperation() {
 //		ParsingExpression reduced = this.normalizeImpl(true, null, null);
 ////		if(reduced.getClass() != this.getClass()) {
@@ -73,9 +89,10 @@ public abstract class ParsingExpression extends ParsingMatcher {
 //		return reduced;
 //	}
 	
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		return this;
-	}
+	abstract ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap);
+//	{
+//		return this;
+//	}
 	
 	protected abstract void visit(ExpressionVisitor visitor);
 	
@@ -169,7 +186,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return false;
 	}
 
-	static int checkLeftRecursion(ParsingExpression e, String uName, int start, int minlen, UList<String> stack, UMap<String> flagMap) {
+	static int checkLeftRecursion(ParsingExpression e, String uName, int start, int minlen, UList<String> stack) {
 		if(e instanceof NonTerminal) {
 			NonTerminal ne = (NonTerminal) e;
 			ne.checkReference();
@@ -184,7 +201,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 				if(!checkRecursion(n, stack)) {
 					int pos = stack.size();
 					stack.add(n);
-					int nc = checkLeftRecursion(ne.deReference(), uName, start, minlen, stack, flagMap);
+					int nc = checkLeftRecursion(ne.deReference(), uName, start, minlen, stack);
 					e.minlen = nc - minlen;
 					stack.clear(pos);
 				}
@@ -199,7 +216,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		if(e instanceof ParsingChoice) {
 			int lmin = Integer.MAX_VALUE;
 			for(int i = 0; i < e.size(); i++) {
-				int nc = checkLeftRecursion(e.get(i), uName, start, minlen, stack, flagMap);
+				int nc = checkLeftRecursion(e.get(i), uName, start, minlen, stack);
 				if(nc < lmin) {
 					lmin = nc;
 				}
@@ -210,23 +227,18 @@ public abstract class ParsingExpression extends ParsingMatcher {
 			int nc = minlen;
 			for(int i = 0; i < e.size(); i++) {
 				ParsingExpression eN = e.get(i);
-				nc = checkLeftRecursion(eN, uName, start, nc, stack, flagMap);
+				nc = checkLeftRecursion(eN, uName, start, nc, stack);
 			}
 			e.minlen = nc - minlen;
 		}
 		else if(e instanceof ParsingUnary) {
-			int lmin = checkLeftRecursion(((ParsingUnary) e).inner, uName, start, minlen, stack, flagMap); // skip count
+			int lmin = checkLeftRecursion(((ParsingUnary) e).inner, uName, start, minlen, stack); // skip count
 			if(e instanceof ParsingOption || e instanceof ParsingRepetition || e instanceof ParsingNot || e instanceof ParsingAnd ) {
 				e.minlen = 0;
 			}
 			else {
 				e.minlen = lmin - minlen;
 			}
-		}
-		else if(e instanceof ParsingIf) {
-			String n = ((ParsingIf) e).flagName;
-			flagMap.put(n, n);
-			e.minlen = 0;
 		}
 		else {
 			if(e.minlen == -1) {
@@ -408,7 +420,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return new ParsingEmpty();
 	}
 
-	public final static ParsingFailure newFailure(ParsingExpression e) {
+	public final static ParsingFailure newFailure(ParsingMatcher e) {
 		return new ParsingFailure(e);
 	}
 
@@ -452,7 +464,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 				((ParsingNot) pe).inner = appendAsChoice(((ParsingNot) pe).inner, ((ParsingNot) e).inner);
 				return;
 			}
-			if(pe instanceof ParsingFailure && pe instanceof ParsingFail) {
+			if(pe instanceof ParsingFailure) {
 				return;
 			}
 		}
@@ -665,14 +677,20 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return true;
 	}
 	
+	public final static ParsingExpression newConstructor(boolean leftJoin, UList<ParsingExpression> l) {
+		return checkUnique(new ParsingConstructor(leftJoin, l), isUnique(l));
+	}
+
+	public final static ParsingExpression newConstructor(boolean leftJoin, ParsingExpression p) {
+		return newConstructor(leftJoin, toSequenceList(p));
+	}
+
 	public final static ParsingExpression newConstructor(ParsingExpression p) {
-		UList<ParsingExpression> l = toSequenceList(p);
-		return checkUnique(new ParsingConstructor(false, l), isUnique(l));
+		return newConstructor(false, p);
 	}
 
 	public final static ParsingExpression newJoinConstructor(ParsingExpression p) {
-		UList<ParsingExpression> l = toSequenceList(p);
-		return checkUnique(new ParsingConstructor(true, l), isUnique(l));
+		return newConstructor(true, p);
 	}
 	
 	public final static UList<ParsingExpression> toSequenceList(ParsingExpression e) {
@@ -701,7 +719,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 	}
 
 	public final static ParsingExpression newFail(String message) {
-		return new ParsingFail(message);
+		return new ParsingFailure(message);
 	}
 
 	public final static ParsingExpression newCatch() {
@@ -736,11 +754,14 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return new ParsingIsa(tagId);
 	}
 
-
 	public final static UMap<ParsingExpression> uniqueMap = new UMap<ParsingExpression>();
 	
-	public static ParsingExpression uniquefy(String key, ParsingExpression e) {
+	static ParsingExpression uniqueExpression(String key, ParsingExpression e) {
 		if(e.uniqueId == 0) {
+			if(!e.isAllUnique()) {
+				dumpId("debug ", e);
+			}
+			assert(e.isAllUnique());
 			ParsingExpression u = uniqueMap.get(key);
 			if(u == null) {
 				u = e;
@@ -779,6 +800,7 @@ abstract class ParsingUnary extends ParsingExpression {
 	}
 	protected final int uniqueKey() {
 		this.inner = inner.uniquefy();
+		assert(this.inner.uniqueId != 0);
 		return this.inner.uniqueId;
 	}
 	@Override
@@ -820,16 +842,6 @@ abstract class ParsingList extends ParsingExpression {
 	}
 
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
-		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = get(i).normalizeImpl(lexOnly, flagMap, withoutMap);
-			ParsingExpression.addSequence(l, e);
-		}
-		return ParsingExpression.newSequence(l);
-	}
-
-	@Override
 	boolean hasObjectOperation() {
 		for(int i = 0; i < this.size(); i++) {
 			if(this.get(i).hasObjectOperation()) {
@@ -849,34 +861,6 @@ abstract class ParsingList extends ParsingExpression {
 		}
 		return CheckNextFlow;
 	}
-
-//	public final ParsingExpression trim() {
-//		int size = this.size();
-//		boolean hasNull = true;
-//		while(hasNull) {
-//			hasNull = false;
-//			for(int i = 0; i < size-1; i++) {
-//				if(this.get(i) == null && this.get(i+1) != null) {
-//					this.swap(i,i+1);
-//					hasNull = true;
-//				}
-//			}
-//		}
-//		for(int i = 0; i < this.size(); i++) {
-//			if(this.get(i) == null) {
-//				size = i;
-//				break;
-//			}
-//		}
-//		if(size == 0) {
-//			return null;
-//		}
-//		if(size == 1) {
-//			return this.get(0);
-//		}
-//		this.list.clear(size);
-//		return this;
-//	}
 	
 	public final void swap(int i, int j) {
 		ParsingExpression e = this.inners.ArrayValues[i];
@@ -890,9 +874,12 @@ class ParsingEmpty extends ParsingExpression {
 		super();
 		this.minlen = 0;
 	}
-	
 	@Override ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniquefy("\b", this);
+		return ParsingExpression.uniqueExpression("\b", this);
+	}
+	@Override
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String, String> withoutMap) {
+		return this;
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -905,14 +892,22 @@ class ParsingEmpty extends ParsingExpression {
 }
 
 class ParsingFailure extends ParsingExpression {
-	ParsingExpression dead;
-	ParsingFailure(ParsingExpression dead) {
+	String message;
+	ParsingFailure(String message) {
 		super();
-		this.dead = dead;
+		this.message = message;
+	}
+	ParsingFailure(ParsingMatcher m) {
+		super();
+		this.message = "expecting " + m;
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
-		return new ParsingFailure(dead);
+		return ParsingExpression.uniqueExpression("!!\b"+message, this);
+	}
+	@Override
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String, String> withoutMap) {
+		return this;
 	}
 	@Override
 	short acceptByte(int ch) {
@@ -920,11 +915,12 @@ class ParsingFailure extends ParsingExpression {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		context.failure(dead);
+		context.failure(this);
 		return false;
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
+		visitor.visitFailure(this);
 	}
 }
 
@@ -938,9 +934,13 @@ class ParsingByte extends ParsingExpression {
 	}
 	@Override ParsingExpression uniquefyImpl() { 
 		if(this.errorToken == null) {
-			return ParsingExpression.uniquefy("'\b" + byteChar, this);
+			return ParsingExpression.uniqueExpression("'\b" + byteChar, this);
 		}
-		return ParsingExpression.uniquefy("'\b" + this.errorToken + "\b" + byteChar, this);
+		return ParsingExpression.uniqueExpression("'\b" + this.errorToken + "\b" + byteChar, this);
+	}
+	@Override
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String, String> withoutMap) {
+		return this;
 	}
 	@Override
 	String expectedToken() {
@@ -974,7 +974,11 @@ class ParsingAny extends ParsingExpression {
 		this.minlen = 1;
 	}
 	@Override ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniquefy(".\b", this);
+		return ParsingExpression.uniqueExpression(".\b", this);
+	}
+	@Override
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String, String> withoutMap) {
+		return this;
 	}
 	@Override 
 	short acceptByte(int ch) {
@@ -1006,7 +1010,6 @@ class NonTerminal extends ParsingExpression {
 		this.ruleName = ruleName;
 		this.uniqueName = this.peg.uniqueRuleName(this.ruleName);
 	}
-
 	@Override
 	boolean hasObjectOperation() {
 		ParsingRule r = this.getRule();
@@ -1015,22 +1018,22 @@ class NonTerminal extends ParsingExpression {
 
 	@Override
 	ParsingExpression uniquefyImpl() {
-		boolean expectedConnector = this.isExpectedConnector();
-		ParsingExpression e = ParsingExpression.uniquefy(getUniqueName(), this);
-		if(expectedConnector) {
-			e = ParsingExpression.newConnector(e, -1);
-		}
-		return e;
+		return ParsingExpression.uniqueExpression(getUniqueName(), this);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		ParsingRule rule = this.getRule();
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		NonTerminal ne = this;
+		ParsingRule rule = ne.getRule();
 		String optName = ParsingRule.toOptionName(rule, lexOnly, withoutMap);
-		if(this.peg.getRule(optName) != rule) {
-			this.peg.makeOptionRule(rule, optName, lexOnly, flagMap, withoutMap);
-			return this.peg.newNonTerminal(optName);
+		if(ne.peg.getRule(optName) != rule) {
+			ne.peg.makeOptionRule(rule, optName, lexOnly, withoutMap);
+			ne = ne.peg.newNonTerminal(optName);
+			//System.out.println(rule.ruleName + "@=>" + optName);
 		}
-		return this;
+		if(isExpectedConnector()) {
+			 return ParsingExpression.newConnector(ne, -1);
+		}
+		return ne;
 	}
 
 	final String getUniqueName() {
@@ -1090,7 +1093,11 @@ class ParsingString extends ParsingExpression {
 	}
 	@Override
 	ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniquefy("''\b" + text, this);
+		return ParsingExpression.uniqueExpression("''\b" + text, this);
+	}
+	@Override
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String, String> withoutMap) {
+		return this;
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1126,7 +1133,11 @@ class ParsingByteRange extends ParsingExpression {
 	}
 	@Override 
 	ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniquefy("[\b" + startByteChar + "-" + endByteChar, this);
+		return ParsingExpression.uniqueExpression("[\b" + startByteChar + "-" + endByteChar, this);
+	}
+	@Override
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String, String> withoutMap) {
+		return this;
 	}
 	void setCount(int[] count) {
 		for(int c = startByteChar; c <= endByteChar; c++) {
@@ -1158,11 +1169,11 @@ class ParsingOption extends ParsingUnary {
 		super(e);
 	}
 	@Override ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniquefy("?\b" + this.uniqueKey(), this);
+		return ParsingExpression.uniqueExpression("?\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(lexOnly, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1198,11 +1209,11 @@ class ParsingRepetition extends ParsingUnary {
 		super(e);
 	}
 	@Override ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniquefy("*\b" + this.uniqueKey(), this);
+		return ParsingExpression.uniqueExpression("*\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(lexOnly, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1245,11 +1256,11 @@ class ParsingAnd extends ParsingUnary {
 		super(e);
 	}
 	@Override ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniquefy("&\b" + this.uniqueKey(), this);
+		return ParsingExpression.uniqueExpression("&\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(lexOnly, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1273,11 +1284,11 @@ class ParsingNot extends ParsingUnary {
 		super(e);
 	}
 	@Override ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniquefy("!\b" + this.uniqueKey(), this);
+		return ParsingExpression.uniqueExpression("!\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		ParsingExpression e = inner.normalizeImpl(true, flagMap, withoutMap);
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(true, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1325,7 +1336,16 @@ class ParsingSequence extends ParsingList {
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniquefy(" \b" + this.uniqueKey(), this);
+		return ParsingExpression.uniqueExpression(" \b" + this.uniqueKey(), this);
+	}
+	@Override
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
+		for(int i = 0; i < this.size(); i++) {
+			ParsingExpression e = get(i).normalizeImpl(lexOnly, withoutMap);
+			ParsingExpression.addSequence(l, e);
+		}
+		return ParsingExpression.newSequence(l);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1352,13 +1372,13 @@ class ParsingChoice extends ParsingList {
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniquefy("|\b" + this.uniqueKey(), this);
+		return ParsingExpression.uniqueExpression("|\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
 		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = get(i).normalizeImpl(lexOnly, flagMap, withoutMap);
+			ParsingExpression e = get(i).normalizeImpl(lexOnly, withoutMap);
 			ParsingExpression.addChoice(l, e);
 		}
 		return ParsingExpression.newChoice(l);
@@ -1412,19 +1432,20 @@ class ParsingConnector extends ParsingUnary {
 	@Override
 	ParsingExpression uniquefyImpl() {
 		if(index != -1) {
-			return ParsingExpression.uniquefy("@" + index + "\b" + this.uniqueKey(), this);
+			return ParsingExpression.uniqueExpression("@" + index + "\b" + this.uniqueKey(), this);
 		}
-		return ParsingExpression.uniquefy("@\b" + this.uniqueKey(), this);
+		return ParsingExpression.uniqueExpression("@\b" + this.uniqueKey(), this);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		if(this.isRemovedOperation()) {
 			lexOnly = true;
 		}
-		if(this.isNothingConnected()) {
-			return this.inner.uniquefy();
+		ParsingExpression e = this.inner.normalizeImpl(lexOnly, withoutMap);
+		if(this.isNothingConnected() || lexOnly) {
+			return e;
 		}
-		return this.inner.normalizeImpl(lexOnly, flagMap, withoutMap);
+		return ParsingExpression.newConnector(e, this.index);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1471,14 +1492,14 @@ class ParsingTagging extends ParsingExpression {
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniquefy("#\b" + this.tag.key(), this);
+		return ParsingExpression.uniqueExpression("#\b" + this.tag.key(), this);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		if(this.isRemovedOperation()) {
-			return this.normalizeImpl(lexOnly, flagMap, withoutMap);
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		if(lexOnly || this.isRemovedOperation()) {
+			return ParsingExpression.newEmpty();
 		}
-		return ParsingExpression.newEmpty();
+		return this;
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1505,14 +1526,14 @@ class ParsingValue extends ParsingExpression {
 	}
 	@Override
 	ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniquefy("`\b" + this.value, this);
+		return ParsingExpression.uniqueExpression("`\b" + this.value, this);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		if(this.isRemovedOperation()) {
-			return this.normalizeImpl(true, flagMap, withoutMap);
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		if(lexOnly || this.isRemovedOperation()) {
+			return ParsingExpression.newEmpty();
 		}
-		return ParsingExpression.newEmpty();
+		return this;
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1542,14 +1563,22 @@ class ParsingConstructor extends ParsingList {
 	@Override
 	ParsingExpression uniquefyImpl() {
 		if(leftJoin) {
-			return ParsingExpression.uniquefy("{@}\b" + this.uniqueKey(), this);
+			return ParsingExpression.uniqueExpression("{@}\b" + this.uniqueKey(), this);
 		}
-		boolean expectedConnector = this.isExpectedConnector();
-		ParsingExpression e = ParsingExpression.uniquefy("{}\b" + this.uniqueKey(), this);
-		if(expectedConnector) {
-			e = ParsingExpression.newConnector(e, -1);
+		return ParsingExpression.uniqueExpression("{}\b" + this.uniqueKey(), this);
+	}
+	@Override
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
+		for(int i = 0; i < this.size(); i++) {
+			ParsingExpression e = get(i).normalizeImpl(lexOnly, withoutMap);
+			ParsingExpression.addSequence(l, e);
 		}
-		return e;
+		ParsingExpression ne = (lexOnly) ? ParsingExpression.newSequence(l) : ParsingExpression.newConstructor(this.leftJoin, l);
+		if(this.isExpectedConnector()) {
+			ne = ParsingExpression.newConnector(ne, -1);
+		}
+		return ne;
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1614,11 +1643,15 @@ abstract class ParsingFunction extends ParsingExpression {
 		super();
 		this.funcName = funcName;
 	}
+	@Override
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String, String> withoutMap) {
+		return this;
+	}
 	String getParameters() {
 		return "";
 	}
 	@Override final ParsingExpression uniquefyImpl() {
-		return 	ParsingExpression.uniquefy("<"+this.funcName+this.getParameters(), this);
+		return 	ParsingExpression.uniqueExpression("<"+this.funcName+this.getParameters(), this);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1634,7 +1667,7 @@ abstract class ParsingOperation extends ParsingUnary {
 		this.inner = inner;
 	}
 	@Override final ParsingExpression uniquefyImpl() {
-		return 	ParsingExpression.uniquefy("<"+this.funcName+this.getParameters()+"+"+this.uniqueId, this);
+		return 	ParsingExpression.uniqueExpression("<"+this.funcName+this.getParameters()+"+"+this.uniqueKey(), this);
 	}
 	public String getParameters() {
 		return "";
@@ -1649,22 +1682,22 @@ abstract class ParsingOperation extends ParsingUnary {
 	}
 }
 
-class ParsingFail extends ParsingFunction {
-	String message;
-	ParsingFail(String message) {
-		super("fail");
-		this.message = message;
-	}
-	@Override
-	public boolean simpleMatch(ParsingContext context) {
-		context.failure(this);
-		return false;
-	}
-	@Override
-	short acceptByte(int ch) {
-		return Reject;
-	}
-}
+//class ParsingFail extends ParsingFunction {
+//	String message;
+//	ParsingFail(String message) {
+//		super("fail");
+//		this.message = message;
+//	}
+//	@Override
+//	public boolean simpleMatch(ParsingContext context) {
+//		context.failure(this);
+//		return false;
+//	}
+//	@Override
+//	short acceptByte(int ch) {
+//		return Reject;
+//	}
+//}
 
 class ParsingCatch extends ParsingFunction {
 	ParsingCatch() {
@@ -1689,8 +1722,8 @@ class ParsingExport extends ParsingUnary {
 		return new ParsingExport(inner);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		return inner.normalizeImpl(lexOnly, flagMap, withoutMap);
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		return inner.normalizeImpl(lexOnly, withoutMap);
 	}
 	@Override
 	protected void visit(ExpressionVisitor visitor) {
@@ -1707,13 +1740,13 @@ class ParsingMatch extends ParsingOperation {
 		super("match", inner);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
 //		ParsingExpression e = inner.normalizeImpl(true, flagMap, withoutMap);
 //		if(e == inner) {
 //			return this;
 //		}
 //		return ParsingExpression.newMatch(e);
-		return inner.normalizeImpl(true, flagMap, withoutMap);
+		return inner.normalizeImpl(true, withoutMap);
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -1731,13 +1764,109 @@ class ParsingMatch extends ParsingOperation {
 	}
 }
 
+class ParsingIf extends ParsingFunction {
+	String flagName;
+	ParsingIf(String flagName) {
+		super("if");
+		this.flagName = flagName;
+	}
+	@Override
+	public String getParameters() {
+		return " " + this.flagName;
+	}
+	@Override
+	public boolean simpleMatch(ParsingContext context) {
+		context.opCheckFlag(this.flagName);
+		return !(context.isFailure());
+	}
+	@Override
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		if(withoutMap != null && withoutMap.containsKey(flagName)) {
+			return ParsingExpression.newFailure(this);
+		}
+		return this;
+	}
+}
+
+class ParsingWithFlag extends ParsingOperation {
+	String flagName;
+	ParsingWithFlag(String flagName, ParsingExpression inner) {
+		super("with", inner);
+		this.flagName = flagName;
+	}
+	@Override
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		boolean removeWithout = false;
+		if(withoutMap != null && withoutMap.containsKey(flagName)) {
+			withoutMap.remove(flagName);
+			removeWithout = true;
+		}
+		ParsingExpression e = inner.normalizeImpl(lexOnly, withoutMap);
+		if(removeWithout) {
+			withoutMap.put(flagName, flagName);
+		}
+		if(e == inner) {
+			return this;
+		}
+		return ParsingExpression.newWithFlag(flagName, e);
+	}
+	@Override
+	public String getParameters() {
+		return " " + this.flagName;
+	}
+	@Override
+	public boolean simpleMatch(ParsingContext context) {
+		final boolean currentFlag = context.getFlag(this.flagName);
+		context.setFlag(this.flagName, true);
+		this.inner.debugMatch(context);
+		context.setFlag(this.flagName, currentFlag);
+		return !(context.isFailure());
+	}
+}
+
+class ParsingWithoutFlag extends ParsingOperation {
+	String flagName;
+	ParsingWithoutFlag(String flagName, ParsingExpression inner) {
+		super("without", inner);
+		this.flagName = flagName;
+	}
+	@Override
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		boolean addWithout = false;
+		if(withoutMap != null && !withoutMap.containsKey(flagName)) {
+			withoutMap.put(flagName, flagName);
+			addWithout = true;
+		}
+		ParsingExpression e = inner.normalizeImpl(lexOnly, withoutMap);
+		if(addWithout) {
+			withoutMap.remove(flagName);
+		}
+		if(e == inner) {
+			return this;
+		}
+		return ParsingExpression.newWithoutFlag(flagName, e);
+	}
+	@Override
+	public String getParameters() {
+		return " " + this.flagName;
+	}
+	@Override
+	public boolean simpleMatch(ParsingContext context) {
+		final boolean currentFlag = context.getFlag(this.flagName);
+		context.setFlag(this.flagName, false);
+		this.inner.debugMatch(context);
+		context.setFlag(this.flagName, currentFlag);
+		return !(context.isFailure());
+	}
+}
+
 class ParsingBlock extends ParsingOperation {
 	ParsingBlock(ParsingExpression e) {
 		super("block", e);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(lexOnly, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1778,8 +1907,8 @@ class ParsingName extends ParsingOperation {
 		this.tagId = tagId; //ParsingTag.tagId(flagName);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(lexOnly, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1820,109 +1949,13 @@ class ParsingIsa extends ParsingFunction {
 }
 
 
-class ParsingIf extends ParsingFunction {
-	String flagName;
-	ParsingIf(String flagName) {
-		super("if");
-		this.flagName = flagName;
-	}
-	@Override
-	public String getParameters() {
-		return " " + this.flagName;
-	}
-	@Override
-	public boolean simpleMatch(ParsingContext context) {
-		context.opCheckFlag(this.flagName);
-		return !(context.isFailure());
-	}
-	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		if(flagMap != null && withoutMap.containsKey(flagName)) {
-			return ParsingExpression.newFailure(this);
-		}
-		return this;
-	}
-}
-
-class ParsingWithFlag extends ParsingOperation {
-	String flagName;
-	ParsingWithFlag(String flagName, ParsingExpression inner) {
-		super("with", inner);
-		this.flagName = flagName;
-	}
-	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		boolean removeWithout = false;
-		if(flagMap != null && withoutMap.containsKey(flagName)) {
-			withoutMap.remove(flagName);
-			removeWithout = true;
-		}
-		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
-		if(removeWithout) {
-			withoutMap.put(flagName, flagName);
-		}
-		if(e == inner) {
-			return this;
-		}
-		return ParsingExpression.newWithFlag(flagName, e);
-	}
-	@Override
-	public String getParameters() {
-		return " " + this.flagName;
-	}
-	@Override
-	public boolean simpleMatch(ParsingContext context) {
-		final boolean currentFlag = context.getFlag(this.flagName);
-		context.setFlag(this.flagName, true);
-		this.inner.debugMatch(context);
-		context.setFlag(this.flagName, currentFlag);
-		return !(context.isFailure());
-	}
-}
-
-class ParsingWithoutFlag extends ParsingOperation {
-	String flagName;
-	ParsingWithoutFlag(String flagName, ParsingExpression inner) {
-		super("without", inner);
-		this.flagName = flagName;
-	}
-	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		boolean addWithout = false;
-		if(flagMap != null && !withoutMap.containsKey(flagName)) {
-			withoutMap.put(flagName, flagName);
-			addWithout = true;
-		}
-		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
-		if(addWithout) {
-			withoutMap.remove(flagName);
-		}
-		if(e == inner) {
-			return this;
-		}
-		return ParsingExpression.newWithFlag(flagName, e);
-	}
-	@Override
-	public String getParameters() {
-		return " " + this.flagName;
-	}
-	@Override
-	public boolean simpleMatch(ParsingContext context) {
-		final boolean currentFlag = context.getFlag(this.flagName);
-		context.setFlag(this.flagName, false);
-		this.inner.debugMatch(context);
-		context.setFlag(this.flagName, currentFlag);
-		return !(context.isFailure());
-	}
-}
-
 class ParsingDebug extends ParsingOperation {
 	protected ParsingDebug(ParsingExpression inner) {
 		super("debug", inner);
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
-		ParsingExpression e = inner.normalizeImpl(lexOnly, flagMap, withoutMap);
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.normalizeImpl(lexOnly, withoutMap);
 		if(e == inner) {
 			return this;
 		}
@@ -1965,7 +1998,7 @@ class ParsingApply extends ParsingOperation {
 		return true;
 	}
 	@Override
-	ParsingExpression normalizeImpl(boolean lexOnly, UMap<String> flagMap, TreeMap<String,String> withoutMap) {
+	ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		//TODO;
 		return null;
 	}

@@ -26,6 +26,8 @@ class ExpressionVisitor {
 	}
 	public void visitEmpty(ParsingEmpty e) {
 	}
+	public void visitFailure(ParsingFailure e) {
+	}
 	public void visitByte(ParsingByte e) {
 	}
 	public void visitByteRange(ParsingByteRange e) {

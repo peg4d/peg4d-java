@@ -73,6 +73,11 @@ class GrammarFormatter extends ExpressionVisitor {
 		sb.append("''");
 	}
 
+	@Override
+	public void visitFailure(ParsingFailure e) {
+		sb.append("!''");
+	}
+
 	public final static String stringfyByte(int ch) {
 		char c = (char)ch;
 		switch(c) {
