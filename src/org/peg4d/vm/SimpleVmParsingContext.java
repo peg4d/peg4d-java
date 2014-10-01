@@ -1,4 +1,4 @@
-package org.peg4d;
+package org.peg4d.vm;
 
 
 //public class SimpleVmParsingContext extends ParsingContext {

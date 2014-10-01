@@ -263,7 +263,7 @@ public class Main {
 		driverMap.put("p4d", org.peg4d.GrammarFormatter.class);
 		driverMap.put("peg", org.peg4d.GrammarFormatter.class);
 		driverMap.put("vm", org.peg4d.CodeGenerator.class);
-		driverMap.put("svm", org.peg4d.SimpleCodeGenerator.class);
+//		driverMap.put("svm", org.peg4d.vm.SimpleCodeGenerator.class);
 	}
 
 	private static GrammarFormatter loadDriverImpl(String driverName) {

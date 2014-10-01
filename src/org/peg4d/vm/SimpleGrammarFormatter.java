@@ -1,11 +1,31 @@
-package org.peg4d;
+package org.peg4d.vm;
 
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Stack;
 
-import org.peg4d.vm.MachineInstruction;
-import org.peg4d.vm.Opcode;
+import org.peg4d.Grammar;
+import org.peg4d.GrammarFormatter;
+import org.peg4d.NonTerminal;
+import org.peg4d.ParsingAnd;
+import org.peg4d.ParsingAny;
+import org.peg4d.ParsingByteRange;
+import org.peg4d.ParsingCharset;
+import org.peg4d.ParsingChoice;
+import org.peg4d.ParsingConnector;
+import org.peg4d.ParsingConstructor;
+import org.peg4d.ParsingExpression;
+import org.peg4d.ParsingIndent;
+import org.peg4d.ParsingMatch;
+import org.peg4d.ParsingNot;
+import org.peg4d.ParsingOperation;
+import org.peg4d.ParsingOption;
+import org.peg4d.ParsingRepetition;
+import org.peg4d.ParsingSequence;
+import org.peg4d.ParsingString;
+import org.peg4d.ParsingTagging;
+import org.peg4d.ParsingValue;
+import org.peg4d.UList;
 
 public class SimpleGrammarFormatter extends GrammarFormatter {
 	UList<Opcode> opList = new UList<Opcode>(new Opcode[256]);

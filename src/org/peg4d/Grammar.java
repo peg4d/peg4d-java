@@ -345,19 +345,18 @@ public class Grammar {
 		System.out.println(sb.toString());
 	}
 	
-	public final void simpleFormatAll(SimpleGrammarFormatter fmt) {
-		StringBuilder sb = new StringBuilder();
-		fmt.formatHeader(sb);
-		UList<ParsingRule> list = this.getRuleList();
-		for(int i = 0; i < list.size(); i++) {
-			ParsingRule r = list.ArrayValues[i];
-			fmt.nonTerminalMap.put(r.ruleName, fmt.opList.size());
-			fmt.formatRule(r.ruleName, r.expr, sb);
-		}
-		fmt.formatFooter(sb);
-		System.out.println(sb.toString());
-	}
-	
+//	public final void simpleFormatAll(SimpleGrammarFormatter fmt) {
+//		StringBuilder sb = new StringBuilder();
+//		fmt.formatHeader(sb);
+//		UList<ParsingRule> list = this.getRuleList();
+//		for(int i = 0; i < list.size(); i++) {
+//			ParsingRule r = list.ArrayValues[i];
+//			fmt.nonTerminalMap.put(r.ruleName, fmt.opList.size());
+//			fmt.formatRule(r.ruleName, r.expr, sb);
+//		}
+//		fmt.formatFooter(sb);
+//		System.out.println(sb.toString());
+//	}
 	
 	private ParsingModel model = new ParsingModel();
 	public final ParsingTag newTag(String tagName) {

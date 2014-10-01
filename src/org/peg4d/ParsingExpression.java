@@ -1551,7 +1551,6 @@ class ParsingValue extends ParsingExpression {
 class ParsingConstructor extends ParsingList {
 	boolean leftJoin = false;
 	int prefetchIndex = 0;
-	ParsingType type;
 	ParsingConstructor(boolean leftJoin, UList<ParsingExpression> list) {
 		super(list);
 		this.leftJoin = leftJoin;
