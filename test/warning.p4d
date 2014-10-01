@@ -1,0 +1,22 @@
+// PEG4d Warning
+
+
+
+OBJECT = { #Object }
+addObject = { #Object }
+Object = { #Object { #Object } }
+
+OBJECT2 = { #Object } { #Object }
+addObject2 = { #Object } { #Object }
+Object2 = { #Object } { #Object }
+
+
+Tag = { #Object } #Tag
+Tag2 = #Tag Object
+
+Connector = { #Object } @Object
+Connector2 = { #Object } @{Object}
+
+doObject = @( #Tag Object )
+doObject2 = @( Object #Tag )
+

@@ -1,0 +1,11 @@
+// The earlier PEG4d implementation produces a cyclic 
+// parsing object. This test is written to test preventing
+// the production of cyclic objects.
+
+File
+	= {} // dummy
+
+TOP
+	[example: Top]
+	= { 'T' #T @('o' #o {@ 'p' #p }) } .*
+

@@ -1,0 +1,25 @@
+// PEG4d Flag testing
+
+File
+	= {} // dummy
+
+ABC
+	[example: a]
+	[example: b]
+	= 'a'
+	/ <if b> 'b'
+	/ <if c> 'c'
+
+AABA
+	[example: aaa]
+	[bad-example: aba]
+	[example: aca]
+	= 'a' <without b ABC> <if a> 'a'
+
+AAA
+	[example: aaa]
+	[bad-example: aba]
+	[bad-example: aca]
+	= <without c AABA>
+
+
