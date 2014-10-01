@@ -57,7 +57,6 @@ public class Grammar {
 		if(fileName.indexOf('/') > 0) {
 			this.name = fileName.substring(fileName.lastIndexOf('/')+1);
 		}
-		context.setRecognitionMode(false);
 		PEG4d builder = new PEG4d(this);
 		while(context.hasByteChar()) {
 			ParsingObject po = context.parse(peg4d, "Chunk");

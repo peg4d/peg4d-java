@@ -1,6 +1,5 @@
 package org.peg4d;
 
-import java.util.HashMap;
 
 public class ParsingContext {
 	ParsingObject left;
@@ -257,32 +256,32 @@ public class ParsingContext {
 		this.left = null;
 	}
 	
-	boolean isMatchingOnly = false;
-	ParsingObject successResult = new ParsingObject(this.emptyTag, this.source, 0);
-	
-	final boolean isRecognitionMode() {
-		return this.isMatchingOnly;
-	}
-
-	final boolean canTransCapture() {
-		return !this.isMatchingOnly;
-	}
-	
-	final boolean setRecognitionMode(boolean recognitionMode) {
-		boolean b = this.isMatchingOnly;
-		this.isMatchingOnly = recognitionMode;
-		return b;
-	}
+//	boolean isMatchingOnly = false;
+//	ParsingObject successResult = new ParsingObject(this.emptyTag, this.source, 0);
+//	
+//	final boolean isRecognitionMode() {
+//		return this.isMatchingOnly;
+//	}
+//
+//	final boolean canTransCapture() {
+//		return !this.isMatchingOnly;
+//	}
+//	
+//	final boolean setRecognitionMode(boolean recognitionMode) {
+//		boolean b = this.isMatchingOnly;
+//		this.isMatchingOnly = recognitionMode;
+//		return b;
+//	}
 	
 	final ParsingObject newParsingObject(long pos, ParsingConstructor created) {
-		if(this.isRecognitionMode()) {
-			this.successResult.setSourcePosition(pos);
-			return this.successResult;
-		}
-		else {
+//		if(this.isRecognitionMode()) {
+//			this.successResult.setSourcePosition(pos);
+//			return this.successResult;
+//		}
+//		else {
 			//System.out.println("created pos="+pos + " mark=" + this.markObjectStack());
-			return new ParsingObject(this.emptyTag, this.source, pos, created);
-		}
+		return new ParsingObject(this.emptyTag, this.source, pos, created);
+//		}
 	}
 
 	private class LinkLog {
@@ -326,7 +325,6 @@ public class ParsingContext {
 	}
 	
 	final void logLink(ParsingObject parent, int index, ParsingObject child) {
-		assert(!this.isRecognitionMode());
 		LinkLog l = this.newLog();
 		l.childNode  = child;
 		child.parent = parent;
@@ -388,7 +386,6 @@ public class ParsingContext {
 //	}
 
 	final void commitLinkLog(int mark, ParsingObject newnode) {
-		assert(!this.isRecognitionMode());
 		LinkLog first = null;
 		int objectSize = 0;
 		while(mark < this.stackSize) {
@@ -482,226 +479,24 @@ public class ParsingContext {
 		this.fpos = this.lstack[this.lstacktop];
 	}
 	
-	public final void opCatch() {
-		if(this.canTransCapture()) {
-			this.left.setSourcePosition(this.fpos);
-			this.left.setValue(this.getErrorMessage());
-		}
-	}
-
-//	public final void opMatchText(byte[] t) {
-//		if(this.source.match(this.pos, t)) {
-//			this.consume(t.length);
-//		}
-//		else {
-//			this.failure();
-//		}
-//	}
-//
-//	public final void opMatchByteChar(int c) {
-//		if(this.source.byteAt(this.pos) == c) {
-//			this.consume(1);
-//		}
-//		else {
-//			this.failure();
-//		}
-//	}
-//
-//	public final void opMatchCharset(ParsingCharset u) {
-//		int consume = u.consume(this.source, pos);
-//		if(consume > 0) {
-//			this.consume(consume);
-//		}
-//		else {
-//			this.failure();
-//		}
-//	}
-//
-//	public final void opMatchAnyChar() {
-//		if(this.source.charAt(this.pos) != -1) {
-//			int len = this.source.charLength(this.pos);
-//			this.consume(len);
-//		}
-//		else {
-//			this.failure();
-//		}
-//	}
-//
-//	public final void opMatchTextNot(byte[] t) {
-//		if(this.source.match(this.pos, t)) {
-//			this.failure();
-//		}
-//	}
-//
-//	public final void opMatchByteCharNot(int c) {
-//		if(this.source.byteAt(this.pos) == c) {
-//			this.failure();
-//		}
-//	}
-//
-//	public final void opMatchCharsetNot(ParsingCharset u) {
-//		int consume = u.consume(this.source, pos);
-//		if(consume > 0) {
-//			this.failure();
-//		}
-//	}
-//
-//	public final void opMatchOptionalText(byte[] t) {
-//		if(this.source.match(this.pos, t)) {
-//			this.consume(t.length);
-//		}
-//	}
-//
-//	public final void opMatchOptionalByteChar(int c) {
-//		if(this.source.byteAt(this.pos) == c) {
-//			this.consume(1);
-//		}
-//	}
-//
-//	public final void opMatchOptionalCharset(ParsingCharset u) {
-//		int consume = u.consume(this.source, pos);
-//		this.consume(consume);
-//	}
-//
-//
-//	public final void opStoreObject() {
-//		this.opush(this.left);
-//	}
-//
-//	public final void opDropStoredObject() {
-//		this.opop();
-//	}
-//
-//	public final void opRestoreObject() {
-//		this.left = this.opop();
-//	}
-//
-//	public final void opRestoreObjectIfFailure() {
-//		if(this.isFailure()) {
-//			this.left = opop();
-//		}
-//		else {
-//			this.opop();
-//		}
-//	}
-//
-//	public final void opRestoreNegativeObject() {
-//		if(this.isFailure()) {
-//			this.left = this.opop();
-//		}
-//		else {
-//			this.opop();
-//			this.failure();
-//		}
-//	}
-//
-//	public void opConnectObject(int index) {
-//		ParsingObject parent = this.opop();
-//		if(!this.isFailure()) {
-//			if(this.canTransCapture() && parent != this.left) {
-//				this.logLink(parent, index, this.left);
-//			}
-//			this.left = parent;
-//		}
-//	}
-//
-//	public final void opDisableTransCapture() {
-//		this.opStoreObject();
-//		lpush(this.isRecognitionMode() ? 1 : 0);
-//		this.setRecognitionMode(true);
-//	}
-//
-//	public final void opEnableTransCapture() {
-//		lpop();
-//		this.setRecognitionMode((this.lstack[lstacktop] == 1));
-//		this.opRestoreObjectIfFailure();
-//	}
-
-	private HashMap<String,Boolean> flagMap = new HashMap<String,Boolean>();
-	
-	public final void setFlag(String flagName, boolean flag) {
-		this.flagMap.put(flagName, flag);
-	}
-	
-	public final boolean getFlag(String flagName) {
-		return this.isFlag(flagMap.get(flagName));
-	}
-	
-	private final boolean isFlag(Boolean f) {
-		return f == null || f.booleanValue();
-	}
-	
-	public final void opCheckFlag(String flag) {
-		Boolean f = this.flagMap.get(flag);
-		if(!isFlag(f)) {
-			this.failure(null);
-		}
-	}
-	
-//	public void opNewObject(ParsingConstructor e) {
+	//	public final void opStringfy() {
 //		if(this.canTransCapture()) {
-//			lpush(this.markObjectStack());
-//			this.left = new ParsingObject(this.emptyTag, this.source, this.pos, e);
+//			StringBuilder sb = new StringBuilder();
+//			joinText(this.left, sb);
+//			this.left.setValue(sb.toString());
 //		}
-//		opush(this.left);
 //	}
-//
-//	public void opLeftJoinObject(ParsingConstructor e) {
-//		if(this.canTransCapture()) {
-//			lpush(this.markObjectStack());
-//			ParsingObject left = new ParsingObject(this.emptyTag, this.source, this.pos, e);
-//			this.logLink(left, 0, this.left);
-//			this.left = left;
+//	
+//	private void joinText(ParsingObject po, StringBuilder sb) {
+//		if(po.size() == 0) {
+//			sb.append(po.getText());
 //		}
-//		opush(this.left);
-//	}
-//
-//	public void opCommitObject() {
-//		ParsingObject left = this.opop();
-//		if(!this.isFailure()) {
-//			this.left = left;
-//			if(this.canTransCapture()) {
-//				this.lpop();
-//				int mark = (int)this.lstack[this.lstacktop];
-//				this.commitLinkLog(this.left, this.left.getSourcePosition(), mark);
+//		else {
+//			for(int i = 0; i < po.size(); i++) {
+//				joinText(po.get(i), sb);
 //			}
 //		}
 //	}
-//
-//	public final void opRefreshStoredObject() {
-////		ostack[ostacktop-1] = this.left;
-//	}
-//
-//	public final void opTagging(ParsingTag tag) {
-//		if(this.canTransCapture()) {
-//			this.left.setTag(tag);
-//		}
-//	}
-//
-//	public final void opValue(Object value) {
-//		if(this.canTransCapture()) {
-//			this.left.setValue(value);
-//		}
-//	}
-	
-	public final void opStringfy() {
-		if(this.canTransCapture()) {
-			StringBuilder sb = new StringBuilder();
-			joinText(this.left, sb);
-			this.left.setValue(sb.toString());
-		}
-	}
-	
-	private void joinText(ParsingObject po, StringBuilder sb) {
-		if(po.size() == 0) {
-			sb.append(po.getText());
-		}
-		else {
-			for(int i = 0; i < po.size(); i++) {
-				joinText(po.get(i), sb);
-			}
-		}
-	}
 	
 	// <indent Expr>  <indent>
 	
@@ -757,10 +552,6 @@ public class ParsingContext {
 		return false;
 	}
 	
-	public final ParsingObject getResult() {
-		return this.left;
-	}
-
 	UList<String> terminalStack = new UList<String>(new String[8]);
 	
 	public int pushCallStack(String uniqueName) {

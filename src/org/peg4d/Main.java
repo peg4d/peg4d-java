@@ -305,13 +305,11 @@ public class Main {
 		ParsingContext context = new ParsingContext(Main.loadSource(peg, fileName));
 		if(Main.StatLevel == 0) {
 			long t = System.currentTimeMillis();
-			context.setRecognitionMode(true);
 			while(System.currentTimeMillis()-t < 4000) {
 				System.out.print(".");System.out.flush();
 				context.parseChunk(peg, startPoint);
 				context.pos = 0;
 			}
-			context.setRecognitionMode(false);
 			context.initMemo(null);
 			System.gc();
 			try{
@@ -322,7 +320,6 @@ public class Main {
 		}
 		source = Main.loadSource(peg, fileName);
 		context = new ParsingContext(source);
-		ParsingStat stat = null;
 		if(OutputType.equalsIgnoreCase("stat")) {
 			context.initStat(new ParsingStat(peg, source));
 		}

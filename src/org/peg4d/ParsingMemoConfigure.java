@@ -160,27 +160,17 @@ public class ParsingMemoConfigure {
 		@Override
 		public boolean simpleMatch(ParsingContext context) {
 			ParsingObject left = context.left;
-			if(context.canTransCapture()) {
-				int mark = context.markObjectStack();
-				if(this.memoMatch(context, this.matchRef)) {
-					if(context.left != left) {
-						context.commitLinkLog(mark, context.left);
-						context.logLink(left, this.index, context.left);
-					}
-					context.left = left;
-					left = null;
-					return true;
+			int mark = context.markObjectStack();
+			if(this.memoMatch(context, this.matchRef)) {
+				if(context.left != left) {
+					context.commitLinkLog(mark, context.left);
+					context.logLink(left, this.index, context.left);
 				}
-				context.abortLinkLog(mark);			
-				return false;
+				context.left = left;
+				left = null;
+				return true;
 			}
-			else {
-				if(this.memoMatch(context, this.matchRef)) {
-					context.left = left;
-					left = null;
-					return true;			
-				}				
-			}
+			context.abortLinkLog(mark);			
 			left = null;
 			return false;
 		}

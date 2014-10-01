@@ -1454,27 +1454,17 @@ class ParsingConnector extends ParsingUnary {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		ParsingObject left = context.left;
-		if(context.canTransCapture()) {
-			int mark = context.markObjectStack();
-			if(this.inner.debugMatch(context)) {
-				if(context.left != left) {
-					context.commitLinkLog(mark, context.left);
-					context.logLink(left, this.index, context.left);
-				}
-				context.left = left;
-				left = null;
-				return true;
+		int mark = context.markObjectStack();
+		if(this.inner.debugMatch(context)) {
+			if(context.left != left) {
+				context.commitLinkLog(mark, context.left);
+				context.logLink(left, this.index, context.left);
 			}
-			context.abortLinkLog(mark);			
-			return false;
+			context.left = left;
+			left = null;
+			return true;
 		}
-		else {
-			if(this.inner.debugMatch(context)) {
-				context.left = left;
-				left = null;
-				return true;			
-			}				
-		}
+		context.abortLinkLog(mark);			
 		left = null;
 		return false;
 	}
@@ -1507,9 +1497,7 @@ class ParsingTagging extends ParsingExpression {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		if(context.canTransCapture()) {
-			context.left.setTag(this.tag);
-		}
+		context.left.setTag(this.tag);
 		return true;
 	}
 }
@@ -1541,9 +1529,7 @@ class ParsingValue extends ParsingExpression {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		if(context.canTransCapture()) {
-			context.left.setValue(this.value);
-		}
+		context.left.setValue(this.value);
 		return true;
 	}
 }
@@ -1586,50 +1572,36 @@ class ParsingConstructor extends ParsingList {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		long startIndex = context.getPosition();
-		if(context.isRecognitionMode()) {
-			ParsingObject newone = context.newParsingObject(startIndex, this);
-			context.left = newone;
-			for(int i = 0; i < this.size(); i++) {
-				if(!this.get(i).debugMatch(context)) {
-					context.rollback(startIndex);
-					return false;
-				}
+		ParsingObject left = context.left;
+		for(int i = 0; i < this.prefetchIndex; i++) {
+			if(!this.get(i).debugMatch(context)) {
+				context.rollback(startIndex);
+				left = null;
+				return false;
 			}
-			context.left = newone;
-			return true;
 		}
-		else {
-			ParsingObject left = context.left;
-			for(int i = 0; i < this.prefetchIndex; i++) {
-				if(!this.get(i).debugMatch(context)) {
-					context.rollback(startIndex);
-					left = null;
-					return false;
-				}
-			}
-			int mark = context.markObjectStack();
-			if(this.leftJoin) {
-				context.lazyCommit(left);
-			}
-			ParsingObject newnode = context.newParsingObject(startIndex, this);
-			context.left = newnode;
-			if(this.leftJoin) {
-				context.logLink(newnode, 0, left);
-			}
-			for(int i = this.prefetchIndex; i < this.size(); i++) {
-				if(!this.get(i).debugMatch(context)) {
-					context.abortLinkLog(mark);
-					context.rollback(startIndex);
-					left = null;
-					return false;
-				}
-			}
-			newnode.setLength((int)(context.getPosition() - startIndex));
-			//context.commitLinkLog2(newnode, startIndex, mark);
-			context.left = newnode;
-			left = null;
-			return true;
+		int mark = context.markObjectStack();
+		if(this.leftJoin) {
+			context.lazyCommit(left);
 		}
+		ParsingObject newnode = context.newParsingObject(startIndex, this);
+		context.left = newnode;
+		if(this.leftJoin) {
+			context.logLink(newnode, 0, left);
+		}
+		for(int i = this.prefetchIndex; i < this.size(); i++) {
+			if(!this.get(i).debugMatch(context)) {
+				context.abortLinkLog(mark);
+				context.rollback(startIndex);
+				left = null;
+				return false;
+			}
+		}
+		newnode.setLength((int)(context.getPosition() - startIndex));
+		//context.commitLinkLog2(newnode, startIndex, mark);
+		context.left = newnode;
+		left = null;
+		return true;
 	}
 }
 
@@ -1703,11 +1675,13 @@ class ParsingCatch extends ParsingFunction {
 		super("catch");
 	}
 	@Override
+	public boolean hasObjectOperation() {
+		return true;
+	}
+	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		if(context.canTransCapture()) {
-			context.left.setSourcePosition(context.fpos);
-			context.left.setValue(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
-		}
+		context.left.setSourcePosition(context.fpos);
+		context.left.setValue(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
 		return true;
 	}
 }
@@ -1749,17 +1723,18 @@ class ParsingMatch extends ParsingOperation {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		boolean oldMode = context.setRecognitionMode(true);
-		ParsingObject left = context.left;
-		if(this.inner.debugMatch(context)) {
-			context.setRecognitionMode(oldMode);
-			context.left = left;
-			left = null;
-			return true;
-		}
-		context.setRecognitionMode(oldMode);
-		left = null;
-		return false;
+//		boolean oldMode = context.setRecognitionMode(true);
+//		ParsingObject left = context.left;
+//		if(this.inner.debugMatch(context)) {
+//			context.setRecognitionMode(oldMode);
+//			context.left = left;
+//			left = null;
+//			return true;
+//		}
+//		context.setRecognitionMode(oldMode);
+//		left = null;
+//		return false;
+		return this.inner.debugMatch(context);
 	}
 }
 
