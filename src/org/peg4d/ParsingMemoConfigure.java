@@ -94,6 +94,7 @@ public class ParsingMemoConfigure {
 	
 	abstract class MemoMatcher extends ParsingMatcher {
 		ParsingExpression holder = null;
+		ParsingExpression key = null;
 		ParsingMatcher matchRef = null;
 		boolean enableMemo = true;
 		int memoHit = 0;
@@ -102,7 +103,7 @@ public class ParsingMemoConfigure {
 
 		final boolean memoMatch(ParsingContext context, ParsingMatcher ma) {
 			long pos = context.getPosition();
-			MemoEntry m = context.getMemo(pos, holder);
+			MemoEntry m = context.getMemo(pos, key);
 			if(m != null) {
 				this.memoHit += 1;
 				this.hitLength += m.consumed;
@@ -115,7 +116,7 @@ public class ParsingMemoConfigure {
 			ParsingObject left = context.left;
 			boolean b = ma.simpleMatch(context);
 			int length = (int)(context.getPosition() - pos);
-			context.setMemo(pos, holder, (context.left == left) ? ParsingMemoConfigure.NonTransition : context.left, length);
+			context.setMemo(pos, key, (context.left == left) ? ParsingMemoConfigure.NonTransition : context.left, length);
 			this.memoMiss += 1;
 			if(!NonTracing) {
 				this.tryTracing();
@@ -179,6 +180,7 @@ public class ParsingMemoConfigure {
 		int index;
 		ConnectorMemoMatcher(ParsingConnector holder) {
 			this.holder = holder;
+			this.key = holder.inner;
 			this.matchRef = holder.inner.matcher;
 			this.index = holder.index;
 		}
@@ -215,8 +217,8 @@ public class ParsingMemoConfigure {
 	class NonTerminalMemoMatcher extends MemoMatcher {
 		NonTerminalMemoMatcher(NonTerminal inner) {
 			this.holder = inner;
-			ParsingExpression deref = Optimizer2.resolveNonTerminal(inner);
-			this.matchRef = deref.matcher;
+			this.key = Optimizer2.resolveNonTerminal(inner);
+			this.matchRef = key.matcher;
 		}
 		
 		@Override
