@@ -1,5 +1,7 @@
 package org.peg4d;
 
+import java.util.HashMap;
+
 
 public class ParsingContext {
 	ParsingObject left;
@@ -40,7 +42,7 @@ public class ParsingContext {
 	}
 		
 	public final ParsingObject parseChunk(Grammar peg, String startPoint) {
-		this.initMemo(null);
+		this.initMemo(null, peg.getRuleSize());
 		ParsingExpression start = peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
@@ -86,7 +88,7 @@ public class ParsingContext {
 	}
 
 	public final ParsingObject parse(Grammar peg, String startPoint, ParsingMemoConfigure conf) {
-		this.initMemo(conf);
+		this.initMemo(conf, peg.getRuleSize());
 		ParsingRule start = peg.getRule(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
@@ -107,13 +109,13 @@ public class ParsingContext {
 		}
 		checkUnusedText(po);
 		if(conf != null && this.stat != null) {
-			conf.show(this.stat);
+			conf.show2(this.stat);
 		}
 		return this.left;
 	}
 
 	public final boolean match(Grammar peg, String startPoint, ParsingMemoConfigure conf) {
-		this.initMemo(conf);
+		this.initMemo(conf, peg.getRuleSize());
 		ParsingExpression start = peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
@@ -431,53 +433,7 @@ public class ParsingContext {
 		o = null;
 	}
 
-	public final void opRememberPosition() {
-		lpush(this.pos);
-	}
-
-	public final void opCommitPosition() {
-		lpop();
-	}
-
-	public final void opBacktrackPosition() {
-		lpop();
-		rollback(this.lstack[this.lstacktop]);
-	}
 	
-	public final void opRememberSequencePosition() {
-		lpush(this.pos);
-		lpush(this.markObjectStack());
-		opush(this.left);
-	}
-
-	public final void opCommitSequencePosition() {
-		opop();
-		lpop();
-		lpop();
-	}
-
-	public final void opBackTrackSequencePosition() {
-		this.left = opop();
-		lpop();
-		this.abortLinkLog((int)this.lstack[this.lstacktop]);
-		lpop();
-		this.rollback(this.lstack[this.lstacktop]);
-	}
-
-
-	public final void opRememberFailurePosition() {
-		lpush(this.fpos);
-	}
-
-	public final void opUpdateFailurePosition() {
-		lpop();
-	}
-
-	public final void opForgetFailurePosition() {
-		lpop();
-		//System.out.println("forget fpos: " + this.fpos + " <- " + this.lstack[this.lstacktop]);
-		this.fpos = this.lstack[this.lstacktop];
-	}
 	
 	//	public final void opStringfy() {
 //		if(this.canTransCapture()) {
@@ -575,8 +531,8 @@ public class ParsingContext {
 	
 	protected ParsingMemo memoMap = null;
 
-	public void initMemo(ParsingMemoConfigure conf) {
-		this.memoMap = (conf == null) ? new NoParsingMemo() : conf.newMemo();
+	public void initMemo(ParsingMemoConfigure conf, int rules) {
+		this.memoMap = (conf == null) ? new NoParsingMemo() : conf.newMemo(rules);
 	}
 
 	final MemoEntry getMemo(long keypos, ParsingExpression e) {
@@ -587,6 +543,19 @@ public class ParsingContext {
 		this.memoMap.setMemo(keypos, e, result, length);
 	}
 
-
+	private HashMap<String,Boolean> flagMap = new HashMap<String,Boolean>();
+	
+	final void setFlag(String flagName, boolean flag) {
+		this.flagMap.put(flagName, flag);
+	}
+	
+	final boolean getFlag(String flagName) {
+		return this.isFlag(flagMap.get(flagName));
+	}
+	
+	final boolean isFlag(Boolean f) {
+		return f == null || f.booleanValue();
+	}
+		
 }
 

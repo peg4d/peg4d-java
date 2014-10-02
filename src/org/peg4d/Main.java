@@ -70,17 +70,15 @@ public class Main {
 	public static boolean Relation = false;
 
 	// --memo:no
-	// --memo:no
-	public static String  ParserName = null;
-	public static boolean TracingMemo = true;
-	public static boolean UseFifo = false;
-	public static boolean AllExpressionMemo  = false;
-	public static boolean PackratStyleMemo   = true;
-	public static boolean ObjectFocusedMemo  = false;
+//	public static String  ParserName = null;
+//	public static boolean TracingMemo = true;
+//	public static boolean UseFifo = false;
+//	public static boolean AllExpressionMemo  = false;
+//	public static boolean PackratStyleMemo   = true;
+//	public static boolean ObjectFocusedMemo  = false;
 	
 	// -O
 	public static int OptimizationLevel = 2;
-	public static int MemoFactor = 256;
 	public static String CSVFileName = "results.csv";
 
 	public final static void main(String[] args) {
@@ -142,9 +140,6 @@ public class Main {
 				PEGFormatter = args[index];
 				index = index + 1;
 			}
-			else if(argument.startsWith("-M")) {
-				Main.MemoFactor  = ParsingCharset.parseInt(argument.substring(2), 256);
-			}
 			else if (argument.startsWith("-O")) {
 				OptimizationLevel = ParsingCharset.parseInt(argument.substring(2), 2);
 			}
@@ -192,39 +187,40 @@ public class Main {
 				}
 				index = index + 1;
 			}
-			else if (argument.equals("--name")) {
-				ParserName = args[index];
-				index = index + 1;
-			}
+//			else if (argument.equals("--name")) {
+//				ParserName = args[index];
+//				index = index + 1;
+//			}
 			else if(argument.startsWith("--memo")) {
-				if(argument.equals("--memo:data")) {
-					AllExpressionMemo = false;
-					PackratStyleMemo = false;
-					ObjectFocusedMemo = true;
+				if(argument.equals("--memo:none")) {
+					ParsingMemoConfigure.NoMemo = true;
 				}
-				else if(argument.equals("--memo:none")) {
-					AllExpressionMemo = false;
-					PackratStyleMemo = false;
-					ObjectFocusedMemo = false;
-					TracingMemo = false;
-				}
-				else if(argument.equals("--memo:all")) {
-					AllExpressionMemo = true;
-					PackratStyleMemo = false;
-					ObjectFocusedMemo = false;
-				}
-				else if(argument.equals("--memo:static")) {
-					TracingMemo = false;
+				else if(argument.equals("--memo:packrat")) {
+					ParsingMemoConfigure.PackratParsing = true;
 				}
 				else if(argument.equals("--memo:fifo")) {
-					UseFifo = true;
+					ParsingMemoConfigure.FifoPackratParsing = true;
+				}
+				else if(argument.equals("--memo:notrace")) {
+					ParsingMemoConfigure.NonTracing = false;
 				}
 				else {
-					ShowUsage("unknown option: " + argument);
+					int distance = ParsingCharset.parseInt(argument.substring(7), -1);
+					if(distance >= 0) {
+						ParsingMemoConfigure.BacktrackDistance  = distance;
+					}
+					else {
+						ShowUsage("unknown option: " + argument);
+					}
 				}
 			}
 			else if(argument.startsWith("--verbose")) {
-				VerboseMode = true;
+				if(argument.equals("--verbose:memo")) {
+					ParsingMemoConfigure.VerboseMemo = true;
+				}
+				else {
+					VerboseMode = true;
+				}
 			}
 			else {
 				ShowUsage("unknown option: " + argument);
@@ -251,10 +247,10 @@ public class Main {
 		System.out.println("  -W<num>                   Warning Level (default:1)");
 		System.out.println("  -O<num>                   Optimization Level (default:2)");
 		System.out.println("  --memo:x                  Memo configuration");
-		System.out.println("     no|packrat|fifo");
-		System.out.println("  -M<num>                   Memo factor (default: 100)");
+		System.out.println("     none|packrat|fifo|notrace");
+		System.out.println("  --memo:<num>              Expected backtrack distance (default: 256)");
 		System.out.println("  --verbose                 Printing Debug infomation");
-		System.out.println("  --verbose:peg             Printing Peg/Debug infomation");
+		System.out.println("  --verbose:memo            Printing Peg/Debug infomation");
 		Main._Exit(0, Message);
 	}
 	
@@ -333,7 +329,7 @@ public class Main {
 				context.parseChunk(peg, startPoint);
 				context.pos = 0;
 			}
-			context.initMemo(null);
+			context.initMemo(null, peg.getRuleSize());
 			System.gc();
 			try{
 				Thread.sleep(500);

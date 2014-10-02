@@ -3,6 +3,8 @@ package org.peg4d;
 import java.util.AbstractList;
 
 public class ParsingObject extends AbstractList<ParsingObject> {
+	private static int idCount = 0;
+	int oid;
 	private ParsingSource    source = null;
 	private long             pospeg = 0;
 	private int              length = 0;
@@ -12,6 +14,7 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 	private ParsingObject    AST[] = null;
 
 	public ParsingObject(ParsingTag tag, ParsingSource source, long pospeg) {
+		this.oid = idCount++;
 		this.tag        = tag;
 		this.source     = source;
 		this.pospeg     = pospeg;
@@ -19,6 +22,7 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 	}
 
 	ParsingObject(ParsingTag tag, ParsingSource source, long pos, ParsingExpression e) {
+		this.oid = idCount++;
 		this.tag        = tag;
 		this.source     = source;
 		this.pospeg     = ParsingUtils.objectId(pos, e);

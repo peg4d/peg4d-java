@@ -262,7 +262,7 @@ class ParsingStat {
 		
 		this.set(new vText("Parser", p.getName()));
 		this.setCount("Optimization", Main.OptimizationLevel);
-		this.setCount("MemoFactor", Main.MemoFactor);
+		this.setCount("BacktrackDistance", ParsingMemoConfigure.BacktrackDistance);
 
 		String fileName = p.source.getResourceName();
 		if(fileName.lastIndexOf('/') > 0) {
@@ -282,7 +282,7 @@ class ParsingStat {
 
 		this.setCount("Memory", this.InitTotalHeap);
 		id = id + ((Main.RecognitionOnlyMode) ? 'C' : 'O');
-		id = id + Main.OptimizationLevel + "." + Main.MemoFactor + "."  + (this.InitTotalHeap / (1024*1024)) +"M";
+		id = id + Main.OptimizationLevel + "." + ParsingMemoConfigure.BacktrackDistance + "."  + (this.InitTotalHeap / (1024*1024)) +"M";
 		this.setCount("HeapSize", this.HeapSize);
 		this.setRatio1("Heap/File", this.HeapSize, this.statFileLength);		
 		this.setCount("UsedHeapSize", this.UsedHeapSize);
@@ -314,12 +314,7 @@ class ParsingStat {
 
 		this.statObject(pego);
 		//p.peg.updateStat(this);
-		if(Main.ParserName == null) {
-			this.setText("StatId", id);
-		}
-		else {
-			this.setText("StatId", Main.ParserName);
-		}
+		this.setText("StatId", id);
 		this.setCount("Latency", this.ErapsedTime);  // ms
 		this.setRatio("Throughput", this.ConsumedLength, this.ErapsedTime);
 		

@@ -15,7 +15,6 @@ public class Grammar {
 	UMap<String>         objectLabelMap = null;
 	public boolean       foundError = false;
 
-	int memoFactor;
 	int optimizationLevel;
 	int LexicalOptimization       = 0;
 	int InliningCount             = 0;
@@ -31,10 +30,6 @@ public class Grammar {
 		this.ruleMap  = new UMap<ParsingRule>();
 		this.nameList  = new UList<String>(new String[16]);
 		this.optimizationLevel = Main.OptimizationLevel;
-		this.memoFactor = Main.MemoFactor;
-		if(this.memoFactor < 0) {
-			this.memoFactor = - this.memoFactor;
-		}
 	}
 
 	public String getName() {
@@ -103,6 +98,10 @@ public class Grammar {
 		}
 	}
 	
+	public int getRuleSize() {
+		return this.ruleMap.size();
+	}
+
 	public final boolean hasRule(String ruleName) {
 		return this.ruleMap.get(ruleName) != null;
 	}
@@ -365,6 +364,7 @@ public class Grammar {
 	public final ParsingTag newStartTag() {
 		return model.get("Text");
 	}
+
 }
 
 class PEG4dGrammar extends Grammar {

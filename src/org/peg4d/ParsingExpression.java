@@ -1572,35 +1572,33 @@ class ParsingConstructor extends ParsingList {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		long startIndex = context.getPosition();
-		ParsingObject left = context.left;
+//		ParsingObject left = context.left;
 		for(int i = 0; i < this.prefetchIndex; i++) {
 			if(!this.get(i).debugMatch(context)) {
 				context.rollback(startIndex);
-				left = null;
 				return false;
 			}
 		}
 		int mark = context.markObjectStack();
-		if(this.leftJoin) {
-			context.lazyCommit(left);
-		}
 		ParsingObject newnode = context.newParsingObject(startIndex, this);
-		context.left = newnode;
 		if(this.leftJoin) {
-			context.logLink(newnode, 0, left);
+			context.lazyCommit(context.left);
+			context.logLink(newnode, 0, context.left);
 		}
+		context.left = newnode;
 		for(int i = this.prefetchIndex; i < this.size(); i++) {
 			if(!this.get(i).debugMatch(context)) {
 				context.abortLinkLog(mark);
 				context.rollback(startIndex);
-				left = null;
+				newnode = null;
 				return false;
 			}
 		}
 		newnode.setLength((int)(context.getPosition() - startIndex));
 		//context.commitLinkLog2(newnode, startIndex, mark);
+		//System.out.println("newnode: " + newnode.oid);
 		context.left = newnode;
-		left = null;
+		newnode = null;
 		return true;
 	}
 }
@@ -1739,6 +1737,7 @@ class ParsingMatch extends ParsingOperation {
 }
 
 class ParsingIf extends ParsingFunction {
+	public final static boolean OldFlag = false;
 	String flagName;
 	ParsingIf(String flagName) {
 		super("if");
@@ -1750,8 +1749,13 @@ class ParsingIf extends ParsingFunction {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-//		context.opCheckFlag(this.flagName);
-//		return !(context.isFailure());
+		if(ParsingIf.OldFlag) {
+			Boolean f = context.getFlag(this.flagName);
+			if(!context.isFlag(f)) {
+				context.failure(null);
+			}
+			return !(context.isFailure());
+		}
 		return true;
 	}
 	@Override
@@ -1791,11 +1795,13 @@ class ParsingWithFlag extends ParsingOperation {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-//		final boolean currentFlag = context.getFlag(this.flagName);
-//		context.setFlag(this.flagName, true);
-//		this.inner.debugMatch(context);
-//		context.setFlag(this.flagName, currentFlag);
-//		return !(context.isFailure());
+		if(ParsingIf.OldFlag) {
+			final boolean currentFlag = context.getFlag(this.flagName);
+			context.setFlag(this.flagName, true);
+			boolean res = this.inner.debugMatch(context);
+			context.setFlag(this.flagName, currentFlag);
+			return res;
+		}
 		return this.inner.debugMatch(context);
 	}
 }
@@ -1828,11 +1834,13 @@ class ParsingWithoutFlag extends ParsingOperation {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-//		final boolean currentFlag = context.getFlag(this.flagName);
-//		context.setFlag(this.flagName, false);
-//		this.inner.debugMatch(context);
-//		context.setFlag(this.flagName, currentFlag);
-//		return !(context.isFailure());
+		if(ParsingIf.OldFlag) {
+			final boolean currentFlag = context.getFlag(this.flagName);
+			context.setFlag(this.flagName, false);
+			boolean res = this.inner.debugMatch(context);
+			context.setFlag(this.flagName, currentFlag);
+			return res;
+		}
 		return this.inner.debugMatch(context);
 	}
 }

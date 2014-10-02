@@ -6,7 +6,12 @@ import java.util.Map;
 
 public class ParsingMemoConfigure {
 	public final static ParsingObject NonTransition = new ParsingObject(null, null, 0);
-	boolean enableTracing = false;
+	public static boolean NoMemo = false;
+	public static boolean PackratParsing = false;
+	public static boolean FifoPackratParsing = false;
+	public static int     BacktrackDistance = 256;
+	public static boolean NonTracing = false;
+	public static boolean VerboseMemo = false;
 	
 	UList<MemoMatcher> memoList = new UList<MemoMatcher>(new MemoMatcher[16]);
 	
@@ -18,7 +23,6 @@ public class ParsingMemoConfigure {
 			exploitMemo1(e.get(i));
 		}
 		if(!(e.matcher instanceof MemoMatcher)) {
-//			System.out.println("e: " + e);
 			if(e instanceof ParsingConnector) {
 				ParsingConnector ne = (ParsingConnector)e;
 				assert(e.isUnique());
@@ -39,39 +43,53 @@ public class ParsingMemoConfigure {
 	}
 
 	void exploitMemo(ParsingRule rule) {
-		for(ParsingRule r : rule.subRule()) {
-			exploitMemo1(r.expr);
+		if(!NoMemo) {
+			for(ParsingRule r : rule.subRule()) {
+				exploitMemo1(r.expr);
+			}
 		}
 	}
 
-	void show(ParsingStat stat) {
-		for(int i = 0; i < memoList.size() - 1; i++) {
-			for(int j = i + 1; j < memoList.size(); j++) {
-				if(memoList.ArrayValues[i].ratio() > memoList.ArrayValues[j].ratio()) {
-					MemoMatcher m = memoList.ArrayValues[i];
-					memoList.ArrayValues[i] = memoList.ArrayValues[j];
-					memoList.ArrayValues[j] = m;
-				}
-				if(memoList.ArrayValues[i].ratio() == memoList.ArrayValues[j].ratio() && memoList.ArrayValues[i].count() > memoList.ArrayValues[j].count()) {
-					MemoMatcher m = memoList.ArrayValues[i];
-					memoList.ArrayValues[i] = memoList.ArrayValues[j];
-					memoList.ArrayValues[j] = m;
+	void show2(ParsingStat stat) {
+		if(VerboseMemo) {
+			for(int i = 0; i < memoList.size() - 1; i++) {
+				for(int j = i + 1; j < memoList.size(); j++) {
+					if(memoList.ArrayValues[i].ratio() > memoList.ArrayValues[j].ratio()) {
+						MemoMatcher m = memoList.ArrayValues[i];
+						memoList.ArrayValues[i] = memoList.ArrayValues[j];
+						memoList.ArrayValues[j] = m;
+					}
+					if(memoList.ArrayValues[i].ratio() == memoList.ArrayValues[j].ratio() && memoList.ArrayValues[i].count() > memoList.ArrayValues[j].count()) {
+						MemoMatcher m = memoList.ArrayValues[i];
+						memoList.ArrayValues[i] = memoList.ArrayValues[j];
+						memoList.ArrayValues[j] = m;
+					}
 				}
 			}
+			if(stat != null) {
+				int hit = 0;
+				int miss = 0;
+				for(MemoMatcher m : memoList) {
+					System.out.println(m);
+					hit += m.memoHit;
+					miss += m.memoMiss;
+				}
+				System.out.println("Total: " + ((double)hit / miss) + " WorstCaseBackTrack=" + stat.WorstBacktrackSize);
+			}
 		}
-		int hit = 0;
-		int miss = 0;
-		for(MemoMatcher m : memoList) {
-			System.out.println(m);
-			hit += m.memoHit;
-			miss += m.memoMiss;
-		}
-		System.out.println("Total: " + ((double)hit / miss) + " WorstCaseBackTrack=" + stat.WorstBacktrackSize);
 	}
 	
-	ParsingMemo newMemo() {
-		//return new FifoPackratParsingMemo(512);
-		return new PackratParsingMemo(512);
+	ParsingMemo newMemo(int rules) {
+		if(ParsingMemoConfigure.NoMemo) {
+			return new NoParsingMemo();
+		}
+		if(ParsingMemoConfigure.PackratParsing) {
+			return new PackratParsingMemo(512);
+		}
+		if(ParsingMemoConfigure.FifoPackratParsing) {
+			return new FifoPackratParsingMemo(ParsingMemoConfigure.BacktrackDistance);
+		}
+		return new TracingPackratParsingMemo(ParsingMemoConfigure.BacktrackDistance, rules);
 	}
 	
 	abstract class MemoMatcher extends ParsingMatcher {
@@ -99,9 +117,9 @@ public class ParsingMemoConfigure {
 			int length = (int)(context.getPosition() - pos);
 			context.setMemo(pos, holder, (context.left == left) ? ParsingMemoConfigure.NonTransition : context.left, length);
 			this.memoMiss += 1;
-			if(enableTracing) {
-				this.tryTracing();
-			}
+//			if(!NonTracing) {
+//				this.tryTracing();
+//			}
 			left = null;
 			return b;
 		}
@@ -151,10 +169,10 @@ public class ParsingMemoConfigure {
 	
 	class ConnectorMemoMatcher extends MemoMatcher {
 		int index;
-		ConnectorMemoMatcher(ParsingConnector inner) {
-			this.holder = inner;
-			this.matchRef = inner.matcher;
-			this.index = inner.index;
+		ConnectorMemoMatcher(ParsingConnector holder) {
+			this.holder = holder;
+			this.matchRef = holder.inner.matcher;
+			this.index = holder.index;
 		}
 				
 		@Override
@@ -163,14 +181,19 @@ public class ParsingMemoConfigure {
 			int mark = context.markObjectStack();
 			if(this.memoMatch(context, this.matchRef)) {
 				if(context.left != left) {
+					//System.out.println("Linked: " + this.holder + " " + left.oid + " => " + context.left.oid);
 					context.commitLinkLog(mark, context.left);
 					context.logLink(left, this.index, context.left);
+				}
+				else {
+					System.out.println("DEBUG nothing linked: " + this.holder + " " + left.oid + " => " + context.left.oid);
+					context.abortLinkLog(mark);					
 				}
 				context.left = left;
 				left = null;
 				return true;
 			}
-			context.abortLinkLog(mark);			
+			context.abortLinkLog(mark);
 			left = null;
 			return false;
 		}
@@ -448,13 +471,13 @@ class FifoPackratParsingMemo extends ParsingMemo {
 }
 
 
-class OpenFifoMemo extends ParsingMemo {
+class TracingPackratParsingMemo extends ParsingMemo {
 	private MemoEntry[] memoArray;
 	private long statSetCount = 0;
 	private long statExpireCount = 0;
 
-	OpenFifoMemo(int slotSize) {
-		this.memoArray = new MemoEntry[slotSize * 111 + 1];
+	TracingPackratParsingMemo(int distance, int rules) {
+		this.memoArray = new MemoEntry[distance * rules + 1];
 		for(int i = 0; i < this.memoArray.length; i++) {
 			this.memoArray[i] = new MemoEntry();
 		}
