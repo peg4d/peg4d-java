@@ -257,6 +257,29 @@ public class Main {
 		System.out.println("  --verbose:peg             Printing Peg/Debug infomation");
 		Main._Exit(0, Message);
 	}
+	
+	static void showUsage() {
+		System.out.println(ProgName + " :");
+		System.out.println("  -p <FILE>                 Specify PEG file  default: PEG4d grammar");
+		System.out.println("  -s | --start <NAME>       Specify Non-Terminal as the starting point. default: TopLevel");
+		System.out.println("  -t <type>                 Specify output type. default: pego");
+		System.out.println("     tag|pego|none|json|csv");
+		System.out.println("  -c                        Invoke as checker (without output generation). Exit 1 when failed");
+		System.out.println("  -f | --format<type>       Specify PEG formatter");
+		System.out.println("  -W<num>                   Warning Level (default:1)");
+		System.out.println("  -O<num>                   Optimization Level (default:2)");
+		System.out.println("  --memo:x                  Memo configuration");
+		System.out.println("     no|packrat|fifo");
+		System.out.println("  -M<num>                   Memo factor (default: 100)");
+		System.out.println("  --verbose                 Printing Debug infomation");
+		System.out.println("  --verbose:peg             Printing Peg/Debug infomation");
+		
+		System.out.println("The most commonly used peg4d commands are:");
+		System.out.println("   parse      Add file contents to the index");
+		System.out.println("   query      Add file contents to the index");
+		
+		Main._Exit(0, "");
+	}
 
 	private final static UMap<Class<?>> driverMap = new UMap<Class<?>>();
 	static {

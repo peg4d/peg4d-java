@@ -1,12 +1,12 @@
 #!/bin/bash
 
 OUT=/dev/null
-PASS="((PASS))"
-FAIL="((FAIL))"
-NL=""
-#PASS="\e[34m((PASS))"
-#FAIL="\e[91m((FAIL))"
-#NL="\e[0m"
+#PASS="((PASS))"
+#FAIL="((FAIL))"
+#NL=""
+PASS="\e[34m((PASS))"
+FAIL="\e[91m((FAIL))"
+NL="\e[0m"
 
 function test_failure {
 	java -ea -jar peg4d.jar -p $1 test/empty >> OUT
