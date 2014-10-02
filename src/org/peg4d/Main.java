@@ -128,10 +128,6 @@ public class Main {
 				GrammarFile = args[index];
 				index = index + 1;
 			}
-			else if ((argument.equals("--find")) && (index < args.length)) {
-				FindFileIndex = index;
-				return;
-			}
 			else if ((argument.equals("-s") || argument.equals("--start")) && (index < args.length)) {
 				StartingPoint = args[index];
 				index = index + 1;
@@ -155,6 +151,10 @@ public class Main {
 			}
 			else if (argument.equals("-a")) {
 				DiskMode = true;
+			}
+			else if ((argument.equals("--find")) && (index < args.length)) {
+				FindFileIndex = index;
+				return;
 			}
 			else if (argument.equals("--relation")) {
 				Relation = true;
@@ -217,6 +217,9 @@ public class Main {
 			else if(argument.startsWith("--verbose")) {
 				if(argument.equals("--verbose:memo")) {
 					ParsingMemoConfigure.VerboseMemo = true;
+				}
+				else if(argument.equals("--verbose:stack")) {
+					ParsingExpression.VerboseStack = true;
 				}
 				else {
 					VerboseMode = true;

@@ -131,9 +131,6 @@ public class ParsingContext {
 	public final void initStat(ParsingStat stat) {
 		this.stat = stat;
 		if(stat != null) {
-			if(Main.StatLevel == 2) {
-				this.stat.initRepeatCounter();
-			}
 			this.stat.start();
 		}
 	}

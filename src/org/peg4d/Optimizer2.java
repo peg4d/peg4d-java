@@ -40,11 +40,11 @@ class Optimizer2 {
 	}
 
 	final static void optimizeNonTerminal(NonTerminal ne) {
-//		if(InlineNonTerminal) {
-//			ParsingExpression e = resolveNonTerminal(ne);
-//			ne.matcher = e.matcher;
-//			countOptimizedNonTerminal += 1;
-//		}
+		if(InlineNonTerminal && !ParsingExpression.VerboseStack) {
+			ParsingExpression e = resolveNonTerminal(ne);
+			ne.matcher = e.matcher;
+			countOptimizedNonTerminal += 1;
+		}
 		//ne.report(ReportLevel.notice, "inlining " + e);
 	}
 	

@@ -11,6 +11,7 @@ abstract class ParsingMatcher {
 }
 
 public abstract class ParsingExpression extends ParsingMatcher {
+	public  static boolean  VerboseStack = false;
 
 	public final static int LeftRecursion     = 1 << 10;
 	public final static int HasSyntaxError    = 1 << 16;
@@ -1074,7 +1075,7 @@ class NonTerminal extends ParsingExpression {
 	public boolean simpleMatch(ParsingContext context) {
 		int stackTop = context.pushCallStack(this.uniqueName);
 		boolean b = this.deReference().debugMatch(context);
-		if(Main.VerboseMode && !b && this.peg != GrammarFactory.Grammar) {
+		if(/*ParsingExpression.VerboseStack &&*/ !b && this.peg != GrammarFactory.Grammar) {
 			context.dumpCallStack("["+context.getPosition()+"] failure: ");
 		}
 		context.popCallStack(stackTop);

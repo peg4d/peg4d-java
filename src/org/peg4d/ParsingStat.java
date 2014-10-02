@@ -6,13 +6,13 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 class ParsingStat {
 
 	ParsingStat(Grammar peg, ParsingSource source) {
-		this.PegSize = 0;
+		this.PegSize = peg.getRuleSize();
+		this.setText("Peg", peg.getName());
+		this.setCount("PegSize", peg.getRuleSize());
 		source.stat = this;
 	}
 	
@@ -36,18 +36,19 @@ class ParsingStat {
 	
 	long MostProccedPostion = 0;
 	long WorstBacktrackSize = 0;
-	long WorstPosition = 0;
+	long WorstBacktrackPosition = 0;
 
-	public final void statBacktrack1(long pos, long pos2) {
-		long len = pos2 - pos;
+	public final void statBacktrack1(long backed_pos, long current_pos) {
+		long len = current_pos - backed_pos;
 		this.BacktrackCount = this.BacktrackCount + 1;
 		this.BacktrackSize  = this.BacktrackSize + len;
-		this.countBacktrackLength(len);
-		if(this.MostProccedPostion < pos2) {
-			this.MostProccedPostion = pos2;
+		if(this.MostProccedPostion < current_pos) {
+			this.MostProccedPostion = current_pos;
 		}
-		if((this.MostProccedPostion - pos) > this.WorstBacktrackSize) {
-			this.WorstBacktrackSize = (this.MostProccedPostion - pos);
+		this.countBacktrackLength(this.MostProccedPostion - backed_pos);
+		if((this.MostProccedPostion - backed_pos) > this.WorstBacktrackSize) {
+			this.WorstBacktrackSize = (this.MostProccedPostion - backed_pos);
+			this.WorstBacktrackPosition = backed_pos;
 		}
 	}
 
@@ -112,10 +113,10 @@ class ParsingStat {
 		
 		this.setCount("CreatedObject", this.ObjectCount);
 		this.setCount("UsedObject", this.UsedObjectCount);
-		this.setCount("DisposedObject", this.ObjectCount - this.UsedObjectCount);
-		this.setRatio("Disposal/Used", this.ObjectCount - this.UsedObjectCount, this.UsedObjectCount);
-		this.setCount("NewObject", this.NewObjectCount);
-		this.setRatio("New/Creation", this.NewObjectCount - this.ObjectCount, this.ObjectCount);
+//		this.setCount("DisposedObject", this.ObjectCount - this.UsedObjectCount);
+//		this.setRatio("Disposal/Used", this.ObjectCount - this.UsedObjectCount, this.UsedObjectCount);
+//		this.setCount("NewObject", this.NewObjectCount);
+//		this.setRatio("New/Creation", this.NewObjectCount - this.ObjectCount, this.ObjectCount);
 		this.setCount("ObjectEdge", this.EdgeCount);
 		this.setCount("ObjectNode", this.NodeCount);
 		this.setCount("ObjectDepth", this.ObjectMaxDepth);
@@ -167,70 +168,70 @@ class ParsingStat {
 		int size = 0;
 	}
 	
-	private final static int MapFifoSize = 9999;
-	Map<Long, ParsingExpression> repeatMap = null;
-	private long lastestEntryPosition = 0;
-	private int MinimumStoredLength = Integer.MAX_VALUE;
-	
-	private int CallCount = 0;
-	private int RepeatCount = 0;
-
-	int[] callCount = null;
-	int[] repeatCount = null;
-
-	void initRepeatCounter() {
-		this.CallCount = 0;
-		this.RepeatCount = 0;
-		MinimumStoredLength = Integer.MAX_VALUE;
-		this.repeatMap = new LinkedHashMap<Long, ParsingExpression>(MapFifoSize) {
-			private static final long serialVersionUID = 6725894996600788028L;
-			@Override
-			protected boolean removeEldestEntry(Map.Entry<Long, ParsingExpression> eldest)  {
-				if(this.size() > MapFifoSize) {
-					long pos = ParsingUtils.getpos(eldest.getKey());
-					int delta = (int)(lastestEntryPosition - pos);
-					if(delta < MinimumStoredLength) {
-						MinimumStoredLength = delta;
-					}
-					return true;			
-				}
-				return false;
-			}
-		};
-		this.callCount = new int[PegSize+1];
-		this.repeatCount = new int[PegSize+1];
-	}
-
-	final void countRepeatCall(ParsingExpression e, long pos) {
-		this.NewObjectCount += 1;
-		this.CallCount += 1;
-		if(this.callCount != null) {
-			callCount[e.uniqueId] += 1;
-			Long key = ParsingUtils.objectId(pos, e);
-			ParsingExpression p = this.repeatMap.get(key);
-			if(p != null) {
-				assert(p == e);
-				RepeatCount += 1;
-				repeatCount[e.uniqueId] += 1;
-				//System.out.println("pos="+pos + ", " + repeatCount[e.uniqueId] + " e= " + e.uniqueId + ", " + e);
-			}
-			else {
-				if(pos > this.lastestEntryPosition) {
-					this.lastestEntryPosition = pos;
-				}
-				this.repeatMap.put(key, e);
-			}
-		}
-	}
-
-	final void ckeckRepeatCounter() {
-		if(this.repeatMap != null) {
-			this.setCount("Calls", this.CallCount);
-			this.setCount("Repeats", this.RepeatCount);
-			this.setRatio("Repeats/Calls", this.RepeatCount, this.CallCount);
-			this.setCount("EnsuredBacktrack", this.MinimumStoredLength);		
-		}
-	}
+//	private final static int MapFifoSize = 9999;
+//	Map<Long, ParsingExpression> repeatMap = null;
+//	private long lastestEntryPosition = 0;
+//	private int MinimumStoredLength = Integer.MAX_VALUE;
+//	
+//	private int CallCount = 0;
+//	private int RepeatCount = 0;
+//
+//	int[] callCount = null;
+//	int[] repeatCount = null;
+//
+//	void initRepeatCounter() {
+//		this.CallCount = 0;
+//		this.RepeatCount = 0;
+//		MinimumStoredLength = Integer.MAX_VALUE;
+//		this.repeatMap = new LinkedHashMap<Long, ParsingExpression>(MapFifoSize) {
+//			private static final long serialVersionUID = 6725894996600788028L;
+//			@Override
+//			protected boolean removeEldestEntry(Map.Entry<Long, ParsingExpression> eldest)  {
+//				if(this.size() > MapFifoSize) {
+//					long pos = ParsingUtils.getpos(eldest.getKey());
+//					int delta = (int)(lastestEntryPosition - pos);
+//					if(delta < MinimumStoredLength) {
+//						MinimumStoredLength = delta;
+//					}
+//					return true;			
+//				}
+//				return false;
+//			}
+//		};
+//		this.callCount = new int[PegSize+1];
+//		this.repeatCount = new int[PegSize+1];
+//	}
+//
+//	final void countRepeatCall(ParsingExpression e, long pos) {
+//		this.NewObjectCount += 1;
+//		this.CallCount += 1;
+//		if(this.callCount != null) {
+//			callCount[e.uniqueId] += 1;
+//			Long key = ParsingUtils.objectId(pos, e);
+//			ParsingExpression p = this.repeatMap.get(key);
+//			if(p != null) {
+//				assert(p == e);
+//				RepeatCount += 1;
+//				repeatCount[e.uniqueId] += 1;
+//				//System.out.println("pos="+pos + ", " + repeatCount[e.uniqueId] + " e= " + e.uniqueId + ", " + e);
+//			}
+//			else {
+//				if(pos > this.lastestEntryPosition) {
+//					this.lastestEntryPosition = pos;
+//				}
+//				this.repeatMap.put(key, e);
+//			}
+//		}
+//	}
+//
+//	final void ckeckRepeatCounter() {
+//		if(this.repeatMap != null) {
+//			this.setCount("Calls", this.CallCount);
+//			this.setCount("Repeats", this.RepeatCount);
+//			this.setRatio("Repeats/Calls", this.RepeatCount, this.CallCount);
+//			this.setCount("EnsuredBacktrack", this.MinimumStoredLength);		
+//		}
+//	}
 
 	long InitTotalHeap = 0;
 	long ErapsedTime = 0;
@@ -240,6 +241,9 @@ class ParsingStat {
 		System.gc(); // meaningless ?
 		this.BacktrackCount = 0;
 		this.BacktrackSize = 0;
+		this.WorstBacktrackPosition = 0;
+		this.WorstBacktrackSize = 0;
+		
 		this.InitTotalHeap = Runtime.getRuntime().totalMemory();
 		long free =  Runtime.getRuntime().freeMemory();
 		this.UsedHeapSize =  InitTotalHeap - free;
@@ -290,27 +294,27 @@ class ParsingStat {
 		this.setCount("ConsumedLength", this.ConsumedLength);
 		this.setCount1("UnconsumedLength", this.UnconsumedLength);
 		
-		this.setCount("BacktrackLength", this.BacktrackSize);
-		this.setRatio("Backtrack/Consumed", this.BacktrackSize, this.ConsumedLength);
+		this.setCount("ParsingLength", this.ConsumedLength + this.BacktrackSize);
+		this.setRatio("Parsing/Consumed", this.ConsumedLength + this.BacktrackSize, this.ConsumedLength);
 		
 		this.setCount("Backtrack", this.BacktrackCount);
 		this.setCount("WorstBacktrack", this.WorstBacktrackSize);
 		
 		this.setRatio("BacktrackAverage", this.BacktrackSize, this.BacktrackCount);
-		this.setRatio("Backtrack1", this.backtrackCount[0], this.BacktrackCount);
-		this.setRatio("Backtrack2", this.backtrackCount[1], this.BacktrackCount);
-		this.setRatio("Backtrack4", this.backtrackCount[2], this.BacktrackCount);
-		this.setRatio("Backtrack8", this.backtrackCount[3], this.BacktrackCount);
-		this.setRatio("Backtrack16", this.backtrackCount[4], this.BacktrackCount);
-		this.setRatio("Backtrack32", this.backtrackCount[5], this.BacktrackCount);
-		this.setRatio("Backtrack64", this.backtrackCount[6], this.BacktrackCount);
-		this.setRatio("Backtrack128", this.backtrackCount[7], this.BacktrackCount);
-		this.setRatio1("Backtrack256", this.backtrackCount[8], this.BacktrackCount);
-		this.setRatio1("Backtrack512", this.backtrackCount[9], this.BacktrackCount);
-		this.setRatio1("Backtrack1024", this.backtrackCount[10], this.BacktrackCount);
+//		this.setRatio("Backtrack1", this.backtrackCount[0], this.BacktrackCount);
+//		this.setRatio("Backtrack2", this.backtrackCount[1], this.BacktrackCount);
+//		this.setRatio("Backtrack4", this.backtrackCount[2], this.BacktrackCount);
+//		this.setRatio("Backtrack8", this.backtrackCount[3], this.BacktrackCount);
+//		this.setRatio("Backtrack16", this.backtrackCount[4], this.BacktrackCount);
+//		this.setRatio("Backtrack32", this.backtrackCount[5], this.BacktrackCount);
+//		this.setRatio("Backtrack64", this.backtrackCount[6], this.BacktrackCount);
+//		this.setRatio("Backtrack128", this.backtrackCount[7], this.BacktrackCount);
+//		this.setRatio1("Backtrack256", this.backtrackCount[8], this.BacktrackCount);
+//		this.setRatio1("Backtrack512", this.backtrackCount[9], this.BacktrackCount);
+//		this.setRatio1("Backtrack1024", this.backtrackCount[10], this.BacktrackCount);
 		
 		p.memoMap.stat(this);
-		ckeckRepeatCounter();
+//		ckeckRepeatCounter();
 
 		this.statObject(pego);
 		//p.peg.updateStat(this);
@@ -319,6 +323,15 @@ class ParsingStat {
 		this.setRatio("Throughput", this.ConsumedLength, this.ErapsedTime);
 		
 		this.writeCSV();
+		//System.out.println("WorstBacktrack: " + p.source.substring(this.WorstBacktrackPosition, this.WorstBacktrackPosition + this.WorstBacktrackSize));
+		double cf = 0;
+		for(int i = 0; i < 16; i++) {
+			int n = 1 << i;
+			double f = (double)this.backtrackCount[i] / this.BacktrackCount;
+			cf += this.backtrackCount[i];
+			System.out.println(String.format("%d\t%d\t%2.3f\t%2.3f", n, this.backtrackCount[i], f, (cf / this.BacktrackCount)));
+			if(n > this.WorstBacktrackSize) break;
+		}
 	}
 	
 	private UMap<vData> csvMap = new UMap<vData>();
@@ -427,69 +440,44 @@ class ParsingStat {
 	private final void CSV(StringBuilder sb, String key) {
 		vData d = this.csvMap.get(key);
 		if(d != null) {
-			d.stringfy(sb, true);
-		}
-		else {
 			sb.append(key);
+			sb.append(",");
+			d.stringfy(sb, true);
+			sb.append(",");
 		}
-		sb.append(",");
 	}
 
 	public final void writeCSV() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("v3,");
-		this.CSV(sb, "StatId");
-//		this.CSV(sb, "MemoFactor");
-		this.CSV(sb, "Optimization");
+		sb.append("v4,");
+		this.CSV(sb, "Id");
 		this.CSV(sb, "Memory");
+		this.CSV(sb, "Optimization");
+		this.CSV(sb, "BacktrackDistance");
 		/** **/
-		sb.append("*PEG,");  // mark
 		this.CSV(sb, "Peg");
 		this.CSV(sb, "PegSize");		
 		/** **/
-		sb.append("*File,");  // mark
 		this.CSV(sb, "FileName");
 		this.CSV(sb, "FileSize");
 		this.CSV(sb, "Latency");
 		this.CSV(sb, "Throughput");
-		sb.append("*M,");  // mark
 		this.CSV(sb, "HeapSize");
 		this.CSV(sb, "Heap/File");
 		this.CSV(sb, "UsedObject");
 
 		/** **/
-		sb.append("*B,");  // mark
-		this.CSV(sb, "Backtrack/Consumed");
-		this.CSV(sb, "WorstBacktrack");
 		this.CSV(sb, "Backtrack");
-//		this.CSV(sb, "ConsumedLength");
-//		this.CSV(sb, "BacktrackLength");
-//		this.CSV(sb, "BacktrackAverage");
-//		this.CSV(sb, "Backtrack1");
-//		this.CSV(sb, "Backtrack2");
-//		this.CSV(sb, "Backtrack4");
-//		this.CSV(sb, "Backtrack8");
-//		this.CSV(sb, "Backtrack16");
-//		this.CSV(sb, "Backtrack32");
-//		this.CSV(sb, "Backtrack64");
-//		this.CSV(sb, "Backtrack128");
-		
-//		this.CSV(sb, "PegSize");
-//		this.CSV(sb, "Complexity");
-//		this.CSV(sb, "Predictablity");
+		this.CSV(sb, "WorstBacktrack");
+		this.CSV(sb, "ParsingLength");
+		this.CSV(sb, "Parsing/Consumed");
 		
 		/** **/
-		sb.append("*Memo*,");  // mark
-		this.CSV(sb, "MemoHit");
-		this.CSV(sb, "Hit/Miss");
+		this.CSV(sb, "MemoStored");
+		this.CSV(sb, "MemoUsed");
+		this.CSV(sb, "Used/Stored");
 		
 		/** **/
-		sb.append("*Object,");  // mark
-		this.CSV(sb, "UsedObject");
-		this.CSV(sb, "DisposedObject");
-		this.CSV(sb, "Disposal/Used");
-//		this.CSV(sb, "NewObject");
-//		this.CSV(sb, "New/Creation");
 		this.CSV(sb, "ObjectEdge");
 		this.CSV(sb, "ObjectNode");
 		this.CSV(sb, "ObjectDepth");
