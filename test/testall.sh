@@ -4,9 +4,9 @@ OUT=/dev/null
 #PASS="((PASS))"
 #FAIL="((FAIL))"
 #NL=""
-PASS="\e[34m((PASS))"
-FAIL="\e[91m((FAIL))"
-NL="\e[0m"
+PASS="\0033[34m((PASS))"
+FAIL="\0033[91m((FAIL))"
+NL="\0033[0m"
 
 function test_failure {
 	java -ea -jar peg4d.jar -p $1 test/empty >> OUT
