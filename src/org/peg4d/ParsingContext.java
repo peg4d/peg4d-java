@@ -535,11 +535,11 @@ public class ParsingContext {
 	}
 
 	final MemoEntry getMemo(long keypos, ParsingExpression e) {
-		return this.memoMap.getMemo(keypos, e);
+		return this.memoMap.getMemo(keypos, e.uniqueId);
 	}
 
 	final void setMemo(long keypos, ParsingExpression e, ParsingObject result, int length) {
-		this.memoMap.setMemo(keypos, e, result, length);
+		this.memoMap.setMemo(keypos, e.uniqueId, result, length);
 	}
 
 	private HashMap<String,Boolean> flagMap = new HashMap<String,Boolean>();

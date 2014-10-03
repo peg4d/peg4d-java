@@ -250,7 +250,7 @@ final class MemoEntry {
 	long key;
 	ParsingObject result;
 	int  consumed;
-	ParsingExpression  keypeg;
+	int  memoPoint;
 	MemoEntry next;
 }
 
@@ -298,8 +298,8 @@ abstract class ParsingMemo {
 		m.next = n;
 	}			
 
-	protected abstract void setMemo(long pos, ParsingExpression keypeg, ParsingObject result, int consumed);
-	protected abstract MemoEntry getMemo(long pos, ParsingExpression keypeg);
+	protected abstract void setMemo(long pos, int memoPoint, ParsingObject result, int consumed);
+	protected abstract MemoEntry getMemo(long pos, int memoPoint);
 
 	protected void stat(ParsingStatistics stat) {
 		stat.setCount("MemoUsed", this.MemoHit);
@@ -310,11 +310,11 @@ abstract class ParsingMemo {
 
 class NoParsingMemo extends ParsingMemo {
 	@Override
-	protected void setMemo(long pos, ParsingExpression keypeg, ParsingObject result, int consumed) {
+	protected void setMemo(long pos, int memoPoint, ParsingObject result, int consumed) {
 	}
 
 	@Override
-	protected MemoEntry getMemo(long pos, ParsingExpression keypeg) {
+	protected MemoEntry getMemo(long pos, int memoPoint) {
 		this.MemoMiss += 1;
 		return null;
 	}
@@ -329,20 +329,20 @@ class PackratParsingMemo extends ParsingMemo {
 		this(new HashMap<Long, MemoEntry>(initSize));
 	}
 	@Override
-	protected final void setMemo(long pos, ParsingExpression keypeg, ParsingObject result, int consumed) {
+	protected final void setMemo(long pos, int memoPoint, ParsingObject result, int consumed) {
 		MemoEntry m = null;
 		m = newMemo();
-		m.keypeg = keypeg;
+		m.memoPoint = memoPoint;
 		m.result = result;
 		m.consumed = consumed;
 		m.next = this.memoMap.get(pos);
 		this.memoMap.put(pos, m);
 	}
 	@Override
-	protected final MemoEntry getMemo(long pos, ParsingExpression keypeg) {
+	protected final MemoEntry getMemo(long pos, int memoPoint) {
 		MemoEntry m = this.memoMap.get(pos);
 		while(m != null) {
-			if(m.keypeg == keypeg) {
+			if(m.memoPoint == memoPoint) {
 				this.MemoHit += 1;
 				return m;
 			}
@@ -374,12 +374,12 @@ class FifoMemo extends ParsingMemo {
 	}
 
 	@Override
-	protected final void setMemo(long pos, ParsingExpression keypeg, ParsingObject result, int consumed) {
+	protected final void setMemo(long pos, int memoPoint, ParsingObject result, int consumed) {
 		MemoEntry m = null;
 		m = newMemo();
-		long key = ParsingUtils.objectId(pos, keypeg);
+		long key = ParsingUtils.objectId(pos, (short)memoPoint);
 		m.key = key;
-		m.keypeg = keypeg;
+		m.memoPoint = memoPoint;
 		m.result = result;
 		m.consumed = consumed;
 		this.memoMap.put(key, m);
@@ -389,8 +389,8 @@ class FifoMemo extends ParsingMemo {
 	}
 
 	@Override
-	protected final MemoEntry getMemo(long pos, ParsingExpression keypeg) {
-		MemoEntry m = this.memoMap.get(ParsingUtils.objectId(pos, keypeg));
+	protected final MemoEntry getMemo(long pos, int memoPoint) {
+		MemoEntry m = this.memoMap.get(ParsingUtils.objectId(pos, (short)memoPoint));
 		if(m != null) {
 			this.MemoHit += 1;
 		}
@@ -414,13 +414,13 @@ class FifoPackratParsingMemo extends ParsingMemo {
 	}
 	
 	@Override
-	protected final void setMemo(long pos, ParsingExpression keypeg, ParsingObject result, int consumed) {
+	protected final void setMemo(long pos, int memoPoint, ParsingObject result, int consumed) {
 		int index = (int)(pos % memoArray.length);
 		long key = pos;
 		MemoEntry m = this.memoArray[index];
 		if(m.key != key) {
 			m.key = key;
-			m.keypeg = keypeg;
+			m.memoPoint = memoPoint;
 			m.result = result;
 			m.consumed = consumed;
 			if(m.next != null) {
@@ -431,7 +431,7 @@ class FifoPackratParsingMemo extends ParsingMemo {
 		else {
 			MemoEntry m2 = newMemo();
 			m2.key = key;
-			m2.keypeg = keypeg;
+			m2.memoPoint = memoPoint;
 			m2.result = result;
 			m2.consumed = consumed;
 			m.next = m2;
@@ -439,13 +439,13 @@ class FifoPackratParsingMemo extends ParsingMemo {
 	}
 
 	@Override
-	protected final MemoEntry getMemo(long pos, ParsingExpression keypeg) {
+	protected final MemoEntry getMemo(long pos, int memoPoint) {
 		int index = (int)(pos % memoArray.length);
 		long key = pos;
 		MemoEntry m = this.memoArray[index];
 		if(m.key == key) {
 			while(m != null) {
-				if(m.keypeg == keypeg) {
+				if(m.memoPoint == memoPoint) {
 					this.MemoHit += 1;
 					return m;
 				}
@@ -478,8 +478,8 @@ class TracingPackratParsingMemo extends ParsingMemo {
 	}
 	
 	@Override
-	protected final void setMemo(long pos, ParsingExpression keypeg, ParsingObject result, int consumed) {
-		long key = ParsingUtils.objectId(pos, keypeg);
+	protected final void setMemo(long pos, int memoPoint, ParsingObject result, int consumed) {
+		long key = ParsingUtils.objectId(pos, (short)memoPoint);
 		int hash =  (Math.abs((int)key) % memoArray.length);
 		MemoEntry m = this.memoArray[hash];
 //		if(m.key != 0) {
@@ -489,14 +489,14 @@ class TracingPackratParsingMemo extends ParsingMemo {
 //			}
 //		}
 		m.key = key;
-		m.keypeg = keypeg;
+		m.memoPoint = memoPoint;
 		m.result = result;
 		m.consumed = consumed;
 	}
 
 	@Override
-	protected final MemoEntry getMemo(long pos, ParsingExpression keypeg) {
-		long key = ParsingUtils.objectId(pos, keypeg);
+	protected final MemoEntry getMemo(long pos, int memoPoint) {
+		long key = ParsingUtils.objectId(pos, (short)memoPoint);
 		int hash =  (Math.abs((int)key) % memoArray.length);
 		MemoEntry m = this.memoArray[hash];
 		if(m.key == key) {
@@ -524,29 +524,29 @@ class DebugMemo extends ParsingMemo {
 		this.m2 = m2;
 	}
 	@Override
-	protected final void setMemo(long pos, ParsingExpression keypeg, ParsingObject result, int consumed) {
-		this.m1.setMemo(pos, keypeg, result, consumed);
-		this.m2.setMemo(pos, keypeg, result, consumed);
+	protected final void setMemo(long pos, int memoPoint, ParsingObject result, int consumed) {
+		this.m1.setMemo(pos, memoPoint, result, consumed);
+		this.m2.setMemo(pos, memoPoint, result, consumed);
 	}
 	@Override
-	protected final MemoEntry getMemo(long pos, ParsingExpression keypeg) {
-		MemoEntry o1 = this.m1.getMemo(pos, keypeg);
-		MemoEntry o2 = this.m2.getMemo(pos, keypeg);
+	protected final MemoEntry getMemo(long pos, int memoPoint) {
+		MemoEntry o1 = this.m1.getMemo(pos, memoPoint);
+		MemoEntry o2 = this.m2.getMemo(pos, memoPoint);
 		if(o1 == null && o2 == null) {
 			return null;
 		}
 		if(o1 != null && o2 == null) {
-			System.out.println("diff: 1 null " + "pos=" + pos + ", e=" + keypeg);
+			System.out.println("diff: 1 null " + "pos=" + pos + ", e=" + memoPoint);
 		}
 		if(o1 == null && o2 != null) {
-			System.out.println("diff: 2 null " + "pos=" + pos + ", e=" + keypeg);
+			System.out.println("diff: 2 null " + "pos=" + pos + ", e=" + memoPoint);
 		}
 		if(o1 != null && o2 != null) {
 			if(o1.result != o2.result) {
-				System.out.println("diff: generaetd " + "pos1=" + pos + ", p1=" + keypeg);
+				System.out.println("diff: generaetd " + "pos1=" + pos + ", p1=" + memoPoint);
 			}
 			if(o1.consumed != o2.consumed) {
-				System.out.println("diff: consumed " + "pos1=" + pos + ", p1=" + keypeg);
+				System.out.println("diff: consumed " + "pos1=" + pos + ", p1=" + memoPoint);
 			}
 		}
 		return o1;
