@@ -46,6 +46,7 @@ public class ParsingMemoConfigure {
 		int memoPoint;
 		int memoHit = 0;
 		long hitLength = 0;
+		int  maxLength = 0;
 		int memoMiss = 0;
 		MemoPoint(ParsingExpression e) {
 			this.e = e;
@@ -85,6 +86,14 @@ public class ParsingMemoConfigure {
 				}
 			}
 			return false;
+		}
+
+		void hit(int consumed) {
+			this.memoHit += 1;
+			this.hitLength += consumed;
+			if(this.maxLength < consumed) {
+				this.maxLength = consumed;
+			}
 		}
 	}
 	
@@ -181,8 +190,7 @@ public class ParsingMemoConfigure {
 			long pos = context.getPosition();
 			MemoEntry m = context.getMemo(pos, memoPoint());
 			if(m != null) {
-				this.memo.memoHit += 1;
-				this.memo.hitLength += m.consumed;
+				this.memo.hit(m.consumed);
 				context.setPosition(pos + m.consumed);
 				if(m.result != ParsingMemoConfigure.NonTransition) {
 					context.left = m.result;
@@ -215,9 +223,9 @@ public class ParsingMemoConfigure {
 				
 		@Override
 		public String toString() {
-			return String.format("MEMO[%d,%s] r=%2.5f #%d len=%.2f %s", 
+			return String.format("MEMO[%d,%s] r=%2.5f #%d len=%.2f %d %s", 
                     this.memo.memoPoint, this.enableMemo,this.memo.ratio(), 
-                    this.memo.count(), this.memo.length(), holder);
+                    this.memo.count(), this.memo.length(), this.memo.maxLength, holder);
 		}
 	}
 	
