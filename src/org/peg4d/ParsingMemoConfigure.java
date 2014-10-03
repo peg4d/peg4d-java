@@ -29,9 +29,11 @@ public class ParsingMemoConfigure {
 			m.memoPoint = this.memoMap.size();
 			this.memoMap.put(key, m);
 		}
-		else {
-			System.out.println("unified memo: \n\t" + m.e+ "\n\t" + e);
-		}
+//		else {
+//			if(VerboseMemo) {
+//				System.out.println("unified memo: \n\t" + m.e+ "\n\t" + e);
+//			}
+//		}
 		return m;
 	}
 
@@ -91,13 +93,13 @@ public class ParsingMemoConfigure {
 			exploitMemo1(e.get(i));
 		}
 		if(!(e.matcher instanceof MemoMatcher)) {
-//			if(e instanceof ParsingConnector) {
-//				ParsingConnector ne = (ParsingConnector)e;
-//				MemoPoint mp = getMemoPoint(ne.inner);
-//				MemoMatcher m = new ConnectorMemoMatcher(ne, mp);
-//				memoList.add(m);
-//				ne.matcher = m;
-//			}
+			if(e instanceof ParsingConnector) {
+				ParsingConnector ne = (ParsingConnector)e;
+				MemoPoint mp = getMemoPoint(ne.inner);
+				MemoMatcher m = new ConnectorMemoMatcher(ne, mp);
+				memoList.add(m);
+				ne.matcher = m;
+			}
 			if(e instanceof NonTerminal) {
 				NonTerminal ne = (NonTerminal)e;
 				if(ne.getRule().type == ParsingRule.LexicalRule) {
@@ -116,6 +118,9 @@ public class ParsingMemoConfigure {
 			for(ParsingRule r : rule.subRule()) {
 				exploitMemo1(r.expr);
 			}
+		}
+		for(MemoMatcher m : memoList) {
+			System.out.println(m);
 		}
 	}
 
@@ -169,7 +174,7 @@ public class ParsingMemoConfigure {
 
 		private int memoPoint() {
 			return memo.memoPoint;
-//			return key.uniqueId;
+			//return key.uniqueId;
 		}
 		
 		final boolean memoMatch(ParsingContext context, ParsingMatcher ma) {
@@ -242,7 +247,7 @@ public class ParsingMemoConfigure {
 					context.logLink(left, this.index, context.left);
 				}
 				else {
-					System.out.println("DEBUG nothing linked: " + this.holder + " " + left.oid + " => " + context.left.oid);
+					System.out.println("FIXME nothing linked: " + this.holder + " " + left.oid + " => " + context.left.oid);
 					context.abortLinkLog(mark);					
 				}
 				context.left = left;

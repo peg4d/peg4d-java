@@ -13,8 +13,6 @@ public class ParsingContext {
 	public ParsingContext(ParsingSource s, long pos, int stacksize, ParsingMemo memo) {
 		this.left = null;
 		this.source = s;
-		//this.lstack = new long[stacksize*8];
-		//this.ostack = new ParsingObject[stacksize];
 		this.resetSource(s, pos);
 		this.memoMap = memo != null ? memo : new NoParsingMemo();
 	}
@@ -26,12 +24,8 @@ public class ParsingContext {
 	public void resetSource(ParsingSource source, long pos) {
 		this.source = source;
 		this.pos = pos;
-		this.fpos = -1;
-//		this.lstack[0] = -1;
-//		this.lstacktop = 1;
-//		this.ostacktop = 0;
+		this.fpos = 0;
 	}
-	
 	
 	public final boolean hasByteChar() {
 		return this.source.byteAt(this.pos) != ParsingSource.EOF;
@@ -48,7 +42,7 @@ public class ParsingContext {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
 		long spos = this.getPosition();
-		long fpos = -1;
+		long fpos = 0;
 		this.emptyTag = peg.newStartTag();
 		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
 		while(hasByteChar()) {
@@ -121,11 +115,18 @@ public class ParsingContext {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
 		ParsingRule r = peg.getLexicalRule(startPoint);
+		if(conf != null) {
+			conf.exploitMemo(r);
+		}
 		start = r.expr;
 		this.emptyTag = peg.newStartTag();
 		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
 		this.left = po;
-		return start.debugMatch(this);
+		boolean res = start.debugMatch(this);
+		if(conf != null && this.stat != null) {
+			conf.show2(this.stat);
+		}
+		return res;
 	}
 	
 	public final void initStat(ParsingStatistics stat) {
@@ -145,37 +146,6 @@ public class ParsingContext {
 		return this.getClass().getSimpleName();
 	}	
 	
-	long[]   lstack;
-	int      lstacktop;
-	
-	public final void lpush(long v) {
-		this.lstack[lstacktop] = v;
-		lstacktop++;
-	}
-
-	public final void lpop() {
-		lstacktop--;
-	}
-
-	public final int lpop2i() {
-		lstacktop--;
-		return (int)this.lstack[this.lstacktop];
-	}
-
-//	ParsingObject[] ostack;
-//	int      ostacktop;
-//
-	public final void opush(ParsingObject left) {
-//		this.ostack[ostacktop] = left;
-//		ostacktop++;
-	}
-
-	public final ParsingObject opop() {
-//		ostacktop--;
-//		return this.ostack[ostacktop];
-		return null;
-	}
-
 	long pos;
 	
 	final long getPosition() {

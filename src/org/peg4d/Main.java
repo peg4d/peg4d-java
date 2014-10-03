@@ -346,11 +346,11 @@ public class Main {
 			context.initStat(new ParsingStatistics(peg, source));
 		}
 		if(Main.RecognitionOnlyMode) {
-			boolean res = context.match(peg, startPoint, null);
-//			if(OutputType.equalsIgnoreCase("stat")) {
-//				context.recordStat(null);
-//				return;
-//			}
+			boolean res = context.match(peg, startPoint, new ParsingMemoConfigure());
+			if(OutputType.equalsIgnoreCase("stat")) {
+				context.recordStat(null);
+				return;
+			}
 			System.exit(res ? 0 : 1);
 		}
 		ParsingObject pego = context.parse(peg, startPoint, new ParsingMemoConfigure());

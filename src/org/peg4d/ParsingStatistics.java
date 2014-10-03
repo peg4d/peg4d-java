@@ -243,7 +243,9 @@ class ParsingStatistics {
 		p.memoMap.stat(this);
 //		ckeckRepeatCounter();
 
-		this.statObject(pego);
+		if(pego != null) {
+			this.statObject(pego);
+		}
 		//p.peg.updateStat(this);
 		this.setText("StatId", id);
 		this.setCount("Latency", this.ErapsedTime);  // ms
