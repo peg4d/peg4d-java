@@ -12,7 +12,7 @@ public abstract class ParsingSource {
 	Grammar   peg;
 	private String    fileName;
 	protected long    startLineNum = 1;
-	ParsingStat      stat = null;
+	ParsingStatistics      stat = null;
 	
 	public ParsingSource(Grammar peg, String fileName, long linenum) {
 		this.peg = peg;

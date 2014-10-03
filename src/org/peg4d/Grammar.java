@@ -289,7 +289,7 @@ public class Grammar {
 	int PredicatedChoiceL1 = 0;
 	int UnpredicatedChoiceL1 = 0;
 
-	void updateStat(ParsingStat stat) {
+	void updateStat(ParsingStatistics stat) {
 		stat.setText("Peg", this.getName());
 		stat.setCount("PegSize", this.DefinedExpressionSize);
 		stat.setCount("PegReference",   this.Reference);

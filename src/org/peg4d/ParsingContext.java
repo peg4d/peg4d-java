@@ -8,7 +8,7 @@ public class ParsingContext {
 	ParsingSource source;
 
 	ParsingTag    emptyTag;	
-	ParsingStat          stat   = null;
+	ParsingStatistics          stat   = null;
 
 	public ParsingContext(ParsingSource s, long pos, int stacksize, ParsingMemo memo) {
 		this.left = null;
@@ -128,7 +128,7 @@ public class ParsingContext {
 		return start.debugMatch(this);
 	}
 	
-	public final void initStat(ParsingStat stat) {
+	public final void initStat(ParsingStatistics stat) {
 		this.stat = stat;
 		if(stat != null) {
 			this.stat.start();
@@ -192,7 +192,9 @@ public class ParsingContext {
 
 	final void rollback(long pos) {
 		if(stat != null && this.pos > pos) {
-			stat.statBacktrack1(pos, this.pos);
+			if(stat.statBacktrack(pos, this.pos) && ParsingExpression.VerboseStack) {
+				this.dumpCallStack("Reaching: " + this.source.substring(0, this.pos) + " <= failed");
+			}
 		}
 		this.pos = pos;
 	}

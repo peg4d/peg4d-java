@@ -343,7 +343,7 @@ public class Main {
 		source = Main.loadSource(peg, fileName);
 		context = new ParsingContext(source);
 		if(OutputType.equalsIgnoreCase("stat")) {
-			context.initStat(new ParsingStat(peg, source));
+			context.initStat(new ParsingStatistics(peg, source));
 		}
 		if(Main.RecognitionOnlyMode) {
 			boolean res = context.match(peg, startPoint, null);

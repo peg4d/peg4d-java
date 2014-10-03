@@ -22,21 +22,43 @@ class Optimizer2 {
 	public static int countOptimizedCharacterChoice = 0;
 	public static int countOptimizedStringChoice = 0;
 	public static int countOptimizedChoice       = 0;
-	
+
 	final static void optimize(ParsingExpression e) {
+		optimize1(e);
+		optimize2(e);
+	}
+
+	final static void optimize1(ParsingExpression e) {
+		for(int i = 0; i < e.size(); i++) {
+			optimize1(e.get(i));
+		}
+		if(!e.isOptimized()) {
+			if(e instanceof ParsingChoice) {
+				optimizeChoice((ParsingChoice)e);
+			}
+			if(e instanceof ParsingNot) {
+				optimizeNot((ParsingNot)e);
+			}
+		}
+	}
+
+	final static void optimize2(ParsingExpression e) {
 		if(!e.isOptimized()) {
 			if(e instanceof NonTerminal) {
 				optimizeNonTerminal((NonTerminal)e);
 			}
 		}
 		for(int i = 0; i < e.size(); i++) {
-			optimize(e.get(i));
+			optimize2(e.get(i));
 		}
-		if(!e.isOptimized()) {
-			if(e instanceof ParsingChoice) {
-				optimizeChoice((ParsingChoice)e);
-			}
+	}
+
+	final static ParsingExpression resolveNonTerminal(ParsingExpression e) {
+		while(e instanceof NonTerminal) {
+			NonTerminal nterm = (NonTerminal) e;
+			e = nterm.deReference();
 		}
+		return e;
 	}
 
 	final static void optimizeNonTerminal(NonTerminal ne) {
@@ -48,14 +70,16 @@ class Optimizer2 {
 		//ne.report(ReportLevel.notice, "inlining " + e);
 	}
 	
-	final static ParsingExpression resolveNonTerminal(ParsingExpression e) {
-		while(e instanceof NonTerminal) {
-			NonTerminal nterm = (NonTerminal) e;
-			e = nterm.deReference();
-		}
-		return e;
-	}
 
+	final static void optimizeNot(ParsingNot holder) {
+		ParsingExpression inner = holder.inner;
+		if(inner instanceof NonTerminal) {
+			inner = resolveNonTerminal(inner);
+		}
+		System.out.println("not " + holder + " " + inner.getClass());
+		
+	}
+	
 	final static void optimizeChoice(ParsingChoice choice) {
 		int[] c = new int[256];
 		if(CharacterChoice && checkCharacterChoice(choice, c)) {

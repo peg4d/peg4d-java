@@ -50,7 +50,7 @@ public class ParsingMemoConfigure {
 		}
 	}
 
-	void show2(ParsingStat stat) {
+	void show2(ParsingStatistics stat) {
 		if(VerboseMemo) {
 			for(int i = 0; i < memoList.size() - 1; i++) {
 				for(int j = i + 1; j < memoList.size(); j++) {
@@ -301,7 +301,7 @@ abstract class ParsingMemo {
 	protected abstract void setMemo(long pos, ParsingExpression keypeg, ParsingObject result, int consumed);
 	protected abstract MemoEntry getMemo(long pos, ParsingExpression keypeg);
 
-	protected void stat(ParsingStat stat) {
+	protected void stat(ParsingStatistics stat) {
 		stat.setCount("MemoUsed", this.MemoHit);
 		stat.setCount("MemoStored", this.MemoMiss);
 		stat.setRatio("Used/Stored", this.MemoHit, this.MemoMiss);
@@ -457,7 +457,7 @@ class FifoPackratParsingMemo extends ParsingMemo {
 	}
 
 	@Override
-	protected final void stat(ParsingStat stat) {
+	protected final void stat(ParsingStatistics stat) {
 		super.stat(stat);
 		stat.setCount("MemoSize", this.memoArray.length);
 		stat.setRatio("MemoCollision80", this.statExpireCount, this.statSetCount);
@@ -509,7 +509,7 @@ class TracingPackratParsingMemo extends ParsingMemo {
 	}
 
 	@Override
-	protected final void stat(ParsingStat stat) {
+	protected final void stat(ParsingStatistics stat) {
 		super.stat(stat);
 		stat.setCount("MemoSize", this.memoArray.length);
 		stat.setRatio("MemoCollision80", this.statExpireCount, this.statSetCount);

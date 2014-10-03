@@ -7,9 +7,9 @@ import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-class ParsingStat {
+class ParsingStatistics {
 
-	ParsingStat(Grammar peg, ParsingSource source) {
+	ParsingStatistics(Grammar peg, ParsingSource source) {
 		this.PegSize = peg.getRuleSize();
 		this.setText("Peg", peg.getName());
 		this.setCount("PegSize", peg.getRuleSize());
@@ -38,24 +38,28 @@ class ParsingStat {
 	long WorstBacktrackSize = 0;
 	long WorstBacktrackPosition = 0;
 
-	public final void statBacktrack1(long backed_pos, long current_pos) {
-		long len = current_pos - backed_pos;
+	public final boolean statBacktrack(long backed_pos, long current_pos) {
+		boolean maximumConsumed = false;
 		this.BacktrackCount = this.BacktrackCount + 1;
-		this.BacktrackSize  = this.BacktrackSize + len;
+		this.BacktrackSize  = this.BacktrackSize + current_pos - backed_pos;
 		if(this.MostProccedPostion < current_pos) {
 			this.MostProccedPostion = current_pos;
+			maximumConsumed = true;
 		}
-		this.countBacktrackLength(this.MostProccedPostion - backed_pos);
-		if((this.MostProccedPostion - backed_pos) > this.WorstBacktrackSize) {
-			this.WorstBacktrackSize = (this.MostProccedPostion - backed_pos);
+		long len = this.MostProccedPostion - backed_pos;
+		this.countBacktrackLength(len);
+		if(len > this.WorstBacktrackSize) {
+			this.WorstBacktrackSize = len;
 			this.WorstBacktrackPosition = backed_pos;
 		}
+		return maximumConsumed;
 	}
 
 	int backtrackCount[] = new int[32];
 	private void countBacktrackLength(long len) {
 		int n = (int)(Math.log(len) / Math.log(2.0));
 		backtrackCount[n] += 1;
+		//if(backtrackCount[n] % 100 == 0) System.out.print(".");
 	}
 	
 //	int BacktrackHistgram[] = new int[4096];
@@ -109,7 +113,7 @@ class ParsingStat {
 		this.NodeCount = 0;
 		this.ObjectMaxDepth = 0;
 		
-		this.statObjectImpl(pego, 1, m);
+		this.statObjectStructure(pego, 1, m);
 		
 		this.setCount("CreatedObject", this.ObjectCount);
 		this.setCount("UsedObject", this.UsedObjectCount);
@@ -120,22 +124,9 @@ class ParsingStat {
 		this.setCount("ObjectEdge", this.EdgeCount);
 		this.setCount("ObjectNode", this.NodeCount);
 		this.setCount("ObjectDepth", this.ObjectMaxDepth);
-
-//		int DataSize = 0;
-//		ObjectCounter data = null;
-//		UList<String> keys = m.keys();
-//		for(int i = 0; i < keys.size(); i++) {
-//			ObjectCounter c = m.get(keys.ArrayValues[i]);
-//			if(DataSize < c.count && c.size > 0) {
-//				data = c;
-//			}
-//		}
-//		this.setText("DataObject", data.tag);
-//		this.setCount("DataSize", data.count);
-//		this.setRatio("DataLength", data.length, data.count);
 	}
 
-	private void statObjectImpl(ParsingObject pego, int depth, UMap<ObjectCounter> m) {
+	private void statObjectStructure(ParsingObject pego, int depth, UMap<ObjectCounter> m) {
 		if(depth > this.ObjectMaxDepth) {
 			this.ObjectMaxDepth = depth;
 		}
@@ -146,7 +137,7 @@ class ParsingStat {
 		else {
 			this.NodeCount += 1;
 			for(int i = 0; i < pego.size(); i++) {
-				this.statObjectImpl(pego.get(i), depth+1, m);
+				this.statObjectStructure(pego.get(i), depth+1, m);
 			}
 		}
 		String tag = pego.getTag().toString();
@@ -168,70 +159,6 @@ class ParsingStat {
 		int size = 0;
 	}
 	
-//	private final static int MapFifoSize = 9999;
-//	Map<Long, ParsingExpression> repeatMap = null;
-//	private long lastestEntryPosition = 0;
-//	private int MinimumStoredLength = Integer.MAX_VALUE;
-//	
-//	private int CallCount = 0;
-//	private int RepeatCount = 0;
-//
-//	int[] callCount = null;
-//	int[] repeatCount = null;
-//
-//	void initRepeatCounter() {
-//		this.CallCount = 0;
-//		this.RepeatCount = 0;
-//		MinimumStoredLength = Integer.MAX_VALUE;
-//		this.repeatMap = new LinkedHashMap<Long, ParsingExpression>(MapFifoSize) {
-//			private static final long serialVersionUID = 6725894996600788028L;
-//			@Override
-//			protected boolean removeEldestEntry(Map.Entry<Long, ParsingExpression> eldest)  {
-//				if(this.size() > MapFifoSize) {
-//					long pos = ParsingUtils.getpos(eldest.getKey());
-//					int delta = (int)(lastestEntryPosition - pos);
-//					if(delta < MinimumStoredLength) {
-//						MinimumStoredLength = delta;
-//					}
-//					return true;			
-//				}
-//				return false;
-//			}
-//		};
-//		this.callCount = new int[PegSize+1];
-//		this.repeatCount = new int[PegSize+1];
-//	}
-//
-//	final void countRepeatCall(ParsingExpression e, long pos) {
-//		this.NewObjectCount += 1;
-//		this.CallCount += 1;
-//		if(this.callCount != null) {
-//			callCount[e.uniqueId] += 1;
-//			Long key = ParsingUtils.objectId(pos, e);
-//			ParsingExpression p = this.repeatMap.get(key);
-//			if(p != null) {
-//				assert(p == e);
-//				RepeatCount += 1;
-//				repeatCount[e.uniqueId] += 1;
-//				//System.out.println("pos="+pos + ", " + repeatCount[e.uniqueId] + " e= " + e.uniqueId + ", " + e);
-//			}
-//			else {
-//				if(pos > this.lastestEntryPosition) {
-//					this.lastestEntryPosition = pos;
-//				}
-//				this.repeatMap.put(key, e);
-//			}
-//		}
-//	}
-//
-//	final void ckeckRepeatCounter() {
-//		if(this.repeatMap != null) {
-//			this.setCount("Calls", this.CallCount);
-//			this.setCount("Repeats", this.RepeatCount);
-//			this.setRatio("Repeats/Calls", this.RepeatCount, this.CallCount);
-//			this.setCount("EnsuredBacktrack", this.MinimumStoredLength);		
-//		}
-//	}
 
 	long InitTotalHeap = 0;
 	long ErapsedTime = 0;
