@@ -124,12 +124,7 @@ public class ParsingMemoConfigure {
 		if(VerboseMemo) {
 			for(int i = 0; i < memoList.size() - 1; i++) {
 				for(int j = i + 1; j < memoList.size(); j++) {
-					if(memoList.ArrayValues[i].ratio() > memoList.ArrayValues[j].ratio()) {
-						MemoMatcher m = memoList.ArrayValues[i];
-						memoList.ArrayValues[i] = memoList.ArrayValues[j];
-						memoList.ArrayValues[j] = m;
-					}
-					if(memoList.ArrayValues[i].ratio() == memoList.ArrayValues[j].ratio() && memoList.ArrayValues[i].count() > memoList.ArrayValues[j].count()) {
+					if(memoList.ArrayValues[i].compareTo(memoList.ArrayValues[j]) > 0) {
 						MemoMatcher m = memoList.ArrayValues[i];
 						memoList.ArrayValues[i] = memoList.ArrayValues[j];
 						memoList.ArrayValues[j] = m;
@@ -141,8 +136,8 @@ public class ParsingMemoConfigure {
 				int miss = 0;
 				for(MemoMatcher m : memoList) {
 					System.out.println(m);
-					hit += m.memoHit;
-					miss += m.memoMiss;
+					hit += m.memo.memoHit;
+					miss += m.memo.memoMiss;
 				}
 				System.out.println("Total: " + ((double)hit / miss) + " WorstCaseBackTrack=" + stat.WorstBacktrackSize);
 			}
@@ -168,9 +163,9 @@ public class ParsingMemoConfigure {
 		ParsingExpression key = null;
 		ParsingMatcher matchRef = null;
 		boolean enableMemo = true;
-		int memoHit = 0;
-		long hitLength = 0;
-		int memoMiss = 0;
+//		int memoHit = 0;
+//		long hitLength = 0;
+//		int memoMiss = 0;
 
 		MemoMatcher(MemoPoint memo) {
 			this.memo = memo;
@@ -180,8 +175,8 @@ public class ParsingMemoConfigure {
 			long pos = context.getPosition();
 			MemoEntry m = context.getMemo(pos, key.uniqueId);
 			if(m != null) {
-				this.memoHit += 1;
-				this.hitLength += m.consumed;
+				this.memo.memoHit += 1;
+				this.memo.hitLength += m.consumed;
 				context.setPosition(pos + m.consumed);
 				if(m.result != ParsingMemoConfigure.NonTransition) {
 					context.left = m.result;
@@ -192,62 +187,31 @@ public class ParsingMemoConfigure {
 			boolean b = ma.simpleMatch(context);
 			int length = (int)(context.getPosition() - pos);
 			context.setMemo(pos, key.uniqueId, (context.left == left) ? ParsingMemoConfigure.NonTransition : context.left, length);
-			this.memoMiss += 1;
-			if(!NonTracing) {
-				this.tryTracing();
+			this.memo.memoMiss += 1;
+			if(!NonTracing && memo.checkUseless()) {
+				enableMemo = false;
+				disabledMemo();
 			}
 			left = null;
 			return b;
 		}
-
-		public int count() {
-			return this.memoMiss + this.memoHit;
-		}
-
-		protected void tryTracing() {
-			if(this.memoMiss == 32) {
-				if(this.memoHit < 2) {		
-					enableMemo = false;
-					disabledMemo();
-					return;
-				}
-			}
-			if(this.memoMiss % 64 == 0) {
-//				if(this.memoHit == 0) {
-//					enableMemo = false;
-//					disabledMemo();
-//					return;
-//				}
-//				if(this.hitLength < this.memoHit) {
-//					enableMemo = false;
-//					disabledMemo();
-//					return;
-//				}
-				if(this.memoMiss / this.memoHit > 10) {
-					enableMemo = false;
-					disabledMemo();
-					return;
-				}
-			}
-		}
 		
+		public int compareTo(MemoMatcher m) {
+			if(this.memo.ratio() == m.memo.ratio()) {
+				return this.memo.count() > m.memo.count() ? 1 : -1;
+			}
+			return (this.memo.ratio() > m.memo.ratio()) ? 1 : -1;
+		}
+
 		void disabledMemo() {
 			this.holder.matcher = new DisabledMemoMatcher(this);
 		}
-		
-		final double ratio() {
-			if(this.memoMiss == 0.0) return 0.0;
-			return (double)this.memoHit / this.memoMiss;
-		}
-		
+				
 		@Override
 		public String toString() {
-			StringBuilder sb = new StringBuilder();
-			double f = (this.memoHit == 0) ? 0.0 : (double)this.hitLength / this.memoHit;
-			sb.append("MEMO[" + this.enableMemo + "] r=" + this.ratio());
-			sb.append(" #" + (this.memoMiss + this.memoHit) + " len=" + f);
-			sb.append(" " + holder);
-			return sb.toString();
+			return String.format("MEMO[%d,%s] r=%2.5f #%d len=%.2f %s", 
+                    this.memo.memoPoint, this.enableMemo,this.memo.ratio(), 
+                    this.memo.count(), this.memo.length(), holder);
 		}
 	}
 	
@@ -310,9 +274,6 @@ public class ParsingMemoConfigure {
 			this.holder = m.holder;
 			this.matchRef = m.matchRef;
 			this.enableMemo = false;
-			this.memoHit = m.memoHit;
-			this.memoMiss = m.memoMiss;
-			this.hitLength = m.hitLength;
 		}
 		
 		@Override
