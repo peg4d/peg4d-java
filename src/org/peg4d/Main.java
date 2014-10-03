@@ -202,7 +202,7 @@ public class Main {
 					ParsingMemoConfigure.FifoPackratParsing = true;
 				}
 				else if(argument.equals("--memo:notrace")) {
-					ParsingMemoConfigure.NonTracing = false;
+					ParsingMemoConfigure.Tracing = false;
 				}
 				else {
 					int distance = ParsingCharset.parseInt(argument.substring(7), -1);
