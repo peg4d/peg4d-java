@@ -53,7 +53,7 @@ DIGIT
 
 W
 	= [a-zA-Z0-9_]
-	/ UCHAR
+	// / UCHAR
 
 UCHAR
 	= '\\u' HEX4

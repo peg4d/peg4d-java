@@ -252,7 +252,7 @@ public class ParsingContext {
 	public final void failure(ParsingMatcher errorInfo) {
 		if(this.pos > fpos) {  // adding error location
 			this.fpos = this.pos;
-			this.setErrorInfo(errorInfo);
+			//this.setErrorInfo(errorInfo);
 		}
 		this.left = null;
 	}
