@@ -193,7 +193,7 @@ class ParsingStatistics {
 		
 		this.set(new vText("Parser", p.getName()));
 		this.setCount("Optimization", Main.OptimizationLevel);
-		this.setCount("BacktrackDistance", ParsingMemoConfigure.BacktrackDistance);
+		this.setCount("BacktrackBufferSize", ParsingMemoConfigure.BacktrackBufferSize);
 
 		String fileName = p.source.getResourceName();
 		if(fileName.lastIndexOf('/') > 0) {
@@ -213,7 +213,7 @@ class ParsingStatistics {
 
 		this.setCount("Memory", this.InitTotalHeap);
 		id = id + ((Main.RecognitionOnlyMode) ? 'C' : 'O');
-		id = id + Main.OptimizationLevel + "." + ParsingMemoConfigure.BacktrackDistance + "."  + (this.InitTotalHeap / (1024*1024)) +"M";
+		id = id + Main.OptimizationLevel + "." + ParsingMemoConfigure.BacktrackBufferSize + "."  + (this.InitTotalHeap / (1024*1024)) +"M";
 		this.setCount("HeapSize", this.HeapSize);
 		this.setRatio1("Heap/File", this.HeapSize, this.statFileLength);		
 		this.setCount("UsedHeapSize", this.UsedHeapSize);
@@ -380,7 +380,7 @@ class ParsingStatistics {
 		this.CSV(sb, "Id");
 		this.CSV(sb, "Memory");
 		this.CSV(sb, "Optimization");
-		this.CSV(sb, "BacktrackDistance");
+		this.CSV(sb, "BacktrackBufferSize");
 		/** **/
 		this.CSV(sb, "Peg");
 		this.CSV(sb, "PegSize");		

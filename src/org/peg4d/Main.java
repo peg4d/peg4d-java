@@ -207,7 +207,7 @@ public class Main {
 				else {
 					int distance = ParsingCharset.parseInt(argument.substring(7), -1);
 					if(distance >= 0) {
-						ParsingMemoConfigure.BacktrackDistance  = distance;
+						ParsingMemoConfigure.BacktrackBufferSize  = distance;
 					}
 					else {
 						ShowUsage("unknown option: " + argument);

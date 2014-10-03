@@ -9,7 +9,7 @@ public class ParsingMemoConfigure {
 	public static boolean NoMemo = false;
 	public static boolean PackratParsing = false;
 	public static boolean FifoPackratParsing = false;
-	public static int     BacktrackDistance = 256;
+	public static int     BacktrackBufferSize = 256;
 	public static boolean NonTracing = false;
 	public static boolean VerboseMemo = false;
 	
@@ -87,9 +87,9 @@ public class ParsingMemoConfigure {
 			return new PackratParsingMemo(512);
 		}
 		if(ParsingMemoConfigure.FifoPackratParsing) {
-			return new FifoPackratParsingMemo(ParsingMemoConfigure.BacktrackDistance);
+			return new FifoPackratParsingMemo(ParsingMemoConfigure.BacktrackBufferSize);
 		}
-		return new TracingPackratParsingMemo(ParsingMemoConfigure.BacktrackDistance, rules);
+		return new TracingPackratParsingMemo(ParsingMemoConfigure.BacktrackBufferSize, rules);
 	}
 	
 	abstract class MemoMatcher extends ParsingMatcher {
