@@ -102,6 +102,9 @@ public abstract class ParsingSource {
 	
 	public final String getTextAround(long pos, String delim) {
 		int ch = 0;
+		if(pos < 0) {
+			pos = 0;
+		}
 		while(this.byteAt(pos) == ParsingSource.EOF && pos > 0) {
 			pos -= 1;
 		}
