@@ -5,7 +5,7 @@ import java.util.HashMap;
 import org.peg4d.vm.Instruction2;
 import org.peg4d.vm.Opcode2;
 
-class GrammarFormatter extends ExpressionVisitor {
+class GrammarFormatter extends ParsingExpressionVisitor {
 	protected StringBuilder sb = null;
 	public GrammarFormatter() {
 		this.sb = null;
@@ -278,7 +278,7 @@ class GrammarFormatter extends ExpressionVisitor {
 
 }
 
-class CodeGenerator extends ExpressionVisitor {
+class CodeGenerator extends ParsingExpressionVisitor {
 	
 	int opIndex = 0;
 	UList<Opcode2> opList = new UList<Opcode2>(new Opcode2[256]);	

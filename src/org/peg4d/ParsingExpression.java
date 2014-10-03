@@ -95,7 +95,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 //		return this;
 //	}
 	
-	protected abstract void visit(ExpressionVisitor visitor);
+	protected abstract void visit(ParsingExpressionVisitor visitor);
 	
 	public final boolean debugMatch(ParsingContext c) {
 //		int d = cc; cc++;
@@ -883,7 +883,7 @@ class ParsingEmpty extends ParsingExpression {
 		return this;
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitEmpty(this);
 	}
 	@Override
@@ -920,7 +920,7 @@ class ParsingFailure extends ParsingExpression {
 		return false;
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitFailure(this);
 	}
 }
@@ -951,7 +951,7 @@ class ParsingByte extends ParsingExpression {
 		return this.toString();
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitByte(this);
 	}
 	@Override
@@ -986,7 +986,7 @@ class ParsingAny extends ParsingExpression {
 		return Accept;
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitAny(this);
 	}
 	@Override
@@ -1062,7 +1062,7 @@ class NonTerminal extends ParsingExpression {
 		r.refc += 1;
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitNonTerminal(this);
 	}
 	@Override short acceptByte(int ch) {
@@ -1101,7 +1101,7 @@ class ParsingString extends ParsingExpression {
 		return this;
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitString(this);
 	}
 	@Override short acceptByte(int ch) {
@@ -1146,7 +1146,7 @@ class ParsingByteRange extends ParsingExpression {
 		}
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitByteRange(this);
 	}
 	@Override 
@@ -1181,7 +1181,7 @@ class ParsingOption extends ParsingUnary {
 		return ParsingExpression.newOption(e);
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitOptional(this);
 	}
 	@Override 
@@ -1221,7 +1221,7 @@ class ParsingRepetition extends ParsingUnary {
 		return ParsingExpression.newRepetition(e);
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitRepetition(this);
 	}
 	@Override short acceptByte(int ch) {
@@ -1268,7 +1268,7 @@ class ParsingAnd extends ParsingUnary {
 		return ParsingExpression.newAnd(e);
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitAnd(this);
 	}
 	@Override
@@ -1296,7 +1296,7 @@ class ParsingNot extends ParsingUnary {
 		return ParsingExpression.newNot(e);
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitNot(this);
 	}
 	@Override
@@ -1349,7 +1349,7 @@ class ParsingSequence extends ParsingList {
 		return ParsingExpression.newSequence(l);
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitSequence(this);
 	}
 	@Override
@@ -1385,7 +1385,7 @@ class ParsingChoice extends ParsingList {
 		return ParsingExpression.newChoice(l);
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitChoice(this);
 	}
 	@Override
@@ -1449,7 +1449,7 @@ class ParsingConnector extends ParsingUnary {
 		return ParsingExpression.newConnector(e, this.index);
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitConnector(this);
 	}
 	@Override
@@ -1493,7 +1493,7 @@ class ParsingTagging extends ParsingExpression {
 		return this;
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitTagging(this);
 	}
 	@Override
@@ -1525,7 +1525,7 @@ class ParsingValue extends ParsingExpression {
 		return this;
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitValue(this);
 	}
 	@Override
@@ -1567,7 +1567,7 @@ class ParsingConstructor extends ParsingList {
 		return ne;
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitConstructor(this);
 	}
 	@Override
@@ -1624,7 +1624,7 @@ abstract class ParsingFunction extends ParsingExpression {
 		return 	ParsingExpression.uniqueExpression("<"+this.funcName+this.getParameters(), this);
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitParsingFunction(this);
 	}
 }
@@ -1643,7 +1643,7 @@ abstract class ParsingOperation extends ParsingUnary {
 		return "";
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitParsingOperation(this);
 	}
 	@Override
@@ -1698,7 +1698,7 @@ class ParsingExport extends ParsingUnary {
 		return inner.normalizeImpl(lexOnly, withoutMap);
 	}
 	@Override
-	protected void visit(ExpressionVisitor visitor) {
+	protected void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitExport(this);
 	}
 	@Override

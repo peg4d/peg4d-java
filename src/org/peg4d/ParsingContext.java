@@ -36,7 +36,7 @@ public class ParsingContext {
 	}
 		
 	public final ParsingObject parseChunk(Grammar peg, String startPoint) {
-		this.initMemo(null, peg.getRuleSize());
+		this.initMemo(null);
 		ParsingExpression start = peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
@@ -82,13 +82,13 @@ public class ParsingContext {
 	}
 
 	public final ParsingObject parse(Grammar peg, String startPoint, ParsingMemoConfigure conf) {
-		this.initMemo(conf, peg.getRuleSize());
 		ParsingRule start = peg.getRule(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
 		}
 		if(conf != null) {
 			conf.exploitMemo(start);
+			this.initMemo(conf);
 		}
 		this.emptyTag = peg.newStartTag();
 		
@@ -109,7 +109,6 @@ public class ParsingContext {
 	}
 
 	public final boolean match(Grammar peg, String startPoint, ParsingMemoConfigure conf) {
-		this.initMemo(conf, peg.getRuleSize());
 		ParsingExpression start = peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
@@ -117,6 +116,7 @@ public class ParsingContext {
 		ParsingRule r = peg.getLexicalRule(startPoint);
 		if(conf != null) {
 			conf.exploitMemo(r);
+			this.initMemo(conf);
 		}
 		start = r.expr;
 		this.emptyTag = peg.newStartTag();
@@ -500,8 +500,8 @@ public class ParsingContext {
 	
 	protected ParsingMemo memoMap = null;
 
-	public void initMemo(ParsingMemoConfigure conf, int rules) {
-		this.memoMap = (conf == null) ? new NoParsingMemo() : conf.newMemo(rules);
+	public void initMemo(ParsingMemoConfigure conf) {
+		this.memoMap = (conf == null) ? new NoParsingMemo() : conf.newMemo();
 	}
 
 	final MemoEntry getMemo(long keypos, int memoPoint) {

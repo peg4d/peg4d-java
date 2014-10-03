@@ -223,38 +223,7 @@ public class Grammar {
 			}
 		}
 	}
-	
-	final void expandFlagOption() {
-		UMap<String> nameMap = new UMap<String>();
-		for(String name : nameList) {
-			ParsingRule rule = this.getRule(name);
-			findFlag(rule.expr, nameMap);
-		}
-	}
-
-	final void findFlag(ParsingExpression e, UMap<String> nameMap) {
-		for(int i = 0; i < e.size(); i++) {
-			findFlag(e.get(i), nameMap);
-		}
-		if(e instanceof ParsingIf) {
-			String n = ((ParsingIf) e).flagName;
-			nameMap.put(n, n); 
-		}
-	}
-
-	final void findFlag(ParsingExpression e, UMap<String> nameMap, UMap<String> contextMap) {
-		if(e instanceof ParsingWithoutFlag) {
-			ParsingWithoutFlag we = (ParsingWithoutFlag)e;
-		}
-		for(int i = 0; i < e.size(); i++) {
-			findFlag(e.get(i), nameMap);
-		}
-		if(e instanceof ParsingIf) {
-			String n = ((ParsingIf) e).flagName;
-			nameMap.put(n, n); 
-		}
-	}
-	
+		
 	final UList<ParsingRule> getExportRuleList() {
 		if(this.exportedRuleList == null) {
 			UList<ParsingRule> l = new UList<ParsingRule>(new ParsingRule[4]);
@@ -280,52 +249,17 @@ public class Grammar {
 		}
 	}
 
-	int DefinedExpressionSize = 0;
-	private int MultiReference = 0;
-	private int Reference = 0;
-	int StrongPredicatedChoice = 0;
-	int PredicatedChoice = 0;
-	int UnpredicatedChoice = 0;
-	int PredicatedChoiceL1 = 0;
-	int UnpredicatedChoiceL1 = 0;
-
-	void updateStat(ParsingStatistics stat) {
-		stat.setText("Peg", this.getName());
-		stat.setCount("PegSize", this.DefinedExpressionSize);
-		stat.setCount("PegReference",   this.Reference);
-		stat.setCount("MultiReference", this.MultiReference);
-		stat.setRatio("Complexity", this.MultiReference, this.Reference);
-		stat.setCount("StrongPredicatedChoice",   this.StrongPredicatedChoice);
-		stat.setCount("PredicatedChoice",   this.PredicatedChoice);
-		stat.setCount("UnpredicatedChoice", this.UnpredicatedChoice);
-		stat.setRatio("Predictablity", this.PredicatedChoice, this.PredicatedChoice + this.UnpredicatedChoice);
-		stat.setRatio("L1Predictability", this.PredicatedChoiceL1, this.PredicatedChoiceL1 + this.UnpredicatedChoiceL1);
-
-//		stat.setCount("ActivatedMemo", this.EnabledMemo);
-//		stat.setCount("DisabledMemo", this.DisabledMemo);
-//		stat.setCount("RemovedMemo", this.memoRemover.RemovedCount);
-		stat.setCount("LexicalOptimization", this.LexicalOptimization);
-		stat.setCount("InterTerminalOptimization", this.InterTerminalOptimization);
-		stat.setCount("PredictionOptimization", this.PredictionOptimization);
-		
-	}
-
-	public final UList<String> makeList(String startPoint) {
-		return new ListMaker().make(this, startPoint);
-	}
-
 	public final void show(String startPoint) {
 		this.show(startPoint, new GrammarFormatter());
 	}
 
 	public final void show(String startPoint, GrammarFormatter fmt) {
+		ParsingRule rule = this.getRule(startPoint);
+		UList<ParsingRule> l = rule.subRule();
 		StringBuilder sb = new StringBuilder();
 		fmt.formatHeader(sb);
-		UList<String> list = makeList(startPoint);
-		for(int i = 0; i < list.size(); i++) {
-			String name = list.ArrayValues[i];
-			ParsingExpression e = this.getExpression(name);
-			fmt.formatRule(name, e, sb);
+		for(ParsingRule r : l) {
+			fmt.formatRule(r.ruleName, r.expr, sb);
 		}
 		fmt.formatFooter(sb);
 		System.out.println(sb.toString());

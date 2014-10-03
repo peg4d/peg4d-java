@@ -148,7 +148,7 @@ public class ParsingMemoConfigure {
 		}
 	}
 	
-	ParsingMemo newMemo(int rules) {
+	ParsingMemo newMemo() {
 		if(ParsingMemoConfigure.NoMemo) {
 			return new NoParsingMemo();
 		}
@@ -158,7 +158,7 @@ public class ParsingMemoConfigure {
 		if(ParsingMemoConfigure.FifoPackratParsing) {
 			return new FifoPackratParsingMemo(ParsingMemoConfigure.BacktrackBufferSize);
 		}
-		return new TracingPackratParsingMemo(ParsingMemoConfigure.BacktrackBufferSize, rules);
+		return new TracingPackratParsingMemo(ParsingMemoConfigure.BacktrackBufferSize, this.memoList.size());
 	}
 	
 	abstract class MemoMatcher extends ParsingMatcher {

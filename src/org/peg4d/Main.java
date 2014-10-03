@@ -332,7 +332,7 @@ public class Main {
 				context.parseChunk(peg, startPoint);
 				context.pos = 0;
 			}
-			context.initMemo(null, peg.getRuleSize());
+			context.initMemo(null);
 			System.gc();
 			try{
 				Thread.sleep(500);

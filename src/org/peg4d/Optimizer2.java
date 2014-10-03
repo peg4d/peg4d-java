@@ -88,7 +88,28 @@ class Optimizer2 {
 		}
 		//ne.report(ReportLevel.notice, "inlining " + e);
 	}
-	
+
+
+//	@Override
+//	public void visitConstructor(ParsingConstructor e) {
+//		this.visitList(e);
+//		int prefetchIndex = 0;
+//		for(int i = 0; i < e.size(); i++) {
+//			ParsingExpression sub = e.get(i);
+//////			if(needsObjectContext(sub)) {
+//////				break;
+//////			}
+////			prefetchIndex = i + 1;
+//		}
+//		if(prefetchIndex > 0) {
+//			if(this.peg.optimizationLevel > 1) {
+//				this.peg.InterTerminalOptimization += 1;
+////				System.out.println("prefetchIndex: " + prefetchIndex + " e = " + e);
+//				e.prefetchIndex = prefetchIndex;
+//			}
+//		}
+//	}
+
 
 	final static void optimizeNot(ParsingNot holder) {
 		ParsingExpression inner = holder.inner;

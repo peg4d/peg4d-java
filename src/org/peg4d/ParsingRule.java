@@ -145,7 +145,7 @@ class ParsingRule {
 	}
 	
 	public ParsingExpression resolveNonTerminal() {
-		return this.expr;
+		return Optimizer2.resolveNonTerminal(this.expr);
 	}
 	
 	UList<ParsingRule> subRule() {
