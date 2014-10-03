@@ -534,12 +534,12 @@ public class ParsingContext {
 		this.memoMap = (conf == null) ? new NoParsingMemo() : conf.newMemo(rules);
 	}
 
-	final MemoEntry getMemo(long keypos, ParsingExpression e) {
-		return this.memoMap.getMemo(keypos, e.uniqueId);
+	final MemoEntry getMemo(long keypos, int memoPoint) {
+		return this.memoMap.getMemo(keypos, memoPoint);
 	}
 
-	final void setMemo(long keypos, ParsingExpression e, ParsingObject result, int length) {
-		this.memoMap.setMemo(keypos, e.uniqueId, result, length);
+	final void setMemo(long keypos, int memoPoint, ParsingObject result, int length) {
+		this.memoMap.setMemo(keypos, memoPoint, result, length);
 	}
 
 	private HashMap<String,Boolean> flagMap = new HashMap<String,Boolean>();
