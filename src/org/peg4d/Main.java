@@ -371,8 +371,8 @@ public class Main {
 		}
 		ParsingObject pego = context.parse(peg, startPoint, new MemoizationManager());
 		if(Relation) {
-			RelationBuilder RBuilder = new RelationBuilder();
-			RBuilder.build(pego);
+			RelationBuilder RBuilder = new RelationBuilder(pego);
+			RBuilder.build();
 		}
 		if(context.isFailure()) {
 			System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
@@ -397,7 +397,7 @@ public class Main {
 			outputMap(pego);
 			return;
 		}
-		if(OutputType.equalsIgnoreCase("pego")) {
+		if(OutputType.equalsIgnoreCase("pego") && !Relation) {
 			new Generator(OutputFileName).writePego(pego);
 		}
 		else if(OutputType.equalsIgnoreCase("json")) {
