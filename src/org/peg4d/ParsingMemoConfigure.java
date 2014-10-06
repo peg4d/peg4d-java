@@ -128,9 +128,9 @@ public class ParsingMemoConfigure {
 				exploitMemo1(r.expr);
 			}
 		}
-		for(MemoMatcher m : memoList) {
-			System.out.println(m);
-		}
+//		for(MemoMatcher m : memoList) {
+//			System.out.println(m);
+//		}
 	}
 
 	void show2(ParsingStatistics stat) {

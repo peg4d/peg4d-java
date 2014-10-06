@@ -147,6 +147,7 @@ public class ParsingContext {
 	}	
 	
 	long pos;
+	long head_pos;
 	
 	final long getPosition() {
 		return this.pos;
@@ -158,6 +159,9 @@ public class ParsingContext {
 	
 	final void consume(int length) {
 		this.pos += length;
+		if(head_pos < pos) {
+			this.head_pos = pos;
+		}
 	}
 
 	final void rollback(long pos) {
