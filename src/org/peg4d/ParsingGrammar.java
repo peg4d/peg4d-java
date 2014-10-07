@@ -117,22 +117,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 		this.optimizationLevel = 0;
 		this.factory.setGrammar("p4d", this);
 	}
-	
-//	this.setRule("DIGIT", c("0-9"));
-//	this.setRule("S", Choice(c(" \\t\\r\\n"), t("\u3000")));
-//	this.setRule("LETTER", c("A-Za-z_"));
-//	this.setRule("W", c("A-Za-z0-9_"));
-//	this.setRule("NAME", Sequence(P("LETTER"), ZeroMore(P("W"))));
-//	this.setRule("HEX", c("0-9A-Fa-f"));
-//
-//	this.setRule("INT", Sequence(P("DIGIT"), ZeroMore(P("DIGIT"))));
-//	this.setRule("COMMENT", 
-//			Choice(
-//					Sequence(t("/*"), ZeroMore(Not(t("*/")), Any()), t("*/")),
-//					Sequence(t("//"), ZeroMore(Not(P("EOL")), Any()), P("EOL"))
-//					)
-//			);
-//	this.setRule("_", ZeroMore(Choice(P("S"), P("COMMENT"))));
 
 	ParsingExpression EOL() {
 		return c("\\r\\n");
@@ -181,11 +165,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 		return ZeroMore(Choice(P("S"), P("COMMENT")));
 	}
 	
-//	this.setRule("Name",       Constructor(P("LETTER"), ZeroMore(P("W")), Tag(ParsingTag.Name)));
-//	this.setRule("DotName",    Constructor(P("LETTER"), ZeroMore(c("A-Za-z0-9_.")), Tag(ParsingTag.Name)));
-//	this.setRule("HyphenName_", Constructor(P("LETTER"), ZeroMore(Choice(P("W"), t("-"))), Tag(ParsingTag.Name)));
-//	this.setRule("Integer",    Constructor(P("INT"), Tag(ParsingTag.Integer)));
-
 	ParsingExpression Integer() {
 		return Constructor(P("INT"), Tag(ParsingTag.Integer));
 	}
@@ -201,21 +180,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 	ParsingExpression HyphenName() {
 		return Constructor(P("LETTER"), ZeroMore(Choice(P("W"), t("-"))), Tag(ParsingTag.Name));
 	}
-
-//ParsingExpression StringContent2 = ZeroMore(Choice(
-//	t("\\\""), t("\\\\"), Sequence(Not(t("\"")), Any())
-//	));
-//this.setRule("String", 
-//	Sequence(t("\""), Constructor(StringContent2, Tag(ParsingTag.String)), t("\""))
-//	);
-//this.setRule("SingleQuotedString", 
-//	Sequence(t("'"),  Constructor(StringContent, Tag(PEG4d.CharacterSequence)), t("'"))
-//	);
-//}
-//ParsingExpression ValueContent = ZeroMore(Choice(
-//t("\\`"), t("\\\\"), Sequence(Not(t("`")), Any())
-//));
-//ParsingExpression _Message = Sequence(t("`"), Constructor(ValueContent, Tag(PEG4d.Value)), t("`"));
 
 	ParsingExpression String() {
 		ParsingExpression StringContent  = ZeroMore(Choice(
@@ -238,14 +202,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 		return Sequence(t("`"), Constructor(ValueContent, Tag(PEG4d.Value)), t("`"));
 	}
 
-//	this.setRule("NonTerminal_", 
-//	Constructor(
-//			P("LETTER"), 
-//			ZeroMore(c("A-Za-z0-9_:")), 
-//			Tag(PEG4d.NonTerminal)
-//			)
-//	);
-
 	ParsingExpression NonTerminal() {
 		return Constructor(
 				P("LETTER"), 
@@ -253,20 +209,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 				Tag(PEG4d.NonTerminal)
 		);
 	}
-
-//	this.setRule("CHARCONTET_", Choice( 
-//	Sequence(t("\\u"), P("HEX"), P("HEX"), P("HEX"), P("HEX")),
-//	Sequence(t("\\x"), P("HEX"), P("HEX")),
-//	t("\\n"), t("\\t"), t("\\\\"), t("\\r"), t("\\v"), t("\\f"), t("\\-"), t("\\]"), 
-//	Sequence(Not(t("]")), Any())
-//	));
-//ParsingExpression _CharChunk = Sequence(
-//	Constructor (P("CHARCONTET_"), Tag(PEG4d.Character)), 
-//	Optional(
-//			LeftJoin(t("-"), Link(Constructor(P("CHARCONTET_"), Tag(PEG4d.Character))), Tag(ParsingTag.List))
-//			)
-//	);
-//this.setRule("Charcter_", Sequence(t("["), Constructor(ZeroMore(Link(_CharChunk)), Tag(PEG4d.Character)), t("]")));
 	
 	ParsingExpression CHAR() {
 		return Choice( 
@@ -287,21 +229,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 		return Sequence(t("["), Constructor(ZeroMore(Link(_CharChunk)), Tag(PEG4d.Character)), t("]"));
 	}
 
-//	ParsingExpression ConstructorBegin = Choice(t("{"), t("<{"), t("<<"), t("8<"));
-//	ParsingExpression Connector  = Choice(t("@"), t("^"));
-//	ParsingExpression ConstructorEnd   = Choice(t("}>"), t("}"), t(">>"), t(">8"));
-//
-//	this.setRule("Constructor_", Constructor(
-//			ConstructorBegin, 
-//			Choice(
-//					Sequence(Connector, P("S"), Tag(PEG4d.LeftJoin)), 
-//					Tag(PEG4d.Constructor)
-//					), 
-//					P("_"), 
-//					Optional(Sequence(Link(P("Expr_")), P("_"))),
-//					ConstructorEnd
-//			));
-
 	ParsingExpression Constructor() {
 		ParsingExpression ConstructorBegin = Choice(t("{"), t("<{"), t("<<"), t("8<"));
 		ParsingExpression Connector  = Choice(t("@"), t("^"));
@@ -318,30 +245,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 		);
 	}
 	
-//	setRule("PIPE_", Optional(t("|")));
-//	setRule("Func_", 
-//			Sequence(t("<"), Constructor(
-//					Choice(
-//							Sequence(t("debug"),   P("S"), Link(P("Expr_")), Tag(PEG4d.Debug)),
-//							Sequence(t("memo"),   P("S"), Link(P("Expr_")), P("_"), t(">"), Tag(PEG4d.Memo)),
-//							Sequence(t("match"),   P("S"), Link(P("Expr_")), P("_"), t(">"), Tag(PEG4d.Match)),
-//							Sequence(t("fail"),   P("S"), Link(P("SingleQuotedString")), P("_"), t(">"), Tag(PEG4d.Fail)),
-//							Sequence(t("catch"), Tag(PEG4d.Catch)),
-//							Sequence(t("if"), P("S"), Optional(t("!")), Link(P("Name")), Tag(PEG4d.If)),
-//							Sequence(t("with"),  P("S"), Link(P("Name")), P("S"), Link(P("Expr_")), Tag(PEG4d.With)),
-//							Sequence(t("without"), P("S"), Link(P("Name")), P("S"), Link(P("Expr_")), Tag(PEG4d.Without)),
-//							Sequence(t("block"), Optional(Sequence(P("S"), Link(P("Expr_")))), Tag(PEG4d.Block)),
-//							Sequence(t("indent"), Tag(PEG4d.Indent)),
-//							//						Sequence(t("choice"), Tag(PEG4d.Choice)),
-//							Sequence(t("isa"), P("S"), Link(P("Name")), Tag(PEG4d.Isa)),
-//							Sequence(t("name"),  P("S"), Link(P("Name")), P("S"), Link(P("Expr_")), Tag(PEG4d.Name)),
-//							Sequence(t("|"), t("append-choice"), Tag(PEG4d.Choice)),
-//							Sequence(t("|"), t("stringfy"), Tag(PEG4d.Stringfy)),
-//							Sequence(t("|"), t("apply"), P("S"), Link(P("Expr_")), Tag(PEG4d.Apply))
-//							)
-//					), P("_"), t(">"))
-//			);
-
 	ParsingExpression Func() {
 		return Sequence(t("<"), Constructor(
 		Choice(
@@ -365,22 +268,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 		);
 	}
 
-//	//			ParsingExpression Any = ParsingExpression.newAny(".");
-//	ParsingExpression _Any = Constructor(t("."), Tag(PEG4d.Any));
-//	ParsingExpression _Tagging = Sequence(t("#"), Constructor(c("A-Za-z0-9"), ZeroMore(c("A-Za-z0-9_.")), Tag(PEG4d.Tagging)));
-//	ParsingExpression _Byte = Constructor(t("0x"), P("HEX"), P("HEX"), Tag(PEG4d.Byte));
-//	ParsingExpression _Unicode = Constructor(t("U+"), P("HEX"), P("HEX"), P("HEX"), P("HEX"), Tag(PEG4d.Byte));
-
-//
-//	setRule("Term_", 
-//			Choice(
-//					P("SingleQuotedString"), P("Charcter_"), P("Func_"),  
-//					_Any, _Message, _Tagging, _Byte, _Unicode,
-//					Sequence(t("("), P("_"), P("Expr_"), P("_"), t(")")),
-//					P("Constructor_"), P("String"), P("NonTerminal_") 
-//					)
-//			);
-
 	ParsingExpression Term() {
 		ParsingExpression _Any = Constructor(t("."), Tag(PEG4d.Any));
 		ParsingExpression _Tagging = Sequence(t("#"), Constructor(c("A-Za-z0-9"), ZeroMore(c("A-Za-z0-9_.")), Tag(PEG4d.Tagging)));
@@ -394,20 +281,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 		);
 	}
 	
-//		this.setRule("SuffixTerm_", Sequence(
-//				P("Term_"), 
-//				Optional(
-//						LeftJoin(
-//								Choice(
-//										Sequence(t("*"), Optional(Link(1, P("Integer"))), Tag(PEG4d.Repetition)), 
-//										Sequence(t("+"), Tag(PEG4d.OneMoreRepetition)), 
-//										Sequence(t("?"), Tag(PEG4d.Optional)),
-//										Sequence(Connector, Optional(Link(1, P("Integer"))), Tag(PEG4d.Connector))
-//										)
-//								)
-//						)
-//				));
-
 	ParsingExpression SuffixTerm() {
 		ParsingExpression Connector  = Choice(t("@"), t("^"));
 		return Sequence(
@@ -425,19 +298,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 		);
 	}
 	
-//		this.setRule("Predicate_", Choice(
-//				Constructor(
-//						Choice(
-//								Sequence(t("&"), Tag(PEG4d.And)),
-//								Sequence(t("!"), Tag(PEG4d.Not)),
-//								Sequence(t("@["), P("_"), Link(1, P("Integer")), P("_"), t("]"), Tag(PEG4d.Connector)),							
-//								Sequence(t("@"), Tag(PEG4d.Connector))
-//								), 
-//								Link(0, P("SuffixTerm_"))
-//						), 
-//						P("SuffixTerm_")
-//				));
-
 	ParsingExpression Predicate() {
 		return Choice(
 			Constructor(
@@ -452,24 +312,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 			P("SuffixTerm")
 		);
 	}
-
-//		this.setRule("NOTRULE_", Not(Choice(P("Rule_"), P("Import_"))));
-//		this.setRule("Sequence_", Sequence(
-//				P("Predicate_"), 
-//				Optional(
-//						LeftJoin(
-//								P("_"), 
-//								P("NOTRULE_"),
-//								Link(P("Predicate_")),
-//								ZeroMore(
-//										P("_"), 
-//										P("NOTRULE_"),
-//										Link(P("Predicate_"))
-//										),
-//										Tag(PEG4d.Sequence) 
-//								)
-//						)
-//				));
 
 	ParsingExpression NOTRULE() {
 		return Not(Choice(P("Rule"), P("Import")));
@@ -494,23 +336,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 		);
 	}
 
-//		this.setRule("Expr_", 
-//				Sequence(
-//						P("Sequence_"), 
-//						Optional(
-//								LeftJoin(
-//										P("_"), t("/"), P("_"), 
-//										Link(P("Sequence_")), 
-//										ZeroMore(
-//												P("_"), t("/"), P("_"), 
-//												Link(P("Sequence_"))
-//												),
-//												Tag(PEG4d.Choice) 
-//										)
-//								)
-//						)
-//				);
-
 	ParsingExpression Expr() {
 		return Sequence(
 			P("Sequence"), 
@@ -527,54 +352,7 @@ class PEG4dGrammar2 extends ParsingGrammar {
 			)
 		);
 	}
-	
-//		this.setRule("Param_",
-//				Sequence(
-//						t("["),
-//						Constructor(
-//								Link(P("Name")),
-//								ZeroMore(
-//										P("_"),
-//										Link(P("Name"))
-//										),
-//										Tag(ParsingTag.List) 
-//								),
-//								t("]")
-//						)
-//				);
-
-//		this.setRule("DOC_", Sequence(
-//				ZeroMore(Not(t("]")), Not(t("[")), Any()),
-//				Optional(Sequence(t("["), P("DOC_"), t("]"), P("DOC_") ))
-//				));
-//
-//		this.setRule("Annotation_",
-//				Sequence(
-//						t("["),
-//						Constructor(
-//								Link(P("HyphenName_")),
-//								t(":"), 
-//								P("_"), 
-//								Link(
-//										Constructor(
-//												P("DOC_"),
-//												Tag(ParsingTag.Text) 
-//												)
-//										),
-//										Tag(PEG4d.Annotation) 
-//								),
-//								t("]"),
-//								P("_")
-//						)
-//				);
-//		this.setRule("Annotations_",
-//				Constructor(
-//						Link(P("Annotation_")),
-//						ZeroMore(Link(P("Annotation_"))),
-//						Tag(ParsingTag.List) 
-//						)
-//				);
-	
+		
 	ParsingExpression DOC() {
 		return Sequence(
 			ZeroMore(Not(t("]")), Not(t("[")), Any()),
@@ -587,9 +365,11 @@ class PEG4dGrammar2 extends ParsingGrammar {
 			t("["),
 			Constructor(
 				Link(P("HyphenName")),
-				t(":"),  P("_"), 
-				Link(Constructor(P("DOC"), Tag(ParsingTag.Text))),
-				Tag(PEG4d.Annotation) 
+				Optional(
+					t(":"),  P("_"), 
+					Link(Constructor(P("DOC"), Tag(ParsingTag.Text))),
+					Tag(PEG4d.Annotation)
+				)
 			),
 			t("]"),
 			P("_")
@@ -604,16 +384,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 		);	
 	}
 	
-//		this.setRule("Rule_", 
-//				Constructor(
-//						Link(0, Choice(P("Name"), P("String"))), P("_"), 
-//						Optional(Sequence(Link(3, P("Param_")), P("_"))),
-//						Optional(Sequence(Link(2, P("Annotations_")), P("_"))),
-//						t("="), P("_"), 
-//						Link(1, P("Expr_")),
-//						Tag(PEG4d.Rule) 
-//						)
-//				);
 	ParsingExpression Rule() {
 		return Constructor(
 			Link(0, Choice(P("Name"), P("String"))), P("_"), 
@@ -625,16 +395,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 		);
 	}
 	
-//		this.setRule("Import_", Constructor(
-//				t("import"), 
-//				Tag(PEG4d.Import), 
-//				P("S"), 
-//				Link(Choice(P("SingleQuotedString"), P("DotName"))), 
-//				Optional(
-//						Sequence(P("S"), t("as"), P("S"), Link(P("Name")))
-//						)
-//				));
-
 	ParsingExpression Import() {
 		return Constructor(
 			t("import"), 
@@ -645,25 +405,6 @@ class PEG4dGrammar2 extends ParsingGrammar {
 		);
 	}
 	
-//		this.setRule("Chunk", Sequence(
-//				P("_"), 
-//				Choice(
-//						P("Rule_"), 
-//						P("Import_")
-//						), 
-//						P("_"), 
-//						Optional(Sequence(t(";"), P("_")))
-//				));
-//	this.setRule("File", Sequence(
-//	P("_"), 
-//	Choice(
-//			P("Rule_"), 
-//			P("Import_")
-//			), 
-//			P("_"), 
-//			Optional(Sequence(t(";"), P("_"))) 
-//	));
-
 	ParsingExpression Chunk() {
 		return Sequence(
 			P("_"), 
@@ -683,9 +424,5 @@ class PEG4dGrammar2 extends ParsingGrammar {
 			Tag(ParsingTag.List)
 		);
 	}
-	
-//		this.verifyRules(/*null*/);
-//		return this;
-//	}
 
 }
