@@ -151,13 +151,20 @@ KEYWORD
 //========
 
 TopLevel
-	= Declaration
+	= FileReference
+	/ Declaration
 	/ Statement
+
 
 Declaration
 	= VarDecl
 	/ FuncDecl
 	/ ClassDecl
+
+FileReference
+	= { "package" _ NAME ('.' NAME)* _ ";" #Package #TODO }
+	/ { "import" _ NAME ('.' NAME)* '.*'? _ ";"? #Import #TODO }
+
 
 // Annotation
 // ==========
@@ -190,9 +197,9 @@ Type
 	/ GenericType {@ _ '*' _ #TPointer}*
 
 GenericType
-	= PrimaryType {@ "<" @Type ("," Type)* ">" #TGeneric}?
+	= PrimaryType {@ "<" @Type ("," @Type)* ">" #TGeneric}?
 	/* Scala Style */
-	/ SCALA PrimaryType {@ "[" @Type ("," Type)* "]" #TGeneric}?
+	/ SCALA PrimaryType {@ "[" @Type ("," @Type)* "]" #TGeneric}?
 
 PrimaryType
 	= { "void"    #TVoid } _
@@ -247,29 +254,34 @@ FuncParamList
 
 FuncParam
 	= { @[0]Annotation @[2]Name @[1](":" Type / Untyped) #Param } _
-	/ C { @[0]Annotation @[1]Type @[2]Name #Param} _
+	/ C { @[0]Annotation @[1]Type @[2]Name #Param } _
 
 
 ClassDecl
-	= { @[0]Annotation "class" _ @[1]Name addExtends? addImplements? @[2]ClassBlock #ClassDecl }
+	[example: public class C extends D implements E,F { } ]
+	[trace]
+	= { @[0]Annotation "class" _ @[1]Name addExtends? addImplements? @ClassBlock #ClassDecl }
 
 addExtends
-	= ( "extend" _ @[3]Name )
+	= ( "extends" _ @[3]Name )
 
 addImplements
 	= ("implements" _ @[4]{ @Name ("," @Name)* #List} )
 
 ClassBlock
-	= { "{" (@FieldDecl / @MethodDecl / _ )* "}" #Block }
+	[example: { static int a=1; C() {} }]
+	= { "{" (@FieldDecl / @MethodDecl / @ConstructorDecl / _ )* "}" #Block }
 	
 FieldDecl
 	= { @Annotation @Name "=" @Expression ";"? #VarDecl}
+	/ VarDecl
 
 ConstructorDecl
-	= { @Annotation "constructor" "(" @FuncParamList ")" @Block #ConstructorDecl }
+	= { @Annotation "constructor" _ "(" @FuncParamList ")" @Block #ConstructorDecl }
+	/ { @Annotation @Name "(" @FuncParamList ")" @Block #ConstructorDecl }
 
 MethodDecl
-	= { @Name "(" @FuncParamList ")" @Block #MethodDecl }
+	= { @Annotation @Type @Name "(" @FuncParamList ")" @Block #MethodDecl }
 
 // Block, Statement
 //===================

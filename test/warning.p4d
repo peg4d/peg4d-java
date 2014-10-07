@@ -1,7 +1,5 @@
 // PEG4d Warning
 
-
-
 OBJECT = { #Object }
 addObject = { #Object }
 Object = { #Object { #Object } }

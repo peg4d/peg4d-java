@@ -82,6 +82,7 @@ public class Main {
 	public static String CSVFileName = "results.csv";
 
 	public final static void main(String[] args) {
+		//new PEG4dGrammar2();
 		parseCommandArguments(args);
 		if(FindFileIndex != -1) {
 			Grammar peg = new GrammarFactory().newGrammar("main");
@@ -219,6 +220,7 @@ public class Main {
 					ParsingMemoConfigure.VerboseMemo = true;
 				}
 				else if(argument.equals("--verbose:stack")) {
+					System.out.println("--verbose:stack");
 					ParsingExpression.VerboseStack = true;
 				}
 				else {

@@ -161,14 +161,15 @@ public class ParsingContext {
 		this.pos += length;
 		if(head_pos < pos) {
 			this.head_pos = pos;
+			if(ParsingExpression.VerboseStack) {
+				this.dumpCallStack(this.source.formatPositionLine("trace", this.pos, "reaching"));
+			}			
 		}
 	}
 
 	final void rollback(long pos) {
 		if(stat != null && this.pos > pos) {
-			if(stat.statBacktrack(pos, this.pos) && ParsingExpression.VerboseStack) {
-				this.dumpCallStack("Reaching: " + this.source.substring(0, this.pos) + " <= failed");
-			}
+			stat.statBacktrack(pos, this.pos);
 		}
 		this.pos = pos;
 	}
