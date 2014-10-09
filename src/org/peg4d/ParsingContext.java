@@ -10,7 +10,7 @@ public class ParsingContext {
 	ParsingTag    emptyTag;	
 	ParsingStatistics          stat   = null;
 
-	public ParsingContext(ParsingSource s, long pos, int stacksize, ParsingMemo memo) {
+	public ParsingContext(ParsingSource s, long pos, int stacksize, MemoTable memo) {
 		this.left = null;
 		this.source = s;
 		this.resetSource(s, pos);
@@ -25,6 +25,9 @@ public class ParsingContext {
 		this.source = source;
 		this.pos = pos;
 		this.fpos = 0;
+		if(ParsingExpression.VerboseStack) {
+			this.initCallStack();
+		}
 	}
 	
 	public final boolean hasByteChar() {
@@ -148,6 +151,12 @@ public class ParsingContext {
 	
 	long pos;
 	long head_pos;
+	long fpos;
+
+	boolean enableTrace = false;
+	String headTrace    = null;
+	String failureTrace = null;
+	String failureInfo  = null;
 	
 	final long getPosition() {
 		return this.pos;
@@ -161,9 +170,9 @@ public class ParsingContext {
 		this.pos += length;
 		if(head_pos < pos) {
 			this.head_pos = pos;
-			if(ParsingExpression.VerboseStack) {
-				this.dumpCallStack(this.source.formatPositionLine("trace", this.pos, "reaching"));
-			}			
+			if(this.enableTrace) {
+				headTrace = this.stringfyCallStack();
+			}
 		}
 	}
 
@@ -173,8 +182,7 @@ public class ParsingContext {
 		}
 		this.pos = pos;
 	}
-
-	long fpos = 0;
+	
 	ParsingMatcher[] errorbuf = new ParsingMatcher[512];
 	long[] posbuf = new long[errorbuf.length];
 
@@ -227,37 +235,16 @@ public class ParsingContext {
 	public final void failure(ParsingMatcher errorInfo) {
 		if(this.pos > fpos) {  // adding error location
 			this.fpos = this.pos;
-			//this.setErrorInfo(errorInfo);
+			if(this.enableTrace) {
+				this.failureTrace = this.stringfyCallStack();
+				this.failureInfo = errorInfo.toString();
+			}
 		}
 		this.left = null;
 	}
-	
-//	boolean isMatchingOnly = false;
-//	ParsingObject successResult = new ParsingObject(this.emptyTag, this.source, 0);
-//	
-//	final boolean isRecognitionMode() {
-//		return this.isMatchingOnly;
-//	}
-//
-//	final boolean canTransCapture() {
-//		return !this.isMatchingOnly;
-//	}
-//	
-//	final boolean setRecognitionMode(boolean recognitionMode) {
-//		boolean b = this.isMatchingOnly;
-//		this.isMatchingOnly = recognitionMode;
-//		return b;
-//	}
-	
+		
 	final ParsingObject newParsingObject(long pos, ParsingConstructor created) {
-//		if(this.isRecognitionMode()) {
-//			this.successResult.setSourcePosition(pos);
-//			return this.successResult;
-//		}
-//		else {
-			//System.out.println("created pos="+pos + " mark=" + this.markObjectStack());
 		return new ParsingObject(this.emptyTag, this.source, pos, created);
-//		}
 	}
 
 	private class LinkLog {
@@ -482,28 +469,42 @@ public class ParsingContext {
 		return false;
 	}
 	
-	UList<String> terminalStack = new UList<String>(new String[8]);
+	UList<String> terminalStack;
+	int[]         callPositions;
+
+	void initCallStack() {
+		if(ParsingExpression.VerboseStack) {
+			this.terminalStack = new UList<String>(new String[256]);
+			this.callPositions = new int[4096];
+		}
+	}
 	
-	public int pushCallStack(String uniqueName) {
+	int pushCallStack(String uniqueName) {
 		int pos = this.terminalStack.size();
 		this.terminalStack.add(uniqueName);
+		callPositions[pos] = (int)this.pos;
 		return pos;
 	}
 
-	public void popCallStack(int stacktop) {
+	void popCallStack(int stacktop) {
 		this.terminalStack.clear(stacktop);
 	}
 
-	public void dumpCallStack(String header) {
-		System.out.print(header);
+	String stringfyCallStack() {
+		StringBuilder sb = new StringBuilder();
+		int n = 0;
 		for(String t : this.terminalStack) {
-			System.out.print(" ");
-			System.out.print(t);
+			if(n > 0) {
+				sb.append(" ");
+			}
+			sb.append(t);
+			sb.append("#");
+			sb.append(this.callPositions[n]); n++;
 		}
-		System.out.println();
+		return sb.toString();
 	}
-	
-	protected ParsingMemo memoMap = null;
+ 		
+	protected MemoTable memoMap = null;
 
 	public void initMemo(ParsingMemoConfigure conf) {
 		this.memoMap = (conf == null) ? new NoParsingMemo() : conf.newMemo();

@@ -157,7 +157,7 @@ public class ParsingMemoConfigure {
 		}
 	}
 	
-	ParsingMemo newMemo() {
+	MemoTable newMemo() {
 		if(ParsingMemoConfigure.NoMemo) {
 			return new NoParsingMemo();
 		}
@@ -307,7 +307,7 @@ final class MemoEntry {
 	MemoEntry next;
 }
 
-abstract class ParsingMemo {
+abstract class MemoTable {
 	protected final static int FifoSize = 64;
 	long AssuredLength = Integer.MAX_VALUE;
 
@@ -315,7 +315,6 @@ abstract class ParsingMemo {
 	int MemoMiss = 0;
 	int MemoSize = 0;
 //	int statMemoSlotCount = 0;
-
 
 	private MemoEntry UnusedMemo = null;
 
@@ -353,7 +352,10 @@ abstract class ParsingMemo {
 
 	protected abstract void setMemo(long pos, int memoPoint, ParsingObject result, int consumed);
 	protected abstract MemoEntry getMemo(long pos, int memoPoint);
-
+	protected long longkey(long pos, int memoPoint, int shift) {
+		return ((pos << shift) | memoPoint) & Long.MAX_VALUE;
+	}
+	
 	protected void stat(ParsingStatistics stat) {
 		stat.setCount("MemoUsed", this.MemoHit);
 		stat.setCount("MemoStored", this.MemoMiss);
@@ -361,7 +363,7 @@ abstract class ParsingMemo {
 	}
 }
 
-class NoParsingMemo extends ParsingMemo {
+class NoParsingMemo extends MemoTable {
 	@Override
 	protected void setMemo(long pos, int memoPoint, ParsingObject result, int consumed) {
 	}
@@ -373,7 +375,7 @@ class NoParsingMemo extends ParsingMemo {
 	}
 }
 
-class PackratParsingMemo extends ParsingMemo {
+class PackratParsingMemo extends MemoTable {
 	protected Map<Long, MemoEntry> memoMap;
 	protected PackratParsingMemo(Map<Long, MemoEntry> memoMap) {
 		this.memoMap = memoMap;
@@ -406,7 +408,7 @@ class PackratParsingMemo extends ParsingMemo {
 	}
 }
 
-class FifoMemo extends ParsingMemo {
+class FifoMemo extends MemoTable {
 	protected Map<Long, MemoEntry> memoMap;
 	protected long farpos = 0;
 	
@@ -454,7 +456,7 @@ class FifoMemo extends ParsingMemo {
 	}
 }
 
-class FifoPackratParsingMemo extends ParsingMemo {
+class FifoPackratParsingMemo extends MemoTable {
 	private MemoEntry[] memoArray;
 	private long statSetCount = 0;
 	private long statExpireCount = 0;
@@ -518,8 +520,9 @@ class FifoPackratParsingMemo extends ParsingMemo {
 }
 
 
-class TracingPackratParsingMemo extends ParsingMemo {
+class TracingPackratParsingMemo extends MemoTable {
 	private MemoEntry[] memoArray;
+	int shift = 16;
 
 	TracingPackratParsingMemo(int distance, int rules) {
 		this.memoArray = new MemoEntry[distance * rules + 1];
@@ -531,8 +534,8 @@ class TracingPackratParsingMemo extends ParsingMemo {
 	
 	@Override
 	protected final void setMemo(long pos, int memoPoint, ParsingObject result, int consumed) {
-		long key = ParsingUtils.objectId(pos, (short)memoPoint);
-		int hash =  (Math.abs((int)key) % memoArray.length);
+		long key = longkey(pos, memoPoint, shift);
+		int hash =  (int)(key % memoArray.length);
 		MemoEntry m = this.memoArray[hash];
 //		if(m.key != 0) {
 //			long diff = keypos - PEGUtils.getpos(m.key);
@@ -548,8 +551,8 @@ class TracingPackratParsingMemo extends ParsingMemo {
 
 	@Override
 	protected final MemoEntry getMemo(long pos, int memoPoint) {
-		long key = ParsingUtils.objectId(pos, (short)memoPoint);
-		int hash =  (Math.abs((int)key) % memoArray.length);
+		long key = longkey(pos, memoPoint, shift);
+		int hash =  (int)(key % memoArray.length);
 		MemoEntry m = this.memoArray[hash];
 		if(m.key == key) {
 			//System.out.println("GET " + key + "/"+ hash + " kp: " + keypeg.uniqueId);
@@ -567,10 +570,10 @@ class TracingPackratParsingMemo extends ParsingMemo {
 	}
 }
 
-class DebugMemo extends ParsingMemo {
-	ParsingMemo m1;
-	ParsingMemo m2;
-	protected DebugMemo(ParsingMemo m1, ParsingMemo m2) {
+class DebugMemo extends MemoTable {
+	MemoTable m1;
+	MemoTable m2;
+	protected DebugMemo(MemoTable m1, MemoTable m2) {
 		this.m1 = m1;
 		this.m2 = m2;
 	}

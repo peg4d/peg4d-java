@@ -16,13 +16,6 @@ public class Grammar {
 	public boolean       foundError = false;
 
 	int optimizationLevel;
-	int LexicalOptimization       = 0;
-	int InliningCount             = 0;
-	int InterTerminalOptimization = 0;
-	int PredictionOptimization    = 0;
-
-	int EnabledMemo  = 0;
-	int DisabledMemo = 0;
 		
 	Grammar(GrammarFactory factory, String name) {
 		this.name = name;
@@ -215,6 +208,7 @@ public class Grammar {
 			Optimizer2.optimize(rule.expr);
 		
 		}
+		
 		ParsingContext context = new ParsingContext(null);
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
@@ -224,6 +218,8 @@ public class Grammar {
 		}
 	}
 		
+	
+	
 	final UList<ParsingRule> getExportRuleList() {
 		if(this.exportedRuleList == null) {
 			UList<ParsingRule> l = new UList<ParsingRule>(new ParsingRule[4]);

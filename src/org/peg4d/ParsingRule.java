@@ -3,6 +3,7 @@ package org.peg4d;
 import java.util.TreeMap;
 
 class ParsingRule {
+	
 	public final static int LexicalRule   = 0;
 	public final static int ObjectRule    = 1;
 	public final static int OperationRule = 1 << 1;

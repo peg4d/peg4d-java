@@ -2,7 +2,6 @@ package org.peg4d;
 
 import java.util.TreeMap;
 
-
 abstract class ParsingMatcher {
 	abstract boolean simpleMatch(ParsingContext context);
 	String expectedToken() {
@@ -768,6 +767,9 @@ public abstract class ParsingExpression extends ParsingMatcher {
 				u = e;
 				e.po = null;
 				e.uniqueId = uniqueMap.size() + 1;
+				if(e instanceof NonTerminal) {
+					
+				}
 				uniqueMap.put(key, e);
 			}
 			assert(u.getClass() == e.getClass());
@@ -1002,9 +1004,10 @@ class ParsingAny extends ParsingExpression {
 }
 
 class NonTerminal extends ParsingExpression {
+	String  uniqueName;
 	Grammar peg;
 	String  ruleName;
-	String  uniqueName;
+	boolean assertFlag = false;
 	NonTerminal(Grammar base, String ruleName) {
 		super();
 		this.peg = base;
@@ -1016,7 +1019,6 @@ class NonTerminal extends ParsingExpression {
 		ParsingRule r = this.getRule();
 		return r.type == ParsingRule.OperationRule;
 	}
-
 	@Override
 	ParsingExpression uniquefyImpl() {
 		return ParsingExpression.uniqueExpression(getUniqueName(), this);
@@ -1048,7 +1050,6 @@ class NonTerminal extends ParsingExpression {
 	final ParsingExpression deReference() {
 		return this.peg.getExpression(this.ruleName);
 	}
-	
 	void checkReference() {
 		ParsingRule r = this.getRule();
 		if(r == null) {
@@ -1075,9 +1076,6 @@ class NonTerminal extends ParsingExpression {
 	public boolean simpleMatch(ParsingContext context) {
 		int stackTop = context.pushCallStack(this.uniqueName);
 		boolean b = this.deReference().matcher.simpleMatch(context);
-//		if(/*ParsingExpression.VerboseStack &&*/ !b && this.peg != GrammarFactory.Grammar) {
-//			context.dumpCallStack("["+context.getPosition()+"] failure: ");
-//		}
 		context.popCallStack(stackTop);
 		return b;
 	}
@@ -1949,29 +1947,37 @@ class ParsingDebug extends ParsingOperation {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		long pos = context.getPosition();
-		ParsingObject left = context.left;
-		this.inner.matcher.simpleMatch(context);
-		if(context.isFailure()) {
-			assert(pos == context.getPosition());
-			System.out.println(context.source.formatPositionLine("debug", context.getPosition(), "failure at pos=" + pos  + " in " + inner));
-			left = null;
-			return false;
-		}
-		if(context.left != left) {
-			System.out.println(context.source.formatPositionLine("debug", pos,
-				"transition #" + context.left.getTag() + " => #" + left.getTag() + " in " + inner));
+		if(ParsingExpression.VerboseStack) {
+			long pos = context.getPosition();
+			long fpos = context.fpos;
+			boolean flag  = context.enableTrace;
+			String htrace = context.headTrace;
+			String ftrace = context.failureTrace;
+			String finfo = context.failureInfo;
+			context.fpos = 0;
+			context.enableTrace = true;
+			this.inner.matcher.simpleMatch(context);
+			context.enableTrace = flag;
+			if(context.isFailure()) {
+				assert(pos == context.getPosition());
+				System.out.println(context.source.formatPositionLine("trace", pos, "trying .. " + this.inner));				
+				System.out.println(context.source.formatPositionLine("failed", context.fpos, "failed at " + context.failureInfo + " " + context.failureTrace));
+				if(fpos >= context.fpos) {
+					context.forgetFailure(fpos);
+					context.failureTrace = ftrace;
+					context.failureInfo = finfo;
+				}
+				return false;
+			}
+			context.fpos = fpos;
+			context.headTrace = htrace;
+			context.failureTrace = ftrace;
+			context.failureInfo = finfo;
 			return true;
 		}
-		else if(context.getPosition() != pos) {
-			System.out.println(context.source.formatPositionMessage("debug", pos,
-				"consumed pos=" + pos + " => " + context.getPosition() + " in " + inner));
-		}
 		else {
-			System.out.println(context.source.formatPositionLine("debug", pos, "pass and unconsumed at pos=" + pos + " in " + inner));
+			return this.inner.matcher.simpleMatch(context);
 		}
-		left = null;
-		return true;
 	}
 }
 

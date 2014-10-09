@@ -49,7 +49,7 @@ NAME
 	= !DIGIT !(KEYWORD !W) W+
 
 KEYWORD
-	= 'auto' / 'break' / 'case' / 'char' / 'const' / 'continue' / 'default' 
+	= 'auto' / 'break' / 'case' / 'class' / 'char' / 'const' / 'continue' / 'default' 
 	/ 'double' / 'do' / 'else' / 'enum' / 'extern' / 'float' / 'for' 
 	/ 'goto' / 'if' / 'int' / 'inline' / 'long' / 'register' / 'restrict' 
 	/ 'return' / 'short' / 'signed' / 'sizeof' / 'static' / 'struct' 
@@ -157,9 +157,9 @@ TopLevel
 
 
 Declaration
-	= VarDecl
+	= ClassDecl
+	/ VarDecl
 	/ FuncDecl
-	/ ClassDecl
 
 FileReference
 	= { "package" _ NAME ('.' NAME)* _ ";" #Package #TODO }
@@ -193,6 +193,7 @@ DefaultAnnotationValue
 
 Type
 	[example: int]
+	[example: String[]]
 	= GenericType {@ "[" "]" #TArray}*
 	/ GenericType {@ _ '*' _ #TPointer}*
 
@@ -250,17 +251,15 @@ FUNCTION
 	= ("function" / "func" / "def") _
 
 FuncParamList
-	= { ( @FuncParam ("," @FuncParam)* )? #List } 
+	= { ( @FuncParam ("," @FuncParam)* )? #List }
 
 FuncParam
-	= { @[0]Annotation @[2]Name @[1](":" Type / Untyped) #Param } _
-	/ C { @[0]Annotation @[1]Type @[2]Name #Param } _
-
+	= { @[0]Annotation @[1]Type @[2]Name #Param } _
+	/ { @[0]Annotation @[2]Name @[1](":" Type / Untyped) #Param } _
 
 ClassDecl
-	[example: public class C extends D implements E,F { } ]
-	[trace]
-	= { @[0]Annotation "class" _ @[1]Name addExtends? addImplements? @ClassBlock #ClassDecl }
+	[example: public class Main { } ]
+	= { @[0]Annotation "class" _ @[1]Name addExtends? addImplements? @[2]ClassBlock #ClassDecl }
 
 addExtends
 	= ( "extends" _ @[3]Name )
@@ -270,7 +269,7 @@ addImplements
 
 ClassBlock
 	[example: { static int a=1; C() {} }]
-	= { "{" (@FieldDecl / @MethodDecl / @ConstructorDecl / _ )* "}" #Block }
+	= <debug { "{" (@MethodDecl / @ConstructorDecl / @FieldDecl / _ )* "}" #Block } >
 	
 FieldDecl
 	= { @Annotation @Name "=" @Expression ";"? #VarDecl}
@@ -303,8 +302,8 @@ Statement
 	/ { "continue" _ ";"? #Continue }
 	/ { "break" _ ";"? #Break }
 	/ { "while" _ "(" @Expression ")" @Statement #While }
-	/ { "for" _ "(" (@Expression)? ";" (@Expression)? ";"? (@Expression)? ")" @Statement #For }
-	/ { "for" _ "(" @Declaration (@Expression)? ";" (@Expression)? ";" @Statement #For }
+	/ { "for" _ <debug "(" (@(VarDecl / Expression))? ";" (@Expression)? ";"? (@Expression)? ")" @Statement > #For }
+	/ { "for" _ "(" @Declaration (@Expression)? ":" (@Expression)? ")" @Statement #ForEach }
 	/ { "do" _ @Statement "while" _ "(" @Expression ")" ";"? #DoWhile }
 	/ TryStatement
 	/ SwitchStatement
