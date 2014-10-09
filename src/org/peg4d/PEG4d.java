@@ -2,6 +2,8 @@ package org.peg4d;
 
 import java.io.File;
 
+import org.peg4d.expression.ParsingExpression;
+
 public class PEG4d extends ParsingBuilder {
 	
 	static final int Any         = ParsingTag.tagId("Any");
@@ -36,7 +38,7 @@ public class PEG4d extends ParsingBuilder {
 
 
 	static final int Block       = ParsingTag.tagId("Block");
-	static final int Indent      = ParsingTag.tagId("Indent");
+	public static final int Indent      = ParsingTag.tagId("Indent");
 	static final int Without     = ParsingTag.tagId("Without");
 	static final int With        = ParsingTag.tagId("With");
 	static final int If          = ParsingTag.tagId("If");

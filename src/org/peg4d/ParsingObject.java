@@ -2,6 +2,8 @@ package org.peg4d;
 
 import java.util.AbstractList;
 
+import org.peg4d.expression.*;
+
 public class ParsingObject extends AbstractList<ParsingObject> {
 	private static int idCount = 0;
 	int oid;
@@ -47,7 +49,7 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 		return ParsingUtils.getpos(this.pospeg);
 	}
 
-	void setSourcePosition(long pos) {
+	public void setSourcePosition(long pos) {
 		this.pospeg = ParsingUtils.objectId(pos, ParsingUtils.getpegid(this.pospeg));
 		assert(pos == ParsingUtils.getpos(this.pospeg));
 	}
@@ -60,15 +62,15 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 		return this.length;
 	}
 
-	void setLength(int length) {
+	public void setLength(int length) {
 		this.length = length;
 	}
 	
-	void setTag(ParsingTag tag) {
+	public void setTag(ParsingTag tag) {
 		this.tag = tag;
 	}
 
-	void setValue(Object value) {
+	public void setValue(Object value) {
 		this.value = value;
 	}
 	

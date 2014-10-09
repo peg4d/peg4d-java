@@ -2,10 +2,12 @@ package org.peg4d;
 
 import java.util.HashMap;
 
+import org.peg4d.expression.*;
+
 
 public class ParsingContext {
-	ParsingObject left;
-	ParsingSource source;
+	public ParsingObject left;
+	public ParsingSource source;
 
 	ParsingTag    emptyTag;	
 	ParsingStatistics          stat   = null;
@@ -146,10 +148,10 @@ public class ParsingContext {
 		return this.getClass().getSimpleName();
 	}	
 	
-	long pos;
+	public long pos;
 	long head_pos;
 	
-	final long getPosition() {
+	public final long getPosition() {
 		return this.pos;
 	}
 	
@@ -157,14 +159,14 @@ public class ParsingContext {
 		this.pos = pos;
 	}
 	
-	final void consume(int length) {
+	public final void consume(int length) {
 		this.pos += length;
 		if(head_pos < pos) {
 			this.head_pos = pos;
 		}
 	}
 
-	final void rollback(long pos) {
+	public final void rollback(long pos) {
 		if(stat != null && this.pos > pos) {
 			if(stat.statBacktrack(pos, this.pos) && ParsingExpression.VerboseStack) {
 				this.dumpCallStack("Reaching: " + this.source.substring(0, this.pos) + " <= failed");
@@ -173,7 +175,7 @@ public class ParsingContext {
 		this.pos = pos;
 	}
 
-	long fpos = 0;
+	public long fpos = 0;
 	ParsingMatcher[] errorbuf = new ParsingMatcher[512];
 	long[] posbuf = new long[errorbuf.length];
 
@@ -181,11 +183,11 @@ public class ParsingContext {
 		return this.left == null;
 	}
 	
-	final long rememberFailure() {
+	public final long rememberFailure() {
 		return this.fpos;
 	}
 	
-	final void forgetFailure(long fpos) {
+	public final void forgetFailure(long fpos) {
 		if(this.fpos != fpos) {
 			this.removeErrorInfo(this.fpos);
 		}
@@ -215,7 +217,7 @@ public class ParsingContext {
 		}
 	}
 
-	String getErrorMessage() {
+	public String getErrorMessage() {
 		ParsingMatcher errorInfo = this.getErrorInfo(this.fpos);
 		if(errorInfo == null) {
 			return "syntax error";
@@ -248,7 +250,7 @@ public class ParsingContext {
 //		return b;
 //	}
 	
-	final ParsingObject newParsingObject(long pos, ParsingConstructor created) {
+	public final ParsingObject newParsingObject(long pos, ParsingConstructor created) {
 //		if(this.isRecognitionMode()) {
 //			this.successResult.setSourcePosition(pos);
 //			return this.successResult;
@@ -285,11 +287,11 @@ public class ParsingContext {
 		this.unusedLog = log;
 	}
 	
-	int markObjectStack() {
+	public int markObjectStack() {
 		return stackSize;
 	}
 
-	void abortLinkLog(int mark) {
+	public void abortLinkLog(int mark) {
 		while(mark < this.stackSize) {
 			LinkLog l = this.logStack;
 			this.logStack = this.logStack.next;
@@ -299,7 +301,7 @@ public class ParsingContext {
 		assert(mark == this.stackSize);
 	}
 	
-	final void logLink(ParsingObject parent, int index, ParsingObject child) {
+	public final void logLink(ParsingObject parent, int index, ParsingObject child) {
 		LinkLog l = this.newLog();
 		l.childNode  = child;
 		child.parent = parent;
@@ -311,7 +313,7 @@ public class ParsingContext {
 		child = null;  // for GC
 	}
 	
-	void lazyCommit(ParsingObject left) {
+	public void lazyCommit(ParsingObject left) {
 		LinkLog l = this.newLog();
 		l.childNode  = left;
 		l.index = -9;
@@ -360,7 +362,7 @@ public class ParsingContext {
 //		newnode = null;
 //	}
 
-	final void commitLinkLog(int mark, ParsingObject newnode) {
+	public final void commitLinkLog(int mark, ParsingObject newnode) {
 		LinkLog first = null;
 		int objectSize = 0;
 		while(mark < this.stackSize) {
@@ -518,15 +520,15 @@ public class ParsingContext {
 
 	private HashMap<String,Boolean> flagMap = new HashMap<String,Boolean>();
 	
-	final void setFlag(String flagName, boolean flag) {
+	public final void setFlag(String flagName, boolean flag) {
 		this.flagMap.put(flagName, flag);
 	}
 	
-	final boolean getFlag(String flagName) {
+	public final boolean getFlag(String flagName) {
 		return this.isFlag(flagMap.get(flagName));
 	}
 	
-	final boolean isFlag(Boolean f) {
+	public final boolean isFlag(Boolean f) {
 		return f == null || f.booleanValue();
 	}
 		

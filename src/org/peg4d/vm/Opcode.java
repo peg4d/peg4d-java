@@ -1,6 +1,6 @@
 package org.peg4d.vm;
 
-import org.peg4d.ParsingExpression;
+import org.peg4d.expression.ParsingExpression;
 
 public final class Opcode {
 	public MachineInstruction opcode;

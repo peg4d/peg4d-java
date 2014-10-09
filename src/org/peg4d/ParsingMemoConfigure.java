@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.peg4d.expression.*;
+
 public class ParsingMemoConfigure {
 	public final static ParsingObject NonTransition = new ParsingObject(null, null, 0);
 	public static boolean NoMemo = false;
