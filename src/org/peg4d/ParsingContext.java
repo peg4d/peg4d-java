@@ -4,8 +4,8 @@ import java.util.HashMap;
 
 
 public class ParsingContext {
-	public ParsingObject left;
-	public ParsingSource source;
+	ParsingObject left;
+	ParsingSource source;
 
 	ParsingTag    emptyTag;	
 	ParsingStatistics          stat   = null;
@@ -150,7 +150,7 @@ public class ParsingContext {
 		return this.getClass().getSimpleName();
 	}	
 	
-	public long pos;
+	long pos;
 	long head_pos;
 	long fpos;
 
@@ -159,7 +159,7 @@ public class ParsingContext {
 	String failureTrace = null;
 	String failureInfo  = null;
 	
-	public final long getPosition() {
+	final long getPosition() {
 		return this.pos;
 	}
 	
@@ -167,7 +167,7 @@ public class ParsingContext {
 		this.pos = pos;
 	}
 	
-	public final void consume(int length) {
+	final void consume(int length) {
 		this.pos += length;
 		if(head_pos < pos) {
 			this.head_pos = pos;
@@ -177,12 +177,13 @@ public class ParsingContext {
 		}
 	}
 
-	public final void rollback(long pos) {
+	final void rollback(long pos) {
 		if(stat != null && this.pos > pos) {
 			stat.statBacktrack(pos, this.pos);
 		}
 		this.pos = pos;
 	}
+	
 	ParsingMatcher[] errorbuf = new ParsingMatcher[512];
 	long[] posbuf = new long[errorbuf.length];
 
@@ -190,11 +191,11 @@ public class ParsingContext {
 		return this.left == null;
 	}
 	
-	public final long rememberFailure() {
+	final long rememberFailure() {
 		return this.fpos;
 	}
 	
-	public final void forgetFailure(long fpos) {
+	final void forgetFailure(long fpos) {
 		if(this.fpos != fpos) {
 			this.removeErrorInfo(this.fpos);
 		}
@@ -224,7 +225,7 @@ public class ParsingContext {
 		}
 	}
 
-	public String getErrorMessage() {
+	String getErrorMessage() {
 		ParsingMatcher errorInfo = this.getErrorInfo(this.fpos);
 		if(errorInfo == null) {
 			return "syntax error";
@@ -273,11 +274,11 @@ public class ParsingContext {
 		this.unusedLog = log;
 	}
 	
-	public int markObjectStack() {
+	int markObjectStack() {
 		return stackSize;
 	}
 
-	public void abortLinkLog(int mark) {
+	void abortLinkLog(int mark) {
 		while(mark < this.stackSize) {
 			LinkLog l = this.logStack;
 			this.logStack = this.logStack.next;
@@ -287,7 +288,7 @@ public class ParsingContext {
 		assert(mark == this.stackSize);
 	}
 	
-	public final void logLink(ParsingObject parent, int index, ParsingObject child) {
+	final void logLink(ParsingObject parent, int index, ParsingObject child) {
 		LinkLog l = this.newLog();
 		l.childNode  = child;
 		child.parent = parent;
@@ -299,7 +300,7 @@ public class ParsingContext {
 		child = null;  // for GC
 	}
 	
-	public void lazyCommit(ParsingObject left) {
+	void lazyCommit(ParsingObject left) {
 		LinkLog l = this.newLog();
 		l.childNode  = left;
 		l.index = -9;
@@ -348,7 +349,7 @@ public class ParsingContext {
 //		newnode = null;
 //	}
 
-	public final void commitLinkLog(int mark, ParsingObject newnode) {
+	final void commitLinkLog(int mark, ParsingObject newnode) {
 		LinkLog first = null;
 		int objectSize = 0;
 		while(mark < this.stackSize) {
@@ -520,15 +521,15 @@ public class ParsingContext {
 
 	private HashMap<String,Boolean> flagMap = new HashMap<String,Boolean>();
 	
-	public final void setFlag(String flagName, boolean flag) {
+	final void setFlag(String flagName, boolean flag) {
 		this.flagMap.put(flagName, flag);
 	}
 	
-	public final boolean getFlag(String flagName) {
+	final boolean getFlag(String flagName) {
 		return this.isFlag(flagMap.get(flagName));
 	}
 	
-	public final boolean isFlag(Boolean f) {
+	final boolean isFlag(Boolean f) {
 		return f == null || f.booleanValue();
 	}
 		

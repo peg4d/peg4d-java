@@ -2,11 +2,10 @@ package org.peg4d;
 
 import java.util.HashMap;
 
-import org.peg4d.expression.*;
 import org.peg4d.vm.Instruction2;
 import org.peg4d.vm.Opcode2;
 
-public class GrammarFormatter extends ParsingExpressionVisitor {
+class GrammarFormatter extends ParsingExpressionVisitor {
 	protected StringBuilder sb = null;
 	public GrammarFormatter() {
 		this.sb = null;

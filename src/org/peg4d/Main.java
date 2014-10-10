@@ -9,7 +9,6 @@ import java.io.InputStreamReader;
 import java.util.TreeMap;
 
 import org.peg4d.data.RelationBuilder;
-import org.peg4d.expression.ParsingExpression;
 import org.peg4d.ext.Generator;
 
 public class Main {
