@@ -2,6 +2,8 @@ package org.peg4d;
 
 import java.util.AbstractList;
 
+import org.peg4d.expression.ParsingExpression;
+
 public class ParsingObject extends AbstractList<ParsingObject> {
 	private static int idCount = 0;
 	int oid;
@@ -96,39 +98,39 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 
 	// AST[]
 	
-	public ParsingExpression getSourceExpression() {
-		short pegid = ParsingUtils.getpegid(pospeg);
-		if(pegid > 0 && source.peg != null) {
-			return source.peg.getDefinedExpression(pegid);
-		}
-		return null;
-	}
-
-	private final static ParsingObject[] LazyAST = new ParsingObject[0];
-
-	private void checkLazyAST() {
-//		if(this.AST == LazyAST) {
-//			PConstructor e = (PConstructor)this.getSourceExpression();
-//			this.AST = null;
-//			long pos = this.getSourcePosition();
-//			e.lazyMatch(this, new ParserContext(source.peg, source, pos, pos+this.getLength()), pos);
+//	public ParsingExpression getSourceExpression() {
+//		short pegid = ParsingUtils.getpegid(pospeg);
+//		if(pegid > 0 && source.peg != null) {
+//			return source.peg.getDefinedExpression(pegid);
 //		}
-	}
-
-	boolean compactAST() {
-		if(this.AST != null) {
-			ParsingExpression e = this.getSourceExpression();
-			if(e instanceof ParsingConstructor && !((ParsingConstructor) e).leftJoin) {
-				this.AST = LazyAST;
-				return true;
-			}
-		}
-		return this.AST == LazyAST;
-	}
+//		return null;
+//	}
+//
+//	private final static ParsingObject[] LazyAST = new ParsingObject[0];
+//
+//	private void checkLazyAST() {
+////		if(this.AST == LazyAST) {
+////			PConstructor e = (PConstructor)this.getSourceExpression();
+////			this.AST = null;
+////			long pos = this.getSourcePosition();
+////			e.lazyMatch(this, new ParserContext(source.peg, source, pos, pos+this.getLength()), pos);
+////		}
+//	}
+//
+//	boolean compactAST() {
+//		if(this.AST != null) {
+//			ParsingExpression e = this.getSourceExpression();
+//			if(e instanceof ParsingConstructor && !((ParsingConstructor) e).leftJoin) {
+//				this.AST = LazyAST;
+//				return true;
+//			}
+//		}
+//		return this.AST == LazyAST;
+//	}
 
 	@Override
 	public final int size() {
-		checkLazyAST();
+//		checkLazyAST();
 		if(this.AST == null) {
 			return 0;
 		}
@@ -137,7 +139,7 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 
 	@Override
 	public final ParsingObject get(int index) {
-		checkLazyAST();
+//		checkLazyAST();
 		return this.AST[index];
 	}
 

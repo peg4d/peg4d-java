@@ -7,7 +7,6 @@ import org.peg4d.GrammarFormatter;
 import org.peg4d.Main;
 import org.peg4d.ParsingCharset;
 import org.peg4d.ParsingContext;
-import org.peg4d.ParsingExpressionVisitor;
 import org.peg4d.ParsingObject;
 import org.peg4d.ParsingRule;
 import org.peg4d.ParsingTag;

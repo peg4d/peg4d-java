@@ -2,6 +2,9 @@ package org.peg4d;
 
 import java.util.TreeMap;
 
+import org.peg4d.expression.NonTerminal;
+import org.peg4d.expression.ParsingExpression;
+
 public class ParsingRule {
 	public final static int LexicalRule   = 0;
 	public final static int ObjectRule    = 1;

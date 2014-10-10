@@ -2,7 +2,9 @@ package org.peg4d;
 
 import java.util.TreeMap;
 
-import org.peg4d.expression.*;
+import org.peg4d.expression.NonTerminal;
+import org.peg4d.expression.ParsingChoice;
+import org.peg4d.expression.ParsingExpression;
 import org.peg4d.model.ParsingModel;
 
 public class Grammar {
@@ -62,10 +64,6 @@ public class Grammar {
 		return this.foundError;
 	}
 		
-	public final ParsingExpression getDefinedExpression(long oid) {
-		return this.getDefinedExpression(oid);
-	}
-
 	public final static char NameSpaceSeparator = ':';
 
 	public final void importGrammar(String filePath) {

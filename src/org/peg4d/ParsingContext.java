@@ -2,6 +2,10 @@ package org.peg4d;
 
 import java.util.HashMap;
 
+import org.peg4d.expression.ParsingConstructor;
+import org.peg4d.expression.ParsingExpression;
+import org.peg4d.expression.ParsingMatcher;
+
 
 public class ParsingContext {
 	public ParsingObject left;
@@ -152,7 +156,7 @@ public class ParsingContext {
 	
 	public long pos;
 	long head_pos;
-	long fpos;
+	public long fpos;
 
 	boolean enableTrace = false;
 	String headTrace    = null;
@@ -243,7 +247,7 @@ public class ParsingContext {
 		this.left = null;
 	}
 		
-	final ParsingObject newParsingObject(long pos, ParsingConstructor created) {
+	public final ParsingObject newParsingObject(long pos, ParsingConstructor created) {
 		return new ParsingObject(this.emptyTag, this.source, pos, created);
 	}
 
@@ -479,14 +483,14 @@ public class ParsingContext {
 		}
 	}
 	
-	int pushCallStack(String uniqueName) {
+	public int pushCallStack(String uniqueName) {
 		int pos = this.terminalStack.size();
 		this.terminalStack.add(uniqueName);
 		callPositions[pos] = (int)this.pos;
 		return pos;
 	}
 
-	void popCallStack(int stacktop) {
+	public void popCallStack(int stacktop) {
 		this.terminalStack.clear(stacktop);
 	}
 

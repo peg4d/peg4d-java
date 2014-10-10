@@ -1,5 +1,6 @@
-package org.peg4d;
+package org.peg4d.expression;
 
+import org.peg4d.UMap;
 import org.peg4d.expression.*;
 
 

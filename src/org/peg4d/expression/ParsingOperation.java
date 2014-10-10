@@ -1,6 +1,5 @@
 package org.peg4d.expression;
 
-import org.peg4d.ParsingExpressionVisitor;
 
 public abstract class ParsingOperation extends ParsingUnary {
 	public String funcName;

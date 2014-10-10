@@ -1,8 +1,16 @@
 package org.peg4d;
 
-import org.peg4d.expression.*;
-
-
+import org.peg4d.expression.NonTerminal;
+import org.peg4d.expression.ParsingAny;
+import org.peg4d.expression.ParsingByte;
+import org.peg4d.expression.ParsingByteRange;
+import org.peg4d.expression.ParsingChoice;
+import org.peg4d.expression.ParsingExpression;
+import org.peg4d.expression.ParsingFailure;
+import org.peg4d.expression.ParsingMatcher;
+import org.peg4d.expression.ParsingNot;
+import org.peg4d.expression.ParsingOption;
+import org.peg4d.expression.ParsingSequence;
 
 class Optimizer2 {
 	

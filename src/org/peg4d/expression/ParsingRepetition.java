@@ -3,7 +3,6 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
-import org.peg4d.ParsingExpressionVisitor;
 import org.peg4d.ParsingObject;
 
 public class ParsingRepetition extends ParsingUnary {

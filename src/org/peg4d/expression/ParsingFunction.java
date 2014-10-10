@@ -2,8 +2,6 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
-import org.peg4d.ParsingExpressionVisitor;
-
 public abstract class ParsingFunction extends ParsingExpression {
 	public String funcName;
 	ParsingFunction(String funcName) {

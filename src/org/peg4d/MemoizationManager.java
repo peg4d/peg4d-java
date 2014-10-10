@@ -3,6 +3,11 @@ package org.peg4d;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.peg4d.expression.NonTerminal;
+import org.peg4d.expression.ParsingConnector;
+import org.peg4d.expression.ParsingExpression;
+import org.peg4d.expression.ParsingMatcher;
+
 public class MemoizationManager {
 	public final static ParsingObject NonTransition = new ParsingObject(null, null, 0);
 	public static boolean NoMemo = false;

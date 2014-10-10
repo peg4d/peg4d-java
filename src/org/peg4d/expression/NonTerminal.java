@@ -4,7 +4,6 @@ import java.util.TreeMap;
 
 import org.peg4d.Grammar;
 import org.peg4d.ParsingContext;
-import org.peg4d.ParsingExpressionVisitor;
 import org.peg4d.ParsingRule;
 import org.peg4d.ReportLevel;
 
