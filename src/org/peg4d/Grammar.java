@@ -2,6 +2,7 @@ package org.peg4d;
 
 import java.util.TreeMap;
 
+import org.peg4d.expression.*;
 import org.peg4d.model.ParsingModel;
 
 public class Grammar {
@@ -40,7 +41,7 @@ public class Grammar {
 		return this.name + ":" + ruleName;
 	}
 	
-	final NonTerminal newNonTerminal(String symbol) {
+	public final NonTerminal newNonTerminal(String symbol) {
 		return new NonTerminal(this, symbol);
 	}
 	

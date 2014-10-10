@@ -2,24 +2,26 @@ package org.peg4d;
 
 import java.util.TreeMap;
 
-class ParsingRule {
+import org.peg4d.expression.*;
+
+public class ParsingRule {
 	public final static int LexicalRule   = 0;
 	public final static int ObjectRule    = 1;
 	public final static int OperationRule = 1 << 1;
 	public final static int ReservedRule  = 1 << 15;
 	
-	Grammar  peg;
+	public Grammar  peg;
 	String baseName;
 	String ruleName;
 
 	ParsingObject po;
-	int type;
-	ParsingExpression expr;
+	public int type;
+	public ParsingExpression expr;
 	
-	int minlen = -1;
-	int refc = 0;
+	public int minlen = -1;
+	public int refc = 0;
 
-	ParsingRule(Grammar peg, String ruleName, ParsingObject po, ParsingExpression e) {
+	public ParsingRule(Grammar peg, String ruleName, ParsingObject po, ParsingExpression e) {
 		this.peg = peg;
 		this.po = po;
 		this.baseName = ruleName;
@@ -44,7 +46,7 @@ class ParsingRule {
 	}
 	
 	
-	final void report(ReportLevel level, String msg) {
+	public final void report(ReportLevel level, String msg) {
 		if(this.po != null) {
 			Main._PrintLine(po.formatSourceMessage(level.toString(), msg));
 		}
