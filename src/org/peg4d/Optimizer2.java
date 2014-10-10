@@ -1,7 +1,5 @@
 package org.peg4d;
 
-import org.peg4d.expression.*;
-
 
 
 class Optimizer2 {
