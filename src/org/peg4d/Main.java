@@ -194,21 +194,24 @@ public class Main {
 //			}
 			else if(argument.startsWith("--memo")) {
 				if(argument.equals("--memo:none")) {
-					ParsingMemoConfigure.NoMemo = true;
+					MemoizationManager.NoMemo = true;
 				}
 				else if(argument.equals("--memo:packrat")) {
-					ParsingMemoConfigure.PackratParsing = true;
+					MemoizationManager.PackratParsing = true;
 				}
-				else if(argument.equals("--memo:fifo")) {
-					ParsingMemoConfigure.FifoPackratParsing = true;
+				else if(argument.equals("--memo:window")) {
+					MemoizationManager.SlidingWindowParsing = true;
+				}
+				else if(argument.equals("--memo:slide")) {
+					MemoizationManager.SlidingLinkedParsing = true;
 				}
 				else if(argument.equals("--memo:notrace")) {
-					ParsingMemoConfigure.Tracing = false;
+					MemoizationManager.Tracing = false;
 				}
 				else {
 					int distance = ParsingCharset.parseInt(argument.substring(7), -1);
 					if(distance >= 0) {
-						ParsingMemoConfigure.BacktrackBufferSize  = distance;
+						MemoizationManager.BacktrackBufferSize  = distance;
 					}
 					else {
 						ShowUsage("unknown option: " + argument);
@@ -217,7 +220,7 @@ public class Main {
 			}
 			else if(argument.startsWith("--verbose")) {
 				if(argument.equals("--verbose:memo")) {
-					ParsingMemoConfigure.VerboseMemo = true;
+					MemoizationManager.VerboseMemo = true;
 				}
 				else if(argument.equals("--verbose:stack")) {
 					System.out.println("--verbose:stack");
@@ -252,10 +255,10 @@ public class Main {
 		System.out.println("  -W<num>                   Warning Level (default:1)");
 		System.out.println("  -O<num>                   Optimization Level (default:2)");
 		System.out.println("  --memo:x                  Memo configuration");
-		System.out.println("     none|packrat|fifo|notrace");
+		System.out.println("     none|packrat|window|slide|notrace");
 		System.out.println("  --memo:<num>              Expected backtrack distance (default: 256)");
 		System.out.println("  --verbose                 Printing Debug infomation");
-		System.out.println("  --verbose:memo            Printing Peg/Debug infomation");
+		System.out.println("  --verbose:memo            Printing Memoization information");
 		Main._Exit(0, Message);
 	}
 	
@@ -320,11 +323,43 @@ public class Main {
 		return d;
 	}
 	
+	private synchronized static void loadStat(Grammar peg, String fileName) {
+		String startPoint = StartingPoint;
+		ParsingSource source = null;
+		ParsingContext context = null;
+		ParsingObject po = null;
+		long bestTime = Long.MAX_VALUE;
+		ParsingStatistics stat = null;
+		for(int i = 0; i < 5; i++) {
+			source = Main.loadSource(peg, fileName);
+			context = new ParsingContext(Main.loadSource(peg, fileName));
+			stat = new ParsingStatistics(peg, source);
+			context.initStat(stat);
+			if(Main.RecognitionOnlyMode) {
+				context.match(peg, startPoint, new MemoizationManager());
+			}
+			else {
+				po = context.parse(peg, startPoint, new MemoizationManager());
+			}
+			long t = stat.end();
+			System.out.println("ErapsedTime: " + t);
+			if(t < bestTime) {
+				bestTime = t;
+			}
+		}
+		stat.ErapsedTime = bestTime;
+		stat.end(po, context);
+	}
+	
 	private synchronized static void loadInputFile(Grammar peg, String fileName) {
 		String startPoint = StartingPoint;
 		Main.printVerbose("FileName", fileName);
 		Main.printVerbose("Grammar", peg.getName());
 		Main.printVerbose("StartingPoint", StartingPoint);
+		if(OutputType.equalsIgnoreCase("stat")) {
+			loadStat(peg, fileName);
+			return;
+		}
 		ParsingSource source = Main.loadSource(peg, fileName);
 		ParsingContext context = new ParsingContext(Main.loadSource(peg, fileName));
 		if(Main.StatLevel == 0) {
@@ -348,19 +383,18 @@ public class Main {
 			context.initStat(new ParsingStatistics(peg, source));
 		}
 		if(Main.RecognitionOnlyMode) {
-			boolean res = context.match(peg, startPoint, new ParsingMemoConfigure());
+			boolean res = context.match(peg, startPoint, new MemoizationManager());
 			if(OutputType.equalsIgnoreCase("stat")) {
 				context.recordStat(null);
 				return;
 			}
 			System.exit(res ? 0 : 1);
 		}
-		ParsingObject pego = context.parse(peg, startPoint, new ParsingMemoConfigure());
+		ParsingObject pego = context.parse(peg, startPoint, new MemoizationManager());
 		if(Relation) {
 			RelationBuilder RBuilder = new RelationBuilder();
 			RBuilder.build(pego);
 		}
-		
 		if(context.isFailure()) {
 			System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
 			System.out.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
@@ -411,7 +445,6 @@ public class Main {
 			m.put(key, n+1);
 		}
 	}
-	
 	
 	private final static void displayShellVersion(Grammar peg) {
 		Main._PrintLine(ProgName + "-" + Version + " (" + CodeName + ") on " + Main._GetPlatform());

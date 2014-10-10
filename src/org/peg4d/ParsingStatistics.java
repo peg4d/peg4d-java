@@ -161,7 +161,9 @@ class ParsingStatistics {
 	
 
 	long InitTotalHeap = 0;
+	long StartTime = 0;
 	long ErapsedTime = 0;
+	
 	double Latency  = 0;
 
 	public void start() {
@@ -174,11 +176,18 @@ class ParsingStatistics {
 		this.InitTotalHeap = Runtime.getRuntime().totalMemory();
 		long free =  Runtime.getRuntime().freeMemory();
 		this.UsedHeapSize =  InitTotalHeap - free;
-		this.ErapsedTime = System.currentTimeMillis();
+		this.StartTime = System.currentTimeMillis();
+	}
+	
+	public long end() {
+		this.ErapsedTime = (System.currentTimeMillis() - StartTime);
+		return this.ErapsedTime;
 	}
 	
 	public void end(ParsingObject pego, ParsingContext p) {
-		this.ErapsedTime = (System.currentTimeMillis() - ErapsedTime);
+		if(this.ErapsedTime == 0) {
+			this.ErapsedTime = (System.currentTimeMillis() - StartTime);
+		}
 
 		System.gc(); // meaningless ?
 		this.ConsumedLength = p.getPosition();
@@ -193,7 +202,7 @@ class ParsingStatistics {
 		
 		this.set(new vText("Parser", p.getName()));
 		this.setCount("Optimization", Main.OptimizationLevel);
-		this.setCount("BacktrackBufferSize", ParsingMemoConfigure.BacktrackBufferSize);
+		this.setCount("BacktrackBufferSize", MemoizationManager.BacktrackBufferSize);
 
 		String fileName = p.source.getResourceName();
 		if(fileName.lastIndexOf('/') > 0) {
@@ -213,7 +222,7 @@ class ParsingStatistics {
 
 		this.setCount("Memory", this.InitTotalHeap);
 		id = id + ((Main.RecognitionOnlyMode) ? 'C' : 'O');
-		id = id + Main.OptimizationLevel + "." + ParsingMemoConfigure.BacktrackBufferSize + "."  + (this.InitTotalHeap / (1024*1024)) +"M";
+		id = id + Main.OptimizationLevel + "." + MemoizationManager.BacktrackBufferSize + "."  + (this.InitTotalHeap / (1024*1024)) +"M";
 		this.setCount("HeapSize", this.HeapSize);
 		this.setRatio1("Heap/File", this.HeapSize, this.statFileLength);		
 		this.setCount("UsedHeapSize", this.UsedHeapSize);
@@ -378,7 +387,7 @@ class ParsingStatistics {
 
 	public final void writeCSV() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("v4,");
+		sb.append("v5,");
 		this.CSV(sb, "Id");
 		this.CSV(sb, "Memory");
 		this.CSV(sb, "Optimization");
@@ -393,7 +402,7 @@ class ParsingStatistics {
 		this.CSV(sb, "Throughput");
 		this.CSV(sb, "HeapSize");
 		this.CSV(sb, "Heap/File");
-		this.CSV(sb, "UsedObject");
+//		this.CSV(sb, "UsedObject");
 
 		/** **/
 		this.CSV(sb, "Backtrack");
@@ -402,14 +411,18 @@ class ParsingStatistics {
 		this.CSV(sb, "Parsing/Consumed");
 		
 		/** **/
+		this.CSV(sb, "Memo");
 		this.CSV(sb, "MemoStored");
 		this.CSV(sb, "MemoUsed");
 		this.CSV(sb, "Used/Stored");
+		this.CSV(sb, "UnusedNonTerminal");
+		this.CSV(sb, "DeactivatedNonTerminal");
+
 		
-		/** **/
-		this.CSV(sb, "ObjectEdge");
-		this.CSV(sb, "ObjectNode");
-		this.CSV(sb, "ObjectDepth");
+//		/** **/
+//		this.CSV(sb, "ObjectEdge");
+//		this.CSV(sb, "ObjectNode");
+//		this.CSV(sb, "ObjectDepth");
 
 		/** **/
 		SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy/MM/dd");

@@ -14,7 +14,7 @@ public class ParsingContext {
 		this.left = null;
 		this.source = s;
 		this.resetSource(s, pos);
-		this.memoMap = memo != null ? memo : new NoParsingMemo();
+		this.memoMap = memo != null ? memo : new NoMemoTable(0, 0);
 	}
 
 	public ParsingContext(ParsingSource s) {
@@ -84,7 +84,7 @@ public class ParsingContext {
 		return this.parse(peg, startPoint, null);
 	}
 
-	public final ParsingObject parse(Grammar peg, String startPoint, ParsingMemoConfigure conf) {
+	public final ParsingObject parse(Grammar peg, String startPoint, MemoizationManager conf) {
 		ParsingRule start = peg.getRule(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
@@ -94,7 +94,6 @@ public class ParsingContext {
 			this.initMemo(conf);
 		}
 		this.emptyTag = peg.newStartTag();
-		
 		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
 		this.left = po;
 		if(start.expr.debugMatch(this)) {
@@ -105,13 +104,14 @@ public class ParsingContext {
 			this.unusedLog = null;
 		}
 		checkUnusedText(po);
-		if(conf != null && this.stat != null) {
+		if(conf != null) {
+			conf.removeMemo(start);
 			conf.show2(this.stat);
 		}
 		return this.left;
 	}
 
-	public final boolean match(Grammar peg, String startPoint, ParsingMemoConfigure conf) {
+	public final boolean match(Grammar peg, String startPoint, MemoizationManager conf) {
 		ParsingExpression start = peg.getExpression(startPoint);
 		if(start == null) {
 			Main._Exit(1, "undefined start rule: " + startPoint );
@@ -126,7 +126,8 @@ public class ParsingContext {
 		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
 		this.left = po;
 		boolean res = start.debugMatch(this);
-		if(conf != null && this.stat != null) {
+		if(conf != null) {
+			conf.removeMemo(r);
 			conf.show2(this.stat);
 		}
 		return res;
@@ -506,8 +507,8 @@ public class ParsingContext {
  		
 	protected MemoTable memoMap = null;
 
-	public void initMemo(ParsingMemoConfigure conf) {
-		this.memoMap = (conf == null) ? new NoParsingMemo() : conf.newMemo();
+	public void initMemo(MemoizationManager conf) {
+		this.memoMap = (conf == null) ? new NoMemoTable(0, 0) : conf.newTable(this.source.length());
 	}
 
 	final MemoEntry getMemo(long keypos, int memoPoint) {

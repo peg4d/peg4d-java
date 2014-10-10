@@ -5,7 +5,7 @@ import java.util.Optional;
 import org.peg4d.Grammar;
 import org.peg4d.GrammarFactory;
 import org.peg4d.ParsingContext;
-import org.peg4d.ParsingMemoConfigure;
+import org.peg4d.MemoizationManager;
 import org.peg4d.ParsingObject;
 import org.peg4d.ParsingSource;
 import org.peg4d.query.Executor.QueryExecutionException;
