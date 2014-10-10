@@ -1,6 +1,9 @@
 package org.peg4d;
 
-class ParsingExpressionVisitor {
+import org.peg4d.expression.*;
+
+
+public class ParsingExpressionVisitor {
 	private UMap<String> visitedMap = new UMap<String>();
 	boolean isVisited(String name) {
 		if(this.visitedMap != null) {

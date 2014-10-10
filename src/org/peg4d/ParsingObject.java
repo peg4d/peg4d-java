@@ -25,7 +25,7 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 		this.oid = idCount++;
 		this.tag        = tag;
 		this.source     = source;
-		this.pospeg     = ParsingUtils.objectId(pos, e);
+		this.pospeg     = ParsingUtils.objectId(pos, (short)e.uniqueId);
 		assert(pos == ParsingUtils.getpos(this.pospeg));
 		this.length     = 0;
 	}
@@ -47,7 +47,7 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 		return ParsingUtils.getpos(this.pospeg);
 	}
 
-	void setSourcePosition(long pos) {
+	public void setSourcePosition(long pos) {
 		this.pospeg = ParsingUtils.objectId(pos, ParsingUtils.getpegid(this.pospeg));
 		assert(pos == ParsingUtils.getpos(this.pospeg));
 	}
@@ -60,15 +60,15 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 		return this.length;
 	}
 
-	void setLength(int length) {
+	public void setLength(int length) {
 		this.length = length;
 	}
 	
-	void setTag(ParsingTag tag) {
+	public void setTag(ParsingTag tag) {
 		this.tag = tag;
 	}
 
-	void setValue(Object value) {
+	public void setValue(Object value) {
 		this.value = value;
 	}
 	
