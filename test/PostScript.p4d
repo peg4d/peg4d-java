@@ -1,0 +1,20 @@
+File
+	= Expr .*
+
+Chunk
+	= Expr
+
+_
+	= [ \t\r\t]
+
+Expr
+	= Value {@ _ addTail}*
+
+addTail
+	= 'sqrt' #Sqrt
+	/ @Expr _ 'add' #Add
+
+Value
+	= { DIGIT+ #Integer }
+	/ { '.' DIGIT+ #Float }
+

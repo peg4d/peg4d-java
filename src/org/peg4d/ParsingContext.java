@@ -473,31 +473,31 @@ public class ParsingContext {
 		return false;
 	}
 	
-	UList<String> terminalStack;
+	UList<String> callStack;
 	int[]         callPositions;
 
 	void initCallStack() {
 		if(ParsingExpression.VerboseStack) {
-			this.terminalStack = new UList<String>(new String[256]);
+			this.callStack = new UList<String>(new String[256]);
 			this.callPositions = new int[4096];
 		}
 	}
 	
 	public int pushCallStack(String uniqueName) {
-		int pos = this.terminalStack.size();
-		this.terminalStack.add(uniqueName);
+		int pos = this.callStack.size();
+		this.callStack.add(uniqueName);
 		callPositions[pos] = (int)this.pos;
 		return pos;
 	}
 
 	public void popCallStack(int stacktop) {
-		this.terminalStack.clear(stacktop);
+		this.callStack.clear(stacktop);
 	}
 
 	String stringfyCallStack() {
 		StringBuilder sb = new StringBuilder();
 		int n = 0;
-		for(String t : this.terminalStack) {
+		for(String t : this.callStack) {
 			if(n > 0) {
 				sb.append(" ");
 			}

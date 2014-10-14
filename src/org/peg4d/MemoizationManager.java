@@ -14,7 +14,7 @@ public class MemoizationManager {
 	public static boolean PackratParsing = false;
 	public static boolean SlidingWindowParsing = false;
 	public static boolean SlidingLinkedParsing = false;
-	public static int     BacktrackBufferSize = 256;
+	public static int     BacktrackBufferSize = 64;
 	public static boolean Tracing = true;
 	public static boolean VerboseMemo = false;
 	
@@ -72,19 +72,19 @@ public class MemoizationManager {
 					return true;
 				}
 			}
-//			if(this.memoMiss % 64 == 0) {
-//				if(this.memoHit == 0) {
-//					return true;
+			if(this.memoMiss % 64 == 0) {
+				if(this.memoHit == 0) {
+					return true;
+				}
+//				if(this.hitLength < this.memoHit) {
+//					enableMemo = false;
+//					disabledMemo();
+//					return;
 //				}
-////				if(this.hitLength < this.memoHit) {
-////					enableMemo = false;
-////					disabledMemo();
-////					return;
-////				}
-//				if(this.memoMiss / this.memoHit > 10) {
-//					return true;
-//				}
-//			}
+				if(this.memoMiss / this.memoHit > 10) {
+					return true;
+				}
+			}
 			return false;
 		}
 
@@ -123,10 +123,12 @@ public class MemoizationManager {
 	}
 
 	void exploitMemo(ParsingRule rule) {
-		if(!NoMemo) {
-			for(ParsingRule r : rule.subRule()) {
-				exploitMemo(r.expr);
-			}
+//		if(NoMemo) {
+//			System.out.println("skip memoiztion");
+//			return;
+//		}
+		for(ParsingRule r : rule.subRule()) {
+			exploitMemo(r.expr);
 		}
 	}
 
@@ -141,10 +143,11 @@ public class MemoizationManager {
 	}
 
 	void removeMemo(ParsingRule rule) {
-		if(!NoMemo) {
-			for(ParsingRule r : rule.subRule()) {
-				removeMemo(r.expr);
-			}
+		if(NoMemo) {
+			
+		}
+		for(ParsingRule r : rule.subRule()) {
+			removeMemo(r.expr);
 		}
 	}
 	

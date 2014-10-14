@@ -1,0 +1,6 @@
+<project name="libbun" default="jar">
+  <!-- directory / file definition -->
+  <property name="BinaryName" value="peg4d" />
+  <data>abc</data>
+</project>
+

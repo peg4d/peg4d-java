@@ -1,0 +1,15 @@
+
+
+File
+	= { S* (@Sentence)* #File }
+
+Sentence
+	= { @Subject @Sentence }
+	/ { (!'。' .)+ '。'? #Sentence } S*
+
+Subject
+	= { (!'。' !'は' .)+ #Subject } 'は' '、'? S*
+
+Clause
+	= { (!'。' !'し' !'であり' .)+ #Clause } ('し' / 'であり') '、'? S*
+	

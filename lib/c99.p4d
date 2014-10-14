@@ -31,7 +31,7 @@ Chunk
 	/ Expression
 	/ Type
 _
-	= (S / BLOCKCOMMENT / LINECOMMENT )*
+	= (S / BLOCKCOMMENT / LINECOMMENT / ATTRIBUTE)*
 
 S
 	= [ \n\r\t\u000B\u000C]
@@ -43,7 +43,13 @@ LINECOMMENT
 	= '//' (!'\n' .)*
 
 ATTRIBUTE
-	= '__attribute__' !W _ '((' (!'))' .)* '))' _
+	= '__attribute__' !W _ '((' ATTRIBUTECONTENT '))' _
+	/ '__asm' !W _ '(' (!')' .)* ')' _
+
+ATTRIBUTECONTENT
+	= NAME _ '(' ('"' STRING_CONTENT* '"' / (!')' .)* ) _ ')'_
+	/ _ (!'))' .)* _
+
 
 EOL
 	= ('\r'? '\n' / !.)
@@ -175,6 +181,7 @@ TopLevel
 	= Directive
 	/ TypeDef
 	/ Declaration
+	/ { #Empty } ";"
 
 Declaration
 	= FunctionDeclaration
@@ -188,7 +195,7 @@ Directive
 
 
 FunctionDeclaration
-	= { @AnnotationList @Type _ @Name _ "(" @FunctionParamList ")" (_ @Block / ";") #Function }
+	= { @AnnotationList @Type _ @Name _ "(" @FunctionParamList ")" (_ @Block /_ ";") #Function }
 
 AnnotationList
 	= { (@Annotation)*  #List } _
@@ -197,6 +204,7 @@ Annotation
 	= "extern"     { #KeyValue @{`extern` #Key } @{`true` #Value } } _
 	/ "static"     { #KeyValue @{`static` #Key } @{`true` #Value } } _
 	/ "inline"     { #KeyValue @{`inline` #Key } @{`true` #Value } } _
+	/ "__inline"   { #KeyValue @{`__inline` #Key } @{`true` #Value } } _
 	/ "auto"       { #KeyValue @{`auto` #Key } @{`true` #Value } } _
 	/ "register"   { #KeyValue @{`register` #Key } @{`true` #Value } } _
 	/ "volatile"   { #KeyValue @{`volatile` #Key } @{`true` #Value } } _
@@ -205,20 +213,21 @@ Annotation
 	/ "_stdcall"  { #KeyValue @{`stdcall` #Key } @{`true` #Value } } _
 
 FunctionParamList
-	= { _ 'void' _ #List }
-	/ { ( @FunctionParam ("," @FunctionParam)* )? ("," "...")? #List } 
+	= { ( @FunctionParam ("," @FunctionParam)* )? ("," "...")? #List } 
+	/ { _ 'void' _ #List }
 
 FunctionParam
-	= { @Type _ @VarName #Param} _
+	= { @Type _ (@VarName)? #Param} _
 	
 // Declaration
 //==============
 
 TypeDef
-	= { "typedef" _ @Type (_ @Name)? ";" #TypeDeclaration }
+	= { "typedef" _ @Type (_ @VarName _/_ @Name _)? (',' _ @VarName _/_ @Name _)* ";" #TypeDeclaration }
 
 VariableDeclaration
 	= { @AnnotationList @Type @InitDecl ("," @InitDecl)*  ATTRIBUTE? ";" #Declaration }
+	/ { @AnnotationList @Type ("=" @Initializer)? ("," @InitDecl)* ATTRIBUTE? ";" #Declaration }
 
 InitDecl
 	= { @VarName ("=" @Initializer)? #VarDecl } _
@@ -254,11 +263,13 @@ Type
 
 TypeSuffix
 	= PrimaryType {@
-		POINTER_QUALIFIER? "*" #TConst
-		/ "*" POINTER_QUALIFIER? #TPointer
+		POINTER_QUALIFIER? "*" POINTER_QUALIFIER? #TPointer
 		/ "[" (NAME / DIGIT*) "]" #TPointer
-		/ "(" _ "*" _ @Name _ ")" _  "(" @FunctionParamList ")" #TFunc
+		/ addFuncType
 	}*
+
+addFuncType
+	= "(" _ ("*"/'^') _ (@Name)? (_ "(" @FunctionParamList ")")? _ ")" _  "(" @FunctionParamList ")" #TFunc
 
 POINTER_QUALIFIER
 	= "const" / "restrict"
@@ -272,6 +283,7 @@ PrimaryType
 	/ { "float"       _   #TFloat } _
 	/ { "double"      _   #TFloat } _
 	/ { "long" _ "double" _ #TFloat } _
+	/ { "long" (_ SIGN)? (_ "long")? (_ "int")? #TInt } _
 	/ { SIGN? "long" (_ "long")? (_ "int")? #TInt } _
 	/ { "signed" `signed int` #TInt } _
 	/ { "unsigned" `unsigned int` #TInt } _
@@ -281,12 +293,12 @@ PrimaryType
 	/ { NAME   #Name } _
 
 StructDeclaration
-	= { "struct" _ @Name addStructMember? #TStruct }
-	/ { "union"  _ @Name addStructMember?  #TUnion }
-	/ { "enum"   _ @Name? "{" @EnumeratorList ","? "}" #TEnum }
+	= { "struct" _ (@Name)? addStructMember? #TStruct }
+	/ { "union"  _ (@Name)? addStructMember?  #TUnion }
+	/ { "enum"   _ (@Name)? ("{" @EnumeratorList ","? "}")? #TEnum }
 
 SIGN
-	= ("signed" / "unsigned" ) _
+	= ("signed" / "unsigned" / "__signed") _
 
 NAME_T
 	= !DIGIT (!('_t' !W)  W )+ '_t' !W
@@ -296,9 +308,11 @@ addStructMember
 
 StructMemberDeclaration
 	= { @AnnotationList @Type @StructMemberName  ("," @StructMemberName )* ";" _ #StructMemberDeclaration }
+	/ { @Type ";" _ #StructMemberDeclaration }
 
 StructMemberName
 	= VarName {@ ":" @ConstantExpression #Bit}*
+	/ { ":" @ConstantExpression #Bit }
 
 EnumeratorList
 	= { @Enumerator ("," @Enumerator)* ","? #List }

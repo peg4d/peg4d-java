@@ -96,7 +96,6 @@ class Optimizer2 {
 			ne.matcher = e.matcher;
 			countOptimizedNonTerminal += 1;
 		}
-		//ne.report(ReportLevel.notice, "inlining " + e);
 	}
 
 
