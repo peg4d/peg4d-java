@@ -34,11 +34,13 @@ public class GrammarFactory {
 		this.grammarMap.put(path, peg);
 	}
 	
+	private final static String LibraryPath = "org/peg4d/lib/";
+	
 	private Grammar loadLibraryGrammar(String filePath) {
 		if(!filePath.endsWith(".p4d")) {
 			filePath = filePath + ".p4d";
-			if(!filePath.startsWith("lib/")) {
-				filePath = "lib/" + filePath;
+			if(!filePath.startsWith(LibraryPath)) {
+				filePath = LibraryPath + filePath;
 			}
 		}
 		if(Main.VerbosePeg) {
