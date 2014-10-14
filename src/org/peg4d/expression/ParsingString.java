@@ -27,9 +27,9 @@ public class ParsingString extends ParsingExpression {
 	}
 	@Override public short acceptByte(int ch) {
 		if(this.utf8.length == 0) {
-			return CheckNextFlow;
+			return WeakReject;
 		}
-		return ((this.utf8[0] & 0xff) == ch) ? Accept : Reject;
+		return ((this.utf8[0] & 0xff) == ch) ? StringAccept : StringReject;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

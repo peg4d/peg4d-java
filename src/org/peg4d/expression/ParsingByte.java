@@ -35,7 +35,7 @@ public class ParsingByte extends ParsingExpression {
 	}
 	@Override
 	public short acceptByte(int ch) {
-		return (byteChar == ch) ? Accept : Reject;
+		return (byteChar == ch) ? StringAccept : StringReject;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

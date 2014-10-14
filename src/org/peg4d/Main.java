@@ -85,15 +85,15 @@ public class Main {
 	public final static void main(String[] args) {
 		//new PEG4dGrammar2();
 		parseCommandArguments(args);
-		if(FindFileIndex != -1) {
-			Grammar peg = new GrammarFactory().newGrammar("main");
-			for(int i = FindFileIndex; i < args.length; i++) {
-				peg.importGrammar(args[i]);
-			}
-			peg.verifyRules();
-			performShell2(peg);
-			return;
-		}
+//		if(FindFileIndex != -1) {
+//			Grammar peg = new GrammarFactory().newGrammar("main");
+//			for(int i = FindFileIndex; i < args.length; i++) {
+//				peg.importGrammar(args[i]);
+//			}
+//			peg.verifyRules();
+//			performShell2(peg);
+//			return;
+//		}
 		Grammar peg = GrammarFile == null ? GrammarFactory.Grammar : new GrammarFactory().newGrammar("main", GrammarFile);
 		if(PEGFormatter != null) {
 			GrammarFormatter fmt = loadGrammarFormatter(PEGFormatter);

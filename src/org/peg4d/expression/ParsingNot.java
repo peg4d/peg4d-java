@@ -27,11 +27,11 @@ public class ParsingNot extends ParsingUnary {
 	@Override
 	public short acceptByte(int ch) {
 		short r = this.inner.acceptByte(ch);
-		if(r == Accept) {
-			return Reject;
+		if(r == StringAccept) {
+			return StringReject;
 		}
-		if(r == Reject) {
-			return Accept;
+		if(r == StringReject) {
+			return StringAccept;
 		}
 		return r;
 	}

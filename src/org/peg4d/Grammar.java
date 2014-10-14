@@ -65,26 +65,25 @@ public class Grammar {
 	}
 		
 	public final static char NameSpaceSeparator = ':';
-
-	public final void importGrammar(String filePath) {
-		this.importGrammar("", filePath);
-	}
 	
-	final void importGrammar(String ns, String filePath) {
+	final void importGrammar(UList<ParsingObject> nameList, String filePath) {
 		Grammar peg = this.factory.getGrammar(filePath);
 		if(peg != null) {
-			UList<ParsingRule> ruleList = peg.getExportRuleList();
-			//System.out.println("filePath: " + filePath + " peg=" + ruleList);
-			for(int i = 0; i < ruleList.size(); i++) {
-				ParsingRule rule = ruleList.ArrayValues[i];
-				String key = rule.ruleName;
-				if(ns != null && ns.length() > 0) {
-					key = ns + ':' + rule.ruleName;
+			for(ParsingObject po : nameList) {
+				String key = po.getText();
+				String ruleName = key;
+				if(ruleName.indexOf(NameSpaceSeparator) > 0) {
+					ruleName = ruleName.substring(ruleName.indexOf(NameSpaceSeparator)+1);
+				}
+				ParsingRule rule = peg.getRule(ruleName);
+				if(rule == null) {
+					Main._PrintLine(po.formatSourceMessage("warning", "undefined rule: " + ruleName));
+					continue;
+					//rule = newUndefinedRule(ruleName);
 				}
 				if(this.ruleMap.hasKey(key)) {
 					Main.printVerbose("duplicated: ", key + " ");
 				}
-				Main.printVerbose("importing: ", rule);
 				this.ruleMap.put(key, rule);
 			}
 		}

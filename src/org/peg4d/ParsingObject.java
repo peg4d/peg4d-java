@@ -49,6 +49,8 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 		return ParsingUtils.getpos(this.pospeg);
 	}
 
+	
+	
 	public void setSourcePosition(long pos) {
 		this.pospeg = ParsingUtils.objectId(pos, ParsingUtils.getpegid(this.pospeg));
 		assert(pos == ParsingUtils.getpos(this.pospeg));

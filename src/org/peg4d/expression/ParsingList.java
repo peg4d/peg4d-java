@@ -44,11 +44,11 @@ public abstract class ParsingList extends ParsingExpression {
 	public short acceptByte(int ch) {
 		for(int i = 0; i < this.size(); i++) {
 			short r = this.get(i).acceptByte(ch);
-			if(r != CheckNextFlow) {
+			if(r != WeakReject) {
 				return r;
 			}
 		}
-		return CheckNextFlow;
+		return WeakReject;
 	}
 	
 	public final void swap(int i, int j) {

@@ -354,7 +354,7 @@ class Optimizer2 {
 	private static ParsingExpression selectChoice(ParsingChoice choice, int ch, ParsingExpression failed) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[2]);
 		for(int i = 0; i < choice.size(); i++) {
-			if(choice.get(i).acceptByte(ch) != ParsingExpression.Reject) {
+			if(choice.get(i).acceptByte(ch) != ParsingExpression.StringReject) {
 				l.add(choice.get(i));
 			}
 		}

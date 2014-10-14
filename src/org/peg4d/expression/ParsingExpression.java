@@ -14,6 +14,16 @@ import org.peg4d.ReportLevel;
 import org.peg4d.UList;
 import org.peg4d.UMap;
 
+enum Prediction {
+	StringAccept,
+	WeakAccept,
+	StringReject,
+	WeakReject
+//	
+//	public boolean isReject() {
+//		return 
+//	}
+}
 
 public abstract class ParsingExpression extends ParsingMatcher {
 	public  static boolean  VerboseStack = false;
@@ -122,13 +132,13 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return b;
 	}
 	
-	public final static short Reject        = 0;
-	public final static short Accept        = 1;
-	public final static short WeakAccept    = 1;
-	public final static short CheckNextFlow = 2;
+	public final static short StringReject        = 0;
+	public final static short WeakReject          = 1;
+	public final static short StringAccept        = 2;
+	public final static short WeakAccept          = 3;
 	
 	public short acceptByte(int ch) {
-		return CheckNextFlow;
+		return WeakReject;
 	}
 	
 	public ParsingExpression getExpression() {

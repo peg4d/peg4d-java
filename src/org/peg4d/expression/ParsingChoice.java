@@ -32,14 +32,14 @@ public class ParsingChoice extends ParsingList {
 		boolean checkNext = false;
 		for(int i = 0; i < this.size(); i++) {
 			short r = this.get(i).acceptByte(ch);
-			if(r == Accept) {
+			if(r == StringAccept) {
 				return r;
 			}
-			if(r == CheckNextFlow) {
+			if(r == WeakReject) {
 				checkNext = true;
 			}
 		}
-		return checkNext ? CheckNextFlow : Reject;
+		return checkNext ? WeakReject : StringReject;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

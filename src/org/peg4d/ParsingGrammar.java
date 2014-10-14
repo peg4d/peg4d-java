@@ -398,13 +398,21 @@ class PEG4dGrammar2 extends ParsingGrammar {
 	}
 	
 	ParsingExpression Import() {
+//		return Constructor(
+//			t("import"), 
+//			P("S"), 
+//			Link(Choice(P("SingleQuotedString"), P("String"), P("DotName"))), 
+//			Optional(Sequence(P("S"), t("as"), P("S"), Link(P("Name")))),
+//			Tag(PEG4d.Import)
+//		);
 		return Constructor(
-			t("import"), 
-			Tag(PEG4d.Import), 
-			P("S"), 
-			Link(Choice(P("SingleQuotedString"), P("DotName"))), 
-			Optional(Sequence(P("S"), t("as"), P("S"), Link(P("Name"))))
-		);
+			t("import"), P("S"), 
+			Link(P("NonTerminal")),
+			ZeroMore(P("_"), t(","), P("_"),  Link(P("NonTerminal"))), P("_"), 
+			t("from"), P("S"), 
+			Link(Choice(P("SingleQuotedString"), P("String"), P("DotName"))), 
+		Tag(PEG4d.Import)
+	);
 	}
 	
 	ParsingExpression Chunk() {

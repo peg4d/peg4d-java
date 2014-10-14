@@ -26,10 +26,10 @@ public class ParsingRepetition extends ParsingUnary {
 	}
 	@Override public short acceptByte(int ch) {
 		short r = this.inner.acceptByte(ch);
-		if(r == Accept) {
+		if(r == StringAccept) {
 			return r;
 		}
-		return CheckNextFlow;
+		return WeakReject;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

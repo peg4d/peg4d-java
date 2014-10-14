@@ -18,7 +18,7 @@ public class ParsingAny extends ParsingExpression {
 	}
 	@Override
 	public short acceptByte(int ch) {
-		return Accept;
+		return StringAccept;
 	}
 	@Override
 	public void visit(ParsingExpressionVisitor visitor) {
