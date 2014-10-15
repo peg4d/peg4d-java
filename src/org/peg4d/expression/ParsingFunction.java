@@ -9,7 +9,7 @@ public abstract class ParsingFunction extends ParsingExpression {
 		this.funcName = funcName;
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
 		return this;
 	}
 	public String getParameters() {

@@ -11,13 +11,13 @@ public class ParsingWithoutFlag extends ParsingOperation {
 		this.flagName = flagName;
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		boolean addWithout = false;
 		if(withoutMap != null && !withoutMap.containsKey(flagName)) {
 			withoutMap.put(flagName, flagName);
 			addWithout = true;
 		}
-		ParsingExpression e = inner.normalizeImpl(lexOnly, withoutMap);
+		ParsingExpression e = inner.norm(lexOnly, withoutMap);
 		if(addWithout) {
 			withoutMap.remove(flagName);
 		}

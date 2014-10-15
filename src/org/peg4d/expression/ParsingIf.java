@@ -27,7 +27,7 @@ public class ParsingIf extends ParsingFunction {
 		return true;
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		if(withoutMap != null && withoutMap.containsKey(flagName)) {
 			return ParsingExpression.newFailure(this);
 		}

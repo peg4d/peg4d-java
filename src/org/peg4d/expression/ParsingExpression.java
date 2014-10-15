@@ -97,19 +97,10 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		}
 	}
 	
-//	ParsingExpression reduceOperation() {
-//		ParsingExpression reduced = this.normalizeImpl(true, null, null);
-////		if(reduced.getClass() != this.getClass()) {
-////			System.out.println("@ " + this.getClass().getSimpleName() + " " + this + "\n\t=> " + reduced.getClass().getSimpleName() + " " + reduced);
-////		}
-//		return reduced;
-//	}
-	
-	public abstract ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap);
-//	{
-//		return this;
-//	}
-	
+	public abstract ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap);	
+	// Expr[Expr -> Expr2]
+	// public abstract ParsingExpression replace(Grammar peg, String oldName, String newName, UMap<ParsingRule>  visited);
+
 	public abstract void visit(ParsingExpressionVisitor visitor);
 	
 	public final boolean debugMatch(ParsingContext c) {
@@ -797,29 +788,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		}
 		return e;
 	}
-	
 }
-
-// ------------------------------
-// PEG4d Function, PEG4d Operator
-
-
-//class ParsingFail extends ParsingFunction {
-//	String message;
-//	ParsingFail(String message) {
-//		super("fail");
-//		this.message = message;
-//	}
-//	@Override
-//	public boolean simpleMatch(ParsingContext context) {
-//		context.failure(this);
-//		return false;
-//	}
-//	@Override
-//	short acceptByte(int ch) {
-//		return Reject;
-//	}
-//}
 
 
 

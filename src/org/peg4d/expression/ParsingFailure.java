@@ -19,7 +19,7 @@ public class ParsingFailure extends ParsingExpression {
 		return ParsingExpression.uniqueExpression("!!\b"+message, this);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
 		return this;
 	}
 	@Override

@@ -120,7 +120,7 @@ public class Grammar {
 			r2.baseName = r.baseName;  // important
 			r2.minlen = r.minlen;
 			r2.refc = r.refc;
-			r2.expr = r.expr.normalizeImpl(lexOnly, withoutMap).uniquefy();
+			r2.expr = r.expr.norm(lexOnly, withoutMap).uniquefy();
 			Main.printVerbose("producing lexical rule", r2);
 		}
 	}
@@ -188,7 +188,7 @@ public class Grammar {
 		for(int i = 0; i < size; i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
 			if(rule.getGrammar() == this) {
-				ParsingExpression e = rule.expr.normalizeImpl(false, withoutMap).uniquefy();
+				ParsingExpression e = rule.expr.norm(false, withoutMap).uniquefy();
 //				if(rule.expr.uniqueId != e.uniqueId) {
 //					System.out.println("RULE; " + rule.ruleName);
 //					System.out.println("\tBEFORE; " + rule.expr);

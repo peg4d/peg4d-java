@@ -151,27 +151,83 @@ public class ParsingRule {
 		return Optimizer2.resolveNonTerminal(this.expr);
 	}
 	
-	UList<ParsingRule> subRule() {
+	public UList<ParsingRule> subRule() {
 		UMap<ParsingRule> visitedMap = new UMap<ParsingRule>();
 		visitedMap.put(this.getUniqueName(), this);
 		makeSubRule(this.expr, visitedMap);
 		return visitedMap.values(new ParsingRule[visitedMap.size()]);
 	}
 
-	private void makeSubRule(ParsingExpression e, UMap<ParsingRule>  visitedMemo) {
+	private void makeSubRule(ParsingExpression e, UMap<ParsingRule>  visited) {
 		for(int i = 0; i < e.size(); i++) {
-			makeSubRule(e.get(i), visitedMemo);
+			makeSubRule(e.get(i), visited);
 		}
 		if(e instanceof NonTerminal) {
 			NonTerminal ne = (NonTerminal)e;
 			assert(e.isUnique());
 			String un = ne.getUniqueName();
-			ParsingRule memoed = visitedMemo.get(un);
+			ParsingRule memoed = visited.get(un);
 			if(memoed == null) {
 				memoed = ne.getRule();
-				visitedMemo.put(un, memoed);
-				makeSubRule(memoed.expr, visitedMemo);
+				visited.put(un, memoed);
+				makeSubRule(memoed.expr, visited);
 			}
 		}
 	}
+
+//	private static final boolean hasNonTerminal(ParsingExpression e, String name, UMap<ParsingRule>  visited) {
+//		for(int i = 0; i < e.size(); i++) {
+//			if(hasNonTerminal(e.get(i), name, visited)) {
+//				return true;
+//			}
+//		}
+//		if(e instanceof NonTerminal) {
+//			NonTerminal ne = (NonTerminal)e;
+//			assert(e.isUnique());
+//			if(name != null && name.equals(ne.ruleName)) {
+//				return true;
+//			}
+//			String un = ne.getUniqueName();
+//			ParsingRule memoed = visited.get(un);
+//			if(memoed == null) {
+//				memoed = ne.getRule();
+//				visited.put(un, memoed);
+//				return hasNonTerminal(memoed.expr, name, visited);
+//			}
+//		}
+//		return false;
+//	}
+//
+//	public void newReplacedNonTerminal(String oldName, String newName) {
+//		// TODO Auto-generated method stub
+//		
+//	}
+//
+//	private static final void replacedNonTerminal(Grammar peg, ParsingExpression e, String oldName, String newName, UMap<ParsingRule>  visited) {
+//		for(int i = 0; i < e.size(); i++) {
+//			if(e.get(i) instanceof NonTerminal) {
+//				NonTerminal ne = (NonTerminal)e.get(i);
+//				if(ne.ruleName.equals(oldName)) {
+//					e.set(i, peg.newNonTerminal(newName).uniquefy());
+//					continue;
+//				}
+//				ParsingExpression ref = ne.deReference();
+//				visited.clear();
+//				if(hasNonTerminal(ref, oldName, visited)) {
+//					e.set(i, peg.newNonTerminal(replacedName(ne.ruleName, oldName, newName)).uniquefy());
+//					continue;
+//				}
+//			}
+//			else {
+//				replacedNonTerminal(peg, e.get(i), oldName, newName, visited);
+//			}
+//		}
+//	}
+//
+//	private static String replacedName(String ruleName, String oldName, String newName) {
+//		return ruleName + "[" + oldName + "->" + newName + "]";
+//	}
+
+	
+	
 }

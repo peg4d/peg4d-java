@@ -13,7 +13,7 @@ public class ParsingEmpty extends ParsingExpression {
 		return ParsingExpression.uniqueExpression("\b", this);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
 		return this;
 	}
 	@Override

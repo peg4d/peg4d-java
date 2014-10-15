@@ -13,8 +13,8 @@ public class ParsingNot extends ParsingUnary {
 		return ParsingExpression.uniqueExpression("!\b" + this.uniqueKey(), this);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
-		ParsingExpression e = inner.normalizeImpl(true, withoutMap);
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.norm(true, withoutMap);
 		if(e == inner) {
 			return this;
 		}

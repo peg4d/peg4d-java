@@ -20,7 +20,7 @@ public class ParsingTagging extends ParsingExpression {
 		return ParsingExpression.uniqueExpression("#\b" + this.tag.key(), this);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		if(lexOnly || this.isRemovedOperation()) {
 			return ParsingExpression.newEmpty();
 		}

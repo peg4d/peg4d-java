@@ -13,7 +13,7 @@ public class ParsingApply extends ParsingOperation {
 		return true;
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		//TODO;
 		return null;
 	}

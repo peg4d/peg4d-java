@@ -10,8 +10,8 @@ public class ParsingBlock extends ParsingOperation {
 		super("block", e);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
-		ParsingExpression e = inner.normalizeImpl(lexOnly, withoutMap);
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.norm(lexOnly, withoutMap);
 		if(e == inner) {
 			return this;
 		}

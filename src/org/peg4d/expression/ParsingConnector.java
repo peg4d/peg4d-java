@@ -23,16 +23,17 @@ public class ParsingConnector extends ParsingUnary {
 		return ParsingExpression.uniqueExpression("@\b" + this.uniqueKey(), this);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		if(this.isRemovedOperation()) {
 			lexOnly = true;
 		}
-		ParsingExpression e = this.inner.normalizeImpl(lexOnly, withoutMap);
+		ParsingExpression e = this.inner.norm(lexOnly, withoutMap);
 		if(this.isNothingConnected() || lexOnly) {
 			return e;
 		}
 		return ParsingExpression.newConnector(e, this.index);
 	}
+
 	@Override
 	public void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitConnector(this);

@@ -25,10 +25,10 @@ public class ParsingConstructor extends ParsingList {
 		return ParsingExpression.uniqueExpression("{}\b" + this.uniqueKey(), this);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
 		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = get(i).normalizeImpl(lexOnly, withoutMap);
+			ParsingExpression e = get(i).norm(lexOnly, withoutMap);
 			ParsingExpression.addSequence(l, e);
 		}
 		ParsingExpression ne = (lexOnly) ? ParsingExpression.newSequence(l) : ParsingExpression.newConstructor(this.leftJoin, l);

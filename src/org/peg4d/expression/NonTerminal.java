@@ -11,9 +11,9 @@ public class NonTerminal extends ParsingExpression {
 	public Grammar peg;
 	public String  ruleName;
 	String  uniqueName;
-	public NonTerminal(Grammar base, String ruleName) {
+	public NonTerminal(Grammar peg, String ruleName) {
 		super();
-		this.peg = base;
+		this.peg = peg;
 		this.ruleName = ruleName;
 		this.uniqueName = this.peg.uniqueRuleName(this.ruleName);
 	}
@@ -28,7 +28,7 @@ public class NonTerminal extends ParsingExpression {
 		return ParsingExpression.uniqueExpression(getUniqueName(), this);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		NonTerminal ne = this;
 		ParsingRule rule = ne.getRule();
 		String optName = ParsingRule.toOptionName(rule, lexOnly, withoutMap);
@@ -87,5 +87,50 @@ public class NonTerminal extends ParsingExpression {
 //		}
 		context.popCallStack(stackTop);
 		return b;
+	}
+}
+
+
+// Name[Old->New]
+
+class ParamNonTerminal extends NonTerminal {
+	String baseName;
+	String oldName;
+	String newName;
+	
+	ParamNonTerminal(Grammar peg, String baseName, String oldName, String newName) {
+		super(peg, baseName);
+		this.baseName = baseName;
+		this.oldName = oldName;
+		this.newName = newName;
+
+	}
+
+//	@Override
+//	void checkReference() {
+//		if(baseName.equals(baseName)) {
+//			UList<ParsingRule> l = this.getRule().subRule();
+//			for(ParsingRule r: l) {
+//				if(r.hasNonTerminal(oldName)) {
+//					r.newReplacedNonTerminal(oldName, newName);
+//				}
+//			}
+//		}
+//	}
+
+	
+	@Override
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
+		return null;
+	}
+	@Override
+	public void visit(ParsingExpressionVisitor visitor) {
+		// TODO Auto-generated method stub
+		
+	}
+	@Override
+	public boolean simpleMatch(ParsingContext context) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 }

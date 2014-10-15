@@ -12,8 +12,8 @@ public class ParsingAnd extends ParsingUnary {
 		return ParsingExpression.uniqueExpression("&\b" + this.uniqueKey(), this);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
-		ParsingExpression e = inner.normalizeImpl(lexOnly, withoutMap);
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		ParsingExpression e = inner.norm(lexOnly, withoutMap);
 		if(e == inner) {
 			return this;
 		}

@@ -18,7 +18,7 @@ public class ParsingByteRange extends ParsingExpression {
 		return ParsingExpression.uniqueExpression("[\b" + startByteChar + "-" + endByteChar, this);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
 		return this;
 	}
 	void setCount(int[] count) {

@@ -9,13 +9,13 @@ public class ParsingMatch extends ParsingOperation {
 		super("match", inner);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
 //		ParsingExpression e = inner.normalizeImpl(true, flagMap, withoutMap);
 //		if(e == inner) {
 //			return this;
 //		}
 //		return ParsingExpression.newMatch(e);
-		return inner.normalizeImpl(true, withoutMap);
+		return inner.norm(true, withoutMap);
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

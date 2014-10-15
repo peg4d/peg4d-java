@@ -13,8 +13,8 @@ public class ParsingExport extends ParsingUnary {
 		return new ParsingExport(inner);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
-		return inner.normalizeImpl(lexOnly, withoutMap);
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		return inner.norm(lexOnly, withoutMap);
 	}
 	@Override
 	public void visit(ParsingExpressionVisitor visitor) {

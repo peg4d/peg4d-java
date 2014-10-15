@@ -19,7 +19,7 @@ public class ParsingByte extends ParsingExpression {
 		return ParsingExpression.uniqueExpression("'\b" + this.errorToken + "\b" + byteChar, this);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
 		return this;
 	}
 	@Override

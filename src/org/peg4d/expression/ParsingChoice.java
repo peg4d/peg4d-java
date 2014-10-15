@@ -15,14 +15,15 @@ public class ParsingChoice extends ParsingList {
 		return ParsingExpression.uniqueExpression("|\b" + this.uniqueKey(), this);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
 		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = get(i).normalizeImpl(lexOnly, withoutMap);
+			ParsingExpression e = get(i).norm(lexOnly, withoutMap);
 			ParsingExpression.addChoice(l, e);
 		}
 		return ParsingExpression.newChoice(l);
 	}
+
 	@Override
 	public void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitChoice(this);

@@ -13,9 +13,10 @@ public class ParsingAny extends ParsingExpression {
 		return ParsingExpression.uniqueExpression(".\b", this);
 	}
 	@Override
-	public ParsingExpression normalizeImpl(boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
 		return this;
 	}
+
 	@Override
 	public short acceptByte(int ch) {
 		return StringAccept;
