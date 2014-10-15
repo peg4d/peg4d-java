@@ -6,8 +6,9 @@ import org.peg4d.ParsingTag;
 public class ParsingIsa extends ParsingFunction {
 	int tagId;
 	ParsingIsa(int tagId) {
-		super("if");
+		super("isa");
 		this.tagId = tagId;
+		this.minlen = 1;
 	}
 	@Override
 	public String getParameters() {

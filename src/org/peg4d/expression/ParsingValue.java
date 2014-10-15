@@ -9,6 +9,7 @@ public class ParsingValue extends ParsingExpression {
 	ParsingValue(String value) {
 		super();
 		this.value = value;
+		this.minlen = 0;
 	}
 	@Override
 	boolean hasObjectOperation() {

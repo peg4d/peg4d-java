@@ -9,6 +9,7 @@ public class ParsingFailure extends ParsingExpression {
 	ParsingFailure(String message) {
 		super();
 		this.message = message;
+		this.minlen = 0;
 	}
 	public ParsingFailure(ParsingMatcher m) {
 		super();

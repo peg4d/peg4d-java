@@ -172,7 +172,8 @@ public class Grammar {
 			String uName = rule.getUniqueName();
 			stack.clear(0);
 			stack.add(uName);
-			rule.minlen = ParsingExpression.checkLeftRecursion(rule.expr, uName, 0, 0, stack);
+			rule.minlen = rule.expr.checkLength(uName, 0, 0, stack);
+			//ParsingExpression.checkLeftRecursion(rule.expr, uName, 0, 0, stack);
 		}
 		if(this.foundError) {
 			Main._Exit(1, "PegError found");

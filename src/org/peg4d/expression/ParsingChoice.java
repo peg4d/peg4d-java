@@ -11,6 +11,19 @@ public class ParsingChoice extends ParsingList {
 		super(list);
 	}
 	@Override
+	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
+		int lmin = Integer.MAX_VALUE;
+		for(int i = 0; i < this.size(); i++) {
+			int nc = this.get(i).checkLength(ruleName, start, minlen, stack);
+			if(nc < lmin) {
+				lmin = nc;
+			}
+		}
+		this.minlen = lmin - minlen;
+		return minlen + this.minlen;
+	}
+
+	@Override
 	ParsingExpression uniquefyImpl() {
 		return ParsingExpression.uniqueExpression("|\b" + this.uniqueKey(), this);
 	}

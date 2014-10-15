@@ -5,6 +5,7 @@ import org.peg4d.ParsingContext;
 public class ParsingCatch extends ParsingFunction {
 	ParsingCatch() {
 		super("catch");
+		this.minlen = 0;
 	}
 	@Override
 	public boolean hasObjectOperation() {

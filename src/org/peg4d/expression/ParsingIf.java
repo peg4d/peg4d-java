@@ -10,6 +10,7 @@ public class ParsingIf extends ParsingFunction {
 	ParsingIf(String flagName) {
 		super("if");
 		this.flagName = flagName;
+		this.minlen = 0;
 	}
 	@Override
 	public String getParameters() {

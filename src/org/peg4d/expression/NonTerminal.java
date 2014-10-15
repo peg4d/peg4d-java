@@ -6,6 +6,7 @@ import org.peg4d.Grammar;
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingRule;
 import org.peg4d.ReportLevel;
+import org.peg4d.UList;
 
 public class NonTerminal extends ParsingExpression {
 	public Grammar peg;
@@ -17,6 +18,58 @@ public class NonTerminal extends ParsingExpression {
 		this.ruleName = ruleName;
 		this.uniqueName = this.peg.uniqueRuleName(this.ruleName);
 	}
+
+	@Override
+	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
+		NonTerminal ne = this;
+		ne.checkReference();
+		if(minlen == 0) {
+			String n = this.getUniqueName();
+			ParsingRule r = this.getRule();
+			if(n.equals(ruleName) && !this.is(LeftRecursion)) {
+				this.set(LeftRecursion);
+				this.report(ReportLevel.error, "left recursion: " + r);
+				r.peg.foundError = true;
+			}
+			if(!checkRecursion(n, stack)) {
+				int pos = stack.size();
+				stack.add(n);
+				int nc = this.deReference().checkLength(ruleName, start, minlen, stack);
+				this.minlen = nc - minlen;
+				stack.clear(pos);
+			}
+			if(this.minlen == -1) {
+				this.minlen = 1; // FIXME: assuming no left recursion
+			}
+		}
+		else if(this.minlen == -1) {
+			this.minlen = 0;
+		}
+		return minlen + this.minlen;
+	}
+	
+	void checkReference() {
+		ParsingRule r = this.getRule();
+		if(r == null) {
+			this.report(ReportLevel.error, "undefined rule: " + this.ruleName);
+			r = new ParsingRule(this.peg, this.ruleName, null, new ParsingIf(this.ruleName));
+			this.peg.setRule(this.ruleName, r);
+		}
+		this.minlen = r.minlen != -1 ? r.minlen : -1 /* FIXME: assuming no left recursion */;
+		r.refc += 1;
+	}
+	
+	private boolean checkRecursion(String uName, UList<String> stack) {
+		for(int i = 0; i < stack.size() - 1; i++) {
+			if(uName.equals(stack.ArrayValues[i])) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+
+	
 	@Override
 	boolean hasObjectOperation() {
 		ParsingRule r = this.getRule();
@@ -55,18 +108,6 @@ public class NonTerminal extends ParsingExpression {
 		return this.peg.getExpression(this.ruleName);
 	}
 	
-	void checkReference() {
-		ParsingRule r = this.getRule();
-		if(r == null) {
-			this.report(ReportLevel.error, "undefined rule: " + this.ruleName);
-			r = new ParsingRule(this.peg, this.ruleName, null, new ParsingIf(this.ruleName));
-			this.peg.setRule(this.ruleName, r);
-		}
-		if(r.minlen != -1) {
-			this.minlen = r.minlen;
-		}
-		r.refc += 1;
-	}
 	@Override
 	public void visit(ParsingExpressionVisitor visitor) {
 		visitor.visitNonTerminal(this);
@@ -88,6 +129,7 @@ public class NonTerminal extends ParsingExpression {
 		context.popCallStack(stackTop);
 		return b;
 	}
+
 }
 
 

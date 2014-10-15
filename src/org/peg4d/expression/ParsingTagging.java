@@ -10,6 +10,7 @@ public class ParsingTagging extends ParsingExpression {
 	ParsingTagging(ParsingTag tag) {
 		super();
 		this.tag = tag;
+		this.minlen = 0;
 	}
 	@Override
 	boolean hasObjectOperation() {

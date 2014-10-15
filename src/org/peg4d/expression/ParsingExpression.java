@@ -97,6 +97,10 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		}
 	}
 	
+	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
+		return this.minlen + minlen;
+	}
+	
 	public abstract ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap);	
 	// Expr[Expr -> Expr2]
 	// public abstract ParsingExpression replace(Grammar peg, String oldName, String newName, UMap<ParsingRule>  visited);

@@ -29,6 +29,16 @@ public abstract class ParsingList extends ParsingExpression {
 		}
 		return sb.toString();
 	}
+	
+	@Override
+	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
+		int local = minlen;
+		for(int i = 0; i < this.size(); i++) {
+			minlen = this.get(i).checkLength(ruleName, start, minlen, stack);
+		}
+		this.minlen = local - minlen;
+		return minlen;
+	}
 
 	@Override
 	boolean hasObjectOperation() {

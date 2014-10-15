@@ -6,6 +6,7 @@ import org.peg4d.ParsingContext;
 public class ParsingIndent extends ParsingFunction {
 	ParsingIndent() {
 		super("indent");
+		this.minlen = 0;
 	}
 	@Override
 	public short acceptByte(int ch) {
