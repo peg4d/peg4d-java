@@ -101,10 +101,10 @@ public class ParsingContext {
 		ParsingObject po = new ParsingObject(this.emptyTag, this.source, 0);
 		this.left = po;
 		if(start.expr.debugMatch(this)) {
-			this.commitLinkLog(0, this.left);
+			this.commitLog(0, this.left);
 		}
 		else {
-			this.abortLinkLog(0);
+			this.abortLog(0);
 			this.unusedLog = null;
 		}
 		checkUnusedText(po);
@@ -251,142 +251,53 @@ public class ParsingContext {
 		return new ParsingObject(this.emptyTag, this.source, pos, created);
 	}
 
-	private class LinkLog {
-		LinkLog next;
+	private class ParsingLog {
+		ParsingLog next;
 		int  index;
 		ParsingObject childNode;
 	}
 
-	LinkLog logStack = null;
-	LinkLog unusedLog = null;
-	int stackSize = 0;
+	ParsingLog logStack = null;
+	ParsingLog unusedLog = null;
+	int   logStackSize = 0;
 	
-	private LinkLog newLog() {
+	private ParsingLog newLog() {
 		if(this.unusedLog == null) {
-			return new LinkLog();
+			return new ParsingLog();
 		}
-		LinkLog l = this.unusedLog;
+		ParsingLog l = this.unusedLog;
 		this.unusedLog = l.next;
 		l.next = null;
 		return l;
 	}
 
-	private void disposeLog(LinkLog log) {
+	private void unuseLog(ParsingLog log) {
 		log.childNode = null;
 		log.next = this.unusedLog;
 		this.unusedLog = log;
 	}
 	
-	public int markObjectStack() {
-		return stackSize;
+	public int markLogStack() {
+		return logStackSize;
 	}
 
-	public void abortLinkLog(int mark) {
-		while(mark < this.stackSize) {
-			LinkLog l = this.logStack;
-			this.logStack = this.logStack.next;
-			this.stackSize--;
-			disposeLog(l);
-		}
-		assert(mark == this.stackSize);
-	}
-	
-	public final void logLink(ParsingObject parent, int index, ParsingObject child) {
-		LinkLog l = this.newLog();
+	public final void lazyLink(ParsingObject parent, int index, ParsingObject child) {
+		ParsingLog l = this.newLog();
 		l.childNode  = child;
 		child.parent = parent;
 		l.index = index;
 		l.next = this.logStack;
 		this.logStack = l;
-		this.stackSize += 1;
-		parent = null; // for GC
-		child = null;  // for GC
+		this.logStackSize += 1;
 	}
 	
-	public void lazyCommit(ParsingObject left) {
-		LinkLog l = this.newLog();
+	public final void lazyJoin(ParsingObject left) {
+		ParsingLog l = this.newLog();
 		l.childNode  = left;
 		l.index = -9;
 		l.next = this.logStack;
 		this.logStack = l;
-		this.stackSize += 1;
-		left = null;
-	}
-
-//	final void capture(ParsingObject newnode, long startIndex) {
-//		newnode.setLength((int)(this.getPosition() - startIndex));
-//		newnode = null;
-//	}
-//
-//	final void commitLinkLog2(ParsingObject newnode, long startIndex, int mark) {
-//		assert(!this.isRecognitionMode());
-//		LinkLog first = null;
-//		int objectSize = 0;
-//		while(mark < this.stackSize) {
-//			LinkLog cur = this.logStack;
-//			this.logStack = this.logStack.next;
-//			this.stackSize--;
-//			if(cur.childNode.parent == newnode) {
-//				cur.next = first;
-//				first = cur;
-//				objectSize += 1;
-//			}
-//			else {
-//				disposeLog(cur);
-//			}
-//		}
-//		if(objectSize > 0) {
-//			newnode.expandAstToSize(objectSize);
-//			for(int i = 0; i < objectSize; i++) {
-//				LinkLog cur = first;
-//				first = first.next;
-//				if(cur.index == -1) {
-//					cur.index = i;
-//				}
-//				newnode.set(cur.index, cur.childNode);
-//				this.disposeLog(cur);
-//			}
-//			checkNullEntry(newnode);
-//		}
-//		newnode.setLength((int)(this.getPosition() - startIndex));
-//		newnode = null;
-//	}
-
-	public final void commitLinkLog(int mark, ParsingObject newnode) {
-		LinkLog first = null;
-		int objectSize = 0;
-		while(mark < this.stackSize) {
-			LinkLog cur = this.logStack;
-			this.logStack = this.logStack.next;
-			this.stackSize--;
-			if(cur.index == -9) { // lazyCommit
-				commitLinkLog(mark, cur.childNode);
-				disposeLog(cur);
-				break;
-			}
-			if(cur.childNode.parent == newnode) {
-				cur.next = first;
-				first = cur;
-				objectSize += 1;
-			}
-			else {
-				disposeLog(cur);
-			}
-		}
-		if(objectSize > 0) {
-			newnode.expandAstToSize(objectSize);
-			for(int i = 0; i < objectSize; i++) {
-				LinkLog cur = first;
-				first = first.next;
-				if(cur.index == -1) {
-					cur.index = i;
-				}
-				newnode.set(cur.index, cur.childNode);
-				this.disposeLog(cur);
-			}
-			checkNullEntry(newnode);
-		}
-		newnode = null;
+		this.logStackSize += 1;
 	}
 
 	private final void checkNullEntry(ParsingObject o) {
@@ -395,10 +306,54 @@ public class ParsingContext {
 				o.set(i, new ParsingObject(emptyTag, this.source, 0));
 			}
 		}
-		o = null;
 	}
 
+	public final void commitLog(int mark, ParsingObject newnode) {
+		ParsingLog first = null;
+		int objectSize = 0;
+		while(mark < this.logStackSize) {
+			ParsingLog cur = this.logStack;
+			this.logStack = this.logStack.next;
+			this.logStackSize--;
+			if(cur.index == -9) { // lazyCommit
+				commitLog(mark, cur.childNode);
+				unuseLog(cur);
+				break;
+			}
+			if(cur.childNode.parent == newnode) {
+				cur.next = first;
+				first = cur;
+				objectSize += 1;
+			}
+			else {
+				unuseLog(cur);
+			}
+		}
+		if(objectSize > 0) {
+			newnode.expandAstToSize(objectSize);
+			for(int i = 0; i < objectSize; i++) {
+				ParsingLog cur = first;
+				first = first.next;
+				if(cur.index == -1) {
+					cur.index = i;
+				}
+				newnode.set(cur.index, cur.childNode);
+				this.unuseLog(cur);
+			}
+			checkNullEntry(newnode);
+		}
+	}
 	
+	public final void abortLog(int mark) {
+		while(mark < this.logStackSize) {
+			ParsingLog l = this.logStack;
+			this.logStack = this.logStack.next;
+			this.logStackSize--;
+			unuseLog(l);
+		}
+		assert(mark == this.logStackSize);
+	}
+
 	
 	//	public final void opStringfy() {
 //		if(this.canTransCapture()) {

@@ -282,22 +282,22 @@ public class MemoizationManager {
 		@Override
 		public boolean simpleMatch(ParsingContext context) {
 			ParsingObject left = context.left;
-			int mark = context.markObjectStack();
+			int mark = context.markLogStack();
 			if(this.memoMatch(context, this.matchRef)) {
 				if(context.left != left) {
 					//System.out.println("Linked: " + this.holder + " " + left.oid + " => " + context.left.oid);
-					context.commitLinkLog(mark, context.left);
-					context.logLink(left, this.index, context.left);
+					context.commitLog(mark, context.left);
+					context.lazyLink(left, this.index, context.left);
 				}
 				else {
 					System.out.println("FIXME nothing linked: " + this.holder + " " + left.oid + " => " + context.left.oid);
-					context.abortLinkLog(mark);					
+					context.abortLog(mark);					
 				}
 				context.left = left;
 				left = null;
 				return true;
 			}
-			context.abortLinkLog(mark);
+			context.abortLog(mark);
 			left = null;
 			return false;
 		}

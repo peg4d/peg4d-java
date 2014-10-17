@@ -19,6 +19,8 @@ public abstract class GrammarFormatter extends GrammarVisitor {
 		this.formatFooter(sb);
 	}
 
+	public abstract String getDesc();
+	
 	public void formatHeader(StringBuilder sb) {
 	}
 	

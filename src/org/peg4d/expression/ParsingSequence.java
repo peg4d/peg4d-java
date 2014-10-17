@@ -30,10 +30,10 @@ public class ParsingSequence extends ParsingList {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		long pos = context.getPosition();
-		int mark = context.markObjectStack();
+		int mark = context.markLogStack();
 		for(int i = 0; i < this.size(); i++) {
 			if(!(this.get(i).matcher.simpleMatch(context))) {
-				context.abortLinkLog(mark);
+				context.abortLog(mark);
 				context.rollback(pos);
 				return false;
 			}

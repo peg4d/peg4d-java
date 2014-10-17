@@ -9,7 +9,7 @@ import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingConstructor extends ParsingList {
 	public boolean leftJoin = false;
-	int prefetchIndex = 0;
+	public int prefetchIndex = 0;
 	ParsingConstructor(boolean leftJoin, UList<ParsingExpression> list) {
 		super(list);
 		this.leftJoin = leftJoin;
@@ -52,16 +52,16 @@ public class ParsingConstructor extends ParsingList {
 				return false;
 			}
 		}
-		int mark = context.markObjectStack();
+		int mark = context.markLogStack();
 		ParsingObject newnode = context.newParsingObject(startIndex, this);
 		if(this.leftJoin) {
-			context.lazyCommit(context.left);
-			context.logLink(newnode, 0, context.left);
+			context.lazyJoin(context.left);
+			context.lazyLink(newnode, 0, context.left);
 		}
 		context.left = newnode;
 		for(int i = this.prefetchIndex; i < this.size(); i++) {
 			if(!this.get(i).matcher.simpleMatch(context)) {
-				context.abortLinkLog(mark);
+				context.abortLog(mark);
 				context.rollback(startIndex);
 				newnode = null;
 				return false;
