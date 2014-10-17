@@ -6,6 +6,7 @@ import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.ParsingChoice;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.model.ParsingModel;
+import org.peg4d.pegcode.GrammarFormatter;
 
 public class Grammar {
 	

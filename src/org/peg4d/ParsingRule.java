@@ -13,7 +13,7 @@ public class ParsingRule {
 	
 	public Grammar  peg;
 	String baseName;
-	String ruleName;
+	public String ruleName;
 
 	ParsingObject po;
 	public int type;

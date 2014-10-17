@@ -3,7 +3,6 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.CharacterReader;
-import org.peg4d.GrammarFormatter;
 import org.peg4d.Main;
 import org.peg4d.ParsingCharset;
 import org.peg4d.ParsingContext;
@@ -13,17 +12,7 @@ import org.peg4d.ParsingTag;
 import org.peg4d.ReportLevel;
 import org.peg4d.UList;
 import org.peg4d.UMap;
-
-enum Prediction {
-	StringAccept,
-	WeakAccept,
-	StringReject,
-	WeakReject
-//	
-//	public boolean isReject() {
-//		return 
-//	}
-}
+import org.peg4d.pegcode.GrammarFormatter;
 
 public abstract class ParsingExpression extends ParsingMatcher {
 	public  static boolean  VerboseStack = false;
@@ -38,10 +27,10 @@ public abstract class ParsingExpression extends ParsingMatcher {
 	public final static int RedundantUnary    = 1 << 21;
 
 	int           flag       = 0;
-	public int           uniqueId   = 0;
+	public int    uniqueId   = 0;
 	public ParsingObject po      = null;
 	int           minlen = -1;
-	public ParsingMatcher       matcher;
+	public ParsingMatcher  matcher;
 		
 	protected ParsingExpression() {
 		this.matcher = this;

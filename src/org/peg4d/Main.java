@@ -11,6 +11,7 @@ import java.util.TreeMap;
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.ext.Generator;
+import org.peg4d.pegcode.GrammarFormatter;
 
 public class Main {
 	public final static String  ProgName  = "PEG4d";
@@ -265,9 +266,9 @@ public class Main {
 	
 	private final static UMap<Class<?>> driverMap = new UMap<Class<?>>();
 	static {
-		driverMap.put("p4d", org.peg4d.GrammarFormatter.class);
-		driverMap.put("peg", org.peg4d.GrammarFormatter.class);
-		driverMap.put("vm", org.peg4d.CodeGenerator.class);
+		driverMap.put("p4d", org.peg4d.pegcode.GrammarFormatter.class);
+		driverMap.put("peg", org.peg4d.pegcode.GrammarFormatter.class);
+//		driverMap.put("vm", org.peg4d.pegcode.CodeGenerator.class);
 //		driverMap.put("svm", org.peg4d.vm.SimpleCodeGenerator.class);
 	}
 
