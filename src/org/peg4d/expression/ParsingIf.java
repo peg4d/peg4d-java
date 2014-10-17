@@ -3,8 +3,9 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingIf extends ParsingFunction {
+public class ParsingIf extends ParsingCommand {
 	public final static boolean OldFlag = false;
 	String flagName;
 	ParsingIf(String flagName) {
@@ -34,4 +35,9 @@ public class ParsingIf extends ParsingFunction {
 		}
 		return this;
 	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitIfFlag(this);
+	}
+
 }

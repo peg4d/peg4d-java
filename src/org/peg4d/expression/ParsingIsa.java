@@ -2,8 +2,9 @@ package org.peg4d.expression;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTag;
+import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingIsa extends ParsingFunction {
+public class ParsingIsa extends ParsingCommand {
 	int tagId;
 	ParsingIsa(int tagId) {
 		super("isa");
@@ -17,5 +18,9 @@ public class ParsingIsa extends ParsingFunction {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		return context.matchTokenStack(tagId);
+	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitIsa(this);
 	}
 }

@@ -3,8 +3,9 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingWithFlag extends ParsingOperation {
+public class ParsingWithFlag extends ParsingFunction {
 	String flagName;
 	ParsingWithFlag(String flagName, ParsingExpression inner) {
 		super("with", inner);
@@ -41,4 +42,9 @@ public class ParsingWithFlag extends ParsingOperation {
 		}
 		return this.inner.matcher.simpleMatch(context);
 	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitWithFlag(this);
+	}
+
 }

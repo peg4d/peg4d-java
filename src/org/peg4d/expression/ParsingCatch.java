@@ -1,8 +1,9 @@
 package org.peg4d.expression;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingCatch extends ParsingFunction {
+public class ParsingCatch extends ParsingCommand {
 	ParsingCatch() {
 		super("catch");
 		this.minlen = 0;
@@ -16,5 +17,9 @@ public class ParsingCatch extends ParsingFunction {
 		context.left.setSourcePosition(context.fpos);
 		context.left.setValue(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
 		return true;
+	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitCatch(this);
 	}
 }

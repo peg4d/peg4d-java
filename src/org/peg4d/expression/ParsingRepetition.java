@@ -4,6 +4,7 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingObject;
+import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingRepetition extends ParsingUnary {
 	ParsingRepetition(ParsingExpression e) {
@@ -21,7 +22,7 @@ public class ParsingRepetition extends ParsingUnary {
 		return ParsingExpression.newRepetition(e);
 	}
 	@Override
-	public void visit(ParsingExpressionVisitor visitor) {
+	public void visit(GrammarVisitor visitor) {
 		visitor.visitRepetition(this);
 	}
 	@Override public short acceptByte(int ch) {

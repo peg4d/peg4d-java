@@ -7,6 +7,7 @@ import org.peg4d.expression.ParsingChoice;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.model.ParsingModel;
 import org.peg4d.pegcode.GrammarFormatter;
+import org.peg4d.pegcode.PEG4dFormatter;
 
 public class Grammar {
 	
@@ -246,7 +247,7 @@ public class Grammar {
 	}
 
 	public final void show(String startPoint) {
-		this.show(startPoint, new GrammarFormatter());
+		this.show(startPoint, new PEG4dFormatter());
 	}
 
 	public final void show(String startPoint, GrammarFormatter fmt) {
@@ -255,7 +256,7 @@ public class Grammar {
 		StringBuilder sb = new StringBuilder();
 		fmt.formatHeader(sb);
 		for(ParsingRule r : l) {
-			fmt.formatRule(r.ruleName, r.expr, sb);
+			fmt.formatRule(r, sb);
 		}
 		fmt.formatFooter(sb);
 		System.out.println(sb.toString());
@@ -267,7 +268,7 @@ public class Grammar {
 		UList<ParsingRule> list = this.getRuleList();
 		for(int i = 0; i < list.size(); i++) {
 			ParsingRule r = list.ArrayValues[i];
-			fmt.formatRule(r.ruleName, r.expr, sb);
+			fmt.formatRule(r, sb);
 		}
 		fmt.formatFooter(sb);
 		System.out.println(sb.toString());

@@ -4,6 +4,7 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTag;
+import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingTagging extends ParsingExpression {
 	public ParsingTag tag;
@@ -28,7 +29,7 @@ public class ParsingTagging extends ParsingExpression {
 		return this;
 	}
 	@Override
-	public void visit(ParsingExpressionVisitor visitor) {
+	public void visit(GrammarVisitor visitor) {
 		visitor.visitTagging(this);
 	}
 	@Override

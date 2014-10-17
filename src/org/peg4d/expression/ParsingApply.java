@@ -3,8 +3,9 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingApply extends ParsingOperation {
+public class ParsingApply extends ParsingFunction {
 	ParsingApply(ParsingExpression inner) {
 		super("apply", inner);
 	}
@@ -29,5 +30,9 @@ public class ParsingApply extends ParsingOperation {
 //		context.opDebug(this.inner);
 		return !(context.isFailure());
 
+	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitApply(this);
 	}
 }

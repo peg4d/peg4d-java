@@ -4,6 +4,7 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingObject;
+import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingConnector extends ParsingUnary {
 	public int index;
@@ -35,7 +36,7 @@ public class ParsingConnector extends ParsingUnary {
 	}
 
 	@Override
-	public void visit(ParsingExpressionVisitor visitor) {
+	public void visit(GrammarVisitor visitor) {
 		visitor.visitConnector(this);
 	}
 	@Override

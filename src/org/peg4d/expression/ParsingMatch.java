@@ -3,8 +3,9 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingMatch extends ParsingOperation {
+public class ParsingMatch extends ParsingFunction {
 	ParsingMatch(ParsingExpression inner) {
 		super("match", inner);
 	}
@@ -31,5 +32,9 @@ public class ParsingMatch extends ParsingOperation {
 //		left = null;
 //		return false;
 		return this.inner.matcher.simpleMatch(context);
+	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitMatch(this);
 	}
 }

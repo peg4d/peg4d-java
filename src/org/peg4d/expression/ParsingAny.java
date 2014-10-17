@@ -3,6 +3,7 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingAny extends ParsingExpression {
 	ParsingAny() {
@@ -22,7 +23,7 @@ public class ParsingAny extends ParsingExpression {
 		return StringAccept;
 	}
 	@Override
-	public void visit(ParsingExpressionVisitor visitor) {
+	public void visit(GrammarVisitor visitor) {
 		visitor.visitAny(this);
 	}
 	@Override

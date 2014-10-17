@@ -3,6 +3,7 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingExport extends ParsingUnary {
 	ParsingExport(ParsingExpression e) {
@@ -17,7 +18,7 @@ public class ParsingExport extends ParsingUnary {
 		return inner.norm(lexOnly, withoutMap);
 	}
 	@Override
-	public void visit(ParsingExpressionVisitor visitor) {
+	public void visit(GrammarVisitor visitor) {
 		visitor.visitExport(this);
 	}
 	@Override

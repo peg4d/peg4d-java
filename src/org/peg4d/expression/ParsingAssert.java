@@ -4,10 +4,11 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingObject;
+import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingDebug extends ParsingOperation {
-	protected ParsingDebug(ParsingExpression inner) {
-		super("debug", inner);
+public class ParsingAssert extends ParsingFunction {
+	protected ParsingAssert(ParsingExpression inner) {
+		super("assert", inner);
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
@@ -43,4 +44,9 @@ public class ParsingDebug extends ParsingOperation {
 		left = null;
 		return true;
 	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitAssert(this);
+	}
+
 }

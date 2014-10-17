@@ -7,6 +7,7 @@ import org.peg4d.ParsingContext;
 import org.peg4d.ParsingRule;
 import org.peg4d.ReportLevel;
 import org.peg4d.UList;
+import org.peg4d.pegcode.GrammarVisitor;
 
 public class NonTerminal extends ParsingExpression {
 	public Grammar peg;
@@ -109,7 +110,7 @@ public class NonTerminal extends ParsingExpression {
 	}
 	
 	@Override
-	public void visit(ParsingExpressionVisitor visitor) {
+	public void visit(GrammarVisitor visitor) {
 		visitor.visitNonTerminal(this);
 	}
 	@Override
@@ -166,7 +167,7 @@ class ParamNonTerminal extends NonTerminal {
 		return null;
 	}
 	@Override
-	public void visit(ParsingExpressionVisitor visitor) {
+	public void visit(GrammarVisitor visitor) {
 		// TODO Auto-generated method stub
 		
 	}

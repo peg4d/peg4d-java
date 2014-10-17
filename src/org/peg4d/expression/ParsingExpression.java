@@ -13,6 +13,8 @@ import org.peg4d.ReportLevel;
 import org.peg4d.UList;
 import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarFormatter;
+import org.peg4d.pegcode.GrammarVisitor;
+import org.peg4d.pegcode.PEG4dFormatter;
 
 public abstract class ParsingExpression extends ParsingMatcher {
 	public  static boolean  VerboseStack = false;
@@ -94,7 +96,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 	// Expr[Expr -> Expr2]
 	// public abstract ParsingExpression replace(Grammar peg, String oldName, String newName, UMap<ParsingRule>  visited);
 
-	public abstract void visit(ParsingExpressionVisitor visitor);
+	public abstract void visit(GrammarVisitor visitor);
 	
 	public final boolean debugMatch(ParsingContext c) {
 //		int d = cc; cc++;
@@ -145,23 +147,23 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return null;
 	}
 
-	private final static GrammarFormatter DefaultFormatter = new GrammarFormatter();
+	private final static GrammarFormatter DefaultFormatter = new PEG4dFormatter();
 	
 	@Override public String toString() {
 		StringBuilder sb = new StringBuilder();
-		DefaultFormatter.format(this, sb);
+		DefaultFormatter.formatExpression(this, sb);
 		return sb.toString();
 	}
 
-	public final String format(String name, GrammarFormatter fmt) {
-		StringBuilder sb = new StringBuilder();
-		fmt.formatRule(name, this, sb);
-		return sb.toString();
-	}
-	
-	public final String format(String name) {
-		return this.format(name, new GrammarFormatter());
-	}
+//	public final String format(String name, GrammarFormatter fmt) {
+//		StringBuilder sb = new StringBuilder();
+//		fmt.formatRule(name, this, sb);
+//		return sb.toString();
+//	}
+//	
+//	public final String format(String name) {
+//		return this.format(name, new PEG4dFormatter());
+//	}
 	
 	public static int WarningLevel = 1;
 
@@ -715,7 +717,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 	}
 	
 	public final static ParsingExpression newDebug(ParsingExpression e) {
-		return checkUnique(new ParsingDebug(e), e.isUnique());
+		return checkUnique(new ParsingAssert(e), e.isUnique());
 	}
 
 	public final static ParsingExpression newFail(String message) {

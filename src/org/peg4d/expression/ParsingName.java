@@ -4,8 +4,9 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTag;
+import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingName extends ParsingOperation {
+public class ParsingName extends ParsingFunction {
 	int tagId;
 	ParsingName(int tagId, ParsingExpression inner) {
 		super("name", inner);
@@ -34,5 +35,9 @@ public class ParsingName extends ParsingOperation {
 			return true;
 		}
 		return false;
+	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitName(this);
 	}
 }

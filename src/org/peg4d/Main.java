@@ -11,7 +11,7 @@ import java.util.TreeMap;
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.ext.Generator;
-import org.peg4d.pegcode.GrammarFormatter;
+import org.peg4d.pegcode.PEG4dFormatter;
 
 public class Main {
 	public final static String  ProgName  = "PEG4d";
@@ -97,13 +97,13 @@ public class Main {
 //		}
 		Grammar peg = GrammarFile == null ? GrammarFactory.Grammar : new GrammarFactory().newGrammar("main", GrammarFile);
 		if(PEGFormatter != null) {
-			GrammarFormatter fmt = loadGrammarFormatter(PEGFormatter);
+			PEG4dFormatter fmt = loadGrammarFormatter(PEGFormatter);
 			StringBuilder sb = new StringBuilder();
 			fmt.formatHeader(sb);
 			UList<ParsingRule> list = peg.getRuleList();
 			for(int i = 0; i < 0; i++) {
 				ParsingRule r = list.ArrayValues[i];
-				fmt.formatRule(r.ruleName, r.expr, sb);
+				fmt.formatRule(r, sb);
 			}
 			fmt.formatFooter(sb);
 			System.out.println(sb.toString());
@@ -266,15 +266,15 @@ public class Main {
 	
 	private final static UMap<Class<?>> driverMap = new UMap<Class<?>>();
 	static {
-		driverMap.put("p4d", org.peg4d.pegcode.GrammarFormatter.class);
-		driverMap.put("peg", org.peg4d.pegcode.GrammarFormatter.class);
+		driverMap.put("p4d", org.peg4d.pegcode.PEG4dFormatter.class);
+		driverMap.put("peg", org.peg4d.pegcode.PEG4dFormatter.class);
 //		driverMap.put("vm", org.peg4d.pegcode.CodeGenerator.class);
 //		driverMap.put("svm", org.peg4d.vm.SimpleCodeGenerator.class);
 	}
 
-	private static GrammarFormatter loadDriverImpl(String driverName) {
+	private static PEG4dFormatter loadDriverImpl(String driverName) {
 		try {
-			return (GrammarFormatter) driverMap.get(driverName).newInstance();
+			return (PEG4dFormatter) driverMap.get(driverName).newInstance();
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -282,8 +282,8 @@ public class Main {
 		return null;
 	}
 	
-	private static GrammarFormatter loadGrammarFormatter(String driverName) {
-		GrammarFormatter d = loadDriverImpl(driverName);
+	private static PEG4dFormatter loadGrammarFormatter(String driverName) {
+		PEG4dFormatter d = loadDriverImpl(driverName);
 		if(d == null) {
 			System.out.println("Supported formatter list:");
 			UList<String> driverList = driverMap.keys();

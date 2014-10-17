@@ -4,8 +4,9 @@ import java.util.TreeMap;
 
 import org.peg4d.PEG4d;
 import org.peg4d.ParsingContext;
+import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingBlock extends ParsingOperation {
+public class ParsingBlock extends ParsingFunction {
 	ParsingBlock(ParsingExpression e) {
 		super("block", e);
 	}
@@ -26,4 +27,9 @@ public class ParsingBlock extends ParsingOperation {
 		context.popTokenStack(stackTop);
 		return b;
 	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitBlock(this);
+	}
+
 }

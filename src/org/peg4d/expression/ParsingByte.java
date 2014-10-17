@@ -3,6 +3,7 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingByte extends ParsingExpression {
 	public int byteChar;
@@ -30,7 +31,7 @@ public class ParsingByte extends ParsingExpression {
 		return this.toString();
 	}
 	@Override
-	public void visit(ParsingExpressionVisitor visitor) {
+	public void visit(GrammarVisitor visitor) {
 		visitor.visitByte(this);
 	}
 	@Override

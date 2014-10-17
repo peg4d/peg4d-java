@@ -4,6 +4,7 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.UList;
+import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingSequence extends ParsingList {
 	ParsingSequence(UList<ParsingExpression> l) {
@@ -23,7 +24,7 @@ public class ParsingSequence extends ParsingList {
 		return ParsingExpression.newSequence(l);
 	}
 	@Override
-	public void visit(ParsingExpressionVisitor visitor) {
+	public void visit(GrammarVisitor visitor) {
 		visitor.visitSequence(this);
 	}
 	@Override
