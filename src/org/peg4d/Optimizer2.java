@@ -15,7 +15,6 @@ import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingSequence;
 
 class Optimizer2 {
-	
 	public static boolean InlineNonTerminal = false;
 	public static boolean Specialization    = false;
 	public static boolean StringSpecialization    = false;
@@ -25,6 +24,7 @@ class Optimizer2 {
 	public static boolean PredictedChoice   = false;
 
 	public static boolean LazyConstructor   = false;
+	public static boolean NotCharacter      = false;
 
 	static void enableOptimizer() {
 		InlineNonTerminal    = true;
@@ -36,6 +36,7 @@ class Optimizer2 {
 		if(Main.OptimizationLevel > 1) {
 			LazyConstructor   = true;
 			StringChoice      = true;
+			NotCharacter      = true;
 		}
 		if(Main.OptimizationLevel > 2) {
 			PredictedChoice   = true;
@@ -197,7 +198,7 @@ class Optimizer2 {
 			countSpecializedNot += 1;
 			return;
 		}
-		//System.out.println("Unoptimized repetition " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
+		System.out.println("Unoptimized repetition " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
 	}
 
 	final static void optimizeConstructor(ParsingConstructor holder) {
@@ -216,6 +217,24 @@ class Optimizer2 {
 	}
 
 	final static void optimizeSequence(ParsingSequence holder) {
+		if(NotCharacter && holder.size() == 2 && holder.get(0) instanceof ParsingNot && holder.get(1) instanceof ParsingAny) {
+			ParsingExpression inner = ((ParsingNot)holder.get(0)).inner;
+			if(InlineNonTerminal && inner instanceof NonTerminal) {
+				inner = resolveNonTerminal(inner);
+			}
+			if(inner instanceof ParsingByte) {
+				holder.matcher = new ByteChoiceMatcher(((ParsingByte) inner).byteChar);
+				countSpecializedNot += 1;
+				return;
+			}
+			ParsingMatcher m = inner.matcher;
+			if(m instanceof ByteChoiceMatcher) {
+				holder.matcher = new ByteChoiceMatcher(((ByteChoiceMatcher) m), false);
+				countSpecializedNot += 1;
+				return;
+			}
+			//System.out.println("not any " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
+		}
 		if(StringSpecialization) {
 			byte[] u = new byte[holder.size()];
 			for(int i = 0; i < holder.size(); i++) {
@@ -230,7 +249,6 @@ class Optimizer2 {
 			countSpecializedSequence += 1;
 			return;
 		}
-		//System.out.println("not " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
 	}
 	
 	final static void optimizeChoice(ParsingChoice choice) {
@@ -572,7 +590,6 @@ class OptionalStringSequenceMatcher extends ParsingMatcher {
 
 class ByteChoiceMatcher extends ParsingMatcher {
 	boolean bitMap[];
-
 	ByteChoiceMatcher(int[] c) {
 		this.bitMap = new boolean[257];
 		for(int i = 0; i < c.length; i++) { 
@@ -580,6 +597,21 @@ class ByteChoiceMatcher extends ParsingMatcher {
 				this.bitMap[i] = true;
 			}
 		}
+	}
+	ByteChoiceMatcher(int NotChar) {
+		this.bitMap = new boolean[257];
+		for(int i = 0; i < 256; i++) { 
+			this.bitMap[i] = true;
+		}
+		this.bitMap[NotChar] = false;
+	}
+
+	ByteChoiceMatcher(ByteChoiceMatcher notByteChoice, boolean eof) {
+		this.bitMap = new boolean[257];
+		for(int i = 0; i < 256; i++) { 
+			this.bitMap[i] = !notByteChoice.bitMap[i];
+		}
+		this.bitMap[256] = eof;
 	}
 	
 	@Override

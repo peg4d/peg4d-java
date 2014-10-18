@@ -302,7 +302,7 @@ public class Main {
 		ParsingObject po = null;
 		long bestTime = Long.MAX_VALUE;
 		ParsingStatistics stat = null;
-		for(int i = 0; i < 5; i++) {
+		for(int i = 0; i < 20; i++) {
 			source = Main.loadSource(peg, fileName);
 			context = new ParsingContext(Main.loadSource(peg, fileName));
 			stat = new ParsingStatistics(peg, source);
