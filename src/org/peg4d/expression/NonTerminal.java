@@ -72,6 +72,7 @@ public class NonTerminal extends ParsingExpression {
 
 	
 	@Override
+	public
 	boolean hasObjectOperation() {
 		ParsingRule r = this.getRule();
 		return r.type == ParsingRule.OperationRule;

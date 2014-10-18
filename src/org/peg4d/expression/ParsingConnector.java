@@ -13,6 +13,7 @@ public class ParsingConnector extends ParsingUnary {
 		this.index = index;
 	}
 	@Override
+	public
 	boolean hasObjectOperation() {
 		return true;
 	}

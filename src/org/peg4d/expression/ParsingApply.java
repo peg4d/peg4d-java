@@ -10,6 +10,7 @@ public class ParsingApply extends ParsingFunction {
 		super("apply", inner);
 	}
 	@Override
+	public
 	boolean hasObjectOperation() {
 		return true;
 	}

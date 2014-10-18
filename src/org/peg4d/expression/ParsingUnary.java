@@ -34,11 +34,8 @@ public abstract class ParsingUnary extends ParsingExpression {
 	}
 
 	@Override
+	public
 	boolean hasObjectOperation() {
-		return this.hasObjectOperation();
+		return this.inner.hasObjectOperation();
 	}
-//	@Override
-//	public short acceptByte(int ch) {
-//		return this.inner.acceptByte(ch);
-//	}
 }

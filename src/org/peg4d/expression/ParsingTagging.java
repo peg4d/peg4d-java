@@ -14,6 +14,7 @@ public class ParsingTagging extends ParsingExpression {
 		this.minlen = 0;
 	}
 	@Override
+	public
 	boolean hasObjectOperation() {
 		return true;
 	}

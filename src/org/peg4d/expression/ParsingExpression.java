@@ -67,7 +67,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return (this.uniqueId == 0 && this.is(DisabledOperation));
 	}
 	
-	boolean hasObjectOperation() {
+	public boolean hasObjectOperation() {
 		return false;
 	}
 	

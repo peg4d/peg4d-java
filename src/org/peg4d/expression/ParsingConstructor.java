@@ -15,6 +15,7 @@ public class ParsingConstructor extends ParsingList {
 		this.leftJoin = leftJoin;
 	}
 	@Override
+	public
 	boolean hasObjectOperation() {
 		return true;
 	}

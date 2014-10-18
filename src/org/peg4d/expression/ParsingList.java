@@ -41,6 +41,7 @@ public abstract class ParsingList extends ParsingExpression {
 	}
 
 	@Override
+	public
 	boolean hasObjectOperation() {
 		for(int i = 0; i < this.size(); i++) {
 			if(this.get(i).hasObjectOperation()) {

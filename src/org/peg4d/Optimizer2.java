@@ -5,6 +5,7 @@ import org.peg4d.expression.ParsingAny;
 import org.peg4d.expression.ParsingByte;
 import org.peg4d.expression.ParsingByteRange;
 import org.peg4d.expression.ParsingChoice;
+import org.peg4d.expression.ParsingConstructor;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingMatcher;
@@ -21,7 +22,9 @@ class Optimizer2 {
 	public static boolean CharacterChoice   = false;
 	public static boolean StringChoice      = false;
 	public static boolean PredictedChoice   = false;
-	
+
+	public static boolean LazyConstructor   = false;
+
 	static void enableOptimizer() {
 		InlineNonTerminal    = true;
 		if(Main.OptimizationLevel > 0) {
@@ -31,6 +34,7 @@ class Optimizer2 {
 		}
 		if(Main.OptimizationLevel > 1) {
 			StringChoice      = true;
+			LazyConstructor   = true;
 		}
 		if(Main.OptimizationLevel > 2) {
 			PredictedChoice   = true;
@@ -40,6 +44,7 @@ class Optimizer2 {
 	public static int countOptimizedNonTerminal = 0;
 
 	public static int countSpecializedSequence  = 0;
+	public static int countLazyConstructor      = 0;
 	public static int countSpecializedNot       = 0;
 	
 	public static int countOptimizedCharacterChoice = 0;
@@ -62,6 +67,10 @@ class Optimizer2 {
 			}
 			if(e instanceof ParsingSequence) {
 				optimizeSequence((ParsingSequence)e);
+				return;
+			}
+			if(e instanceof ParsingConstructor) {
+				optimizeConstructor((ParsingConstructor)e);
 				return;
 			}
 			if(Specialization) {
@@ -101,28 +110,6 @@ class Optimizer2 {
 			countOptimizedNonTerminal += 1;
 		}
 	}
-
-
-//	@Override
-//	public void visitConstructor(ParsingConstructor e) {
-//		this.visitList(e);
-//		int prefetchIndex = 0;
-//		for(int i = 0; i < e.size(); i++) {
-//			ParsingExpression sub = e.get(i);
-//////			if(needsObjectContext(sub)) {
-//////				break;
-//////			}
-////			prefetchIndex = i + 1;
-//		}
-//		if(prefetchIndex > 0) {
-//			if(this.peg.optimizationLevel > 1) {
-//				this.peg.InterTerminalOptimization += 1;
-////				System.out.println("prefetchIndex: " + prefetchIndex + " e = " + e);
-//				e.prefetchIndex = prefetchIndex;
-//			}
-//		}
-//	}
-
 
 	final static void optimizeNot(ParsingNot holder) {
 		ParsingExpression inner = holder.inner;
@@ -177,6 +164,21 @@ class Optimizer2 {
 		//System.out.println("option " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
 	}
 
+	final static void optimizeConstructor(ParsingConstructor holder) {
+		int prefetchIndex = 0;
+		for(int i = 0; i < holder.size(); i++) {
+			ParsingExpression sub = holder.get(i);
+			if(sub.hasObjectOperation()) {
+				break;
+			}
+			prefetchIndex = i + 1;
+		}
+		if(prefetchIndex > 0 && LazyConstructor) {
+			countLazyConstructor += 1;
+			holder.prefetchIndex = prefetchIndex;
+		}
+	}
+
 	final static void optimizeSequence(ParsingSequence holder) {
 		if(StringSpecialization) {
 			byte[] u = new byte[holder.size()];
@@ -194,7 +196,6 @@ class Optimizer2 {
 		}
 		//System.out.println("not " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
 	}
-
 	
 	final static void optimizeChoice(ParsingChoice choice) {
 		int[] c = new int[256];
