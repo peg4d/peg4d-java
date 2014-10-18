@@ -668,11 +668,17 @@ public abstract class ParsingExpression extends ParsingMatcher {
 	}
 	
 	public final static UList<ParsingExpression> toSequenceList(ParsingExpression e) {
+		UList<ParsingExpression> l;
 		if(e instanceof ParsingSequence) {
-			return ((ParsingSequence) e).inners;
+			l = new UList<ParsingExpression>(new ParsingExpression[e.size()]);
+			for(int i = 0; i < e.size(); i++) {
+				l.add(e.get(i));
+			}
 		}
-		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[1]);
-		l.add(e);
+		else {
+			l = new UList<ParsingExpression>(new ParsingExpression[1]);
+			l.add(e);
+		}
 		return l;
 	}
 		

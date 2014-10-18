@@ -3,21 +3,25 @@ package org.peg4d.expression;
 import org.peg4d.UList;
 
 public abstract class ParsingList extends ParsingExpression {
-	UList<ParsingExpression> inners;
+	//UList<ParsingExpression> inners;
+	ParsingExpression[] inners;
 	ParsingList(UList<ParsingExpression> list) {
 		super();
-		this.inners = list;
+		this.inners = new ParsingExpression[list.size()];
+		for(int i = 0; i < list.size(); i++) {
+			this.inners[i] = list.get(i);
+		}
 	}
 	@Override
 	public final int size() {
-		return this.inners.size();
+		return this.inners.length;
 	}
 	@Override
 	public final ParsingExpression get(int index) {
-		return this.inners.ArrayValues[index];
+		return this.inners[index];
 	}
 	final void set(int index, ParsingExpression e) {
-		this.inners.ArrayValues[index] = e;
+		this.inners[index] = e;
 	}
 	protected final String uniqueKey() {
 		StringBuilder sb = new StringBuilder();
@@ -52,8 +56,8 @@ public abstract class ParsingList extends ParsingExpression {
 	}
 	
 	public final void swap(int i, int j) {
-		ParsingExpression e = this.inners.ArrayValues[i];
-		this.inners.ArrayValues[i] = this.inners.ArrayValues[j];
-		this.inners.ArrayValues[j] = e;
+		ParsingExpression e = this.inners[i];
+		this.inners[i] = this.inners[j];
+		this.inners[j] = e;
 	}
 }
