@@ -1,7 +1,6 @@
 package org.peg4d;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 import java.util.LinkedHashMap;
@@ -10,9 +9,9 @@ import java.util.Map;
 public abstract class ParsingSource {
 	public final static int EOF = 256; 
 	Grammar   peg;
-	private String    fileName;
-	protected long    startLineNum = 1;
-	ParsingStatistics      stat = null;
+	private String     fileName;
+	protected long     startLineNum = 1;
+	ParsingStatistics  stat = null;
 	
 	public ParsingSource(Grammar peg, String fileName, long linenum) {
 		this.peg = peg;
@@ -21,6 +20,7 @@ public abstract class ParsingSource {
 	}
 
 	public abstract int     byteAt(long pos);
+	public abstract int     fastByteAt(long pos);
 	public abstract long    length();
 
 	public int charAt(long pos) {
@@ -179,14 +179,21 @@ class StringSource extends ParsingSource {
 	
 	StringSource(Grammar peg, String sourceText) {
 		super(peg, "(string)", 1);
-		this.utf8 = ParsingCharset.toUtf8(sourceText);
-		this.textLength = utf8.length;
+		this.utf8 = toZeroTerminalByteSequence(sourceText);
+		this.textLength = utf8.length-1;
 	}
 	
 	StringSource(Grammar peg, String fileName, long linenum, String sourceText) {
 		super(peg, fileName, linenum);
-		this.utf8 = ParsingCharset.toUtf8(sourceText);
-		this.textLength = utf8.length;
+		this.utf8 = toZeroTerminalByteSequence(sourceText);
+		this.textLength = utf8.length-1;
+	}
+	
+	private final byte[] toZeroTerminalByteSequence(String s) {
+		byte[] b = ParsingCharset.toUtf8(s);
+		byte[] b2 = new byte[b.length+1];
+		System.arraycopy(b, 0, b2, 0, b.length);
+		return b2;
 	}
 	
 	@Override
@@ -200,6 +207,11 @@ class StringSource extends ParsingSource {
 			return this.utf8[(int)pos] & 0xff;
 		}
 		return ParsingSource.EOF;
+	}
+
+	@Override
+	public final int fastByteAt(long pos) {
+		return this.utf8[(int)pos] & 0xff;
 	}
 
 	@Override
@@ -291,12 +303,13 @@ class FileSource extends ParsingSource {
 	@Override
 	public final int byteAt(long pos) {
 		if(pos < this.fileLength) {
-			return byteAt_(pos);
+			return fastByteAt(pos);
 		}
 		return ParsingSource.EOF;
 	}
-
-	public final int byteAt_(long pos) {
+	
+	@Override
+	public final int fastByteAt(long pos) {
 		int buffer_pos = (int)(pos - this.buffer_offset);
 		if(!(buffer_pos >= 0 && buffer_pos < PageSize)) {
 			this.buffer_offset = buffer_alignment(pos);
@@ -501,37 +514,44 @@ class FileSource extends ParsingSource {
 
 }
 
-class InputStreamSource extends ParsingSource {
-	public InputStreamSource(Grammar peg, String fileName, InputStream inStream) {
-		super(peg, fileName, 1);
-	}
-
-	@Override
-	public long length() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public int byteAt(long n) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public boolean match(long pos, byte[] text) {
-		return false;
-	}
-
-	@Override
-	public String substring(long startIndex, long endIndex) {
-		return null;
-	}
-
-	@Override
-	public long linenum(long pos) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-}
+//class InputStreamSource extends ParsingSource {
+//	public InputStreamSource(Grammar peg, String fileName, InputStream inStream) {
+//		super(peg, fileName, 1);
+//	}
+//
+//	@Override
+//	public long length() {
+//		// TODO Auto-generated method stub
+//		return 0;
+//	}
+//
+//	@Override
+//	public int byteAt(long n) {
+//		// TODO Auto-generated method stub
+//		return 0;
+//	}
+//
+//	@Override
+//	public int fastByteAt(long pos) {
+//		// TODO Auto-generated method stub
+//		return 0;
+//	}
+//
+//	@Override
+//	public boolean match(long pos, byte[] text) {
+//		return false;
+//	}
+//
+//	@Override
+//	public String substring(long startIndex, long endIndex) {
+//		return null;
+//	}
+//
+//	@Override
+//	public long linenum(long pos) {
+//		// TODO Auto-generated method stub
+//		return 0;
+//	}
+//
+//
+//}

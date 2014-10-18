@@ -207,9 +207,13 @@ public class Grammar {
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
 			Optimizer2.optimize(rule.expr);
-		
 		}
-		
+		if(Optimizer2.InlineNonTerminal) {
+			for(int i = 0; i < nameList.size(); i++) {
+				ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
+				Optimizer2.optimizeInline(rule.expr);
+			}
+		}
 		ParsingContext context = new ParsingContext(null);
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);

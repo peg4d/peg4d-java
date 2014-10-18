@@ -15,9 +15,11 @@ import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingSequence;
 
 class Optimizer2 {
-	public static boolean InlineNonTerminal = false;
-	public static boolean Specialization    = false;
-	public static boolean StringSpecialization    = false;
+	public static boolean InlineNonTerminal     = true;
+
+	public static boolean NonZeroByte           = false;
+	public static boolean Specialization        = false;
+	public static boolean StringSpecialization  = false;
 	
 	public static boolean CharacterChoice   = false;
 	public static boolean StringChoice      = false;
@@ -27,7 +29,9 @@ class Optimizer2 {
 	public static boolean NotCharacter      = false;
 
 	static void enableOptimizer() {
-		InlineNonTerminal    = true;
+		if(ParsingExpression.VerboseStack) {
+			InlineNonTerminal    = false;
+		}
 		if(Main.OptimizationLevel > 0) {
 			Specialization       = true;
 			StringSpecialization = true;
@@ -40,6 +44,9 @@ class Optimizer2 {
 		}
 		if(Main.OptimizationLevel > 2) {
 			PredictedChoice   = true;
+		}
+		if(Main.OptimizationLevel > 3) {
+			NonZeroByte  = true;
 		}
 	}
 
@@ -54,13 +61,8 @@ class Optimizer2 {
 	public static int countOptimizedChoice       = 0;
 
 	final static void optimize(ParsingExpression e) {
-		optimize1(e);
-		optimize2(e);
-	}
-
-	final static void optimize1(ParsingExpression e) {
 		for(int i = 0; i < e.size(); i++) {
-			optimize1(e.get(i));
+			optimize(e.get(i));
 		}
 		if(!e.isOptimized()) {
 			if(e instanceof ParsingChoice) {
@@ -74,6 +76,12 @@ class Optimizer2 {
 			if(e instanceof ParsingConstructor) {
 				optimizeConstructor((ParsingConstructor)e);
 				return;
+			}
+			if(NonZeroByte) {
+				if(e instanceof ParsingByte && ((ParsingByte) e).byteChar != 0) {
+					e.matcher = new NonZeroByteMatcher(((ParsingByte) e).byteChar);
+					return;
+				}
 			}
 			if(Specialization) {
 				if(e instanceof ParsingNot) {
@@ -92,15 +100,21 @@ class Optimizer2 {
 		}
 	}
 
-	final static void optimize2(ParsingExpression e) {
+	final static void optimizeInline(ParsingExpression e) {
 		if(!e.isOptimized()) {
 			if(e instanceof NonTerminal) {
 				optimizeNonTerminal((NonTerminal)e);
 			}
 		}
 		for(int i = 0; i < e.size(); i++) {
-			optimize2(e.get(i));
+			optimizeInline(e.get(i));
 		}
+	}
+
+	final static void optimizeNonTerminal(NonTerminal ne) {
+		ParsingExpression e = resolveNonTerminal(ne);
+		ne.matcher = e.matcher;
+		countOptimizedNonTerminal += 1;
 	}
 
 	final static ParsingExpression resolveNonTerminal(ParsingExpression e) {
@@ -109,14 +123,6 @@ class Optimizer2 {
 			e = nterm.deReference();
 		}
 		return e;
-	}
-
-	final static void optimizeNonTerminal(NonTerminal ne) {
-		if(InlineNonTerminal && !ParsingExpression.VerboseStack) {
-			ParsingExpression e = resolveNonTerminal(ne);
-			ne.matcher = e.matcher;
-			countOptimizedNonTerminal += 1;
-		}
 	}
 
 	final static void optimizeNot(ParsingNot holder) {
@@ -198,7 +204,7 @@ class Optimizer2 {
 			countSpecializedNot += 1;
 			return;
 		}
-		System.out.println("Unoptimized repetition " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
+		//System.out.println("Unoptimized repetition " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
 	}
 
 	final static void optimizeConstructor(ParsingConstructor holder) {
@@ -446,6 +452,24 @@ class Optimizer2 {
 	}
 }
 
+class NonZeroByteMatcher extends ParsingMatcher {
+	int byteChar;
+	NonZeroByteMatcher(int byteChar) {
+		this.byteChar = byteChar;
+	}
+	@Override
+	public boolean simpleMatch(ParsingContext context) {
+		int c = context.source.fastByteAt(context.pos);
+		if(c == byteChar) {
+			context.consume(1);
+			return true;
+		}
+		context.failure(this);
+		return false;
+	}
+}
+
+
 class NotByteMatcher extends ParsingMatcher {
 	int byteChar;
 
@@ -538,11 +562,9 @@ class ZeroMoreByteChoiceMatcher extends ParsingMatcher {
 
 class StringSequenceMatcher extends ParsingMatcher {
 	byte[] utf8;
-
 	StringSequenceMatcher(byte[] utf8) {
 		this.utf8 = utf8;
 	}
-	
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		if(context.source.match(context.pos, this.utf8)) {
@@ -556,11 +578,9 @@ class StringSequenceMatcher extends ParsingMatcher {
 
 class NotStringSequenceMatcher extends ParsingMatcher {
 	byte[] utf8;
-
 	NotStringSequenceMatcher(byte[] utf8) {
 		this.utf8 = utf8;
 	}
-	
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		if(context.source.match(context.pos, this.utf8)) {
@@ -573,11 +593,9 @@ class NotStringSequenceMatcher extends ParsingMatcher {
 
 class OptionalStringSequenceMatcher extends ParsingMatcher {
 	byte[] utf8;
-
 	OptionalStringSequenceMatcher(byte[] utf8) {
 		this.utf8 = utf8;
 	}
-	
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		if(context.source.match(context.pos, this.utf8)) {
@@ -586,7 +604,6 @@ class OptionalStringSequenceMatcher extends ParsingMatcher {
 		return true;
 	}
 }
-
 
 class ByteChoiceMatcher extends ParsingMatcher {
 	boolean bitMap[];
@@ -598,6 +615,17 @@ class ByteChoiceMatcher extends ParsingMatcher {
 			}
 		}
 	}
+	ByteChoiceMatcher(int beginChar, int endChar) {
+		this.bitMap = new boolean[257];
+		for(int i = 0; i < 256; i++) {
+			if(beginChar <= i && i <= endChar) {
+				this.bitMap[i] = true;
+			}
+			else {
+				this.bitMap[i] = false;
+			}
+		}
+	}
 	ByteChoiceMatcher(int NotChar) {
 		this.bitMap = new boolean[257];
 		for(int i = 0; i < 256; i++) { 
@@ -605,7 +633,6 @@ class ByteChoiceMatcher extends ParsingMatcher {
 		}
 		this.bitMap[NotChar] = false;
 	}
-
 	ByteChoiceMatcher(ByteChoiceMatcher notByteChoice, boolean eof) {
 		this.bitMap = new boolean[257];
 		for(int i = 0; i < 256; i++) { 
@@ -613,7 +640,6 @@ class ByteChoiceMatcher extends ParsingMatcher {
 		}
 		this.bitMap[256] = eof;
 	}
-	
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		int c = context.source.byteAt(context.pos);

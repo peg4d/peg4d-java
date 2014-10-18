@@ -15,14 +15,21 @@ class StringSource extends ParsingSource {
 	
 	StringSource(Grammar peg, String sourceText) {
 		super(peg, "(string)", 1);
-		this.utf8 = ParsingCharset.toUtf8(sourceText);
-		this.textLength = utf8.length;
+		this.utf8 = toZeroTerminalByteSequence(sourceText);
+		this.textLength = utf8.length-1;
 	}
 	
 	StringSource(Grammar peg, String fileName, long linenum, String sourceText) {
 		super(peg, fileName, linenum);
-		this.utf8 = ParsingCharset.toUtf8(sourceText);
-		this.textLength = utf8.length;
+		this.utf8 = toZeroTerminalByteSequence(sourceText);
+		this.textLength = utf8.length-1;
+	}
+	
+	private final byte[] toZeroTerminalByteSequence(String s) {
+		byte[] b = ParsingCharset.toUtf8(s);
+		byte[] b2 = new byte[b.length+1];
+		System.arraycopy(b, 0, b2, 0, b.length);
+		return b2;
 	}
 	
 	@Override
@@ -36,6 +43,11 @@ class StringSource extends ParsingSource {
 			return this.utf8[(int)pos] & 0xff;
 		}
 		return ParsingSource.EOF;
+	}
+
+	@Override
+	public final int fastByteAt(long pos) {
+		return this.utf8[(int)pos] & 0xff;
 	}
 
 	@Override
