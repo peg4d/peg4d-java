@@ -11,6 +11,7 @@ import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingMatcher;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
+import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingSequence;
 
 class Optimizer2 {
@@ -35,9 +36,9 @@ class Optimizer2 {
 		if(Main.OptimizationLevel > 1) {
 			LazyConstructor   = true;
 			StringChoice      = true;
-			PredictedChoice   = true;
 		}
 		if(Main.OptimizationLevel > 2) {
+			PredictedChoice   = true;
 		}
 	}
 
@@ -76,9 +77,15 @@ class Optimizer2 {
 			if(Specialization) {
 				if(e instanceof ParsingNot) {
 					optimizeNot((ParsingNot)e);
+					return;
 				}
 				if(e instanceof ParsingOption) {
 					optimizeOption((ParsingOption)e);
+					return;
+				}
+				if(e instanceof ParsingRepetition) {
+					optimizeRepetition((ParsingRepetition)e);
+					return;
 				}
 			}
 		}
@@ -162,6 +169,35 @@ class Optimizer2 {
 //			return;
 //		}
 		//System.out.println("option " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
+	}
+
+	final static void optimizeRepetition(ParsingRepetition holder) {
+		ParsingExpression inner = holder.inner;
+		if(InlineNonTerminal && inner instanceof NonTerminal) {
+			inner = resolveNonTerminal(inner);
+		}
+//		if(inner instanceof ParsingByte) {
+//			holder.matcher = new NotByteMatcher(((ParsingByte) inner).byteChar);
+//			countSpecializedNot += 1;
+//			return;
+//		}
+//		if(inner instanceof ParsingAny) {
+//			holder.matcher = new NotAnyMatcher();
+//			countSpecializedNot += 1;
+//			return;
+//		}
+		if(inner instanceof ParsingByteRange) {
+			holder.matcher = new ZeroMoreByteRangeMatcher(((ParsingByteRange) inner).startByteChar, ((ParsingByteRange) inner).endByteChar);
+			countSpecializedNot += 1;
+			return;
+		}
+		ParsingMatcher m = inner.matcher;
+		if(m instanceof ByteChoiceMatcher) {
+			holder.matcher = new ZeroMoreByteChoiceMatcher(((ByteChoiceMatcher) m).bitMap);
+			countSpecializedNot += 1;
+			return;
+		}
+		//System.out.println("Unoptimized repetition " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
 	}
 
 	final static void optimizeConstructor(ParsingConstructor holder) {
@@ -422,7 +458,6 @@ class NotAnyMatcher extends ParsingMatcher {
 
 class NotByteChoiceMatcher extends ParsingMatcher {
 	boolean bitMap[];
-
 	NotByteChoiceMatcher(boolean bitMap[]) {
 		this.bitMap = bitMap;
 	}
@@ -433,6 +468,46 @@ class NotByteChoiceMatcher extends ParsingMatcher {
 		if(this.bitMap[c]) {
 			context.failure(this);
 			return false;			
+		}
+		return true;
+	}
+}
+
+class ZeroMoreByteRangeMatcher extends ParsingMatcher {
+	int startChar;
+	int endChar;
+	ZeroMoreByteRangeMatcher(int startChar, int endChar) {
+		this.startChar = startChar;
+		this.endChar = endChar;
+	}
+	
+	@Override
+	public boolean simpleMatch(ParsingContext context) {
+		while(true) {
+			int c = context.source.byteAt(context.pos);
+			if(c < startChar || endChar < c) {
+				break;
+			}
+			context.pos += 1;
+		}
+		return true;
+	}
+}
+
+class ZeroMoreByteChoiceMatcher extends ParsingMatcher {
+	boolean bitMap[];
+	ZeroMoreByteChoiceMatcher(boolean bitMap[]) {
+		this.bitMap = bitMap;
+	}
+	
+	@Override
+	public boolean simpleMatch(ParsingContext context) {
+		while(true) {
+			int c = context.source.byteAt(context.pos);
+			if(!this.bitMap[c]) {
+				break;
+			}
+			context.pos += 1;
 		}
 		return true;
 	}
