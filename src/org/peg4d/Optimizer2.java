@@ -274,23 +274,28 @@ class Optimizer2 {
 			return;
 		}
 		if(PredictedChoice) {
+			boolean selfChoice = false;
 			ParsingExpression[] matchCase = new ParsingExpression[257];
-			matchCase[256] = new ParsingFailure(choice);  // EOF
+			ParsingExpression fails = new ParsingFailure(choice);
 			//System.out.println("Optimized3: " + choice);
-			for(int ch = 0; ch < 256; ch++) {
-				matchCase[ch] = selectChoice(choice, ch, matchCase[256]);
+			for(int ch = 0; ch <= 256; ch++) {
+				matchCase[ch] = selectChoice(choice, ch, fails);
 				if(matchCase[ch] == choice) {
 					/* this is a rare case where the selected choice is the parent choice */
 					/* this cause the repeated calls of the same matchers */
-					//System.out.println("Optimization3 FAILED: SAME CHOICE: " + choice + " at " + GrammarFormatter.stringfyByte(ch) );
-					return; 
+					//System.out.println("SELF CHOICE: " + choice + " at " + GrammarFormatter.stringfyByte(ch) );
+					selfChoice = true;
+					//return; 
 				}
-				if(matchCase[ch] != matchCase[256]) {
+				if(matchCase[ch] != fails) {
 					//System.out.println("|3 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
 				}
 				countOptimizedChoice += 1;
 			}
-			choice.matcher = new MappedChoiceMatcher(choice, matchCase);
+//			if(selfChoice) {
+//				System.out.println("SELF CHOICE: " + choice);
+//			}
+			choice.matcher = selfChoice ? new MappedSelfChoiceMatcher(choice, matchCase) : new MappedChoiceMatcher(choice, matchCase);
 		}
 	}
 		
@@ -623,6 +628,26 @@ class MappedChoiceMatcher extends ParsingMatcher {
 	public boolean simpleMatch(ParsingContext context) {
 		int c = context.source.byteAt(context.pos);
 		//System.out.println("pos="+context.pos + ", c=" + (char)c + " in " + choice);
+		return this.matchCase[c].matcher.simpleMatch(context);
+	}
+}
+
+class MappedSelfChoiceMatcher extends ParsingMatcher {
+	ParsingChoice choice;
+	ParsingExpression[] matchCase;
+
+	MappedSelfChoiceMatcher(ParsingChoice choice, ParsingExpression[] matchCase) {
+		this.choice = choice;
+		this.matchCase = matchCase;
+	}
+	
+	@Override
+	public boolean simpleMatch(ParsingContext context) {
+		int c = context.source.byteAt(context.pos);
+		//System.out.println("pos="+context.pos + ", c=" + (char)c + " in " + choice);
+		if(this.matchCase[c] == choice) {
+			return choice.simpleMatch(context);
+		}
 		return this.matchCase[c].matcher.simpleMatch(context);
 	}
 }
