@@ -118,18 +118,15 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return b;
 	}
 	
-	public final static short StringReject        = 0;
-	public final static short WeakReject          = 1;
-	public final static short StringAccept        = 2;
-	public final static short WeakAccept          = 3;
+	public final static short Reject        = 0;
+	public final static short Accept        = 1;
+	public final static short LazyAccept    = 2;  // depending on the next
 	
-	public short acceptByte(int ch) {
-		return WeakReject;
-	}
+	public abstract short acceptByte(int ch);
 	
-	public ParsingExpression getExpression() {
-		return this;
-	}
+//	public ParsingExpression getExpression() {
+//		return this;
+//	}
 
 	public final boolean is(int uflag) {
 		return ((this.flag & uflag) == uflag);
@@ -605,17 +602,6 @@ public abstract class ParsingExpression extends ParsingMatcher {
 	}
 	
 	public final static ParsingExpression newOption(ParsingExpression p) {
-//		if(StringSpecialization) {
-//			if(p instanceof PByteChar) {
-//				return new POptionalByteChar(0, (PByteChar)p);
-//			}
-//			if(p instanceof PCharacter) {
-//				return new POptionalCharacter(0, (PCharacter)p);
-//			}
-//			if(p instanceof PString) {
-//				return new POptionalString(0, (PString)p);
-//			}
-//		}
 		return checkUnique(new ParsingOption(p), p.isUnique());
 	}
 	
@@ -624,9 +610,6 @@ public abstract class ParsingExpression extends ParsingMatcher {
 	}
 		
 	public final static ParsingExpression newRepetition(ParsingExpression p) {
-//		if(p instanceof PCharacter) {
-//			return new PZeroMoreCharacter(0, (PCharacter)p);
-//		}
 		return checkUnique(new ParsingRepetition(p), p.isUnique());
 	}
 
@@ -635,26 +618,15 @@ public abstract class ParsingExpression extends ParsingMatcher {
 	}
 	
 	public final static ParsingExpression newNot(ParsingExpression p) {
-//		if(StringSpecialization) {
-//			if(p instanceof PByteChar) {
-//				return new PNotByteChar(0, (PByteChar)p);
-//			}
-//			if(p instanceof PString) {
-//				return new PNotString(0, (PString)p);
-//			}
-//			if(p instanceof PCharacter) {
-//				return new PNotCharacter(0, (PCharacter)p);
-//			}
-//		}
-//		if(p instanceof ParsingOperation) {
-//			p = ((ParsingOperation)p).inner;
-//		}
 		return checkUnique(new ParsingNot(p), p.isUnique());
 	}
 		
 	public final static ParsingExpression newChoice(UList<ParsingExpression> l) {
 		if(l.size() == 1) {
 			return l.ArrayValues[0];
+		}
+		if(l.size() == 2 && l.ArrayValues[1] instanceof ParsingEmpty) {
+			return newOption(l.ArrayValues[0]);  //     e / '' => e?
 		}
 		return checkUnique(new ParsingChoice(l), isUnique(l));
 	}

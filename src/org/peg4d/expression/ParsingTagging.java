@@ -29,12 +29,16 @@ public class ParsingTagging extends ParsingExpression {
 		return this;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
-		visitor.visitTagging(this);
+	public short acceptByte(int ch) {
+		return LazyAccept;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.left.setTag(this.tag);
 		return true;
+	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitTagging(this);
 	}
 }

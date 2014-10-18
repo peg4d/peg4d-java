@@ -28,10 +28,10 @@ public class ParsingOption extends ParsingUnary {
 	@Override 
 	public short acceptByte(int ch) {
 		short r = this.inner.acceptByte(ch);
-		if(r == StringAccept) {
-			return r;
+		if(r == Accept) {
+			return Accept;
 		}
-		return WeakReject;
+		return LazyAccept;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

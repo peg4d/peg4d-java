@@ -33,7 +33,7 @@ public class ParsingByteRange extends ParsingExpression {
 	}
 	@Override 
 	public short acceptByte(int ch) {
-		return (startByteChar <= ch && ch <= endByteChar) ? StringAccept : StringReject;
+		return (startByteChar <= ch && ch <= endByteChar) ? Accept : Reject;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

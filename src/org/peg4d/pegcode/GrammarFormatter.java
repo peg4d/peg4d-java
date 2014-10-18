@@ -47,4 +47,36 @@ public abstract class GrammarFormatter extends GrammarVisitor {
 		}
 	}
 
+	public final static String stringfyByte(int ch) {
+		char c = (char)ch;
+		switch(c) {
+		case '\n' : return("'\\n'"); 
+		case '\t' : return("'\\t'"); 
+		case '\r' : return("'\\r'"); 
+		case '\'' : return("'\\''"); 
+		case '\\' : return("'\\\\'"); 
+		}
+		if(Character.isISOControl(c) || c > 127) {
+			return(String.format("0x%02x", (int)c));
+		}
+		return("'" + c + "'");
+	}
+
+	public final static String stringfyByte2(int ch) {
+		char c = (char)ch;
+		switch(c) {
+		case '\n' : return("\\n"); 
+		case '\t' : return("\\t"); 
+		case '\r' : return("\\r"); 
+		case '\'' : return("\\'"); 
+		case ']' : return("\\]"); 
+		case '-' : return("\\-"); 
+		case '\\' : return("\\\\"); 
+		}
+		if(Character.isISOControl(c) || c > 127) {
+			return(String.format("\\x%02x", (int)c));
+		}
+		return("" + c);
+	}
+
 }

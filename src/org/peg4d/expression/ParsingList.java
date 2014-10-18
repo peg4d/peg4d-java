@@ -49,17 +49,6 @@ public abstract class ParsingList extends ParsingExpression {
 		}
 		return false;
 	}
-
-	@Override
-	public short acceptByte(int ch) {
-		for(int i = 0; i < this.size(); i++) {
-			short r = this.get(i).acceptByte(ch);
-			if(r != WeakReject) {
-				return r;
-			}
-		}
-		return WeakReject;
-	}
 	
 	public final void swap(int i, int j) {
 		ParsingExpression e = this.inners.ArrayValues[i];

@@ -26,7 +26,7 @@ public class ParsingFailure extends ParsingExpression {
 	}
 	@Override
 	public short acceptByte(int ch) {
-		return StringReject;
+		return Reject;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

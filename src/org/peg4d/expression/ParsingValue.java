@@ -28,12 +28,16 @@ public class ParsingValue extends ParsingExpression {
 		return this;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
-		visitor.visitValue(this);
+	public short acceptByte(int ch) {
+		return LazyAccept;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.left.setValue(this.value);
 		return true;
+	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitValue(this);
 	}
 }

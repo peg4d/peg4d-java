@@ -31,4 +31,14 @@ public class ParsingAnd extends ParsingUnary {
 		context.rollback(pos);
 		return !context.isFailure();
 	}
+	
+	@Override
+	public short acceptByte(int ch) {
+		short r = this.inner.acceptByte(ch);
+		if(r == Accept || r == LazyAccept) {
+			return LazyAccept;
+		}
+		return r;
+	}
+	
 }

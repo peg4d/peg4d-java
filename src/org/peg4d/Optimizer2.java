@@ -23,14 +23,18 @@ class Optimizer2 {
 	public static boolean PredictedChoice   = false;
 	
 	static void enableOptimizer() {
-		InlineNonTerminal = true;
-		Specialization    = true;
-		StringSpecialization = true;
-		CharacterChoice   = true;
+		InlineNonTerminal    = true;
 		if(Main.OptimizationLevel > 0) {
+			Specialization       = true;
+			StringSpecialization = true;
+			CharacterChoice      = true;
+		}
+		if(Main.OptimizationLevel > 1) {
 			StringChoice      = true;
 		}
-//		PredictedChoice   = true;  // Don't enable. it bugs
+		if(Main.OptimizationLevel > 2) {
+			PredictedChoice   = true;
+		}
 	}
 
 	public static int countOptimizedNonTerminal = 0;
@@ -238,13 +242,18 @@ class Optimizer2 {
 			//System.out.println("Optimized3: " + choice);
 			for(int ch = 0; ch < 256; ch++) {
 				matchCase[ch] = selectChoice(choice, ch, matchCase[256]);
-				matchCase[ch] = matchCase[ch].uniquefy();
-//				if(matchCase[ch] != matchCase[256]) {
-//					System.out.println("|3 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
-//				}
+				if(matchCase[ch] == choice) {
+					/* this is a rare case where the selected choice is the parent choice */
+					/* this cause the repeated calls of the same matchers */
+					//System.out.println("Optimization3 FAILED: SAME CHOICE: " + choice + " at " + GrammarFormatter.stringfyByte(ch) );
+					return; 
+				}
+				if(matchCase[ch] != matchCase[256]) {
+					//System.out.println("|3 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
+				}
 				countOptimizedChoice += 1;
 			}
-			choice.matcher = new MappedChoiceMatcher(matchCase);
+			choice.matcher = new MappedChoiceMatcher(choice, matchCase);
 		}
 	}
 		
@@ -353,15 +362,27 @@ class Optimizer2 {
 	
 	private static ParsingExpression selectChoice(ParsingChoice choice, int ch, ParsingExpression failed) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[2]);
-		for(int i = 0; i < choice.size(); i++) {
-			if(choice.get(i).acceptByte(ch) != ParsingExpression.StringReject) {
-				l.add(choice.get(i));
-			}
-		}
+		selectChoice(choice, ch, failed, l);
 		if(l.size() == 0) {
 			l.add(failed);
 		}
-		return ParsingExpression.newChoice(l);
+		return ParsingExpression.newChoice(l).uniquefy();
+	}
+
+	private static void selectChoice(ParsingChoice choice, int ch, ParsingExpression failed, UList<ParsingExpression> l) {
+		for(int i = 0; i < choice.size(); i++) {
+			ParsingExpression e = resolveNonTerminal(choice.get(i));
+			if(e instanceof ParsingChoice) {
+				selectChoice((ParsingChoice)e, ch, failed, l);
+			}
+			else {
+				short r = e.acceptByte(ch);
+				//System.out.println("~ " + GrammarFormatter.stringfyByte(ch) + ": r=" + r + " in " + e);
+				if(r != ParsingExpression.Reject) {
+					l.add(e);
+				}
+			}
+		}
 	}
 }
 
@@ -514,15 +535,18 @@ class StringChoiceMatcher extends ParsingMatcher {
 }
 
 class MappedChoiceMatcher extends ParsingMatcher {
+	ParsingChoice choice;
 	ParsingExpression[] matchCase;
 
-	MappedChoiceMatcher(ParsingExpression[] matchCase) {
+	MappedChoiceMatcher(ParsingChoice choice, ParsingExpression[] matchCase) {
+		this.choice = choice;
 		this.matchCase = matchCase;
 	}
 	
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		int c = context.source.byteAt(context.pos);
+		//System.out.println("pos="+context.pos + ", c=" + (char)c + " in " + choice);
 		return this.matchCase[c].matcher.simpleMatch(context);
 	}
 }

@@ -118,7 +118,7 @@ public class NonTerminal extends ParsingExpression {
 		if(this.deReference() != null && !this.is(LeftRecursion)) {
 			return this.deReference().acceptByte(ch);
 		}
-		return WeakAccept;
+		return LazyAccept;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

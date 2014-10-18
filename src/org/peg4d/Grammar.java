@@ -219,14 +219,12 @@ public class Grammar {
 		}
 	}
 		
-	
-	
 	final UList<ParsingRule> getExportRuleList() {
 		if(this.exportedRuleList == null) {
 			UList<ParsingRule> l = new UList<ParsingRule>(new ParsingRule[4]);
 			ParsingExpression e = this.getExpression("export");
 			if(e != null) {
-				appendExportRuleList(l, e.getExpression());
+				appendExportRuleList(l, e);
 			}
 			this.exportedRuleList = l;
 		}
@@ -241,7 +239,7 @@ public class Grammar {
 		}
 		if(e instanceof ParsingChoice) {
 			for(int i = 0; i < e.size(); i++) {
-				appendExportRuleList(l, e.get(i).getExpression());
+				appendExportRuleList(l, e.get(i));
 			}
 		}
 	}

@@ -39,8 +39,14 @@ public class ParsingConstructor extends ParsingList {
 		return ne;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
-		visitor.visitConstructor(this);
+	public short acceptByte(int ch) {
+		for(int i = 0; i < this.size(); i++) {
+			short r = this.get(i).acceptByte(ch);
+			if(r != LazyAccept) {
+				return r;
+			}
+		}
+		return LazyAccept;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -73,5 +79,9 @@ public class ParsingConstructor extends ParsingList {
 		context.left = newnode;
 		newnode = null;
 		return true;
+	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitConstructor(this);
 	}
 }

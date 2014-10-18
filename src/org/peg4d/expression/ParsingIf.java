@@ -29,6 +29,10 @@ public class ParsingIf extends ParsingCommand {
 		return true;
 	}
 	@Override
+	public short acceptByte(int ch) {
+		return LazyAccept;
+	}
+	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		if(withoutMap != null && withoutMap.containsKey(flagName)) {
 			return ParsingExpression.newFailure(this);

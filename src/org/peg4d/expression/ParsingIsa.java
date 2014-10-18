@@ -16,6 +16,10 @@ public class ParsingIsa extends ParsingCommand {
 		return " " + ParsingTag.tagName(this.tagId);
 	}
 	@Override
+	public short acceptByte(int ch) {
+		return Accept;
+	}
+	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		return context.matchTokenStack(tagId);
 	}

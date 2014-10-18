@@ -13,6 +13,10 @@ public class ParsingCatch extends ParsingCommand {
 		return true;
 	}
 	@Override
+	public short acceptByte(int ch) {
+		return LazyAccept;
+	}
+	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		context.left.setSourcePosition(context.fpos);
 		context.left.setValue(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));

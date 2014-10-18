@@ -22,19 +22,12 @@ public class ParsingNot extends ParsingUnary {
 		return ParsingExpression.newNot(e);
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
-		visitor.visitNot(this);
-	}
-	@Override
 	public short acceptByte(int ch) {
 		short r = this.inner.acceptByte(ch);
-		if(r == StringAccept) {
-			return StringReject;
+		if(r == Accept || r == LazyAccept) {   /* !('a'?) accept nothing */
+			return Reject;
 		}
-		if(r == StringReject) {
-			return StringAccept;
-		}
-		return r;
+		return LazyAccept;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -54,5 +47,9 @@ public class ParsingNot extends ParsingUnary {
 			left = null;
 			return true;
 		}
+	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitNot(this);
 	}
 }

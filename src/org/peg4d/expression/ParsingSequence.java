@@ -24,8 +24,14 @@ public class ParsingSequence extends ParsingList {
 		return ParsingExpression.newSequence(l);
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
-		visitor.visitSequence(this);
+	public short acceptByte(int ch) {
+		for(int i = 0; i < this.size(); i++) {
+			short r = this.get(i).acceptByte(ch);
+			if(r != LazyAccept) {
+				return r;
+			}
+		}
+		return LazyAccept;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -39,5 +45,10 @@ public class ParsingSequence extends ParsingList {
 			}
 		}
 		return true;
+	}
+
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitSequence(this);
 	}
 }

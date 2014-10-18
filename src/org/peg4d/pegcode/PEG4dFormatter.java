@@ -44,6 +44,7 @@ public class PEG4dFormatter extends GrammarFormatter {
 		this.sb = null;
 	}
 		
+	@Override
 	public String getDesc() {
 		return "PEG4d";
 	}
@@ -77,38 +78,6 @@ public class PEG4dFormatter extends GrammarFormatter {
 		return "=";
 	}
 	
-	public final static String stringfyByte(int ch) {
-		char c = (char)ch;
-		switch(c) {
-		case '\n' : return("'\\n'"); 
-		case '\t' : return("'\\t'"); 
-		case '\r' : return("'\\r'"); 
-		case '\'' : return("'\\''"); 
-		case '\\' : return("'\\\\'"); 
-		}
-		if(Character.isISOControl(c) || c > 127) {
-			return(String.format("0x%02x", (int)c));
-		}
-		return("'" + c + "'");
-	}
-	
-	public final static String stringfyByte2(int ch) {
-		char c = (char)ch;
-		switch(c) {
-		case '\n' : return("\\n"); 
-		case '\t' : return("\\t"); 
-		case '\r' : return("\\r"); 
-		case '\'' : return("\\'"); 
-		case ']' : return("\\]"); 
-		case '-' : return("\\-"); 
-		case '\\' : return("\\\\"); 
-		}
-		if(Character.isISOControl(c) || c > 127) {
-			return(String.format("\\x%02x", (int)c));
-		}
-		return("" + c);
-	}
-
 	public void formatRuleName(String ruleName, ParsingExpression e) {
 		this.formatString(ruleName);
 	}
@@ -130,7 +99,7 @@ public class PEG4dFormatter extends GrammarFormatter {
 
 	@Override
 	public void visitByte(ParsingByte e) {
-		this.formatString(stringfyByte(e.byteChar));
+		this.formatString(GrammarFormatter.stringfyByte(e.byteChar));
 	}
 
 	@Override
@@ -142,9 +111,9 @@ public class PEG4dFormatter extends GrammarFormatter {
 	@Override
 	public void visitByteRange(ParsingByteRange e) {
 		this.formatString("[");
-		this.formatString(stringfyByte2(e.startByteChar));
+		this.formatString(GrammarFormatter.stringfyByte2(e.startByteChar));
 		this.formatString("-");
-		this.formatString(stringfyByte2(e.endByteChar));
+		this.formatString(GrammarFormatter.stringfyByte2(e.endByteChar));
 		this.formatString("]");
 	}
 	

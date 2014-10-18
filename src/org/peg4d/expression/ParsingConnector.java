@@ -36,8 +36,8 @@ public class ParsingConnector extends ParsingUnary {
 	}
 
 	@Override
-	public void visit(GrammarVisitor visitor) {
-		visitor.visitConnector(this);
+	public short acceptByte(int ch) {
+		return inner.acceptByte(ch);
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
@@ -55,5 +55,9 @@ public class ParsingConnector extends ParsingUnary {
 		context.abortLog(mark);			
 		left = null;
 		return false;
+	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitConnector(this);
 	}
 }

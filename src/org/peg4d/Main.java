@@ -219,7 +219,6 @@ public class Main {
 					MemoizationManager.VerboseMemo = true;
 				}
 				else if(argument.equals("--verbose:stack")) {
-					System.out.println("--verbose:stack");
 					ParsingExpression.VerboseStack = true;
 				}
 				else {

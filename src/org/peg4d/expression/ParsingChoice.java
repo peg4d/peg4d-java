@@ -44,17 +44,17 @@ public class ParsingChoice extends ParsingList {
 	}
 	@Override
 	public short acceptByte(int ch) {
-		boolean checkNext = false;
+		boolean hasLazyAccept = false;
 		for(int i = 0; i < this.size(); i++) {
 			short r = this.get(i).acceptByte(ch);
-			if(r == StringAccept) {
+			if(r == Accept) {
 				return r;
 			}
-			if(r == WeakReject) {
-				checkNext = true;
+			if(r == LazyAccept) {
+				hasLazyAccept = true;
 			}
 		}
-		return checkNext ? WeakReject : StringReject;
+		return hasLazyAccept ? LazyAccept : Reject;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

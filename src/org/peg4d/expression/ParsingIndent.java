@@ -12,9 +12,9 @@ public class ParsingIndent extends ParsingCommand {
 	@Override
 	public short acceptByte(int ch) {
 		if (ch == '\t' || ch == ' ') {
-			return StringAccept;
+			return Accept;
 		}
-		return WeakReject;
+		return LazyAccept;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

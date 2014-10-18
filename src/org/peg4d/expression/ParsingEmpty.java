@@ -25,4 +25,8 @@ public class ParsingEmpty extends ParsingExpression {
 	public boolean simpleMatch(ParsingContext context) {
 		return true;
 	}
+	@Override
+	public short acceptByte(int ch) {
+		return LazyAccept;
+	}
 }

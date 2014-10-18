@@ -15,7 +15,8 @@ public abstract class ParsingFunction extends ParsingUnary {
 		return "";
 	}
 	@Override
-	public ParsingExpression getExpression() {
-		return this.inner;
+	public short acceptByte(int ch) {
+		return this.inner.acceptByte(ch);
 	}
+
 }
