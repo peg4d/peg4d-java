@@ -24,9 +24,11 @@ public class ParsingNot extends ParsingUnary {
 	@Override
 	public short acceptByte(int ch) {
 		short r = this.inner.acceptByte(ch);
-		if(r == Accept || r == LazyAccept) {   /* !('a'?) accept nothing */
-			return Reject;
-		}
+		/* the code below works only if a single character in !(e) */
+		/* we must accept 'i' for !'int' 'i' */
+//		if(r == Accept || r == LazyAccept) {
+//			return Reject;
+//		}
 		return LazyAccept;
 	}
 	@Override

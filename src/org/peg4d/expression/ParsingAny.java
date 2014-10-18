@@ -20,7 +20,7 @@ public class ParsingAny extends ParsingExpression {
 	}
 	@Override
 	public short acceptByte(int ch) {
-		return (ch == ParsingSource.EOF) ? Reject : Accept ;
+		return (ch == ParsingSource.EOF) ? Reject : Accept;
 	}
 	@Override
 	public void visit(GrammarVisitor visitor) {

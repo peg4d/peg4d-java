@@ -40,7 +40,7 @@ public abstract class ParsingList extends ParsingExpression {
 		for(int i = 0; i < this.size(); i++) {
 			minlen = this.get(i).checkLength(ruleName, start, minlen, stack);
 		}
-		this.minlen = local - minlen;
+		this.minlen = minlen - local;
 		return minlen;
 	}
 

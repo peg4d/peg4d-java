@@ -4,6 +4,7 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingObject;
+import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingRepetition extends ParsingUnary {
@@ -22,9 +23,15 @@ public class ParsingRepetition extends ParsingUnary {
 		return ParsingExpression.newRepetition(e);
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
-		visitor.visitRepetition(this);
+	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
+		this.inner.checkLength(ruleName, start, minlen, stack);
+//		if(!(this.inner.minlen > 0) && !(this.inner instanceof NonTerminal)) {
+//			this.report(ReportLevel.warning, "uncosumed repetition: " + this.inner.minlen);
+//		}
+		this.minlen = 0;
+		return this.minlen + minlen;
 	}
+
 	@Override public short acceptByte(int ch) {
 		short r = this.inner.acceptByte(ch);
 		if(r == Accept) {
@@ -50,5 +57,9 @@ public class ParsingRepetition extends ParsingUnary {
 		}
 //		context.forgetFailure(f);
 		return true;
+	}
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		visitor.visitRepetition(this);
 	}
 }

@@ -33,11 +33,11 @@ class Optimizer2 {
 			CharacterChoice      = true;
 		}
 		if(Main.OptimizationLevel > 1) {
-			StringChoice      = true;
 			LazyConstructor   = true;
+			StringChoice      = true;
+			PredictedChoice   = true;
 		}
 		if(Main.OptimizationLevel > 2) {
-			PredictedChoice   = true;
 		}
 	}
 

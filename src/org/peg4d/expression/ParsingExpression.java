@@ -118,9 +118,9 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return b;
 	}
 	
-	public final static short Reject        = 0;
-	public final static short Accept        = 1;
-	public final static short LazyAccept    = 2;  // depending on the next
+	public final static short Reject         = 0;
+	public final static short Accept         = 1;
+	public final static short LazyAccept     = 2;  // depending on the next
 	
 	public abstract short acceptByte(int ch);
 	
@@ -151,16 +151,6 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		DefaultFormatter.formatExpression(this, sb);
 		return sb.toString();
 	}
-
-//	public final String format(String name, GrammarFormatter fmt) {
-//		StringBuilder sb = new StringBuilder();
-//		fmt.formatRule(name, this, sb);
-//		return sb.toString();
-//	}
-//	
-//	public final String format(String name) {
-//		return this.format(name, new PEG4dFormatter());
-//	}
 	
 	public static int WarningLevel = 1;
 
@@ -365,7 +355,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 			for(int i = 1; i < e.size(); i++) {
 				int r = typeCheckImpl(e.get(i), status, flagMap);
 				if(r != first) {
-					e.get(i).report(ReportLevel.warning, "mixed choice");
+					e.get(i).report(ReportLevel.warning, "mixed type in the choice");
 				}
 			}
 			return first;
@@ -554,12 +544,6 @@ public abstract class ParsingExpression extends ParsingMatcher {
 			return newByte(c, token);
 		}
 		return new ParsingByteRange(c, c2);
-//		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[c2 - c + 1]);
-//		while(c <= c2) {
-//			l.add(newByteChar(c, token));
-//			c++;
-//		}
-//		return newChoice(l);
 	}
 	
 	public final static ParsingExpression newCharset(String t, String t2, String token) {
