@@ -99,12 +99,7 @@ public class Main {
 		if(PEGFormatter != null) {
 			GrammarFormatter fmt = loadGrammarFormatter(PEGFormatter);
 			StringBuilder sb = new StringBuilder();
-			fmt.formatHeader(sb);
-			for(ParsingRule r: peg.getRuleList()) {
-				fmt.formatRule(r, sb);
-			}
-			fmt.formatFooter(sb);
-			System.out.println(sb.toString());
+			fmt.formatGrammar(peg, sb);
 			return ;
 		}
 		if(InputFileName != null) {
@@ -268,6 +263,7 @@ public class Main {
 		driverMap.put("p4d", org.peg4d.pegcode.PEG4dFormatter.class);
 		driverMap.put("peg", org.peg4d.pegcode.PEG4dFormatter.class);
 		driverMap.put("c2", org.peg4d.pegcode.CGenerator2.class);
+		driverMap.put("py", org.peg4d.pegcode.PythonGenerator.class);
 	}
 
 	private static GrammarFormatter loadDriverImpl(String driverName) {

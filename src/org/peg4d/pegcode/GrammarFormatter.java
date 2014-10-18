@@ -11,25 +11,26 @@ public abstract class GrammarFormatter extends GrammarVisitor {
 		this.sb = null;
 	}
 	
-	public GrammarFormatter(Grammar peg, StringBuilder sb) {
-		this.formatHeader(sb);
-		for(ParsingRule r : peg.getRuleList()) {
+	public abstract String getDesc();
+
+	public void formatGrammar(Grammar peg, StringBuilder sb) {
+		this.sb = sb;
+		this.formatHeader();
+		for(ParsingRule r: peg.getRuleList()) {
 			this.formatRule(r, sb);
 		}
-		this.formatFooter(sb);
+		this.formatFooter();
+		System.out.println(sb.toString());
 	}
-
-	public abstract String getDesc();
 	
-	public void formatHeader(StringBuilder sb) {
+	public void formatHeader() {
+	}
+	public void formatFooter() {
 	}
 	
 	public final void formatRule(ParsingRule rule, StringBuilder sb) {
 		this.sb = sb;
 		this.visitRule(rule);
-	}
-
-	public void formatFooter(StringBuilder sb) {
 	}
 
 	public final void formatExpression(ParsingExpression e, StringBuilder sb) {

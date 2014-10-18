@@ -254,23 +254,17 @@ public class Grammar {
 		ParsingRule rule = this.getRule(startPoint);
 		UList<ParsingRule> l = rule.subRule();
 		StringBuilder sb = new StringBuilder();
-		fmt.formatHeader(sb);
+//		fmt.formatHeader(sb);
 		for(ParsingRule r : l) {
 			fmt.formatRule(r, sb);
 		}
-		fmt.formatFooter(sb);
+//		fmt.formatFooter(sb);
 		System.out.println(sb.toString());
 	}
 
 	public final void formatAll(GrammarFormatter fmt) {
 		StringBuilder sb = new StringBuilder();
-		fmt.formatHeader(sb);
-		UList<ParsingRule> list = this.getRuleList();
-		for(int i = 0; i < list.size(); i++) {
-			ParsingRule r = list.ArrayValues[i];
-			fmt.formatRule(r, sb);
-		}
-		fmt.formatFooter(sb);
+		fmt.formatGrammar(this, sb);
 		System.out.println(sb.toString());
 	}
 		

@@ -1,5 +1,6 @@
 package org.peg4d.pegcode;
 
+import org.peg4d.Grammar;
 import org.peg4d.ParsingRule;
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.ParsingAnd;
@@ -38,7 +39,7 @@ public class CGenerator2 extends GrammarFormatter {
 	public String getDesc() {
 		return "c";
 	}
-
+	
 	String indent = "";
 
 	protected void writeLine(String s) {
@@ -53,39 +54,7 @@ public class CGenerator2 extends GrammarFormatter {
 		indent = indent.substring(2);
 		writeLine("}");
 	}
-	
-	@Override
-	public void formatHeader(StringBuilder sb) {
-		this.sb = sb;
-		writeLine("struct ParsingObject");
-		openIndent();
-		writeLine("long  oid;");
-		writeLine("const char *tag;");
-		writeLine("long start_pos;");
-		writeLine("long end_pos;");
-		writeLine("const char *value;");
-		writeLine("struct ParsingObject *parent;");
-		writeLine("struct ParsingObject **child;");
-		writeLine("int child_size;");
-		closeIndent();
-		sb.append(";");
-		writeLine("struct ParsingContext ");
-		openIndent();
-		writeLine("unsigned char *inputs;");
-		writeLine("long input_size;");
-		writeLine("long pos;");
-		writeLine("struct ParsingObject *left;");
-		writeLine("int tstack_id;");
-		closeIndent();
-		sb.append(";");
-		writeLine("void Pcomit(struct ParsingContext *c, int tid);");
-		writeLine("void Pabort(struct ParsingContext *c, int tid);");
-		writeLine("void Pconnect(struct ParsingContext *c, struct ParsingObject *parent);");
-		writeLine("struct ParsingObject* Pnew(struct ParsingContext *c, long pos);");
-		writeLine("void PleftJoin(struct ParsingContext *c, struct ParsingObject *parent);");
-		writeLine("void Pdispose(struct ParsingContext *c, int tid, struct ParsingObject *newone);");
-	}
-	
+		
 	class FailurePoint {
 		int id;
 		FailurePoint prev;
@@ -119,21 +88,63 @@ public class CGenerator2 extends GrammarFormatter {
 	void jumpPrevFailureJump() {
 		writeLine("goto CATCH_FAILURE" + fLabel.prev.id + ";");
 	}
+	void let(String type, String var, String expr) {
+		if(type != null) {
+			writeLine(type + " " + var + " = " + expr + ";");		
+		}
+		else {
+			writeLine("" + var + " = " + expr + ";");
+		}
+	}
+	void letO(String type, String var, String expr) {
+		if(type != null) {
+			writeLine(type + " " + var + " = NULL;");		
+			writeLine("P4D_setObject(c, &" + var + ", " + expr + ");");		
+		}
+		else {
+			writeLine("P4D_setObject(c, &" + var + ", " + expr + ");");		
+		}
+	}
+	void gotoLabel(String label) {
+		writeLine("goto " + label + ";");
+	}
+	void exitLabel(String label) {
+		writeLine(label + ": ;; /* <- this is required for avoiding empty statement */");
+	}
 
 	String funcName(String symbol) {
 		return "p" + symbol;
 	}
 	
 	@Override
+	public void formatGrammar(Grammar peg, StringBuilder sb) {
+		this.formatHeader();
+		for(ParsingRule r: peg.getRuleList()) {
+			this.writeLine("int " + funcName(r.ruleName) + "(ParsingContext c);");
+		}
+		for(ParsingRule r: peg.getRuleList()) {
+			this.formatRule(r, sb);
+		}
+		this.formatFooter();
+		System.out.println(sb.toString());
+	}
+
+	@Override
+	public void formatHeader() {
+		writeLine("#include \"libpeg4d/parsing.h\"");
+	}
+
+
+	@Override
 	public void visitRule(ParsingRule e) {
 		this.initFailureJumpPoint();
-		writeLine("int " + funcName(e.ruleName) + "(struct ParsingContext *c)");
+		writeLine("int " + funcName(e.ruleName) + "(ParsingContext c)");
 		openIndent();
-		writeLine("long pos = c->pos;");
+		let("long", "pos", "c->pos");
 
 		this.pushFailureJumpPoint();
 		e.expr.visit(this);
-		writeLine("c->pos = pos;");
+		let(null, "c->pos", "pos");
 		writeLine("return 0;");
 		
 		this.popFailureJumpPoint(e);
@@ -166,7 +177,7 @@ public class CGenerator2 extends GrammarFormatter {
 		openIndent();
 		jumpFailureJump();
 		closeIndent();
-		writeLine("pos++;");
+		writeLine("pos += 1;");
 	}
 
 	@Override
@@ -175,7 +186,7 @@ public class CGenerator2 extends GrammarFormatter {
 		openIndent();
 		jumpFailureJump();
 		closeIndent();
-		writeLine("pos++;");
+		writeLine("pos += 1;");
 	}
 
 	@Override
@@ -184,7 +195,7 @@ public class CGenerator2 extends GrammarFormatter {
 		openIndent();
 		jumpFailureJump();
 		closeIndent();
-		writeLine("pos++;");
+		writeLine("pos +=1;");
 	}
 
 	@Override
@@ -198,12 +209,12 @@ public class CGenerator2 extends GrammarFormatter {
 		this.openIndent();
 		this.pushFailureJumpPoint();
 		String posName = "pos" + this.fID;
-		writeLine("long " + posName + " = pos;");
+		let("long", posName, "pos");
 		e.inner.visit(this);
-		writeLine("pos = " + posName + ";");
+		let(null, "pos", posName);
 		this.jumpPrevFailureJump();
 		this.popFailureJumpPoint(e);
-		writeLine("pos = " + posName + ";");
+		let(null, "pos", posName);
 		this.closeIndent();
 	}
 
@@ -211,9 +222,9 @@ public class CGenerator2 extends GrammarFormatter {
 	public void visitAnd(ParsingAnd e) {
 		this.openIndent();
 		String posName = "pos" + this.fID;
-		writeLine("long " + posName + " = pos;");
+		let("long", posName, "pos");
 		e.inner.visit(this);
-		writeLine("pos = " + posName + ";");
+		let(null, "pos", posName);
 		this.closeIndent();
 	}
 
@@ -245,18 +256,19 @@ public class CGenerator2 extends GrammarFormatter {
 	public void visitChoice(ParsingChoice e) {
 		int fid = this.fID;
 		String labelName = "EXIT_CHOICE" + fid;
+		String posName = "pos" + fid;
 		openIndent();
-		writeLine("long pos" + fid + " = pos;");
+		let("long", posName, "pos");
 		for(int i = 0; i < e.size() - 1; i++) {
 			this.pushFailureJumpPoint();
 			e.get(i).visit(this);
-			this.writeLine("goto " + labelName + ";");
+			this.gotoLabel(labelName);
 			this.popFailureJumpPoint(e.get(i));
-			writeLine("pos = pos" + fid + ";");
+			let(null, "pos", posName);
 		}
 		e.get(e.size() - 1).visit(this);
 		closeIndent();
-		this.writeLine(labelName + ": ;;");
+		this.exitLabel(labelName);
 	}
 
 	@Override
@@ -268,24 +280,28 @@ public class CGenerator2 extends GrammarFormatter {
 		String leftName = "left" + this.fID;
 		String labelName = "EXIT_NEW" + this.fID;
 		openIndent();
-		writeLine("struct ParsingObject *"+leftName+" = c->left;");
-		writeLine("int tid = c->tstack_id;");
-		writeLine("c->left = Pnew(c, pos);");
+		this.letO("ParsingObject", leftName, "c->left");
+		this.let("int", "tid", "P4D_markLogStack(c)");
+		this.letO(null, "c->left", "P4D_newObject(c, pos)");
 		if(e.leftJoin) {
-			writeLine("PleftJoin(c, c->left, " + leftName +");");
+			//context.lazyJoin(context.left);
+			//context.lazyLink(newnode, 0, context.left);
+			writeLine("P4D_lazyJoin(c, left);");
+			writeLine("P4D_lazyLink(c, c->left, 0, left);");
 		}
 		for(int i = e.prefetchIndex; i < e.size(); i++) {
 			e.get(i).visit(this);
 		}
-		writeLine("PsetLength(c, pos);");
-		writeLine("goto " + labelName + ";");
+		writeLine("c->left->end_pos = pos;");
+		this.letO(null, leftName, "NULL");
+		this.gotoLabel(labelName);
 
 		this.popFailureJumpPoint(e);
-		writeLine("Pdispose(c, tid, c->left);");
-		writeLine("c->left = " + leftName + ";");
+		this.letO(null, "c->left", leftName);
+		this.letO(null, leftName, "NULL");
 		this.jumpFailureJump();
 		closeIndent();
-		writeLine(labelName + ": ;;");
+		this.exitLabel(labelName);
 	}
 
 	@Override
@@ -294,20 +310,24 @@ public class CGenerator2 extends GrammarFormatter {
 		int uid = this.fID;
 		String leftName = "left" + uid;
 		String labelName = "EXIT_CONNECTOR" + uid;
+		String markName = "mark" + uid;
 		openIndent();
-		writeLine("struct ParsingObject *"+leftName+" = c->left;");
-		writeLine("int tid = c->tstack_id;");
+		this.letO("ParsingObject", leftName, "c->left");
+		this.let("int", markName, "P4D_markLogStack(c);");
 		e.inner.visit(this);
-		writeLine("Pcomit(c, tid);");
-		writeLine("Pconnect(c, " + leftName + ");");
-		writeLine("c->left = " + leftName + ";");
-		writeLine("goto " + labelName + ";");
+		writeLine("P4D_commitLog(c, " + markName + ", c->left);");
+		writeLine("P4D_lazyLink(c, " + leftName + "," + e.index + " , c->left);");
+		this.letO(null, "c->left", leftName);
+		this.letO(null, leftName, "NULL");
+		this.gotoLabel(labelName);
+
 		this.popFailureJumpPoint(e);
-		writeLine("Pabort(c, tid);");
-		writeLine("c->left = " + leftName + ";");
+		writeLine("P4D_abortLog(c, " + markName + ");");
+		this.letO(null, "c->left", leftName);
+		this.letO(null, leftName, "NULL");
 		this.jumpFailureJump();
-		writeLine(labelName + ": ;;");
 		closeIndent();
+		this.exitLabel(labelName);
 	}
 
 	@Override
