@@ -123,17 +123,12 @@ public class NonTerminal extends ParsingExpression {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		int stackTop = context.pushCallStack(this.uniqueName);
+		int stackTop = context.pushCallStack(this);
 		boolean b = this.deReference().matcher.simpleMatch(context);
-//		if(/*ParsingExpression.VerboseStack &&*/ !b && this.peg != GrammarFactory.Grammar) {
-//			context.dumpCallStack("["+context.getPosition()+"] failure: ");
-//		}
 		context.popCallStack(stackTop);
 		return b;
 	}
-
 }
-
 
 // Name[Old->New]
 

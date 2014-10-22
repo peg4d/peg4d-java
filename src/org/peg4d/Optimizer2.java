@@ -29,7 +29,7 @@ class Optimizer2 {
 	public static boolean NotCharacter      = false;
 
 	static void enableOptimizer() {
-		if(ParsingExpression.VerboseStack) {
+		if(Main.DebugLevel > 0) {
 			InlineNonTerminal    = false;
 		}
 		if(Main.OptimizationLevel > 0) {

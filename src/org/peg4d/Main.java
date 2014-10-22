@@ -9,7 +9,6 @@ import java.io.InputStreamReader;
 import java.util.TreeMap;
 
 import org.peg4d.data.RelationBuilder;
-import org.peg4d.expression.ParsingExpression;
 import org.peg4d.ext.Generator;
 import org.peg4d.pegcode.GrammarFormatter;
 
@@ -18,7 +17,7 @@ public class Main {
 	public final static String  CodeName  = "yokohama";
 	public final static int     MajorVersion = 0;
 	public final static int     MinerVersion = 2;
-	public final static int     PatchLevel   = 6;
+	public final static int     PatchLevel   = 7;
 	public final static String  Version = "" + MajorVersion + "." + MinerVersion + "." + PatchLevel;
 	public final static String  Copyright = "Copyright (c) 2014, Konoha project authors";
 	public final static String  License = "BSD-Style Open Source";
@@ -44,6 +43,9 @@ public class Main {
 	// -W
 	public static int WarningLevel = 1;
 
+	// -g
+	public static int DebugLevel = 0;
+	
 	// --find
 	private static int FindFileIndex = -1;
 	
@@ -139,6 +141,9 @@ public class Main {
 			else if (argument.startsWith("-W")) {
 				WarningLevel = ParsingCharset.parseInt(argument.substring(2), 2);
 			}
+			else if (argument.startsWith("-g")) {
+				DebugLevel = ParsingCharset.parseInt(argument.substring(2), 1);
+			}
 			else if (argument.equals("-i")) {
 				Main.OptimizationLevel = 0;
 				ShellMode = true;
@@ -218,9 +223,6 @@ public class Main {
 				if(argument.equals("--verbose:memo")) {
 					MemoizationManager.VerboseMemo = true;
 				}
-				else if(argument.equals("--verbose:stack")) {
-					ParsingExpression.VerboseStack = true;
-				}
 				else {
 					VerboseMode = true;
 				}
@@ -249,6 +251,7 @@ public class Main {
 		System.out.println("  -f | --format<type>       Specify PEG formatter");
 		System.out.println("  -W<num>                   Warning Level (default:1)");
 		System.out.println("  -O<num>                   Optimization Level (default:2)");
+		System.out.println("  -g                        Debug Level");
 		System.out.println("  --memo:x                  Memo configuration");
 		System.out.println("     none|packrat|window|slide|notrace");
 		System.out.println("  --memo:<num>              Expected backtrack distance (default: 256)");
@@ -373,11 +376,17 @@ public class Main {
 		if(context.isFailure()) {
 			System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
 			System.out.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
+			if(Main.DebugLevel > 0) {
+				System.out.println(context.maximumFailureTrace);
+			}
 			return;
 		}
 		if(context.hasByteChar()) {
 			System.out.println(context.source.formatPositionLine("unconsumed", context.pos, ""));
 			System.out.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
+			if(Main.DebugLevel > 0) {
+				System.out.println(context.maximumFailureTrace);
+			}
 		}
 		if(OutputType.equalsIgnoreCase("stat")) {
 			context.recordStat(pego);
