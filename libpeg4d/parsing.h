@@ -1,6 +1,9 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include <string.h>
 #include<assert.h>
+#include <unistd.h>
+
 
 struct ParsingObject
 {
@@ -23,8 +26,8 @@ struct ParsingLog {
 
 struct ParsingContext
 {
-    unsigned char *inputs;
-	long input_size;
+    char *inputs;
+	size_t input_size;
 	long pos;
 	struct ParsingObject *left;
 
@@ -38,6 +41,49 @@ struct ParsingContext
 typedef struct ParsingObject* ParsingObject;
 typedef struct ParsingContext* ParsingContext;
 typedef struct ParsingLog* ParsingLog;
+
+static char *loadFile(const char *filename, size_t *length)
+{
+    size_t len = 0;
+    FILE *fp = fopen(filename, "rb");
+    char *source;
+    if (!fp) {
+        return NULL;
+    }
+    fseek(fp, 0, SEEK_END);
+    len = (size_t)ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    source = (char *)malloc(len + 1);
+    if (len != fread(source, 1, len, fp)) {
+        fprintf(stderr, "fread error\n");
+        exit(EXIT_FAILURE);
+    }
+    source[len] = '\0';
+    fclose(fp);
+    *length = len;
+    return source;
+}
+
+ParsingObject P4D_newObject(ParsingContext this, long start);
+void P4D_setObject(ParsingContext this, ParsingObject *var, ParsingObject o);
+
+void ParsingContext_Init(ParsingContext this, const char *filename)
+{
+    memset(this, 0, sizeof(*this));
+    this->pos = this->input_size = 0;
+    this->inputs = loadFile(filename, &this->input_size);
+    P4D_setObject(this, &this->left, P4D_newObject(this, this->pos));
+}
+
+void ParsingContext_Dispose(ParsingContext context)
+{
+    free(context);
+}
+
+void P4D_consume(long *pos, long length)
+{
+    *pos += length;
+}
 
 ParsingObject P4D_newObject(ParsingContext this, long start)
 {
@@ -60,8 +106,6 @@ ParsingObject P4D_newObject(ParsingContext this, long start)
     o->child_size = 0;
     return o;
 }
-
-void P4D_setObject(ParsingContext this, ParsingObject *var, ParsingObject o);
 
 void P4D_unusedObject(ParsingContext this, ParsingObject o)
 {
@@ -88,7 +132,9 @@ void P4D_setObject(ParsingContext this, ParsingObject *var, ParsingObject o)
         }
     }
     var[0] = o;
-    o->refc += 1;
+    if (o != NULL) {
+        o->refc += 1;
+    }
 }
 
 ParsingLog P4D_newLog(ParsingContext this) {
@@ -183,4 +229,17 @@ void P4D_abortLog(ParsingContext this, int mark) {
         P4D_unuseLog(this, l);
     }
 }
+
+static void peg_usage(const char *file)
+{
+    fprintf(stderr, "Usage: %s -f peg_bytecode target_file\n", file);
+    exit(EXIT_FAILURE);
+}
+
+static void peg_error(const char *errmsg)
+{
+    fprintf(stderr, "%s\n", errmsg);
+    exit(EXIT_FAILURE);
+}
+
 
