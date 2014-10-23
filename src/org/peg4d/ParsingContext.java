@@ -2,6 +2,7 @@ package org.peg4d;
 
 import java.util.HashMap;
 
+import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.ParsingConstructor;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingMatcher;
@@ -29,9 +30,7 @@ public class ParsingContext {
 		this.source = source;
 		this.pos = pos;
 		this.fpos = 0;
-		if(ParsingExpression.VerboseStack) {
-			this.initCallStack();
-		}
+		this.initCallStack();
 	}
 	
 	public final boolean hasByteChar() {
@@ -158,9 +157,7 @@ public class ParsingContext {
 	long head_pos;
 	public long fpos;
 
-	boolean enableTrace = false;
-	String headTrace    = null;
-	String failureTrace = null;
+	StackTrace maximumFailureTrace = null;
 	String failureInfo  = null;
 	
 	public final long getPosition() {
@@ -175,9 +172,6 @@ public class ParsingContext {
 		this.pos += length;
 		if(head_pos < pos) {
 			this.head_pos = pos;
-			if(this.enableTrace) {
-				headTrace = this.stringfyCallStack();
-			}
 		}
 	}
 
@@ -187,6 +181,7 @@ public class ParsingContext {
 		}
 		this.pos = pos;
 	}
+
 	ParsingMatcher[] errorbuf = new ParsingMatcher[512];
 	long[] posbuf = new long[errorbuf.length];
 
@@ -199,10 +194,10 @@ public class ParsingContext {
 	}
 	
 	public final void forgetFailure(long fpos) {
-		if(this.fpos != fpos) {
-			this.removeErrorInfo(this.fpos);
-		}
-		this.fpos = fpos;
+//		if(this.fpos != fpos) {
+//			this.removeErrorInfo(this.fpos);
+//		}
+//		this.fpos = fpos;
 	}
 	
 	private ParsingMatcher getErrorInfo(long fpos) {
@@ -213,20 +208,20 @@ public class ParsingContext {
 		return null;
 	}
 
-	private void setErrorInfo(ParsingMatcher errorInfo) {
-		int index = (int)this.pos % errorbuf.length;
-		errorbuf[index] = errorInfo;
-		posbuf[index] = this.pos;
-		//System.out.println("push " + this.pos + " @" + errorInfo);
-	}
-
-	private void removeErrorInfo(long fpos) {
-		int index = (int)this.pos % errorbuf.length;
-		if(posbuf[index] == fpos) {
-			//System.out.println("pop " + fpos + " @" + errorbuf[index]);
-			errorbuf[index] = null;
-		}
-	}
+//	private void setErrorInfo(ParsingMatcher errorInfo) {
+//		int index = (int)this.pos % errorbuf.length;
+//		errorbuf[index] = errorInfo;
+//		posbuf[index] = this.pos;
+//		//System.out.println("push " + this.pos + " @" + errorInfo);
+//	}
+//
+//	private void removeErrorInfo(long fpos) {
+//		int index = (int)this.pos % errorbuf.length;
+//		if(posbuf[index] == fpos) {
+//			//System.out.println("pop " + fpos + " @" + errorbuf[index]);
+//			errorbuf[index] = null;
+//		}
+//	}
 
 	public String getErrorMessage() {
 		ParsingMatcher errorInfo = this.getErrorInfo(this.fpos);
@@ -237,11 +232,10 @@ public class ParsingContext {
 	}
 	
 	public final void failure(ParsingMatcher errorInfo) {
-		if(this.pos > fpos) {  // adding error location
+		if(this.pos >= fpos) {  // adding error location
 			this.fpos = this.pos;
-			if(this.enableTrace) {
-				this.failureTrace = this.stringfyCallStack();
-				this.failureInfo = errorInfo.toString();
+			if(this.stackedNonTerminals != null) {
+				this.maximumFailureTrace = new StackTrace();
 			}
 		}
 		this.left = null;
@@ -428,39 +422,50 @@ public class ParsingContext {
 		return false;
 	}
 	
-	UList<String> callStack;
-	int[]         callPositions;
+	UList<NonTerminal> stackedNonTerminals;
+	int[]         stackedPositions;
+	
+	class StackTrace {
+		StackTrace prev;
+		NonTerminal[] NonTerminals;
+		int[]    Positions;
+		StackTrace() {
+			NonTerminals = new NonTerminal[stackedNonTerminals.size()];
+			Positions = new int[stackedNonTerminals.size()];
+			System.arraycopy(stackedNonTerminals.ArrayValues, 0, NonTerminals , 0, NonTerminals.length);
+			System.arraycopy(Positions, 0, stackedPositions, 0, Positions.length);
+		}
+		@Override
+		public String toString() {
+			StringBuilder sb = new StringBuilder();
+			for(int n = 0; n < NonTerminals.length; n++) {
+				if(n > 0) {
+					sb.append(" ");
+				}
+				sb.append(this.NonTerminals[n]);
+				sb.append("#");
+				sb.append(this.Positions[n]);
+			}
+			return sb.toString();
+		}
+	}
 
 	void initCallStack() {
-		if(ParsingExpression.VerboseStack) {
-			this.callStack = new UList<String>(new String[256]);
-			this.callPositions = new int[4096];
+		if(Main.DebugLevel > 0) {
+			this.stackedNonTerminals = new UList<NonTerminal>(new NonTerminal[256]);
+			this.stackedPositions = new int[4096];
 		}
 	}
 	
-	public int pushCallStack(String uniqueName) {
-		int pos = this.callStack.size();
-		this.callStack.add(uniqueName);
-		callPositions[pos] = (int)this.pos;
+	public int pushCallStack(NonTerminal e) {
+		int pos = this.stackedNonTerminals.size();
+		this.stackedNonTerminals.add(e);
+		stackedPositions[pos] = (int)this.pos;
 		return pos;
 	}
 
 	public void popCallStack(int stacktop) {
-		this.callStack.clear(stacktop);
-	}
-
-	String stringfyCallStack() {
-		StringBuilder sb = new StringBuilder();
-		int n = 0;
-		for(String t : this.callStack) {
-			if(n > 0) {
-				sb.append(" ");
-			}
-			sb.append(t);
-			sb.append("#");
-			sb.append(this.callPositions[n]); n++;
-		}
-		return sb.toString();
+		this.stackedNonTerminals.clear(stacktop);
 	}
  		
 	protected MemoTable memoMap = null;
