@@ -79,7 +79,11 @@ public class CGenerator2 extends GrammarFormatter {
 		fLabel = fLabel.prev;
 	}
 	void popFailureJumpPoint(ParsingExpression e) {
-		writeLine("CATCH_FAILURE" + fLabel.id + ":" + "/* " + e + " */");
+		writeLine("CATCH_FAILURE" + fLabel.id + ":" + "/* " + " */");
+		fLabel = fLabel.prev;
+	}
+	void popFailureJumpPointEmptyState(ParsingExpression e) {
+		writeLine("CATCH_FAILURE" + fLabel.id + ": ;;" + "/* " + " */");
 		fLabel = fLabel.prev;
 	}
 	void jumpFailureJump() {
@@ -142,6 +146,7 @@ public class CGenerator2 extends GrammarFormatter {
 		writeLine("        peg_error(\"parse_error\");");
 		writeLine("    }");
 		writeLine("    P4D_commitLog(&context, 0, context.left);");
+		writeLine("    dump_pego(context.left, context.inputs, 0);");
 		writeLine("    ParsingContext_Dispose(&context);");
 		writeLine("    return 0;");
 		writeLine("}");
@@ -151,11 +156,15 @@ public class CGenerator2 extends GrammarFormatter {
 	public void formatGrammar(Grammar peg, StringBuilder sb) {
 		this.formatHeader();
 		for(ParsingRule r: peg.getRuleList()) {
-			this.writeLine("int " + funcName(r.ruleName) + "(ParsingContext c);");
+			if (!r.ruleName.startsWith("\"")) {
+				this.writeLine("int " + funcName(r.ruleName) + "(ParsingContext c);");
+			}
 		}
 		this.generateMainFunction();
 		for(ParsingRule r: peg.getRuleList()) {
-			this.formatRule(r, sb);
+			if (!r.ruleName.startsWith("\"")) {
+				this.formatRule(r, sb);
+			}
 		}
 		this.formatFooter();
 		System.out.println(sb.toString());
@@ -180,6 +189,7 @@ public class CGenerator2 extends GrammarFormatter {
 		writeLine("return 0;");
 		
 		this.popFailureJumpPoint(e);
+		let(null, "c->pos", "pos");
 		writeLine("return -1;");
 		closeIndent();
 		writeLine("");
@@ -214,7 +224,7 @@ public class CGenerator2 extends GrammarFormatter {
 
 	@Override
 	public void visitByteRange(ParsingByteRange e) {
-		writeLine("if(c->inputs[c->pos] < " + e.startByteChar + " && c->inputs[c->pos] > " + e.endByteChar + ")");
+		writeLine("if(!(c->inputs[c->pos] >= " + e.startByteChar + " && c->inputs[c->pos] <= " + e.endByteChar + "))");
 		openIndent();
 		jumpFailureJump();
 		closeIndent();
@@ -264,15 +274,22 @@ public class CGenerator2 extends GrammarFormatter {
 	public void visitOptional(ParsingOption e) {
 		this.pushFailureJumpPoint();
 		e.inner.visit(this);
-		this.popFailureJumpPoint(e);
+		this.popFailureJumpPointEmptyState(e);
 	}
 
 	@Override
 	public void visitRepetition(ParsingRepetition e) {
+		String posName = "pos" + this.fID;
+		String pposName = "ppos" + this.fID;
 		this.pushFailureJumpPoint();
-		writeLine("while(1)");
+		let("long", posName, "c->pos");
+		let("long", pposName, "-1");
+		writeLine("while(" + pposName + " < " + posName + ")");
 		this.openIndent();
+		let(null, posName, "c->pos");
 		e.inner.visit(this);
+		let(null, pposName, posName);
+		let(null, posName, "c->pos");
 		this.closeIndent();
 		this.popFailureJumpPoint(e);		
 	}
@@ -320,8 +337,8 @@ public class CGenerator2 extends GrammarFormatter {
 		if(e.leftJoin) {
 			//context.lazyJoin(context.left);
 			//context.lazyLink(newnode, 0, context.left);
-			writeLine("P4D_lazyJoin(c, left);");
-			writeLine("P4D_lazyLink(c, c->left, 0, left);");
+			writeLine("P4D_lazyJoin(c, "+ leftName +");");
+			writeLine("P4D_lazyLink(c, c->left, 0, " + leftName + ");");
 		}
 		for(int i = e.prefetchIndex; i < e.size(); i++) {
 			e.get(i).visit(this);
@@ -331,6 +348,7 @@ public class CGenerator2 extends GrammarFormatter {
 		this.gotoLabel(labelName);
 
 		this.popFailureJumpPoint(e);
+		writeLine("P4D_abortLog(c, tid);");
 		this.letO(null, "c->left", leftName);
 		this.letO(null, leftName, "NULL");
 		this.jumpFailureJump();
