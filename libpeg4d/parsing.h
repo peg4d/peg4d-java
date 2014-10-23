@@ -64,6 +64,41 @@ static char *loadFile(const char *filename, size_t *length)
     return source;
 }
 
+void P4D_disposeObject(ParsingObject o);
+
+void dump_pego(ParsingObject pego, char* source, int level)
+{
+    int i;
+    long j;
+    if (pego) {
+        for (i = 0; i < level; i++) {
+            fprintf(stderr, "  ");
+        }
+        fprintf(stderr, "{%s ", pego->tag);
+        if (pego->child_size == 0) {
+            fprintf(stderr, "'");
+            for (j = pego->start_pos; j < pego->end_pos; j++) {
+                fprintf(stderr, "%c", source[j]);
+            }
+            fprintf(stderr, "'");
+        }
+        else {
+            fprintf(stderr, "\n");
+            for (j = 0; j < pego->child_size; j++) {
+                dump_pego(pego->child[j], source, level + 1);
+            }
+            for (i = 0; i < level; i++) {
+                fprintf(stderr, "  ");
+            }
+        }
+        fprintf(stderr, "}\n");
+        P4D_disposeObject(pego);
+    }
+    else {
+        fprintf(stderr, "%p tag:null\n", pego);
+    }
+}
+
 ParsingObject P4D_newObject(ParsingContext this, long start);
 void P4D_setObject(ParsingContext this, ParsingObject *var, ParsingObject o);
 
@@ -75,9 +110,10 @@ void ParsingContext_Init(ParsingContext this, const char *filename)
     P4D_setObject(this, &this->left, P4D_newObject(this, this->pos));
 }
 
-void ParsingContext_Dispose(ParsingContext context)
+void ParsingContext_Dispose(ParsingContext this)
 {
-    free(context);
+    free(this->inputs);
+    this->inputs = NULL;
 }
 
 void P4D_consume(long *pos, long length)
@@ -135,6 +171,12 @@ void P4D_setObject(ParsingContext this, ParsingObject *var, ParsingObject o)
     if (o != NULL) {
         o->refc += 1;
     }
+}
+
+void P4D_disposeObject(ParsingObject o)
+{
+    free(o);
+    o = NULL;
 }
 
 ParsingLog P4D_newLog(ParsingContext this) {
