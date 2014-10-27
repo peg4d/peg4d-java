@@ -75,12 +75,12 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 	private InvocationTarget target_consume         = newVirtualTarget(ParsingContext.class, void.class, "consume", int.class);
 	private InvocationTarget target_getPosition     = newVirtualTarget(ParsingContext.class, long.class, "getPosition");
 	private InvocationTarget target_rollback        = newVirtualTarget(ParsingContext.class, void.class, "rollback", long.class);
-	private InvocationTarget target_markObjectStack = newVirtualTarget(ParsingContext.class, int.class, "markObjectStack");
-	private InvocationTarget target_abortLinkLog    = newVirtualTarget(ParsingContext.class, void.class, "abortLinkLog", int.class);
+	private InvocationTarget target_markLogStack = newVirtualTarget(ParsingContext.class, int.class, "markLogStack");
+	private InvocationTarget target_abortLog        = newVirtualTarget(ParsingContext.class, void.class, "abortLog", int.class);
 	private InvocationTarget target_rememberFailure = newVirtualTarget(ParsingContext.class, long.class, "rememberFailure");
 	private InvocationTarget target_forgetFailure   = newVirtualTarget(ParsingContext.class, void.class, "forgetFailure", long.class);
-	private InvocationTarget target_logLink = 
-			newVirtualTarget(ParsingContext.class, void.class, "logLink", ParsingObject.class, int.class, ParsingObject.class);
+	private InvocationTarget target_lazyLink = 
+			newVirtualTarget(ParsingContext.class, void.class, "lazyLink", ParsingObject.class, int.class, ParsingObject.class);
 	private InvocationTarget target_setFlag = 
 			newVirtualTarget(ParsingContext.class, void.class, "setFlag", String.class, boolean.class);
 	private InvocationTarget target_getFlag         = newVirtualTarget(ParsingContext.class, boolean.class, "getFlag", String.class);
@@ -626,7 +626,7 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		VarEntry entry_left = this.mBuilder.createNewVarAndStore(ParsingObject.class);
 
 		this.mBuilder.loadFromVar(this.entry_context);
-		this.mBuilder.callInvocationTarget(this.target_markObjectStack);
+		this.mBuilder.callInvocationTarget(this.target_markLogStack);
 		VarEntry entry_mark = this.mBuilder.createNewVarAndStore(int.class);
 
 		Label thenLabel = this.mBuilder.newLabel();
@@ -640,7 +640,7 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		// else
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.loadFromVar(entry_mark);
-		this.mBuilder.callInvocationTarget(this.target_abortLinkLog);
+		this.mBuilder.callInvocationTarget(this.target_abortLog);
 //		this.mBuilder.pushNull();
 //		this.mBuilder.storeToVar(entry_left);
 		this.mBuilder.push(false);
@@ -663,13 +663,13 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.mBuilder.loadFromVar(entry_mark);
 			this.getFieldOfContext("left", ParsingObject.class);
-			this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "commitLinkLog", int.class, ParsingObject.class);
+			this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "commitLog", int.class, ParsingObject.class);
 
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.mBuilder.loadFromVar(entry_left);
 			this.mBuilder.push(e.index);
 			this.getFieldOfContext("left", ParsingObject.class);
-			this.mBuilder.callInvocationTarget(this.target_logLink);
+			this.mBuilder.callInvocationTarget(this.target_lazyLink);
 
 			// merge2
 			this.mBuilder.mark(mergeLabel2);
@@ -705,7 +705,7 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		VarEntry entry_pos = this.mBuilder.createNewVarAndStore(long.class);
 
 		this.mBuilder.loadFromVar(this.entry_context);
-		this.mBuilder.callInvocationTarget(this.target_markObjectStack);
+		this.mBuilder.callInvocationTarget(this.target_markLogStack);
 		VarEntry entry_mark = this.mBuilder.createNewVarAndStore(int.class);
 
 		Label thenLabel = this.mBuilder.newLabel();
@@ -724,7 +724,7 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		this.mBuilder.mark(thenLabel);
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.loadFromVar(entry_mark);
-		this.mBuilder.callInvocationTarget(this.target_abortLinkLog);
+		this.mBuilder.callInvocationTarget(this.target_abortLog);
 
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.loadFromVar(entry_pos);
@@ -792,7 +792,7 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		VarEntry entry_startIndex = this.mBuilder.createNewVarAndStore(long.class);
 
 		this.mBuilder.loadFromVar(this.entry_context);
-		this.mBuilder.callInvocationTarget(this.target_markObjectStack);
+		this.mBuilder.callInvocationTarget(this.target_markLogStack);
 		VarEntry entry_mark = this.mBuilder.createNewVarAndStore(int.class);
 
 		// new parsingObject
@@ -815,13 +815,13 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		if(e.leftJoin) {
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.getFieldOfContext("left", ParsingObject.class);
-			this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "lazyCommit", ParsingObject.class);
+			this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "lazyJoin", ParsingObject.class);
 	
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.mBuilder.loadFromVar(entry_newnode);
 			this.mBuilder.push(0);
 			this.getFieldOfContext("left", ParsingObject.class);
-			this.mBuilder.callInvocationTarget(this.target_logLink);
+			this.mBuilder.callInvocationTarget(this.target_lazyLink);
 		}
 
 		// put to context.left
@@ -863,7 +863,7 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		this.mBuilder.mark(thenLabel);
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.loadFromVar(entry_mark);
-		this.mBuilder.callInvocationTarget(this.target_abortLinkLog);
+		this.mBuilder.callInvocationTarget(this.target_abortLog);
 
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.loadFromVar(entry_startIndex);
