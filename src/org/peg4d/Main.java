@@ -267,6 +267,7 @@ public class Main {
 		driverMap.put("c2", org.peg4d.pegcode.CGenerator2.class);
 		driverMap.put("pegjs", org.peg4d.pegcode.PEGjsFormatter.class);
 		driverMap.put("py", org.peg4d.pegcode.PythonGenerator.class);
+		driverMap.put("old-jvm", org.peg4d.jvm.OldStyleJavaByteCodeGenerator.class);
 	}
 
 	private static GrammarFormatter loadDriverImpl(String driverName) {
@@ -331,6 +332,10 @@ public class Main {
 	}
 	
 	private synchronized static void loadInputFile(Grammar peg, String fileName) {
+		loadInputFile(peg, fileName, null);
+	}
+
+	private synchronized static void loadInputFile(Grammar peg, String fileName, Class<?> parserClass) {
 		String startPoint = StartingPoint;
 		Main.printVerbose("FileName", fileName);
 		Main.printVerbose("Grammar", peg.getName());
