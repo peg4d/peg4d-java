@@ -109,12 +109,16 @@ public class CodeGenerator extends GrammarFormatter {
 	private int popFailureJumpPoint(ParsingRule r) {
 		FailurePoint fLabel = this.fLabel;
 		this.fLabel = this.fLabel.prev;
+		labelMap.put(fLabel.id, codeIndex);
+		System.out.println("L" + fLabel.id);
 		return fLabel.id;
 	}
 	
 	private int popFailureJumpPoint(ParsingExpression e) {
 		FailurePoint fLabel = this.fLabel;
 		this.fLabel = this.fLabel.prev;
+		labelMap.put(fLabel.id, codeIndex);
+		System.out.println("L" + fLabel.id);
 		return fLabel.id;
 	}
 	
@@ -146,20 +150,21 @@ public class CodeGenerator extends GrammarFormatter {
 		this.formatHeader();
 		for(ParsingRule r: peg.getRuleList()) {
 			if (!r.ruleName.startsWith("\"")) {
-				this.formatRule(r, sb);
+				this.formatRule(r, sb);		//string builder is not used.
 			}
 		}
 		this.formatFooter();
-		System.out.println(sb.toString());
 	}
 
 	@Override
 	public void formatHeader() {
+		System.out.println("\nGenerate Byte Code\n");
 		writeCode(Instruction.EXIT);
 	}
 	
 	@Override
 	public void formatFooter() {
+		System.out.println();
 		for (int i = 0; i < codeList.size(); i++) {
 			Opcode code = codeList.ArrayValues[i];
 			if (code.isJumpCode()) {
@@ -169,8 +174,10 @@ public class CodeGenerator extends GrammarFormatter {
 					break;
 				case RET:
 					break;
+				case EXIT:
+					break;
 				default:
-					code.ndata[0] = this.labelMap.get(code.ndata);
+					code.ndata[0] = this.labelMap.get(code.ndata[0]);
 					break;
 				}
 			}
@@ -186,12 +193,15 @@ public class CodeGenerator extends GrammarFormatter {
 	@Override
 	public void visitRule(ParsingRule e) {
 		this.callMap.put(e.ruleName, this.codeIndex);
+		this.pushFailureJumpPoint();
 		e.expr.visit(this);
+		this.popFailureJumpPoint(e);
+		writeCode(Instruction.RET);
 	}
 
 	@Override
 	public void visitNonTerminal(NonTerminal e) {
-		writeCode(Instruction.CALL);
+		writeCode(Instruction.CALL, 0);
 	}
 
 	@Override
@@ -225,7 +235,14 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitNot(ParsingNot e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		this.pushFailureJumpPoint();
+		writeCode(Instruction.PUSHp);
+		e.inner.visit(this);
+		writeJumpCode(Instruction.IFSUCC, this.jumpFailureJump());
+		writeCode(Instruction.STOREp);
+		writeJumpCode(Instruction.JUMP, this.jumpPrevFailureJump());
+		this.popFailureJumpPoint(e);
+		writeCode(Instruction.STOREp);
 	}
 
 	@Override
