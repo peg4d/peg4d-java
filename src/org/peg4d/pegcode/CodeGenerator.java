@@ -305,7 +305,28 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitConstructor(ParsingConstructor e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		int label = newLabel();
+		for(int i = 0; i < e.prefetchIndex; i++) {
+			e.get(i).visit(this);
+		}
+		this.pushFailureJumpPoint();
+		writeCode(Instruction.PUSHo);
+		writeCode(Instruction.PUSHm);
+		writeCode(Instruction.NEW);
+		if (e.leftJoin) {
+			writeCode(Instruction.NEWJOIN);
+			writeCode(Instruction.LINK);
+		}
+		for(int i = e.prefetchIndex; i < e.size(); i++) {
+			e.get(i).visit(this);
+		}
+		writeCode(Instruction.SETendp);
+		writeCode(Instruction.POPn, 2);
+		writeJumpCode(Instruction.JUMP, label);
+		this.popFailureJumpPoint(e);
+		writeCode(Instruction.ABORT);
+		writeCode(Instruction.STOREo);
+		writeLabel(label);
 	}
 
 	@Override
