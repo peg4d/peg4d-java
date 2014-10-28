@@ -1,30 +1,32 @@
 package org.peg4d.vm;
 
-import org.peg4d.expression.ParsingExpression;
-
-public final class Opcode {
-	public MachineInstruction opcode;
-    public int ndata = 0;          
-    public byte[] bdata = null;
-    public ParsingExpression generated; // this is 
-    
-    public Opcode(MachineInstruction mi) {
-    	this.opcode = mi;
-    }
-    public Opcode(MachineInstruction mi, int ndata) {
-    	this.opcode = mi;
-    	this.ndata = ndata;
-    }
-    @Override
+public class Opcode {
+	public Instruction inst;
+	public int ndata = 0;
+	public String name = null;
+	
+	public Opcode(Instruction inst) {
+		this.inst = inst;
+	}
+	
+	public Opcode(Instruction inst, int ndata) {
+		this.inst = inst;
+		this.ndata = ndata;
+	}
+	
+	public Opcode(Instruction inst, String name) {
+		this.inst = inst;
+		this.name = name;
+	}
+	
 	public String toString() {
-    	if(this.bdata == null) {
-    		return opcode.toString() + " " + ndata; 
-    	}
-    	else {
-    		return opcode.toString() + " " + ndata; 
-    	}
-    }
-    public final boolean isJumpCode() {
-    	return this.opcode.compareTo(MachineInstruction.IFFAIL) <= 0;
+		if (this.name == null) {
+			return inst.toString() + " " + ndata;
+		}
+		return inst.toString() + " " + name;
+	}
+	
+	public final boolean isJumpCode() {
+    	return this.inst.compareTo(Instruction.IFFAIL) <= 0;
     }
 }
