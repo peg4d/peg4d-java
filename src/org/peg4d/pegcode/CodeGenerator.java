@@ -202,6 +202,7 @@ public class CodeGenerator extends GrammarFormatter {
 	@Override
 	public void visitNonTerminal(NonTerminal e) {
 		writeCode(Instruction.CALL, 0);
+		writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
 	}
 
 	@Override
@@ -216,16 +217,19 @@ public class CodeGenerator extends GrammarFormatter {
 	@Override
 	public void visitByte(ParsingByte e) {
 		writeCode(Instruction.BYTE, e.byteChar);
+		writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
 	}
 
 	@Override
 	public void visitByteRange(ParsingByteRange e) {
 		writeCode(Instruction.CHAR, e.startByteChar, e.endByteChar);
+		writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
 	}
 
 	@Override
 	public void visitAny(ParsingAny e) {
 		writeCode(Instruction.ANY);
+		writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
 	}
 
 	@Override
@@ -238,7 +242,6 @@ public class CodeGenerator extends GrammarFormatter {
 		this.pushFailureJumpPoint();
 		writeCode(Instruction.PUSHp);
 		e.inner.visit(this);
-		writeJumpCode(Instruction.IFSUCC, this.jumpFailureJump());
 		writeCode(Instruction.STOREp);
 		writeJumpCode(Instruction.JUMP, this.jumpPrevFailureJump());
 		this.popFailureJumpPoint(e);
@@ -247,12 +250,22 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitAnd(ParsingAnd e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		writeCode(Instruction.PUSHp);
+		e.inner.visit(this);
+		writeCode(Instruction.STOREp);
 	}
 
 	@Override
 	public void visitOptional(ParsingOption e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		int label = newLabel();
+		this.pushFailureJumpPoint();
+		writeCode(Instruction.PUSHp);
+		e.inner.visit(this);
+		writeCode(Instruction.POP);
+		writeJumpCode(Instruction.JUMP, label);
+		this.popFailureJumpPoint(e);
+		writeCode(Instruction.STOREp);
+		writeLabel(label);
 	}
 
 	@Override
