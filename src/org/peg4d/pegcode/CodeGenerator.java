@@ -60,6 +60,13 @@ public class CodeGenerator extends GrammarFormatter {
 		return code;
 	}
 	
+	private Opcode newCode(Instruction inst, int ndata1, int ndata2) {
+		Opcode code = new Opcode(inst, ndata1, ndata2);
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		return code;
+	}
+	
 	private Opcode newCode(Instruction inst, String name) {
 		Opcode code = new Opcode(inst, name);
 		System.out.println("\t" + code.toString());
@@ -73,6 +80,10 @@ public class CodeGenerator extends GrammarFormatter {
 	
 	public final void writeCode(Instruction inst, int ndata) {
 		codeList.add(newCode(inst, ndata));
+	}
+	
+	public final void writeCode(Instruction inst, int ndata1, int ndata2) {
+		codeList.add(newCode(inst, ndata1, ndata2));
 	}
 	
 	public final void writeCode(Instruction inst, String name) {
@@ -154,12 +165,12 @@ public class CodeGenerator extends GrammarFormatter {
 			if (code.isJumpCode()) {
 				switch (code.inst) {
 				case CALL:
-					code.ndata = this.callMap.get(code.name);
+					code.ndata[0] = this.callMap.get(code.name);
 					break;
 				case RET:
 					break;
 				default:
-					code.ndata = this.labelMap.get(code.ndata);
+					code.ndata[0] = this.labelMap.get(code.ndata);
 					break;
 				}
 			}
@@ -174,37 +185,37 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitRule(ParsingRule e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		this.callMap.put(e.ruleName, this.codeIndex);
+		e.expr.visit(this);
 	}
 
 	@Override
 	public void visitNonTerminal(NonTerminal e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		writeCode(Instruction.CALL);
 	}
 
 	@Override
 	public void visitEmpty(ParsingEmpty e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
 	}
 
 	@Override
 	public void visitFailure(ParsingFailure e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		writeCode(Instruction.FAIL);
 	}
 
 	@Override
 	public void visitByte(ParsingByte e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		writeCode(Instruction.BYTE, e.byteChar);
 	}
 
 	@Override
 	public void visitByteRange(ParsingByteRange e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		writeCode(Instruction.CHAR, e.startByteChar, e.endByteChar);
 	}
 
 	@Override
 	public void visitAny(ParsingAny e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		writeCode(Instruction.ANY);
 	}
 
 	@Override
