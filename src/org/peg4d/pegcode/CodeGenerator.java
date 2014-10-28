@@ -270,7 +270,14 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitRepetition(ParsingRepetition e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		int label = newLabel();
+		writeLabel(label);
+		writeCode(Instruction.PUSHp);
+		e.inner.visit(this);
+		writeCode(Instruction.POP);
+		writeJumpCode(Instruction.JUMP, label);
+		this.popFailureJumpPoint(e);
+		writeCode(Instruction.STOREp);
 	}
 
 	@Override
