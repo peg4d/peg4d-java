@@ -271,6 +271,7 @@ public class CodeGenerator extends GrammarFormatter {
 	@Override
 	public void visitRepetition(ParsingRepetition e) {
 		int label = newLabel();
+		this.pushFailureJumpPoint();
 		writeLabel(label);
 		writeCode(Instruction.PUSHp);
 		e.inner.visit(this);
@@ -282,12 +283,24 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitSequence(ParsingSequence e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		for(int i = 0; i < e.size(); i++) {
+			e.get(i).visit(this);
+		}
 	}
 
 	@Override
 	public void visitChoice(ParsingChoice e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		int label = newLabel();
+		for(int i = 0; i < e.size(); i++) {
+			this.pushFailureJumpPoint();
+			writeCode(Instruction.PUSHp);
+			e.visit(this);
+			writeJumpCode(Instruction.JUMP, label);
+			this.popFailureJumpPoint(e.get(i));
+			writeCode(Instruction.STOREp);
+		}
+		writeJumpCode(Instruction.JUMP, jumpFailureJump());
+		writeLabel(label);
 	}
 
 	@Override
