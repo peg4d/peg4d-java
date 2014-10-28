@@ -2,12 +2,11 @@ package org.peg4d.vm;
 
 public class Opcode {
 	public Instruction inst;
-	public int[] ndata;
+	public int[] ndata = null;
 	public String name = null;
 	
 	public Opcode(Instruction inst) {
 		this.inst = inst;
-		this.ndata = new int[1];
 	}
 	
 	public Opcode(Instruction inst, int ndata) {
@@ -30,7 +29,15 @@ public class Opcode {
 	
 	public String toString() {
 		if (this.name == null) {
-			return inst.toString() + " " + ndata;
+			if (this.ndata != null) {
+				if (this.ndata.length == 1) {
+					return inst.toString() + " " + ndata[0];
+				}
+				return inst.toString() + " " + ndata[0] + "-" + ndata[1];
+			}
+			else {
+				return inst.toString();
+			}
 		}
 		return inst.toString() + " " + name;
 	}
