@@ -349,12 +349,12 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitTagging(ParsingTagging e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		writeCode(Instruction.TAG, e.tag.toString());
 	}
 
 	@Override
 	public void visitValue(ParsingValue e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		writeCode(Instruction.VALUE, e.value);
 	}
 
 	@Override
