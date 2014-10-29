@@ -75,7 +75,7 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 	private InvocationTarget target_consume         = newVirtualTarget(ParsingContext.class, void.class, "consume", int.class);
 	private InvocationTarget target_getPosition     = newVirtualTarget(ParsingContext.class, long.class, "getPosition");
 	private InvocationTarget target_rollback        = newVirtualTarget(ParsingContext.class, void.class, "rollback", long.class);
-	private InvocationTarget target_markLogStack = newVirtualTarget(ParsingContext.class, int.class, "markLogStack");
+	private InvocationTarget target_markLogStack    = newVirtualTarget(ParsingContext.class, int.class, "markLogStack");
 	private InvocationTarget target_abortLog        = newVirtualTarget(ParsingContext.class, void.class, "abortLog", int.class);
 	private InvocationTarget target_rememberFailure = newVirtualTarget(ParsingContext.class, long.class, "rememberFailure");
 	private InvocationTarget target_forgetFailure   = newVirtualTarget(ParsingContext.class, void.class, "forgetFailure", long.class);
@@ -691,11 +691,6 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		this.mBuilder.push(true);
 	}
 
-//	@Override
-//	public void visitList(ParsingList e) {
-//		throw new RuntimeException("unimplemented visit method: " + e.getClass());
-//	}
-
 	@Override
 	public void visitSequence(ParsingSequence e) {
 		this.mBuilder.enterScope();
@@ -878,27 +873,6 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		this.mBuilder.exitScope();
 	}
 
-//	@Override
-//	public void visitParsingFunction(ParsingFunction parsingFunction) {
-//		if(parsingFunction instanceof ParsingIf) {
-//			this.visitParsingIfFlag((ParsingIf) parsingFunction);
-//		}
-//		else {
-//			throw new RuntimeException("unimplemented visit method: " + parsingFunction.getClass());
-//		}
-//	}
-
-//	@Override
-//	public void visitParsingOperation(ParsingOperation e) {
-//		if(e instanceof ParsingWithFlag) {
-//			this.visitWithFlag((ParsingWithFlag) e);
-//		} else if(e instanceof ParsingWithoutFlag) {
-//			this.visitWithoutFlag((ParsingWithoutFlag) e);
-//		} else {
-//			throw new RuntimeException("unimplemented visit method: " + e.getClass());
-//		}
-//	}
-
 	@Override
 	public void visitWithFlag(ParsingWithFlag e) {
 		final String flagName = e.getParameters().substring(1);
@@ -963,11 +937,60 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		e.inner.visit(this);
 	}
 
-	public void visitParsingIfFlag(ParsingIf e) {
+	@Override
+	public void visitRule(ParsingRule e) {
+		// TODO Auto-generated method stub
+		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+	}
+
+	@Override
+	public void visitMatch(ParsingMatch e) {
+		// TODO Auto-generated method stub
+		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+	}
+
+	@Override
+	public void visitCatch(ParsingCatch e) {
+		// TODO Auto-generated method stub
+		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+	}
+
+	@Override
+	public void visitAssert(ParsingAssert e) {
+		// TODO Auto-generated method stub
+		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+	}
+
+	@Override
+	public void visitIfFlag(ParsingIf e) {
 		if(ParsingIf.OldFlag) {
 			this.mBuilder.enterScope();
 
-			//TODO:
+			this.mBuilder.loadFromVar(this.entry_context);
+			this.mBuilder.push(e.getParameters().substring(1));
+			this.mBuilder.callInstanceMethod(ParsingContext.class, boolean.class, "getFlag", String.class);
+			VarEntry entry_f = this.mBuilder.createNewVarAndStore(boolean.class);
+
+			Label thenLabel = this.mBuilder.newLabel();
+			Label mergeLabel = this.mBuilder.newLabel();
+
+			this.mBuilder.loadFromVar(this.entry_context);
+			this.mBuilder.loadFromVar(entry_f);
+			this.mBuilder.callInstanceMethod(ParsingContext.class, boolean.class, "isFlag", boolean.class);
+			this.mBuilder.push(true);
+
+			this.mBuilder.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.NE, thenLabel);
+			this.mBuilder.goTo(mergeLabel);
+
+			// then
+			this.mBuilder.mark(thenLabel);
+			this.generateFailure();
+
+			// merge
+			this.mBuilder.mark(mergeLabel);
+			this.mBuilder.loadFromVar(this.entry_context);
+			this.mBuilder.callInstanceMethod(ParsingContext.class, boolean.class, "isFailure");
+			this.mBuilder.not();
 
 			this.mBuilder.exitScope();
 			return;
@@ -976,56 +999,70 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 	}
 
 	@Override
-	public void visitRule(ParsingRule e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void visitMatch(ParsingMatch e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void visitCatch(ParsingCatch e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void visitAssert(ParsingAssert e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void visitIfFlag(ParsingIf e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
 	public void visitBlock(ParsingBlock e) {
 		// TODO Auto-generated method stub
-		
+		throw new RuntimeException("unimplemented visit method: " + e.getClass());
 	}
 
 	@Override
 	public void visitName(ParsingName e) {
-		// TODO Auto-generated method stub
-		
+		this.mBuilder.enterScope();
+
+		this.mBuilder.loadFromVar(this.entry_context);
+		this.mBuilder.callInvocationTarget(this.target_getPosition);
+		VarEntry entry_startIndex = this.mBuilder.createNewVarAndStore(long.class);
+
+		Label thenLabel = this.mBuilder.newLabel();
+		Label mergeLabel = this.mBuilder.newLabel();
+
+		this.mBuilder.push(true);
+		e.inner.visit(this);
+
+		this.mBuilder.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.EQ, thenLabel);
+		this.mBuilder.push(false);
+		this.mBuilder.goTo(mergeLabel);
+
+		// then
+		this.mBuilder.mark(thenLabel);
+		{
+			this.mBuilder.enterScope();
+
+			this.mBuilder.loadFromVar(this.entry_context);
+			this.mBuilder.callInvocationTarget(this.target_getPosition);
+			VarEntry entry_endIndex = this.mBuilder.createNewVarAndStore(long.class);
+
+			this.getFieldOfContext("source", ParsingSource.class);
+			this.mBuilder.loadFromVar(entry_startIndex);
+			this.mBuilder.loadFromVar(entry_endIndex);
+			this.mBuilder.callInstanceMethod(ParsingSource.class, String.class, "substring", long.class, long.class);
+			VarEntry entry_s = this.mBuilder.createNewVarAndStore(String.class);
+
+			this.mBuilder.loadFromVar(this.entry_context);
+			this.mBuilder.push(ParsingTag.tagId(e.getParameters().substring(1)));
+			this.mBuilder.loadFromVar(entry_s);
+			this.mBuilder.callInstanceMethod(ParsingContext.class, int.class, "pushTokenStack", int.class, String.class);
+			this.mBuilder.pop();
+			this.mBuilder.push(true);
+
+			this.mBuilder.exitScope();
+		}
+
+		// merge
+		this.mBuilder.mark(mergeLabel);
+
+		this.mBuilder.exitScope();
 	}
 
 	@Override
 	public void visitIsa(ParsingIsa e) {
-		// TODO Auto-generated method stub
-		
+		this.mBuilder.loadFromVar(this.entry_context);
+		this.mBuilder.push(ParsingTag.tagId(e.getParameters().substring(1)));
+		this.mBuilder.callInstanceMethod(ParsingContext.class, boolean.class, "matchTokenStack", int.class);
 	}
 
 	@Override
 	public void visitApply(ParsingApply e) {
 		// TODO Auto-generated method stub
-		
+		throw new RuntimeException("unimplemented visit method: " + e.getClass());
 	}
 }
