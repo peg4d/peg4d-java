@@ -97,7 +97,7 @@ public class Main {	//TODO: pipe line mode
 		Grammar peg = pegDef4Data.get() == null ? GrammarFactory.Grammar : new GrammarFactory().newGrammar("data", pegDef4Data.get());
 		
 		String dataFilename = targetData.get();
-		ParsingSource dataSource = org.peg4d.Main.loadSource(peg, dataFilename);
+		ParsingSource dataSource = org.peg4d.ParsingSource.loadSource(dataFilename);
 		ParsingContext context = new ParsingContext(dataSource);
 		ParsingObject parsedObject = context.parse(peg, defaultStartPoint);
 
@@ -122,7 +122,7 @@ public class Main {	//TODO: pipe line mode
 		
 		if(queryScript.isPresent()) {
 			boolean result = parseAndRunQuery(new Executor(), queryPeg, 
-					org.peg4d.Main.loadSource(peg, queryScript.get()), parsedObject);
+					org.peg4d.ParsingSource.loadSource(queryScript.get()), parsedObject);
 			System.exit(result ? 0 : 1);
 		}
 		else {

@@ -8,6 +8,7 @@ import org.peg4d.ParsingCharset;
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingObject;
 import org.peg4d.ParsingRule;
+import org.peg4d.ParsingSource;
 import org.peg4d.ParsingTag;
 import org.peg4d.ReportLevel;
 import org.peg4d.UList;
@@ -470,7 +471,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 	}
 
 	public static final ParsingExpression newString(String text) {
-		byte[] utf8 = ParsingCharset.toUtf8(text);
+		byte[] utf8 = ParsingSource.toUtf8(text);
 		if(utf8.length == 0) {
 			return newEmpty();
 		}
@@ -492,15 +493,15 @@ public abstract class ParsingExpression extends ParsingMatcher {
 	}
 
 	public final static ParsingExpression newUnicodeRange(int c, int c2, String token) {
-		byte[] b = ParsingCharset.toUtf8(String.valueOf((char)c));
-		byte[] b2 = ParsingCharset.toUtf8(String.valueOf((char)c2));
+		byte[] b = ParsingSource.toUtf8(String.valueOf((char)c));
+		byte[] b2 = ParsingSource.toUtf8(String.valueOf((char)c2));
 		if(equalsBase(b, b2)) {
 			return newUnicodeRange(b, b2, token);
 		}
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[b.length]);
 		b2 = b;
 		for(int pc = c + 1; pc <= c2; pc++) {
-			byte[] b3 = ParsingCharset.toUtf8(String.valueOf((char)pc));
+			byte[] b3 = ParsingSource.toUtf8(String.valueOf((char)pc));
 			if(equalsBase(b, b3)) {
 				b2 = b3;
 				continue;
@@ -509,7 +510,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 			b = b3;
 			b2 = b3;
 		}
-		b2 = ParsingCharset.toUtf8(String.valueOf((char)c2));
+		b2 = ParsingSource.toUtf8(String.valueOf((char)c2));
 		l.add(newUnicodeRange(b, b2, token));
 		return newChoice(l);
 	}

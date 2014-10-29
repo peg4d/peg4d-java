@@ -3,7 +3,6 @@ package org.peg4d.query;
 import java.io.UnsupportedEncodingException;
 
 import org.peg4d.Grammar;
-import org.peg4d.ParsingCharset;
 import org.peg4d.ParsingObject;
 import org.peg4d.Utils;
 import org.peg4d.ParsingSource;
@@ -14,19 +13,19 @@ class StringSource extends ParsingSource {
 	long textLength;
 	
 	StringSource(Grammar peg, String sourceText) {
-		super(peg, "(string)", 1);
+		super("(string)", 1);
 		this.utf8 = toZeroTerminalByteSequence(sourceText);
 		this.textLength = utf8.length-1;
 	}
 	
 	StringSource(Grammar peg, String fileName, long linenum, String sourceText) {
-		super(peg, fileName, linenum);
+		super(fileName, linenum);
 		this.utf8 = toZeroTerminalByteSequence(sourceText);
 		this.textLength = utf8.length-1;
 	}
 	
 	private final byte[] toZeroTerminalByteSequence(String s) {
-		byte[] b = ParsingCharset.toUtf8(s);
+		byte[] b = ParsingSource.toUtf8(s);
 		byte[] b2 = new byte[b.length+1];
 		System.arraycopy(b, 0, b2, 0, b.length);
 		return b2;
@@ -66,7 +65,7 @@ class StringSource extends ParsingSource {
 	@Override
 	public final String substring(long startIndex, long endIndex) {
 		try {
-			return new String(this.utf8, (int)(startIndex), (int)(endIndex - startIndex), ParsingCharset.DefaultEncoding);
+			return new String(this.utf8, (int)(startIndex), (int)(endIndex - startIndex), ParsingSource.DefaultEncoding);
 		} catch (UnsupportedEncodingException e) {
 		}
 		return null;

@@ -44,7 +44,7 @@ public class Grammar {
 	
 	final boolean loadGrammarFile(String fileName) {
 		Grammar peg4d = GrammarFactory.Grammar;
-		ParsingSource s = Main.loadSource(peg4d, fileName);
+		ParsingSource s = ParsingSource.loadSource(fileName);
 		ParsingContext context = new ParsingContext(s); //peg4d.newParserContext();
 		this.name = fileName;
 		if(fileName.indexOf('/') > 0) {

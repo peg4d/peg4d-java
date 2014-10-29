@@ -1,11 +1,7 @@
 package org.peg4d;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.util.TreeMap;
 
@@ -287,12 +283,12 @@ public class Main {
 
 	static ParsingSource newParsingSource(Grammar peg) {
 		if(InputFileName != null) {
-			return Main.loadSource(peg, InputFileName);
+			return ParsingSource.loadSource(InputFileName);
 		}
 		if(InputString == null) {
 			showUsage("unspecfied input; expected -i or -s option");
 		}
-		return new StringSource(peg, InputString);
+		return new StringSource(InputString);
 	}
 	
 	public static void check() {
@@ -444,7 +440,7 @@ public class Main {
 				startPoint = switchStaringPoint(peg, line.substring(1), startPoint);
 				continue;
 			}
-			ParsingSource source = new StringSource(peg, "(stdin)", linenum, line);
+			ParsingSource source = new StringSource("(stdin)", linenum, line);
 			ParsingContext context = new ParsingContext(source);
 			ParsingObject po = context.parse(peg, startPoint);
 			if(context.isFailure()) {
@@ -611,38 +607,6 @@ public class Main {
 	}
 
 	// file
-
-	public final static ParsingSource loadSource(Grammar peg, String fileName) {
-		InputStream Stream = Main.class.getResourceAsStream("/" + fileName);
-		if (Stream == null) {
-			try {
-				File f = new File(fileName);
-				if(f.length() > 128 * 1024) {
-					return new FileSource(peg, fileName);
-				}
-				Stream = new FileInputStream(fileName);
-			} catch (IOException e) {
-				Main._Exit(1, "file error: " + fileName);
-				return null;
-			}
-		}
-		BufferedReader reader = new BufferedReader(new InputStreamReader(Stream));
-		try {
-			StringBuilder builder = new StringBuilder();
-			String line = reader.readLine();
-			while(line != null) {
-				builder.append(line);
-				builder.append("\n");
-				line = reader.readLine();
-			}
-			return new StringSource(peg, fileName, 1, builder.toString());
-		}
-		catch(IOException e) {
-			e.printStackTrace();
-			Main._Exit(1, "file error: " + fileName);
-		}
-		return null;
-	}
 
 	public final static String _GetPlatform() {
 		return "Java JVM-" + System.getProperty("java.version");

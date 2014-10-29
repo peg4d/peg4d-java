@@ -1,6 +1,5 @@
 package org.peg4d;
 
-import java.io.UnsupportedEncodingException;
 
 public abstract class ParsingCharset {
 	public final static int MAX = 256;
@@ -63,46 +62,6 @@ public abstract class ParsingCharset {
 			return c;
 		}
 		return t.charAt(0);
-	}
-
-	private final static int E = 1;
-	private final static int[] utf8len = {
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E,
-        E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E,
-        E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E,
-        E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E,
-        E, E, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-        3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-        4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, E, E,
-        0 /* EOF */
-	};
-
-	public final static int lengthOfUtf8(byte ch) {
-		return utf8len[ch & 0xff];
-	}
-
-	public final static int lengthOfUtf8(int ch) {
-		return utf8len[ch];
-	}
-
-	public final static String DefaultEncoding = "UTF8";
-	
-	public final static byte[] toUtf8(String text) {
-		try {
-			return text.getBytes(DefaultEncoding);
-		} catch (UnsupportedEncodingException e) {
-			Main._Exit(1, "unsupported character: " + e);
-		}
-		return text.getBytes();
 	}
 
 	static int hex(int c) {

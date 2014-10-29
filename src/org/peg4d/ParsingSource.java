@@ -1,6 +1,11 @@
 package org.peg4d;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 import java.util.LinkedHashMap;
@@ -8,13 +13,13 @@ import java.util.Map;
 
 public abstract class ParsingSource {
 	public final static int EOF = 256; 
-	Grammar   peg;
+	public final static String DefaultEncoding = "UTF8";
+
 	private String     fileName;
 	protected long     startLineNum = 1;
 	ParsingStatistics  stat = null;
 	
-	public ParsingSource(Grammar peg, String fileName, long linenum) {
-		this.peg = peg;
+	public ParsingSource(String fileName, long linenum) {
 		this.fileName = fileName;
 		this.startLineNum = linenum;
 	}
@@ -23,9 +28,47 @@ public abstract class ParsingSource {
 	public abstract int     fastByteAt(long pos);
 	public abstract long    length();
 
+	private final static int E = 1;
+	final static int[] utf8LengthMatrix = {
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E,
+        E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E,
+        E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E,
+        E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E,
+        E, E, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+        4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, E, E,
+        0 /* EOF */
+	};
+
+	public final static byte[] toUtf8(String text) {
+		try {
+			return text.getBytes(DefaultEncoding);
+		} catch (UnsupportedEncodingException e) {
+			Main._Exit(1, "unsupported character: " + e);
+		}
+		return text.getBytes();
+	}
+
+	public final static int lengthOfUtf8(int ch) {
+		return ParsingSource.utf8LengthMatrix[ch];
+	}
+
+	public final static int lengthOfUtf8(byte ch) {
+		return ParsingSource.utf8LengthMatrix[ch & 0xff];
+	}
+
 	public int charAt(long pos) {
 		int c = byteAt(pos), c2, c3, c4;
-		int len = ParsingCharset.lengthOfUtf8(c);
+		int len = ParsingSource.lengthOfUtf8(c);
 		switch(len) {
 		case 1:
 			return c;
@@ -47,9 +90,9 @@ public abstract class ParsingSource {
 		return -1;
 	}
 
-	public int charLength(long pos) {
+	public final int charLength(long pos) {
 		int c = byteAt(pos);
-		return ParsingCharset.lengthOfUtf8(c);
+		return ParsingSource.lengthOfUtf8(c);
 	}
 	
 	public abstract boolean match(long pos, byte[] text);
@@ -162,7 +205,6 @@ public abstract class ParsingSource {
 		return delim + source.toString() + delim + marker.toString();
 	}
 
-
 	public final String getFilePath(String fileName) {
 		int loc = this.getResourceName().lastIndexOf("/");
 		if(loc > 0) {
@@ -171,26 +213,57 @@ public abstract class ParsingSource {
 		return fileName;
 	}
 
+	public final static ParsingSource loadSource(String fileName) {
+		InputStream Stream = Main.class.getResourceAsStream("/" + fileName);
+		if (Stream == null) {
+			try {
+				File f = new File(fileName);
+				if(f.length() > 128 * 1024) {
+					return new FileSource(fileName);
+				}
+				Stream = new FileInputStream(fileName);
+			} catch (IOException e) {
+				Main._Exit(1, "file error: " + fileName);
+				return null;
+			}
+		}
+		BufferedReader reader = new BufferedReader(new InputStreamReader(Stream));
+		try {
+			StringBuilder builder = new StringBuilder();
+			String line = reader.readLine();
+			while(line != null) {
+				builder.append(line);
+				builder.append("\n");
+				line = reader.readLine();
+			}
+			return new StringSource(fileName, 1, builder.toString());
+		}
+		catch(IOException e) {
+			e.printStackTrace();
+			Main._Exit(1, "file error: " + fileName);
+		}
+		return null;
+	}
 }
 
 class StringSource extends ParsingSource {
 	private byte[] utf8;
 	long textLength;
 	
-	StringSource(Grammar peg, String sourceText) {
-		super(peg, "(string)", 1);
+	StringSource(String sourceText) {
+		super("(string)", 1);
 		this.utf8 = toZeroTerminalByteSequence(sourceText);
 		this.textLength = utf8.length-1;
 	}
 	
-	StringSource(Grammar peg, String fileName, long linenum, String sourceText) {
-		super(peg, fileName, linenum);
+	StringSource(String fileName, long linenum, String sourceText) {
+		super(fileName, linenum);
 		this.utf8 = toZeroTerminalByteSequence(sourceText);
 		this.textLength = utf8.length-1;
 	}
 	
 	private final byte[] toZeroTerminalByteSequence(String s) {
-		byte[] b = ParsingCharset.toUtf8(s);
+		byte[] b = ParsingSource.toUtf8(s);
 		byte[] b2 = new byte[b.length+1];
 		System.arraycopy(b, 0, b2, 0, b.length);
 		return b2;
@@ -230,7 +303,7 @@ class StringSource extends ParsingSource {
 	@Override
 	public final String substring(long startIndex, long endIndex) {
 		try {
-			return new String(this.utf8, (int)(startIndex), (int)(endIndex - startIndex), ParsingCharset.DefaultEncoding);
+			return new String(this.utf8, (int)(startIndex), (int)(endIndex - startIndex), ParsingSource.DefaultEncoding);
 		} catch (UnsupportedEncodingException e) {
 		}
 		return null;
@@ -264,8 +337,8 @@ class FileSource extends ParsingSource {
 	private final int FifoSize = 8; 
 	private LinkedHashMap<Long, byte[]> fifoMap = null;
 	
-	FileSource(Grammar peg, String fileName) throws IOException {
-		super(peg, fileName, 1);
+	FileSource(String fileName) throws IOException {
+		super(fileName, 1);
 		this.file = new RandomAccessFile(fileName, "r");
 		this.fileLength = this.file.length();
 		this.buffer_offset = 0;
@@ -374,12 +447,12 @@ class FileSource extends ParsingSource {
 						this.buffer_offset = off_s;
 						this.readMainBuffer(this.buffer_offset);
 					}
-					return new String(this.buffer, (int)(startIndex - this.buffer_offset), (int)(endIndex - startIndex), ParsingCharset.DefaultEncoding);
+					return new String(this.buffer, (int)(startIndex - this.buffer_offset), (int)(endIndex - startIndex), ParsingSource.DefaultEncoding);
 				}
 				else {
 					byte[] b = new byte[(int)(endIndex - startIndex)];
 					this.readStringBuffer(startIndex, b);
-					return new String(b, ParsingCharset.DefaultEncoding);
+					return new String(b, ParsingSource.DefaultEncoding);
 				}
 			} catch (UnsupportedEncodingException e) {
 				e.printStackTrace();
