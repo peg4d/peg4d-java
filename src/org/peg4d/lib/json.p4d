@@ -17,6 +17,13 @@ Value
 	/ Null
 	/ True
 	/ False
+	/ ObjectId
+
+ObjectId 
+        = 'ObjectId' '("' { [0-9a-z]+ #ObjectId } '")'
+
+ID
+        = [0-9a-z]+
 
 Array
 	= { '[' (S* @Value (VALUESEP @Value)* )? S* ']' #List }
