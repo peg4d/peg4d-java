@@ -221,7 +221,7 @@ class ParsingStatistics {
 		this.setRatio1("IO Ratio", this.statReadLength, this.statFileLength);
 
 		this.setCount("Memory", this.InitTotalHeap);
-		id = id + ((Main.RecognitionOnlyMode) ? 'C' : 'O');
+//		id = id + ((Main.RecognitionOnlyMode) ? 'C' : 'O');
 		id = id + Main.OptimizationLevel + "." + MemoizationManager.BacktrackBufferSize + "."  + (this.InitTotalHeap / (1024*1024)) +"M";
 		this.setCount("HeapSize", this.HeapSize);
 		this.setRatio1("Heap/File", this.HeapSize, this.statFileLength);		

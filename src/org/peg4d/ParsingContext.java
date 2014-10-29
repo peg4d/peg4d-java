@@ -172,6 +172,9 @@ public class ParsingContext {
 		this.pos += length;
 		if(head_pos < pos) {
 			this.head_pos = pos;
+			if(this.stackedNonTerminals != null) {
+				this.maximumFailureTrace = new StackTrace();
+			}
 		}
 	}
 
@@ -232,11 +235,8 @@ public class ParsingContext {
 	}
 	
 	public final void failure(ParsingMatcher errorInfo) {
-		if(this.pos >= fpos) {  // adding error location
+		if(this.pos > fpos) {  // adding error location
 			this.fpos = this.pos;
-			if(this.stackedNonTerminals != null) {
-				this.maximumFailureTrace = new StackTrace();
-			}
 		}
 		this.left = null;
 	}
@@ -430,21 +430,23 @@ public class ParsingContext {
 		NonTerminal[] NonTerminals;
 		int[]    Positions;
 		StackTrace() {
-			NonTerminals = new NonTerminal[stackedNonTerminals.size()];
-			Positions = new int[stackedNonTerminals.size()];
+			this.NonTerminals = new NonTerminal[stackedNonTerminals.size()];
+			this.Positions = new int[stackedNonTerminals.size()];
 			System.arraycopy(stackedNonTerminals.ArrayValues, 0, NonTerminals , 0, NonTerminals.length);
-			System.arraycopy(Positions, 0, stackedPositions, 0, Positions.length);
+			System.arraycopy(stackedPositions, 0, Positions, 0, Positions.length);
 		}
 		@Override
 		public String toString() {
 			StringBuilder sb = new StringBuilder();
 			for(int n = 0; n < NonTerminals.length; n++) {
 				if(n > 0) {
-					sb.append(" ");
+					sb.append("\n");
 				}
-				sb.append(this.NonTerminals[n]);
-				sb.append("#");
-				sb.append(this.Positions[n]);
+				sb.append(source.formatPositionLine(this.NonTerminals[n].ruleName, this.Positions[n], "pos="+this.Positions[n]));
+//				sb.append(this.NonTerminals[n]);
+//				sb.append("#");
+//				source.linenum()
+//				sb.append()this.Positions[n]);
 			}
 			return sb.toString();
 		}

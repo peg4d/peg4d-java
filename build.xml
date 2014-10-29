@@ -1,6 +1,6 @@
 <project name="libbun" default="jar">
 	<!-- directory / file definition -->
-	<property name="BinaryName" value="peg4d" />
+	<property name="BinaryName" value="nez-0.9" />
 	<property name="source_dir" value="src" />
 	<property name="build_dir"  value="build" />
 	<property name="root_dir"   value="." />
@@ -37,6 +37,7 @@
 	<target name="jar" depends="build">
 		<jar jarfile="${BinaryName}.jar">
 			<fileset dir="${build_dir}" includes="**/*.class" />
+			<fileset dir="${source_dir}" includes="**/*.p4d" />
 			<fileset dir="." includes="lib/**" />
 			<exclude name="**/*Test.class" />
 			<manifest>
