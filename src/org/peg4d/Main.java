@@ -27,7 +27,6 @@ public class Main {
 		if(Command == null) {
 			showUsage("unspecfied command");
 		}
-		
 		try {
 			Method m = Main.class.getMethod(Command);
 			m.invoke(null);

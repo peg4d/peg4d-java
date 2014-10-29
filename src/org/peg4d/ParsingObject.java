@@ -5,8 +5,8 @@ import java.util.AbstractList;
 import org.peg4d.expression.ParsingExpression;
 
 public class ParsingObject extends AbstractList<ParsingObject> {
-	private static int idCount = 0;
-	int oid;
+//	private static int idCount = 0;
+//	int oid;
 	private ParsingSource    source = null;
 	private long             pospeg = 0;
 	private int              length = 0;
@@ -16,7 +16,7 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 	private ParsingObject    AST[] = null;
 
 	public ParsingObject(ParsingTag tag, ParsingSource source, long pospeg) {
-		this.oid = idCount++;
+//		this.oid = idCount++;
 		this.tag        = tag;
 		this.source     = source;
 		this.pospeg     = pospeg;
@@ -24,7 +24,7 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 	}
 
 	ParsingObject(ParsingTag tag, ParsingSource source, long pos, ParsingExpression e) {
-		this.oid = idCount++;
+//		this.oid = idCount++;
 		this.tag        = tag;
 		this.source     = source;
 		this.pospeg     = ParsingUtils.objectId(pos, (short)e.uniqueId);
@@ -321,12 +321,12 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 	final void stringfy(String indent, StringBuilder sb) {
 		sb.append("\n");
 		sb.append(indent);
-		sb.append("{#");
+		sb.append("(#");
 		sb.append(this.tag.toString());
 		if(this.AST == null) {
 			sb.append(" ");
 			ParsingCharset.formatQuoteString(sb, '\'', this.getText(), '\'');
-			sb.append("}");
+			sb.append(")");
 		}
 		else {
 			String nindent = "   " + indent;
@@ -342,7 +342,7 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 			}
 			sb.append("\n");
 			sb.append(indent);
-			sb.append("}");
+			sb.append(")");
 		}
 	}
 

@@ -290,7 +290,7 @@ public class MemoizationManager {
 					context.lazyLink(left, this.index, context.left);
 				}
 				else {
-					System.out.println("FIXME nothing linked: " + this.holder + " " + left.oid + " => " + context.left.oid);
+//					System.out.println("FIXME nothing linked: " + this.holder + " " + left.oid + " => " + context.left.oid);
 					context.abortLog(mark);					
 				}
 				context.left = left;
