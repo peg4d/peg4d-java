@@ -84,7 +84,7 @@ public class ParsingRule {
 			boolean isBadExample = a.key.equals("bad-example");
 			if(isExample || isBadExample) {
 				boolean ok = true;
-				ParsingSource s = ParsingObjectUtils.newStringSource(a.value);
+				ParsingSource s = Utils.newStringSource(a.value);
 				context.resetSource(s, 0);
 				context.parse(peg, this.ruleName, null);
 //				System.out.println("@@ " + context.isFailure() + " " + context.hasByteChar() + " " + isExample + " " + isBadExample);

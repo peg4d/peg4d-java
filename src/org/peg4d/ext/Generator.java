@@ -6,10 +6,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.peg4d.Main;
-import org.peg4d.ParsingCharset;
 import org.peg4d.ParsingObject;
 import org.peg4d.UList;
 import org.peg4d.UMap;
+import org.peg4d.Utils;
 
 public class Generator {
 	private class Counter {
@@ -90,7 +90,7 @@ public class Generator {
 			this.write(LF);
 			this.write(indent);
 			this.write("{#" + pego.getTag()+ " "); 
-			this.write(ParsingCharset.quoteString('\'', pego.getText(), '\''));
+			this.write(Utils.quoteString('\'', pego.getText(), '\''));
 			this.write("}");
 		}
 		else {
@@ -249,7 +249,7 @@ public class Generator {
 		}
 		else {
 			String text = pego.getText();
-			text = ParsingCharset.quoteString('"', text, '"');
+			text = Utils.quoteString('"', text, '"');
 			write(lf, "", text);
 		}
 	}

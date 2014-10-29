@@ -325,7 +325,7 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 		sb.append(this.tag.toString());
 		if(this.AST == null) {
 			sb.append(" ");
-			ParsingCharset.formatQuoteString(sb, '\'', this.getText(), '\'');
+			Utils.formatQuoteString(sb, '\'', this.getText(), '\'');
 			sb.append(")");
 		}
 		else {

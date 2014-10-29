@@ -153,11 +153,11 @@ public class PEG4d extends ParsingBuilder {
 			Main.printVerbose("direct inlining", t);
 			return peg.getExpression(t);
 		}
-		return ParsingExpression.newString(ParsingCharset.unquoteString(po.getText()));
+		return ParsingExpression.newString(Utils.unquoteString(po.getText()));
 	}
 
 	public ParsingExpression toCharacterSequence(ParsingObject po) {
-		return ParsingExpression.newString(ParsingCharset.unquoteString(po.getText()));
+		return ParsingExpression.newString(Utils.unquoteString(po.getText()));
 	}
 
 	public ParsingExpression toCharacter(ParsingObject po) {
@@ -235,7 +235,7 @@ public class PEG4d extends ParsingBuilder {
 
 	public ParsingExpression toRepetition(ParsingObject po) {
 		if(po.size() == 2) {
-			int ntimes = ParsingCharset.parseInt(po.textAt(1, ""), -1);
+			int ntimes = Utils.parseInt(po.textAt(1, ""), -1);
 			if(ntimes != 1) {
 				UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[ntimes]);
 				for(int i = 0; i < ntimes; i++) {
@@ -262,7 +262,7 @@ public class PEG4d extends ParsingBuilder {
 	public ParsingExpression toConnector(ParsingObject po) {
 		int index = -1;
 		if(po.size() == 2) {
-			index = ParsingCharset.parseInt(po.textAt(1, ""), -1);
+			index = Utils.parseInt(po.textAt(1, ""), -1);
 		}
 		return ParsingExpression.newConnector(toParsingExpression(po.get(0)), index);
 	}
@@ -290,7 +290,7 @@ public class PEG4d extends ParsingBuilder {
 	}
 
 	public ParsingExpression toFail(ParsingObject po) {
-		return ParsingExpression.newFail(ParsingCharset.unquoteString(po.textAt(0, "")));
+		return ParsingExpression.newFail(Utils.unquoteString(po.textAt(0, "")));
 	}
 
 	public ParsingExpression toWith(ParsingObject po) {

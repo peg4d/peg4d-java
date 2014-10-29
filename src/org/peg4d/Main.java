@@ -110,13 +110,13 @@ public class Main {
 				index = index + 1;
 			}
 			else if (argument.startsWith("-O")) {
-				OptimizationLevel = ParsingCharset.parseInt(argument.substring(2), 2);
+				OptimizationLevel = Utils.parseInt(argument.substring(2), 2);
 			}
 			else if (argument.startsWith("-W")) {
-				WarningLevel = ParsingCharset.parseInt(argument.substring(2), 2);
+				WarningLevel = Utils.parseInt(argument.substring(2), 2);
 			}
 			else if (argument.startsWith("-g")) {
-				DebugLevel = ParsingCharset.parseInt(argument.substring(2), 1);
+				DebugLevel = Utils.parseInt(argument.substring(2), 1);
 			}
 			else if (argument.equals("-a")) {
 				DiskMode = true;
@@ -138,7 +138,7 @@ public class Main {
 					MemoizationManager.Tracing = false;
 				}
 				else {
-					int distance = ParsingCharset.parseInt(argument.substring(7), -1);
+					int distance = Utils.parseInt(argument.substring(7), -1);
 					if(distance >= 0) {
 						MemoizationManager.BacktrackBufferSize  = distance;
 					}

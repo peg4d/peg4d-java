@@ -5,8 +5,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.peg4d.ParsingCharset;
 import org.peg4d.ParsingRule;
+import org.peg4d.Utils;
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.ParsingAnd;
 import org.peg4d.expression.ParsingAny;
@@ -130,7 +130,7 @@ public class PEGjsFormatter extends GrammarFormatter {
 	@Override
 	public void visitString(ParsingString e) {
 		char quote = '\'';
-		this.formatString(ParsingCharset.quoteString(quote, e.text, quote));
+		this.formatString(Utils.quoteString(quote, e.text, quote));
 	}
 	
 	@Override
@@ -237,7 +237,7 @@ public class PEGjsFormatter extends GrammarFormatter {
 			break;
 		}
 		if(s.length() > 1) {
-			this.formatString(ParsingCharset.quoteString('\'', s, '\''));
+			this.formatString(Utils.quoteString('\'', s, '\''));
 		}
 		return end - 1;
 	}
