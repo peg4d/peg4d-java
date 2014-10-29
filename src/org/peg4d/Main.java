@@ -369,8 +369,8 @@ public class Main {
 		Grammar peg = newGrammar();
 		ParsingContext context = new ParsingContext(newParsingSource(peg));
 		ParsingObject pego = context.parse(peg, StartingPoint, new MemoizationManager());
-		RelationBuilder RBuilder = new RelationBuilder();
-		RBuilder.build(pego);
+		RelationBuilder RBuilder = new RelationBuilder(pego);
+		RBuilder.build();
 	}
 	
 	private static int StatTimes = 10;
