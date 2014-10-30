@@ -6,6 +6,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.Method;
 import org.peg4d.Grammar;
+import org.peg4d.PEG4d;
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingObject;
 import org.peg4d.ParsingRule;
@@ -413,13 +414,11 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 
 	@Override
 	public void visitIndent(ParsingIndent e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		this.mBuilder.loadFromVar(this.entry_context);
+		this.mBuilder.push(PEG4d.Indent);
+		this.mBuilder.callInstanceMethod(ParsingContext.class, boolean.class, "matchTokenStackTop", int.class);
 	}
 
-//	@Override
-//	public void visitUnary(ParsingUnary e) {
-//		throw new RuntimeException("unimplemented visit method: " + e.getClass());
-//	}
 
 	@Override
 	public void visitNot(ParsingNot e) {
@@ -1000,8 +999,29 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 
 	@Override
 	public void visitBlock(ParsingBlock e) {
-		// TODO Auto-generated method stub
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		this.mBuilder.enterScope();
+
+		this.getFieldOfContext("source", ParsingSource.class);
+		this.getFieldOfContext("pos", long.class);
+		this.mBuilder.callInstanceMethod(ParsingSource.class, String.class, "getIndentText", long.class);
+		VarEntry entry_indent = this.mBuilder.createNewVarAndStore(String.class);
+
+		this.mBuilder.loadFromVar(this.entry_context);
+		this.mBuilder.push(PEG4d.Indent);
+		this.mBuilder.loadFromVar(entry_indent);
+		this.mBuilder.callInstanceMethod(ParsingContext.class, int.class, "pushTokenStack", int.class, String.class);
+		VarEntry entry_stackTop = this.mBuilder.createNewVarAndStore(int.class);
+
+		e.inner.visit(this);
+		VarEntry entry_b = this.mBuilder.createNewVar(boolean.class);
+
+		this.mBuilder.loadFromVar(this.entry_context);
+		this.mBuilder.loadFromVar(entry_stackTop);
+		this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "popTokenStack", int.class);
+
+		this.mBuilder.loadFromVar(entry_b);
+
+		this.mBuilder.exitScope();
 	}
 
 	@Override
