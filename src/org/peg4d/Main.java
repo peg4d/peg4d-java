@@ -612,14 +612,6 @@ public class Main {
 		return "Java JVM-" + System.getProperty("java.version");
 	}
 
-//	public final static String _GetEnv(String Name) {
-//		return System.getenv(Name);
-//	}
-//
-//	public final static void _Print(Object msg) {
-//		System.err.print(msg);
-//	}
-
 	public final static void _PrintLine(Object message) {
 		System.err.println(message);
 	}
@@ -630,8 +622,6 @@ public class Main {
 		}
 	}
 
-	
-	
 	public final static void _Exit(int status, String message) {
 		if(Main.VerboseMode) {
 			System.out.println("EXIT " + Main._GetStackInfo(3) + " " + message);
@@ -670,8 +660,6 @@ public class Main {
 		}
 	}
 
-	
-	
 	public final static boolean _IsFlag(int flag, int flag2) {
 		return ((flag & flag2) == flag2);
 	}
@@ -685,7 +673,7 @@ public class Main {
 	}
 
 	public final static String _CharToString(int ch) {
-			return String.format("%c", ch);
+		return String.format("%c", ch);
 	}
-
+	
 }
