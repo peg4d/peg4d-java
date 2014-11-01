@@ -267,6 +267,7 @@ public class Main {
 		driverMap.put("c2", org.peg4d.pegcode.CGenerator2.class);
 		driverMap.put("pegjs", org.peg4d.pegcode.PEGjsFormatter.class);
 		driverMap.put("py", org.peg4d.pegcode.PythonGenerator.class);
+		driverMap.put("vm", org.peg4d.pegcode.CodeGenerator.class);
 	}
 
 	private static GrammarFormatter loadDriverImpl(String driverName) {
