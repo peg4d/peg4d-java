@@ -18,6 +18,13 @@ struct ParsingObject
     struct ParsingObject **child;
 };
 
+typedef struct Instruction {
+    long opcode;
+    int *ndata;
+    char *name;
+    const void *ptr;
+} PegVMInstruction, Instruction;
+
 struct ParsingLog {
     struct ParsingLog *next;
     int    index;
@@ -35,7 +42,15 @@ struct ParsingContext
     
 	int    logStackSize;
     struct ParsingLog *logStack;
-    struct ParsingLog *unusedLog;
+    
+    uint64_t bytecode_length;
+    
+    long *stack_pointer;
+    struct ParsingObject **object_stack_pointer;
+    int *call_stack_pointer;
+    long *stack_pointer_base;
+    struct ParsingObject **object_stack_pointer_base;
+    int *call_stack_pointer_base;
 };
 
 typedef struct ParsingObject* ParsingObject;
@@ -66,41 +81,62 @@ static char *loadFile(const char *filename, size_t *length)
 
 void P4D_disposeObject(ParsingObject o);
 
-void dump_pego(ParsingObject pego, char* source, int level)
+void dump_pego(ParsingObject *pego, char* source, int level)
 {
     int i;
     long j;
-    if (pego) {
+    if (pego[0]) {
         for (i = 0; i < level; i++) {
             fprintf(stderr, "  ");
         }
-        fprintf(stderr, "{%s ", pego->tag);
-        if (pego->child_size == 0) {
+        fprintf(stderr, "{%s ", pego[0]->tag);
+        if (pego[0]->child_size == 0) {
             fprintf(stderr, "'");
-            for (j = pego->start_pos; j < pego->end_pos; j++) {
+            for (j = pego[0]->start_pos; j < pego[0]->end_pos; j++) {
                 fprintf(stderr, "%c", source[j]);
             }
             fprintf(stderr, "'");
         }
         else {
             fprintf(stderr, "\n");
-            for (j = 0; j < pego->child_size; j++) {
-                dump_pego(pego->child[j], source, level + 1);
+            for (j = 0; j < pego[0]->child_size; j++) {
+                dump_pego(&pego[0]->child[j], source, level + 1);
             }
             for (i = 0; i < level; i++) {
                 fprintf(stderr, "  ");
             }
+            free(pego[0]->child);
+            pego[0]->child = NULL;
         }
         fprintf(stderr, "}\n");
-        P4D_disposeObject(pego);
+        free(pego[0]);
+        pego[0] = NULL;
     }
     else {
         fprintf(stderr, "%p tag:null\n", pego);
     }
 }
 
+void dispose_pego(ParsingObject *pego) {
+    if (pego[0]) {
+        if (pego[0]->child_size != 0) {
+            for (int i = 0; i < pego[0]->child_size; i++) {
+                dispose_pego(&pego[0]->child[i]);
+            }
+            free(pego[0]->child);
+            pego[0]->child = NULL;
+        }
+        free(pego[0]);
+        pego[0] = NULL;
+    }
+
+}
+
 ParsingObject P4D_newObject(ParsingContext this, long start);
 void P4D_setObject(ParsingContext this, ParsingObject *var, ParsingObject o);
+
+#define PARSING_CONTEXT_MAX_ERROR_LENGTH 256
+#define PARSING_CONTEXT_MAX_STACK_LENGTH 1024
 
 void ParsingContext_Init(ParsingContext this, const char *filename)
 {
@@ -108,12 +144,25 @@ void ParsingContext_Init(ParsingContext this, const char *filename)
     this->pos = this->input_size = 0;
     this->inputs = loadFile(filename, &this->input_size);
     P4D_setObject(this, &this->left, P4D_newObject(this, this->pos));
+    this->stack_pointer_base = (long *) malloc(sizeof(long) * PARSING_CONTEXT_MAX_STACK_LENGTH);
+    this->object_stack_pointer_base = (ParsingObject *) malloc(sizeof(ParsingObject) * PARSING_CONTEXT_MAX_STACK_LENGTH);
+    this->call_stack_pointer_base = (int*) malloc(sizeof(int) * PARSING_CONTEXT_MAX_STACK_LENGTH);
+    this->stack_pointer = &this->stack_pointer_base[0];
+    this->object_stack_pointer = &this->object_stack_pointer_base[0];
+    this->call_stack_pointer = &this->call_stack_pointer_base[0];
 }
 
 void ParsingContext_Dispose(ParsingContext this)
 {
     free(this->inputs);
     this->inputs = NULL;
+    free(this->call_stack_pointer_base);
+    this->call_stack_pointer_base = NULL;
+    free(this->stack_pointer_base);
+    this->stack_pointer_base = NULL;
+    free(this->object_stack_pointer_base);
+    this->object_stack_pointer_base = NULL;
+    dispose_pego(&this->unusedObject);
 }
 
 void P4D_consume(long *pos, long length)
@@ -180,23 +229,16 @@ void P4D_disposeObject(ParsingObject o)
 }
 
 ParsingLog P4D_newLog(ParsingContext this) {
-    if(this->unusedLog == NULL) {
-        ParsingLog l = (ParsingLog)malloc(sizeof (struct ParsingLog));
-        l->next = NULL;
-        l->childNode = NULL;
-        return l;
-    }
-    ParsingLog l = this->unusedLog;
-    this->unusedLog = l->next;
+    ParsingLog l = (ParsingLog)malloc(sizeof (struct ParsingLog));
     l->next = NULL;
-    assert(l->childNode == NULL);
+    l->childNode = NULL;
     return l;
 }
 
 void P4D_unuseLog(ParsingContext this, ParsingLog log) {
     P4D_setObject(this, &log->childNode, NULL);
-    log->next = this->unusedLog;
-    this->unusedLog = log;
+    free(log);
+    log = NULL;
 }
 
 int P4D_markLogStack(ParsingContext this) {
