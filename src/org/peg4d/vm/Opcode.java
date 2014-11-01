@@ -27,6 +27,13 @@ public class Opcode {
 		this.name = name;
 	}
 	
+	public Opcode(Instruction inst, int ndata, String name) {
+		this.inst = inst;
+		this.ndata = new int[1];
+		this.ndata[0] = ndata;
+		this.name = name;
+	}
+	
 	public String toString() {
 		if (this.name == null) {
 			if (this.ndata != null) {
