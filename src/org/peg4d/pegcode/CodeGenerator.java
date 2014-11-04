@@ -388,8 +388,10 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitAnd(ParsingAnd e) {
+		this.pushFailureJumpPoint();
 		writeCode(Instruction.PUSHp);
 		e.inner.visit(this);
+		this.popFailureJumpPoint(e);
 		writeCode(Instruction.STOREp);
 	}
 
@@ -415,7 +417,7 @@ public class CodeGenerator extends GrammarFormatter {
 		writeLabel(label);
 		writeCode(Instruction.PUSHp);
 		e.inner.visit(this);
-		writeCode(Instruction.REPCOND, end);
+		writeJumpCode(Instruction.REPCOND, end);
 		writeJumpCode(Instruction.JUMP, label);
 		this.popFailureJumpPoint(e);
 		writeCode(Instruction.SUCC);
@@ -457,12 +459,11 @@ public class CodeGenerator extends GrammarFormatter {
 		}
 		this.pushFailureJumpPoint();
 		if (e.leftJoin) {
-			writeCode(Instruction.PUSHo);
+			writeCode(Instruction.PUSHconnect);
+			writeCode(Instruction.PUSHconnect);
 			writeCode(Instruction.PUSHm);
-			writeCode(Instruction.PUSHo);
 			writeCode(Instruction.NEW);
-			writeCode(Instruction.NEWJOIN);
-			writeCode(Instruction.LINK);
+			writeCode(Instruction.NEWJOIN, 0);
 		}
 		else {
 			writeCode(Instruction.PUSHo);
@@ -492,7 +493,7 @@ public class CodeGenerator extends GrammarFormatter {
 		e.inner.visit(this);
 		writeCode(Instruction.COMMIT);
 		writeCode(Instruction.LINK, e.index);
-		//writeCode(Instruction.STOREo);
+		writeCode(Instruction.STOREo);
 		writeJumpCode(Instruction.JUMP, label);
 		this.popFailureJumpPoint(e);
 		//writeCode(Instruction.SUCC);

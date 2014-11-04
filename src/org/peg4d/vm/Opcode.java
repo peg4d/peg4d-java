@@ -50,6 +50,6 @@ public class Opcode {
 	}
 	
 	public final boolean isJumpCode() {
-    	return this.inst.compareTo(Instruction.IFFAIL) <= 0;
+    	return this.inst.compareTo(Instruction.REPCOND) <= 0;
     }
 }
