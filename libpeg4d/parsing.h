@@ -92,8 +92,13 @@ void dump_pego(ParsingObject *pego, char* source, int level)
         fprintf(stderr, "{%s ", pego[0]->tag);
         if (pego[0]->child_size == 0) {
             fprintf(stderr, "'");
-            for (j = pego[0]->start_pos; j < pego[0]->end_pos; j++) {
-                fprintf(stderr, "%c", source[j]);
+            if (pego[0]->value == NULL) {
+                for (j = pego[0]->start_pos; j < pego[0]->end_pos; j++) {
+                    fprintf(stderr, "%c", source[j]);
+                }
+            }
+            else {
+                fprintf(stderr, "%s", pego[0]->value);
             }
             fprintf(stderr, "'");
         }
@@ -130,6 +135,47 @@ void dispose_pego(ParsingObject *pego) {
         pego[0] = NULL;
     }
 
+}
+
+void dump_pego_file(FILE *file, ParsingObject *pego, char* source, int level)
+{
+    int i;
+    long j;
+    if (pego[0]) {
+        for (i = 0; i < level; i++) {
+            fprintf(file, " ");
+        }
+        fprintf(file, "{%s ", pego[0]->tag);
+        if (pego[0]->child_size == 0) {
+            fprintf(file, "'");
+            if (pego[0]->value == NULL) {
+                for (j = pego[0]->start_pos; j < pego[0]->end_pos; j++) {
+                    fprintf(file, "%c", source[j]);
+                }
+            }
+            else {
+                fprintf(file, "%s", pego[0]->value);
+            }
+            fprintf(file, "'");
+        }
+        else {
+            fprintf(file, "\n");
+            for (j = 0; j < pego[0]->child_size; j++) {
+                dump_pego_file(file, &pego[0]->child[j], source, level + 1);
+            }
+            for (i = 0; i < level; i++) {
+                fprintf(file, " ");
+            }
+            free(pego[0]->child);
+            pego[0]->child = NULL;
+        }
+        fprintf(file, "}\n");
+        free(pego[0]);
+        pego[0] = NULL;
+    }
+    else {
+        fprintf(file, "%p tag:null\n", pego);
+    }
 }
 
 ParsingObject P4D_newObject(ParsingContext this, long start);

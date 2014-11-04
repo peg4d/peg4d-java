@@ -11,6 +11,7 @@ int main(int argc, char * const argv[])
     PegVMInstruction *inst;
     const char *syntax_file = NULL;
     const char *output_type = NULL;
+    const char *input_file = NULL;
     const char *orig_argv0 = argv[0];
     int opt;
     while ((opt = getopt(argc, argv, "p:t:")) != -1) {
@@ -33,7 +34,8 @@ int main(int argc, char * const argv[])
     if (syntax_file == NULL) {
         peg_error("not input syntaxfile");
     }
-    ParsingContext_Init(&context, argv[0]);
+    input_file = argv[0];
+    ParsingContext_Init(&context, input_file);
     inst = loadByteCodeFile(&context, inst, syntax_file);
     if(output_type == NULL || !strcmp(output_type, "pego")) {
         clock_t start = clock();
@@ -52,6 +54,37 @@ int main(int argc, char * const argv[])
         clock_t end = clock();
         fprintf(stderr, "EraspedTime: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
         dispose_pego(&context.left);
+    }
+    else if (!strcmp(output_type, "file")) {
+        char output_file[256] = "dump/dump_parsed_";
+        char fileName[256];
+        size_t input_fileName_len = strlen(input_file);
+        size_t start = 0;
+        size_t index = 0;
+        while (input_fileName_len > 0) {
+            input_fileName_len--;
+            if (input_file[input_fileName_len] == '/') {
+                start = input_fileName_len + 1;
+                break;
+            }
+            if (input_file[input_fileName_len] == '.') {
+                index = input_fileName_len;
+            }
+
+        }
+        strncpy(fileName, input_file + start, index-start);
+        strcat(output_file, fileName);
+        strcat(output_file, ".txt");
+        if(execute(&context, inst)) {
+            peg_error("parse error");
+        }
+        FILE *file;
+        file = fopen(output_file, "w");
+        if (file == NULL) {
+            assert(0 && "can not open file");
+        }
+        dump_pego_file(file, &context.left, context.inputs, 0);
+        fclose(file);
     }
     ParsingContext_Dispose(&context);
     free(inst);
@@ -140,6 +173,22 @@ int execute(ParsingContext context, Instruction *inst)
     
     int failflag = 0;
     
+    int pushcount[1000];
+    int popcount[1000];
+    int startpc[1000];
+    int endpc[1000];
+    int count = 0;
+    
+    int pushOcount[1000];
+    int popOcount[1000];
+    
+    pushcount[0] = 0;
+    popcount[0] = 0;
+    pushOcount[count] = 0;
+    popOcount[count] = 0;
+    startpc[0] = 1;
+    
+    
     for (int i = 0; i < context->bytecode_length; i++) {
         inst[i].ptr = table[inst[i].opcode];
     }
@@ -158,9 +207,27 @@ int execute(ParsingContext context, Instruction *inst)
     }
     OP(CALL) {
         PUSH_IP(context, pc);
-        JUMP;
+        //JUMP;
+        pc = *inst[pc].ndata;
+        count++;
+        pushcount[count] = 0;
+        popcount[count] = 0;
+        pushOcount[count] = 0;
+        popOcount[count] = 0;
+        startpc[count] = pc;
+        goto *inst[pc].ptr;
     }
     OP(RET) {
+        endpc[count] = pc;
+        if (pushcount[count] != popcount[count]) {
+            fprintf(stderr, "(start:%d ~ end:%d) ", startpc[count], endpc[count]);
+            assert(0 && "pushcount != popcount");
+        }
+        if (pushOcount[count] != popOcount[count]) {
+            fprintf(stderr, "(start:%d ~ end:%d) ", startpc[count], endpc[count]);
+            assert(0 && "pushOcount != popOcount");
+        }
+        count--;
         RET;
     }
     OP(IFSUCC) {
@@ -175,7 +242,15 @@ int execute(ParsingContext context, Instruction *inst)
         }
         DISPATCH_NEXT;
     }
+    OP(REPCOND) {
+        popcount[count]++;
+        if (context->pos == POP_SP()) {
+            JUMP;
+        }
+        DISPATCH_NEXT;
+    }
     OP(PUSHo){
+        pushOcount[count]++;
         ParsingObject left = P4D_newObject(context, context->pos);
         *left = *context->left;
         left->refc = 1;
@@ -183,12 +258,14 @@ int execute(ParsingContext context, Instruction *inst)
         DISPATCH_NEXT;
     }
     OP(PUSHconnect) {
+        pushOcount[count]++;
         ParsingObject left = context->left;
         context->left->refc++;
         PUSH_OSP(left);
         DISPATCH_NEXT;
     }
     OP(PUSHp) {
+        pushcount[count]++;
         PUSH_SP(context->pos);
         DISPATCH_NEXT;
     }
@@ -196,23 +273,28 @@ int execute(ParsingContext context, Instruction *inst)
         assert(0 && "Not implemented");
     }
     OP(PUSHm){
+        pushcount[count]++;
         PUSH_SP(P4D_markLogStack(context));
         DISPATCH_NEXT;
     }
     OP(POP){
+        popcount[count]++;
         POP_SP();
         DISPATCH_NEXT;
     }
     OP(POPo){
+        popOcount[count]++;
         ParsingObject left = POP_OSP();
         P4D_setObject(context, &left, NULL);
         DISPATCH_NEXT;
     }
     OP(STOREo){
+        popOcount[count]++;
         ParsingObject left = POP_OSP();
-        P4D_setObject(context, &left, NULL);
+        P4D_setObject(context, &context->left, left);
         DISPATCH_NEXT;}
     OP(STOREp){
+        popcount[count]++;
         context->pos = POP_SP();
         DISPATCH_NEXT;
     }
@@ -257,32 +339,34 @@ int execute(ParsingContext context, Instruction *inst)
         }
         DISPATCH_NEXT;
     }
-    OP(REPCOND) {
-        if (context->pos == POP_SP()) {
-            JUMP;
-        }
-        DISPATCH_NEXT;
-    }
     OP(NEW){
         P4D_setObject(context, &context->left, P4D_newObject(context, context->pos));
         DISPATCH_NEXT;
     }
     OP(NEWJOIN){
-        P4D_lazyJoin(context, (ParsingObject)POP_OSP());
+        popOcount[count]++;
+        ParsingObject left = POP_OSP();
+        P4D_lazyJoin(context, left);
+        P4D_lazyLink(context, context->left, inst[pc].ndata[0], left);
         DISPATCH_NEXT;
     }
     OP(COMMIT){
+        popcount[count]++;
         P4D_commitLog(context, (int)POP_SP(), context->left);
         DISPATCH_NEXT;
     }
     OP(ABORT){
+        popcount[count]++;
         P4D_abortLog(context, (int)POP_SP());
         DISPATCH_NEXT;
     }
     OP(LINK){
+        popOcount[count]++;
         ParsingObject parent = (ParsingObject)POP_OSP();
         P4D_lazyLink(context, parent, inst[pc].ndata[0], context->left);
-        P4D_setObject(context, &context->left, parent);
+        //P4D_setObject(context, &context->left, parent);
+        PUSH_OSP(parent);
+        pushOcount[count]++;
         DISPATCH_NEXT;
     }
     OP(SETendp){
