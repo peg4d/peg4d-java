@@ -276,6 +276,7 @@ public class Main {
 		driverMap.put("pegjs", org.peg4d.pegcode.PEGjsFormatter.class);
 		driverMap.put("py", org.peg4d.pegcode.PythonGenerator.class);
 		driverMap.put("old-jvm", org.peg4d.jvm.OldStyleJavaByteCodeGenerator.class);
+		driverMap.put("opt-jvm", org.peg4d.jvm.OptimizedByteCodeGenerator.class);
 	}
 
 	private static GrammarFormatter loadDriverImpl(String driverName) {
@@ -315,7 +316,7 @@ public class Main {
 		ParsingObject po = null;
 		long bestTime = Long.MAX_VALUE;
 		ParsingStatistics stat = null;
-		for(int i = 0; i < 20; i++) {
+		for(int i = 0; i < 100; i++) {
 			source = Main.loadSource(peg, fileName);
 			context = new ParsingContext(Main.loadSource(peg, fileName));
 			stat = new ParsingStatistics(peg, source);

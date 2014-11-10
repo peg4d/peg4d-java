@@ -1,5 +1,12 @@
 package org.peg4d.jvm;
 
+import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -32,6 +39,7 @@ import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingIf;
 import org.peg4d.expression.ParsingIndent;
 import org.peg4d.expression.ParsingIsa;
+import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
 import org.peg4d.expression.ParsingName;
 import org.peg4d.expression.ParsingNot;
@@ -57,7 +65,13 @@ import org.peg4d.pegcode.GrammarFormatter;
 public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements Opcodes {
 	private final static String packagePrefix = "org/peg4d/generated/";
 
+	private final static Handle handle_utf8Codes = newBsmHandle("Utf8Codes", String.class);
+
 	private static int nameSuffix = -1;
+
+	public final boolean enableOptimization;
+
+	private int alternativeCount = -1;
 
 	private ClassBuilder cBuilder;
 
@@ -86,6 +100,36 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 			newVirtualTarget(ParsingContext.class, void.class, "setFlag", String.class, boolean.class);
 	private InvocationTarget target_getFlag         = newVirtualTarget(ParsingContext.class, boolean.class, "getFlag", String.class);
 
+
+	/**
+	 * create handle for invokedynamic.
+	 * @param name
+	 * bootstrap method name(not include method name prefix 'bsm')
+	 * @param paramClasses
+	 * additional parameter classes
+	 * @return
+	 */
+	private final static Handle newBsmHandle(String name, Class<?>... paramClasses) {
+		String bsmName = "bsm" + name;
+		final int size = paramClasses.length;
+		Type[] paramTypes = new Type[paramClasses.length + 3];
+		paramTypes[0] = Type.getType(MethodHandles.Lookup.class);
+		paramTypes[1] = Type.getType(String.class);
+		paramTypes[2] = Type.getType(MethodType.class);
+		for(int i = 0; i < size; i++) {
+			paramTypes[i + 3] = Type.getType(paramClasses[i]);
+		}
+		Method methodDesc = new Method(bsmName, Type.getType(CallSite.class), paramTypes);
+		return new Handle(H_INVOKESTATIC, Type.getType(JvmRuntime.class).getInternalName(), bsmName, methodDesc.getDescriptor());
+	}
+
+	public OldStyleJavaByteCodeGenerator() {
+		this(false);
+	}
+
+	protected OldStyleJavaByteCodeGenerator(boolean enableOptimization) {
+		this.enableOptimization = enableOptimization;
+	}
 
 	/**
 	 * 
@@ -690,8 +734,46 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		this.mBuilder.push(true);
 	}
 
+	private boolean checkOptimaization(ParsingSequence e) {
+//		final int size = e.size();
+//		for(int i = 0; i < size; i++) {
+//			if(!(e.get(i) instanceof ParsingByte)) {
+//				return false;
+//			}
+//		}
+//		return true;
+		
+		return false;
+	}
+
+	private void optimizeByteSequence(ParsingSequence e) {
+		StringBuilder sBuilder = new StringBuilder();
+		final int size = e.size();
+		for(int i = 0; i < size; i++) {
+			if(i > 0) {
+				sBuilder.append(",");
+			}
+			int utf8Code = ((ParsingByte) e.get(i)).byteChar;
+			sBuilder.append(Integer.toHexString(utf8Code));
+		}
+		String codeString = sBuilder.toString();
+
+		// generate code
+		this.mBuilder.loadFromVar(this.entry_context);
+
+		// initialize utf8 codes
+		Type typeDesc = Type.getMethodType(Type.getType(int[].class));
+		this.mBuilder.invokeDynamic("decodeUtf8", typeDesc.getDescriptor(), handle_utf8Codes, codeString);
+
+		this.mBuilder.callStaticMethod(JvmRuntime.class, boolean.class, "matchUtf8", ParsingContext.class, int[].class);
+	}
+
 	@Override
 	public void visitSequence(ParsingSequence e) {
+		if(this.checkOptimaization(e)) {
+			this.optimizeByteSequence(e);
+			return;
+		}
 		this.mBuilder.enterScope();
 
 		this.mBuilder.loadFromVar(this.entry_context);
@@ -730,6 +812,32 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		this.mBuilder.exitScope();
 	}
 
+	private void optimizeAlternative(ParsingExpression alter) {
+		if(!enableOptimization) {
+			alter.visit(this);
+			return;
+		}
+
+		if(!(alter instanceof ParsingList)) {
+			alter.visit(this);
+			return;
+		}
+		if((alter instanceof ParsingSequence) && this.checkOptimaization((ParsingSequence) alter)) {
+			alter.visit(this);
+			return;
+		}
+
+		MethodBuilder mBuilder = this.mBuilder;
+		String alterName = "___ALTER___" + ++this.alternativeCount;
+
+		this.formatRule(alterName, alter);
+
+		this.mBuilder = mBuilder;
+		Method methodDesc = Methods.method(boolean.class, alterName, ParsingContext.class);
+		this.mBuilder.loadFromVar(this.entry_context);
+		this.mBuilder.invokeStatic(this.cBuilder.getTypeDesc(), methodDesc);
+	}
+
 	@Override
 	public void visitChoice(ParsingChoice e) {
 		this.mBuilder.enterScope();
@@ -752,7 +860,8 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 			this.mBuilder.loadFromVar(entry_left);
 			this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingObject.class));
 
-			e.get(i).visit(this);
+//			e.get(i).visit(this);
+			this.optimizeAlternative(e.get(i));
 			this.mBuilder.push(true);
 			this.mBuilder.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.EQ, thenLabel);
 		}
@@ -776,8 +885,63 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		this.mBuilder.exitScope();
 	}
 
+	private void optimizeConstructor(List<ParsingByte> byteExprList) {
+		StringBuilder sBuilder = new StringBuilder();
+		final int size = byteExprList.size();
+		for(int i = 0; i < size; i++) {
+			if(i > 0) {
+				sBuilder.append(",");
+			}
+			int utf8Code = byteExprList.get(i).byteChar;
+			sBuilder.append(Integer.toHexString(utf8Code));
+		}
+		String codeString = sBuilder.toString();
+
+		// generate code
+		this.mBuilder.loadFromVar(this.entry_context);
+
+		// initialize utf8 codes
+		Type typeDesc = Type.getMethodType(Type.getType(int[].class));
+		this.mBuilder.invokeDynamic("decodeUtf8", typeDesc.getDescriptor(), handle_utf8Codes, codeString);
+
+		this.mBuilder.callStaticMethod(JvmRuntime.class, boolean.class, "matchUtf8NoRollback", ParsingContext.class, int[].class);
+	}
+
+	private List<Object> convertConstructor(ParsingConstructor e) {
+		List<Object> resultList = new ArrayList<>();
+		List<ParsingByte> byteExprList = new ArrayList<>();
+		final int size = e.size();
+		for(int i = 0; i < size; i++) {
+			ParsingExpression expr = e.get(i);
+//			if(!(expr instanceof ParsingByte)) {
+//				int listSize = byteExprList.size();
+//				if(listSize == 1) {
+//					resultList.add(byteExprList.get(0));
+//					byteExprList.clear();
+//				} else if(listSize > 1) {
+//					resultList.add(byteExprList);
+//					byteExprList = new ArrayList<>();
+//				}
+//				resultList.add(expr);
+//			} else {
+//				byteExprList.add((ParsingByte) expr);
+//			}
+			resultList.add(expr);
+		}
+		int listSize = byteExprList.size();
+		if(listSize == 1) {
+			resultList.add(byteExprList.get(0));
+		} else if(listSize > 1) {
+			resultList.add(byteExprList);
+		}
+		return resultList;
+	}
+
+	@SuppressWarnings("unchecked")
 	@Override
 	public void visitConstructor(ParsingConstructor e) {
+		List<Object> exprList = this.convertConstructor(e);
+
 		this.mBuilder.enterScope();
 
 		// variable
@@ -827,8 +991,13 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		Label thenLabel = this.mBuilder.newLabel();
 		Label mergeLabel = this.mBuilder.newLabel();
 
-		for(int i = 0; i < e.size(); i++) {	// only support prefetchIndex = 0
-			e.get(i).visit(this);
+		for(int i = 0; i < exprList.size(); i++) {	// only support prefetchIndex = 0
+			Object expr = exprList.get(i);
+			if(expr instanceof List) {
+				this.optimizeConstructor((List<ParsingByte>) expr);
+			} else {
+				((ParsingExpression) expr).visit(this);
+			}
 			this.mBuilder.push(true);
 			this.mBuilder.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.NE, thenLabel);
 		}
