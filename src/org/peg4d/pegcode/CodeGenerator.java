@@ -5,8 +5,10 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 
 import org.peg4d.Grammar;
+import org.peg4d.Main;
 import org.peg4d.ParsingRule;
 import org.peg4d.UList;
 import org.peg4d.expression.NonTerminal;
@@ -45,6 +47,7 @@ import org.peg4d.vm.Instruction;
 public class CodeGenerator extends GrammarFormatter {
 	
 	int codeIndex = 0;
+	boolean backTrackFlag = false;
 	
 	UList<Opcode> codeList = new UList<Opcode>(new Opcode[256]);	
 	HashMap<Integer,Integer> labelMap = new HashMap<Integer,Integer>();
@@ -89,16 +92,16 @@ public class CodeGenerator extends GrammarFormatter {
 			byteCode[pos] = (byte) code.inst.ordinal();
 			pos++;
 			if (code.ndata != null) {
-				byteCode[pos] = (byte) (0x000000ff & (code.ndata.length));
+				byteCode[pos] = (byte) (0x000000ff & (code.ndata.size()));
 				pos++;
-				for(int j = 0; j < code.ndata.length; j++){
-					byteCode[pos] = (byte) (0x000000ff & (code.ndata[j]));
+				for(int j = 0; j < code.ndata.size(); j++){
+					byteCode[pos] = (byte) (0x000000ff & (code.ndata.get(j)));
 					pos++;
-					byteCode[pos] = (byte) (0x000000ff & (code.ndata[j] >> 8));
+					byteCode[pos] = (byte) (0x000000ff & (code.ndata.get(j) >> 8));
 					pos++;
-					byteCode[pos] = (byte) (0x000000ff & (code.ndata[j] >> 16));
+					byteCode[pos] = (byte) (0x000000ff & (code.ndata.get(j) >> 16));
 					pos++;
-					byteCode[pos] = (byte) (0x000000ff & (code.ndata[j] >> 24));
+					byteCode[pos] = (byte) (0x000000ff & (code.ndata.get(j) >> 24));
 					pos++;
 				}
 			}
@@ -106,6 +109,14 @@ public class CodeGenerator extends GrammarFormatter {
 				byteCode[pos] = 0;
 				pos++;
 			}
+			byteCode[pos] = (byte) (0x000000ff & (code.jump));
+			pos++;
+			byteCode[pos] = (byte) (0x000000ff & (code.jump >> 8));
+			pos++;
+			byteCode[pos] = (byte) (0x000000ff & (code.jump >> 16));
+			pos++;
+			byteCode[pos] = (byte) (0x000000ff & (code.jump >> 24));
+			pos++;
 			if(code.name != null) {
 				int j = 0;
 				byteCode[pos] = (byte) code.name.length();
@@ -163,14 +174,23 @@ public class CodeGenerator extends GrammarFormatter {
 	}
 	
 	private Opcode newCode(Instruction inst, int ndata) {
-		Opcode code = new Opcode(inst, ndata);
+		Opcode code = new Opcode(inst).append(ndata);
 		System.out.println("\t" + code.toString());
 		this.codeIndex++;
 		return code;
 	}
 	
-	private Opcode newCode(Instruction inst, int ndata1, int ndata2) {
-		Opcode code = new Opcode(inst, ndata1, ndata2);
+	private Opcode newCode(Instruction inst, int ndata1, int jump) {
+		Opcode code = new Opcode(inst).append(ndata1);
+		code.jump = jump;
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		return code;
+	}
+	
+	private Opcode newCode(Instruction inst, int ndata1, int ndata2, int jump) {
+		Opcode code = new Opcode(inst).append(ndata1).append(ndata2);
+		code.jump = jump;
 		System.out.println("\t" + code.toString());
 		this.codeIndex++;
 		return code;
@@ -184,7 +204,15 @@ public class CodeGenerator extends GrammarFormatter {
 	}
 	
 	private Opcode newCode(Instruction inst, int ndata, String name) {
-		Opcode code = new Opcode(inst, ndata, name);
+		Opcode code = new Opcode(inst, name).append(ndata);
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		return code;
+	}
+	
+	private Opcode newJumpCode(Instruction inst, int jump) {
+		Opcode code = new Opcode(inst);
+		code.jump = jump;
 		System.out.println("\t" + code.toString());
 		this.codeIndex++;
 		return code;
@@ -198,8 +226,12 @@ public class CodeGenerator extends GrammarFormatter {
 		codeList.add(newCode(inst, ndata));
 	}
 	
-	public final void writeCode(Instruction inst, int ndata1, int ndata2) {
-		codeList.add(newCode(inst, ndata1, ndata2));
+	public final void writeCode(Instruction inst, int ndata1, int jump) {
+		codeList.add(newCode(inst, ndata1, jump));
+	}
+	
+	public final void writeCode(Instruction inst, int ndata1, int ndata2, int jump) {
+		codeList.add(newCode(inst, ndata1, ndata2, jump));
 	}
 	
 	public final void writeCode(Instruction inst, String name) {
@@ -262,7 +294,117 @@ public class CodeGenerator extends GrammarFormatter {
 	}
 	
 	public final void writeJumpCode(Instruction inst, int labelId) {
-		codeList.add(newCode(inst, labelId));
+		codeList.add(newJumpCode(inst, labelId));
+	}
+	
+	public final int writeSequenceCode(ParsingExpression e, int index, int size) {
+		int count = 0;
+		for (int i = index; i < size; i++) {
+			if (e.get(i) instanceof ParsingByte) {
+				count++;
+			}
+			else {
+				break;
+			}
+		}
+		if (count <= 1) {
+			e.get(index).visit(this);
+			return index++;
+		}
+		Opcode code = new Opcode(Instruction.STRING);
+		for(int i = index; i < index + count; i++) {
+			code.append(((ParsingByte)e.get(i)).byteChar);
+		}
+		code.jump = this.jumpFailureJump();
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		codeList.add(code);
+		//writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
+		return index + count - 1;
+	}
+	
+	public final int writeChoiceCode(ParsingExpression e, int index, int size) {
+		int charCount = 0;
+		for (int i = index; i < size; i++) {
+			if (e.get(i) instanceof ParsingByte) {
+				charCount++;
+			}
+			else {
+				break;
+			}
+		}
+		if (charCount <= 1) {
+			this.pushFailureJumpPoint();
+			writeCode(Instruction.PUSHp);
+			e.get(index).visit(this);
+			this.backTrackFlag = true;
+			return index++;
+		}
+		if (charCount != size) {
+			backTrackFlag = true;
+			this.pushFailureJumpPoint();
+			writeCode(Instruction.PUSHp);
+		}
+		writeCharsetCode(e, index, charCount);
+		//writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
+		return index + charCount - 1;
+	}
+	
+	public void writeCharsetCode(ParsingExpression e, int index, int charCount) {
+		Opcode code = new Opcode(Instruction.CHARSET);
+		for(int i = index; i < index + charCount; i++) {
+			code.append(((ParsingByte)e.get(i)).byteChar);
+		}
+		code.jump = this.jumpFailureJump();
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		codeList.add(code);
+	}
+	
+	public void readAheadChoice(ParsingChoice e) {
+		Opcode code = new Opcode(Instruction.READAHEAD);
+		for(int i = 0; i < e.size(); i++) {
+			if (e.get(i) instanceof ParsingByte) {
+				code.append(((ParsingByte)e.get(i)).byteChar);
+			}
+			else if (e.get(i) instanceof ParsingSequence) {
+				code.append(checkSequenceFirstChar((ParsingSequence)e.get(i)));
+			}
+			else if (e.get(i) instanceof ParsingConstructor) {
+				code.append(checkConstructorFirstChar((ParsingConstructor)e.get(i)));
+			}
+			else {
+				code.append(0);
+			}
+		}
+	}
+	
+	public int checkSequenceFirstChar(ParsingSequence e) {
+		//for(int i = 0; i < e.size(); i++) {
+			if (e.get(0) instanceof ParsingByte) {
+				return ((ParsingByte)e.get(0)).byteChar;
+			}
+			else if (e.get(0) instanceof ParsingConstructor) {
+				return checkConstructorFirstChar((ParsingConstructor)e.get(0));
+			}
+			else {
+				return 0;
+			}
+		//}
+	}
+	
+	public int checkConstructorFirstChar(ParsingConstructor e) {
+		//for(int i = 0; i < e.size(); i++) {
+			if (e.get(0) instanceof ParsingByte) {
+				return ((ParsingByte)e.get(0)).byteChar;
+			}
+			else if (e.get(0) instanceof ParsingConstructor) {
+				return checkConstructorFirstChar((ParsingConstructor)e.get(0));
+			}
+			else {
+				return 0;
+			}
+		//}
 	}
 	
 	@Override
@@ -299,8 +441,8 @@ public class CodeGenerator extends GrammarFormatter {
 			if (code.isJumpCode()) {
 				switch (code.inst) {
 				case CALL:
-					code.ndata[0] = this.callMap.get(code.name);
-					System.out.println("[" + i + "] " + code + " " + code.ndata[0]);
+					code.jump = this.callMap.get(code.name);
+					System.out.println("[" + i + "] " + code + " " + code.jump);
 					break;
 				case RET:
 					System.out.println("[" + i + "] " + code);
@@ -309,7 +451,7 @@ public class CodeGenerator extends GrammarFormatter {
 					System.out.println("[" + i + "] " + code);
 					break;
 				default:
-					code.ndata[0] = this.labelMap.get(code.ndata[0]);
+					code.jump = this.labelMap.get(code.jump);
 					System.out.println("[" + i + "] " + code);
 					break;
 				}
@@ -337,7 +479,7 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitNonTerminal(NonTerminal e) {
-		writeCode(Instruction.CALL, 0, e.ruleName);
+		writeCode(Instruction.CALL, e.ruleName);
 		writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
 	}
 
@@ -352,20 +494,20 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitByte(ParsingByte e) {
-		writeCode(Instruction.BYTE, e.byteChar);
-		writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
+		writeCode(Instruction.BYTE, e.byteChar, this.jumpFailureJump());
+		//writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
 	}
 
 	@Override
 	public void visitByteRange(ParsingByteRange e) {
-		writeCode(Instruction.CHAR, e.startByteChar, e.endByteChar);
-		writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
+			writeCode(Instruction.CHAR, e.startByteChar, e.endByteChar, this.jumpFailureJump());
+			//writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
 	}
 
 	@Override
 	public void visitAny(ParsingAny e) {
-		writeCode(Instruction.ANY);
-		writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
+		writeJumpCode(Instruction.ANY, this.jumpFailureJump());
+		//writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
 	}
 
 	@Override
@@ -393,6 +535,7 @@ public class CodeGenerator extends GrammarFormatter {
 		e.inner.visit(this);
 		this.popFailureJumpPoint(e);
 		writeCode(Instruction.STOREp);
+		writeJumpCode(Instruction.IFFAIL, jumpFailureJump());
 	}
 
 	@Override
@@ -428,58 +571,70 @@ public class CodeGenerator extends GrammarFormatter {
 	@Override
 	public void visitSequence(ParsingSequence e) {
 		for(int i = 0; i < e.size(); i++) {
-			e.get(i).visit(this);
+			i = writeSequenceCode(e, i, e.size());
 		}
 	}
 
 	@Override
 	public void visitChoice(ParsingChoice e) {
+		//readAheadChoice(e);
+		boolean backTrackFlag = this.backTrackFlag = false;
 		int label = newLabel();
 		for(int i = 0; i < e.size(); i++) {
-			this.pushFailureJumpPoint();
-			writeCode(Instruction.PUSHp);
-			e.get(i).visit(this);
-			writeJumpCode(Instruction.JUMP, label);
-			this.popFailureJumpPoint(e.get(i));
-			if (i != e.size() - 1) {
-				writeCode(Instruction.SUCC);
+			i = writeChoiceCode(e, i, e.size());
+			backTrackFlag = this.backTrackFlag;
+			if (backTrackFlag) {
+				writeJumpCode(Instruction.JUMP, label);
+				this.popFailureJumpPoint(e.get(i));
+				if (i != e.size() - 1) {
+					writeCode(Instruction.SUCC);
+				}
+				writeCode(Instruction.STOREp);
 			}
-			writeCode(Instruction.STOREp);
 		}
-		writeJumpCode(Instruction.JUMP, jumpFailureJump());
-		writeLabel(label);
-		writeCode(Instruction.POP);
+		if (backTrackFlag) {
+			writeJumpCode(Instruction.JUMP, jumpFailureJump());
+			writeLabel(label);
+			writeCode(Instruction.POP);
+		}
+		this.backTrackFlag = false;
 	}
 
 	@Override
 	public void visitConstructor(ParsingConstructor e) {
 		int label = newLabel();
 		for(int i = 0; i < e.prefetchIndex; i++) {
-			e.get(i).visit(this);
+			i = writeSequenceCode(e, i, e.prefetchIndex);
 		}
 		this.pushFailureJumpPoint();
 		if (e.leftJoin) {
+//			writeCode(Instruction.PUSHconnect);
 			writeCode(Instruction.PUSHconnect);
-			writeCode(Instruction.PUSHconnect);
-			writeCode(Instruction.PUSHm);
-			writeCode(Instruction.NEW);
+			//writeCode(Instruction.PUSHm);
+//			writeCode(Instruction.NEW);
 			writeCode(Instruction.NEWJOIN, 0);
 		}
 		else {
-			writeCode(Instruction.PUSHo);
-			writeCode(Instruction.PUSHm);
+			//writeCode(Instruction.PUSHo);
+			//writeCode(Instruction.PUSHm);
 			writeCode(Instruction.NEW);
 		}
 		for(int i = e.prefetchIndex; i < e.size(); i++) {
-			e.get(i).visit(this);
+			i = writeSequenceCode(e, i, e.size());
 		}
 		writeCode(Instruction.SETendp);
 		writeCode(Instruction.POP);
-		writeCode(Instruction.POPo);
+		if (e.leftJoin) {
+			writeCode(Instruction.POPo);
+		}
+		//writeCode(Instruction.POPo);
 		writeJumpCode(Instruction.JUMP, label);
 		this.popFailureJumpPoint(e);
 		writeCode(Instruction.ABORT);
-		writeCode(Instruction.STOREo);
+		if (e.leftJoin) {
+			writeCode(Instruction.STOREo);
+		}
+		//writeCode(Instruction.STOREo);
 		writeJumpCode(Instruction.JUMP, this.jumpFailureJump());
 		writeLabel(label);
 	}
@@ -489,11 +644,11 @@ public class CodeGenerator extends GrammarFormatter {
 		int label = newLabel();
 		this.pushFailureJumpPoint();
 		writeCode(Instruction.PUSHconnect);
-		writeCode(Instruction.PUSHm);
+		//writeCode(Instruction.PUSHm);
 		e.inner.visit(this);
-		writeCode(Instruction.COMMIT);
-		writeCode(Instruction.LINK, e.index);
-		writeCode(Instruction.STOREo);
+		writeCode(Instruction.COMMIT, e.index);
+		//writeCode(Instruction.LINK, e.index);
+		//writeCode(Instruction.STOREo);
 		writeJumpCode(Instruction.JUMP, label);
 		this.popFailureJumpPoint(e);
 		//writeCode(Instruction.SUCC);

@@ -1,48 +1,58 @@
 package org.peg4d.vm;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Opcode {
 	public Instruction inst;
-	public int[] ndata = null;
+	public List<Integer> ndata;
+	public int jump = 0;
 	public String name = null;
 	
 	public Opcode(Instruction inst) {
 		this.inst = inst;
-	}
-	
-	public Opcode(Instruction inst, int ndata) {
-		this.inst = inst;
-		this.ndata = new int[1];
-		this.ndata[0] = ndata;
-	}
-	
-	public Opcode(Instruction inst, int ndata1, int ndata2) {
-		this.inst = inst;
-		this.ndata = new int[2];
-		this.ndata[0] = ndata1;
-		this.ndata[1] = ndata2;
+		this.ndata = new ArrayList<Integer>();
 	}
 	
 	public Opcode(Instruction inst, String name) {
 		this.inst = inst;
+		this.ndata = new ArrayList<Integer>();
 		this.name = name;
 	}
 	
-	public Opcode(Instruction inst, int ndata, String name) {
-		this.inst = inst;
-		this.ndata = new int[1];
-		this.ndata[0] = ndata;
-		this.name = name;
+	public Opcode append(int ndata) {
+		this.ndata.add(ndata);
+		return this;
+	}
+	
+	public int get(int index) {
+		return this.ndata.get(index);
+	}
+	
+	public int remove(int index) {
+		return this.ndata.remove(index);
+	}
+	
+	public int size() {
+		return this.ndata.size();
 	}
 	
 	public String toString() {
 		if (this.name == null) {
-			if (this.ndata != null) {
-				if (this.ndata.length == 1) {
-					return inst.toString() + " " + ndata[0];
+			if (!this.ndata.isEmpty()) {
+				String str = inst.toString();
+				for (int i = 0; i < this.ndata.size(); i++) {
+					str = str +  " " + this.ndata.get(i); 
 				}
-				return inst.toString() + " " + ndata[0] + "-" + ndata[1];
+				if (this.jump != 0) {
+					str = str + " " + this.jump;
+				}
+				return str;
 			}
 			else {
+				if (this.jump != 0) {
+					return inst.toString() + " " + this.jump;
+				}
 				return inst.toString();
 			}
 		}
@@ -50,6 +60,6 @@ public class Opcode {
 	}
 	
 	public final boolean isJumpCode() {
-    	return this.inst.compareTo(Instruction.REPCOND) <= 0;
+    	return this.inst.compareTo(Instruction.ANY) <= 0;
     }
 }

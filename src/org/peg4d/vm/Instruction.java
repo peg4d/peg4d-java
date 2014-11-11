@@ -8,6 +8,11 @@ public enum Instruction {
 	IFSUCC, 
 	IFFAIL,
 	REPCOND,
+	BYTE,
+	STRING,
+	CHAR,
+	CHARSET,
+	ANY,
 	PUSHo,
 	PUSHconnect,
 	PUSHp,
@@ -21,9 +26,6 @@ public enum Instruction {
 	STOREm,
 	FAIL,
 	SUCC,
-	BYTE,
-	CHAR,
-	ANY,
 	NEW,
 	NEWJOIN,
 	COMMIT,
@@ -32,6 +34,5 @@ public enum Instruction {
 	SETendp,
 	TAG,
 	VALUE,
-	REMEMBER,
-	BACK
+	READAHEAD
 }
