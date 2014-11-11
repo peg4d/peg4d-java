@@ -10,6 +10,11 @@ OP(RET)\
 OP(IFSUCC)\
 OP(IFFAIL)\
 OP(REPCOND)\
+OP(BYTE)\
+OP(STRING)\
+OP(CHAR)\
+OP(CHARSET)\
+OP(ANY)\
 OP(PUSHo)\
 OP(PUSHconnect)\
 OP(PUSHp)\
@@ -23,9 +28,6 @@ OP(STOREf)\
 OP(STOREm)\
 OP(FAIL)\
 OP(SUCC)\
-OP(BYTE)\
-OP(CHAR)\
-OP(ANY)\
 OP(NEW)\
 OP(NEWJOIN)\
 OP(COMMIT)\
@@ -34,8 +36,6 @@ OP(LINK)\
 OP(SETendp)\
 OP(TAG)\
 OP(VALUE)\
-OP(REMEMBER)\
-OP(BACK)
 
 enum pegvm_opcode {
 #define DEFINE_ENUM(NAME) PEGVM_OP_##NAME,
@@ -69,11 +69,15 @@ static void dump_PegVMInstructions(Instruction *inst, uint64_t size) {
 #define OP_DUMPCASE(OP) case PEGVM_OP_##OP:
                     
                     OP_DUMPCASE(CHAR) {
-                        fprintf(stderr, "[%d-", inst[i].ndata[0]);
-                        fprintf(stderr, "%d] ", inst[i].ndata[1]);
+                        fprintf(stderr, "[%d-", inst[i].ndata[1]);
+                        fprintf(stderr, "%d] ", inst[i].ndata[2]);
+                        fprintf(stderr, "%d ", inst[i].jump);
+                    }
+                    OP_DUMPCASE(CHARSET) {
+                        fprintf(stderr, "%d ", inst[i].jump);
                     }
                     default:
-                        fprintf(stderr, "%d ", inst[i].ndata[0]);
+                        fprintf(stderr, "%d ", inst[i].jump);
                         break;
             }
         }
@@ -147,13 +151,15 @@ PegVMInstruction* loadByteCodeFile(ParsingContext context, PegVMInstruction *ins
         inst[i].opcode = buf[info.pos++];
         code_length = buf[info.pos++];
         if (code_length != 0) {
-        inst[i].ndata = malloc(sizeof(int) * code_length);
+            inst[i].ndata = malloc(sizeof(int) * (code_length + 1));
+            inst[i].ndata[0] = code_length;
             while (j < code_length) {
-                inst[i].ndata[j] = read32(buf, &info);
+                inst[i].ndata[j+1] = read32(buf, &info);
                 j++;
             }
         }
         j = 0;
+        inst[i].jump = read32(buf, &info);
         code_length = buf[info.pos++];
         if (code_length != 0) {
             inst[i].name = malloc(sizeof(int) * code_length);

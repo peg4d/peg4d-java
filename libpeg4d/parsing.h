@@ -23,6 +23,7 @@ typedef struct Instruction {
     int *ndata;
     char *name;
     const void *ptr;
+    int jump;
 } PegVMInstruction, Instruction;
 
 struct ParsingLog {

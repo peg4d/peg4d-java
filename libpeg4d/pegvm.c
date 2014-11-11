@@ -159,7 +159,7 @@ static inline int *POP_IP(ParsingContext context)
 #define PUSH_OSP(INST) (*context->object_stack_pointer = (INST), INC_OSP(context, 1))
 #define POP_OSP(INST) (DEC_OSP(context, 1))
 #define TOP_SP() (*context->stack_pointer)
-#define JUMP pc = *inst[pc].ndata; goto *inst[pc].ptr;
+#define JUMP pc = inst[pc].jump; goto *inst[pc].ptr;
 #define RET pc = *POP_IP(context) + 1; goto *inst[pc].ptr;
 
 int execute(ParsingContext context, Instruction *inst)
@@ -188,7 +188,6 @@ int execute(ParsingContext context, Instruction *inst)
     popOcount[count] = 0;
     startpc[0] = 1;
     
-    
     for (int i = 0; i < context->bytecode_length; i++) {
         inst[i].ptr = table[inst[i].opcode];
     }
@@ -208,7 +207,7 @@ int execute(ParsingContext context, Instruction *inst)
     OP(CALL) {
         PUSH_IP(context, pc);
         //JUMP;
-        pc = *inst[pc].ndata;
+        pc = inst[pc].jump;
         count++;
         pushcount[count] = 0;
         popcount[count] = 0;
@@ -224,6 +223,7 @@ int execute(ParsingContext context, Instruction *inst)
             assert(0 && "pushcount != popcount");
         }
         if (pushOcount[count] != popOcount[count]) {
+            fprintf(stderr, "(push:%d ~ pop:%d) \n", pushOcount[count], popOcount[count]);
             fprintf(stderr, "(start:%d ~ end:%d) ", startpc[count], endpc[count]);
             assert(0 && "pushOcount != popOcount");
         }
@@ -237,6 +237,9 @@ int execute(ParsingContext context, Instruction *inst)
         DISPATCH_NEXT;
     }
     OP(IFFAIL){
+        if (pc == 910) {
+            pc = 910;
+        }
         if (failflag) {
             JUMP;
         }
@@ -262,6 +265,8 @@ int execute(ParsingContext context, Instruction *inst)
         ParsingObject left = context->left;
         context->left->refc++;
         PUSH_OSP(left);
+        pushcount[count]++;
+        PUSH_SP(P4D_markLogStack(context));
         DISPATCH_NEXT;
     }
     OP(PUSHp) {
@@ -313,46 +318,88 @@ int execute(ParsingContext context, Instruction *inst)
         DISPATCH_NEXT;
     }
     OP(BYTE) {
-        if (context->inputs[context->pos] == inst[pc].ndata[0]) {
+        if (context->inputs[context->pos] == inst[pc].ndata[1]) {
             context->pos++;
         }
         else {
             failflag = 1;
+            JUMP;
+        }
+        DISPATCH_NEXT;
+    }
+    OP(STRING) {
+        int j = 0;
+        while (j < inst[pc].ndata[0]) {
+            if (context->inputs[context->pos] == inst[pc].ndata[j+1]) {
+                context->pos++;
+                j++;
+            }
+            else {
+                failflag = 1;
+                JUMP;
+            }
         }
         DISPATCH_NEXT;
     }
     OP(CHAR){
-        if (context->inputs[context->pos] >= inst[pc].ndata[0] && context->inputs[context->pos] <= inst[pc].ndata[1]) {
-            P4D_consume(&context->pos, 1);
+        if (context->inputs[context->pos] >= inst[pc].ndata[1] && context->inputs[context->pos] <= inst[pc].ndata[2]) {
+            context->pos++;
         }
         else {
             failflag = 1;
+            JUMP;
         }
         DISPATCH_NEXT;
     }
+    OP(CHARSET){
+        int j = 0;
+        while (j < inst[pc].ndata[0]) {
+            if (context->inputs[context->pos] == inst[pc].ndata[j+1]) {
+                context->pos++;
+                goto CHARSET_CONSUME;
+            }
+            j++;
+        }
+        failflag = 1;
+        JUMP;
+    CHARSET_CONSUME:
+        DISPATCH_NEXT
+    }
     OP(ANY){
         if(context->inputs[context->pos] != 0) {
-            P4D_consume(&context->pos, 1);
+            context->pos++;
         }
         else {
             failflag = 1;
+            JUMP;
         }
         DISPATCH_NEXT;
     }
     OP(NEW){
+        if (pc == 977) {
+            pc = 977;
+        }
+        pushcount[count]++;
+        PUSH_SP(P4D_markLogStack(context));
         P4D_setObject(context, &context->left, P4D_newObject(context, context->pos));
         DISPATCH_NEXT;
     }
     OP(NEWJOIN){
-        popOcount[count]++;
-        ParsingObject left = POP_OSP();
+        //popOcount[count]++;
+        ParsingObject left;
+        P4D_setObject(context, &left, context->left);
+        P4D_setObject(context, &context->left, P4D_newObject(context, context->pos));
         P4D_lazyJoin(context, left);
-        P4D_lazyLink(context, context->left, inst[pc].ndata[0], left);
+        P4D_lazyLink(context, context->left, inst[pc].ndata[1], left);
         DISPATCH_NEXT;
     }
     OP(COMMIT){
         popcount[count]++;
         P4D_commitLog(context, (int)POP_SP(), context->left);
+        popOcount[count]++;
+        ParsingObject parent = (ParsingObject)POP_OSP();
+        P4D_lazyLink(context, parent, inst[pc].ndata[1], context->left);
+        P4D_setObject(context, &context->left, parent);
         DISPATCH_NEXT;
     }
     OP(ABORT){
@@ -363,7 +410,7 @@ int execute(ParsingContext context, Instruction *inst)
     OP(LINK){
         popOcount[count]++;
         ParsingObject parent = (ParsingObject)POP_OSP();
-        P4D_lazyLink(context, parent, inst[pc].ndata[0], context->left);
+        P4D_lazyLink(context, parent, inst[pc].ndata[1], context->left);
         //P4D_setObject(context, &context->left, parent);
         PUSH_OSP(parent);
         pushOcount[count]++;
@@ -380,12 +427,6 @@ int execute(ParsingContext context, Instruction *inst)
     OP(VALUE){
         context->left->value = inst[pc].name;
         DISPATCH_NEXT;
-    }
-    OP(REMEMBER){
-        assert(0 && "Not implemented");
-    }
-    OP(BACK){
-        assert(0 && "Not implemented");
     }
 
     return failflag;
