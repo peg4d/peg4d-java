@@ -48,6 +48,7 @@ public class CodeGenerator extends GrammarFormatter {
 	
 	int codeIndex = 0;
 	boolean backTrackFlag = false;
+	int optimizationLevel = 0;
 	
 	UList<Opcode> codeList = new UList<Opcode>(new Opcode[256]);	
 	HashMap<Integer,Integer> labelMap = new HashMap<Integer,Integer>();
@@ -409,6 +410,7 @@ public class CodeGenerator extends GrammarFormatter {
 	
 	@Override
 	public void formatGrammar(Grammar peg, StringBuilder sb) {
+		this.optimizationLevel = Main.OptimizationLevel;
 		this.formatHeader();
 		for(ParsingRule r: peg.getRuleList()) {
 			if (r.ruleName.equals("File")) {
@@ -571,19 +573,45 @@ public class CodeGenerator extends GrammarFormatter {
 	@Override
 	public void visitSequence(ParsingSequence e) {
 		for(int i = 0; i < e.size(); i++) {
-			i = writeSequenceCode(e, i, e.size());
+			if (optimizationLevel > 0) {
+				i = writeSequenceCode(e, i, e.size());
+			}
+			else {
+				e.get(i).visit(this);
+			}
 		}
 	}
 
 	@Override
 	public void visitChoice(ParsingChoice e) {
 		//readAheadChoice(e);
-		boolean backTrackFlag = this.backTrackFlag = false;
 		int label = newLabel();
-		for(int i = 0; i < e.size(); i++) {
-			i = writeChoiceCode(e, i, e.size());
-			backTrackFlag = this.backTrackFlag;
+		if (optimizationLevel > 0) {
+			boolean backTrackFlag = this.backTrackFlag = false;
+			for(int i = 0; i < e.size(); i++) {
+				i = writeChoiceCode(e, i, e.size());
+				backTrackFlag = this.backTrackFlag;
+				if (backTrackFlag) {
+					writeJumpCode(Instruction.JUMP, label);
+					this.popFailureJumpPoint(e.get(i));
+					if (i != e.size() - 1) {
+						writeCode(Instruction.SUCC);
+					}
+					writeCode(Instruction.STOREp);
+				}
+			}
 			if (backTrackFlag) {
+				writeJumpCode(Instruction.JUMP, jumpFailureJump());
+				writeLabel(label);
+				writeCode(Instruction.POP);
+			}
+			this.backTrackFlag = false;
+		}
+		else {
+			for(int i = 0; i < e.size(); i++) {
+				this.pushFailureJumpPoint();
+				writeCode(Instruction.PUSHp);
+				e.get(i).visit(this);
 				writeJumpCode(Instruction.JUMP, label);
 				this.popFailureJumpPoint(e.get(i));
 				if (i != e.size() - 1) {
@@ -591,20 +619,22 @@ public class CodeGenerator extends GrammarFormatter {
 				}
 				writeCode(Instruction.STOREp);
 			}
-		}
-		if (backTrackFlag) {
 			writeJumpCode(Instruction.JUMP, jumpFailureJump());
 			writeLabel(label);
 			writeCode(Instruction.POP);
 		}
-		this.backTrackFlag = false;
 	}
 
 	@Override
 	public void visitConstructor(ParsingConstructor e) {
 		int label = newLabel();
 		for(int i = 0; i < e.prefetchIndex; i++) {
-			i = writeSequenceCode(e, i, e.prefetchIndex);
+			if (optimizationLevel > 0) {
+				i = writeSequenceCode(e, i, e.prefetchIndex);
+			}
+			else {
+				e.get(i).visit(this);
+			}
 		}
 		this.pushFailureJumpPoint();
 		if (e.leftJoin) {
@@ -620,7 +650,12 @@ public class CodeGenerator extends GrammarFormatter {
 			writeCode(Instruction.NEW);
 		}
 		for(int i = e.prefetchIndex; i < e.size(); i++) {
-			i = writeSequenceCode(e, i, e.size());
+			if (optimizationLevel > 0) {
+				i = writeSequenceCode(e, i, e.size());
+			}
+			else {
+				e.get(i).visit(this);
+			}
 		}
 		writeCode(Instruction.SETendp);
 		writeCode(Instruction.POP);

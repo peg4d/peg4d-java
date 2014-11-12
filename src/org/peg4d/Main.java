@@ -236,7 +236,9 @@ public class Main {
 			index++;
 		}
 		else {
-			Main.OptimizationLevel = 0;
+			if (PEGFormatter == null) {
+				Main.OptimizationLevel = 0;
+			}
 			ShellMode = true;
 		}
 	}
