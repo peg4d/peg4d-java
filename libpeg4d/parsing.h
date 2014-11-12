@@ -133,7 +133,7 @@ void dump_pego(ParsingObject *pego, char* source, int level)
 }
 
 void dispose_pego(ParsingObject *pego) {
-    if (pego[0]) {
+    if (pego[0] != NULL) {
         if (pego[0]->child_size != 0) {
             for (int i = 0; i < pego[0]->child_size; i++) {
                 dispose_pego(&pego[0]->child[i]);
@@ -218,12 +218,12 @@ void ParsingContext_Dispose(ParsingContext this)
     this->stack_pointer_base = NULL;
     free(this->object_stack_pointer_base);
     this->object_stack_pointer_base = NULL;
-    dispose_pego(&this->unusedObject);
+    //dispose_pego(&this->unusedObject);
 }
 
 void createMemoryPool(MemoryPool pool) {
-    pool->object_pool = malloc(sizeof(ParsingObject) * pool->pool_size);
-    pool->log_pool = malloc(sizeof(ParsingLog) * pool->pool_size);
+    pool->object_pool = (ParsingObject)malloc(sizeof(struct ParsingObject) * pool->pool_size);
+    pool->log_pool = (ParsingLog)malloc(sizeof(struct ParsingLog) * pool->pool_size);
     pool->object_pool_index = 0;
     pool->log_pool_index = 0;
 }
@@ -248,15 +248,8 @@ void P4D_consume(long *pos, long length)
 ParsingObject P4D_newObject(ParsingContext this, long start, MemoryPool pool)
 {
     ParsingObject o;
-    if (this->unusedObject == NULL) {
-        o = (ParsingObject)malloc(sizeof (struct ParsingObject));
-        //o = &pool->object_pool[pool->object_pool_index];
-        //pool->object_pool_index++;
-    }
-    else {
-        o = this->unusedObject;
-        this->unusedObject = o->parent;
-    }
+    o = &pool->object_pool[pool->object_pool_index];
+    pool->object_pool_index++;
     o->refc       = 0;
     o->oid        = 0;
     o->start_pos  = start;
@@ -285,9 +278,6 @@ void P4D_unusedObject(ParsingContext this, ParsingObject o)
 void P4D_setObject(ParsingContext this, ParsingObject *var, ParsingObject o)
 {
     if (var[0] != NULL) {
-        if(var[0] == o) {
-            return;
-        }
         var[0]->refc -= 1;
         if(var[0]->refc == 0) {
             P4D_unusedObject(this, var[0]);
@@ -305,8 +295,10 @@ void P4D_disposeObject(ParsingObject o)
     o = NULL;
 }
 
-ParsingLog P4D_newLog(ParsingContext this) {
-    ParsingLog l = (ParsingLog)malloc(sizeof (struct ParsingLog));
+ParsingLog P4D_newLog(ParsingContext this, MemoryPool pool) {
+    //ParsingLog l = (ParsingLog)malloc(sizeof (struct ParsingLog));
+    ParsingLog l = &pool->log_pool[pool->log_pool_index];
+    pool->log_pool_index++;
     l->next = NULL;
     l->childNode = NULL;
     return l;
@@ -314,16 +306,16 @@ ParsingLog P4D_newLog(ParsingContext this) {
 
 void P4D_unuseLog(ParsingContext this, ParsingLog log) {
     P4D_setObject(this, &log->childNode, NULL);
-    free(log);
-    log = NULL;
+    //free(log);
+    //log = NULL;
 }
 
 int P4D_markLogStack(ParsingContext this) {
     return this->logStackSize;
 }
 
-void P4D_lazyLink(ParsingContext this, ParsingObject parent, int index, ParsingObject child) {
-    ParsingLog l = P4D_newLog(this);
+void P4D_lazyLink(ParsingContext this, ParsingObject parent, int index, ParsingObject child, MemoryPool pool) {
+    ParsingLog l = P4D_newLog(this, pool);
     P4D_setObject(this, &l->childNode, child);
     child->parent = parent;
     l->index = index;
@@ -332,8 +324,8 @@ void P4D_lazyLink(ParsingContext this, ParsingObject parent, int index, ParsingO
     this->logStackSize += 1;
 }
 
-void P4D_lazyJoin(ParsingContext this, ParsingObject left) {
-    ParsingLog l = P4D_newLog(this);
+void P4D_lazyJoin(ParsingContext this, ParsingObject left, MemoryPool pool) {
+    ParsingLog l = P4D_newLog(this, pool);
     P4D_setObject(this, &l->childNode, left);
     l->index = -9;
     l->next = this->logStack;

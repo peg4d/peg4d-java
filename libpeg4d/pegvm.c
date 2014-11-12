@@ -40,9 +40,7 @@ int main(int argc, char * const argv[])
     uint64_t bytecode_length = context.bytecode_length;
     pool.pool_size = context.input_size * bytecode_length / 1000;
     createMemoryPool(&pool);
-    ParsingContext_Dispose(&context);
     if(output_type == NULL || !strcmp(output_type, "pego")) {
-        ParsingContext_Init(&context, input_file);
         context.bytecode_length = bytecode_length;
         clock_t start = clock();
         if(execute(&context, inst, &pool)) {
@@ -51,25 +49,21 @@ int main(int argc, char * const argv[])
         clock_t end = clock();
         dump_pego(&context.left, context.inputs, 0);
         fprintf(stderr, "EraspedTime: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
-        ParsingContext_Dispose(&context);
     }
     else if(!strcmp(output_type, "stat")) {
         for (int i = 0; i < 20; i++) {
             init_pool(&pool);
-        ParsingContext_Init(&context, input_file);
-            context.bytecode_length = bytecode_length;
-        clock_t start = clock();
-        if(execute(&context, inst, &pool)) {
-            peg_error("parse error");
-        }
-        clock_t end = clock();
-        fprintf(stderr, "EraspedTime: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
-        dispose_pego(&context.left);
-        ParsingContext_Dispose(&context);
+            clock_t start = clock();
+            if(execute(&context, inst, &pool)) {
+                peg_error("parse error");
+            }
+            clock_t end = clock();
+            fprintf(stderr, "EraspedTime: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
+            dispose_pego(&context.left);
+            context.pos = 0;
         }
     }
     else if (!strcmp(output_type, "file")) {
-        ParsingContext_Init(&context, input_file);
         context.bytecode_length = bytecode_length;
         char output_file[256] = "dump/dump_parsed_";
         char fileName[256];
@@ -100,9 +94,9 @@ int main(int argc, char * const argv[])
         }
         dump_pego_file(file, &context.left, context.inputs, 0);
         fclose(file);
-        ParsingContext_Dispose(&context);
     }
     destroyMemoryPool(&pool);
+    ParsingContext_Dispose(&context);
     free(inst);
     inst = NULL;
     return 0;
@@ -406,8 +400,8 @@ int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         ParsingObject left;
         P4D_setObject(context, &left, context->left);
         P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
-        P4D_lazyJoin(context, left);
-        P4D_lazyLink(context, context->left, inst[pc].ndata[1], left);
+        P4D_lazyJoin(context, left, pool);
+        P4D_lazyLink(context, context->left, inst[pc].ndata[1], left, pool);
         DISPATCH_NEXT;
     }
     OP(COMMIT){
@@ -415,7 +409,7 @@ int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         P4D_commitLog(context, (int)POP_SP(), context->left, pool);
         popOcount[count]++;
         ParsingObject parent = (ParsingObject)POP_OSP();
-        P4D_lazyLink(context, parent, inst[pc].ndata[1], context->left);
+        P4D_lazyLink(context, parent, inst[pc].ndata[1], context->left, pool);
         P4D_setObject(context, &context->left, parent);
         DISPATCH_NEXT;
     }
@@ -427,7 +421,7 @@ int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     OP(LINK){
         popOcount[count]++;
         ParsingObject parent = (ParsingObject)POP_OSP();
-        P4D_lazyLink(context, parent, inst[pc].ndata[1], context->left);
+        P4D_lazyLink(context, parent, inst[pc].ndata[1], context->left, pool);
         //P4D_setObject(context, &context->left, parent);
         PUSH_OSP(parent);
         pushOcount[count]++;
