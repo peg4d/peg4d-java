@@ -2,13 +2,13 @@
 #include <time.h>
 #include "pegvm.h"
 
-int execute(ParsingContext context, Instruction *inst);
+int execute(ParsingContext context, Instruction *inst, MemoryPool pool);
 
 int main(int argc, char * const argv[])
 {
-    //chdir("/Users/hondashun/Documents/workspace/peg4d-java/libpeg4d");
     struct ParsingContext context;
     PegVMInstruction *inst;
+    struct MemoryPool pool;
     const char *syntax_file = NULL;
     const char *output_type = NULL;
     const char *input_file = NULL;
@@ -37,25 +37,40 @@ int main(int argc, char * const argv[])
     input_file = argv[0];
     ParsingContext_Init(&context, input_file);
     inst = loadByteCodeFile(&context, inst, syntax_file);
+    uint64_t bytecode_length = context.bytecode_length;
+    pool.pool_size = context.input_size * bytecode_length / 1000;
+    createMemoryPool(&pool);
+    ParsingContext_Dispose(&context);
     if(output_type == NULL || !strcmp(output_type, "pego")) {
+        ParsingContext_Init(&context, input_file);
+        context.bytecode_length = bytecode_length;
         clock_t start = clock();
-        if(execute(&context, inst)) {
+        if(execute(&context, inst, &pool)) {
             peg_error("parse error");
         }
         clock_t end = clock();
         dump_pego(&context.left, context.inputs, 0);
         fprintf(stderr, "EraspedTime: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
+        ParsingContext_Dispose(&context);
     }
     else if(!strcmp(output_type, "stat")) {
+        for (int i = 0; i < 20; i++) {
+            init_pool(&pool);
+        ParsingContext_Init(&context, input_file);
+            context.bytecode_length = bytecode_length;
         clock_t start = clock();
-        if(execute(&context, inst)) {
+        if(execute(&context, inst, &pool)) {
             peg_error("parse error");
         }
         clock_t end = clock();
         fprintf(stderr, "EraspedTime: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
         dispose_pego(&context.left);
+        ParsingContext_Dispose(&context);
+        }
     }
     else if (!strcmp(output_type, "file")) {
+        ParsingContext_Init(&context, input_file);
+        context.bytecode_length = bytecode_length;
         char output_file[256] = "dump/dump_parsed_";
         char fileName[256];
         size_t input_fileName_len = strlen(input_file);
@@ -75,7 +90,7 @@ int main(int argc, char * const argv[])
         strncpy(fileName, input_file + start, index-start);
         strcat(output_file, fileName);
         strcat(output_file, ".txt");
-        if(execute(&context, inst)) {
+        if(execute(&context, inst, &pool)) {
             peg_error("parse error");
         }
         FILE *file;
@@ -85,8 +100,9 @@ int main(int argc, char * const argv[])
         }
         dump_pego_file(file, &context.left, context.inputs, 0);
         fclose(file);
+        ParsingContext_Dispose(&context);
     }
-    ParsingContext_Dispose(&context);
+    destroyMemoryPool(&pool);
     free(inst);
     inst = NULL;
     return 0;
@@ -162,9 +178,10 @@ static inline int *POP_IP(ParsingContext context)
 #define JUMP pc = inst[pc].jump; goto *inst[pc].ptr;
 #define RET pc = *POP_IP(context) + 1; goto *inst[pc].ptr;
 
-int execute(ParsingContext context, Instruction *inst)
+int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
 {
     PUSH_IP(context, -1);
+    P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
     static const void *table[] = {
 #define DEFINE_TABLE(NAME) &&PEGVM_OP_##NAME,
         PEGVM_OP_EACH(DEFINE_TABLE)
@@ -198,7 +215,7 @@ int execute(ParsingContext context, Instruction *inst)
 #define OP(OP) PEGVM_OP_##OP:
 #define DISPATCH_NEXT pc++; goto *inst[pc].ptr;
     OP(EXIT) {
-        P4D_commitLog(context, 0, context->left);
+        P4D_commitLog(context, 0, context->left, pool);
         return failflag;
     }
     OP(JUMP) {
@@ -254,7 +271,7 @@ int execute(ParsingContext context, Instruction *inst)
     }
     OP(PUSHo){
         pushOcount[count]++;
-        ParsingObject left = P4D_newObject(context, context->pos);
+        ParsingObject left = P4D_newObject(context, context->pos, pool);
         *left = *context->left;
         left->refc = 1;
         PUSH_OSP(left);
@@ -381,21 +398,21 @@ int execute(ParsingContext context, Instruction *inst)
         }
         pushcount[count]++;
         PUSH_SP(P4D_markLogStack(context));
-        P4D_setObject(context, &context->left, P4D_newObject(context, context->pos));
+        P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
         DISPATCH_NEXT;
     }
     OP(NEWJOIN){
         //popOcount[count]++;
         ParsingObject left;
         P4D_setObject(context, &left, context->left);
-        P4D_setObject(context, &context->left, P4D_newObject(context, context->pos));
+        P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
         P4D_lazyJoin(context, left);
         P4D_lazyLink(context, context->left, inst[pc].ndata[1], left);
         DISPATCH_NEXT;
     }
     OP(COMMIT){
         popcount[count]++;
-        P4D_commitLog(context, (int)POP_SP(), context->left);
+        P4D_commitLog(context, (int)POP_SP(), context->left, pool);
         popOcount[count]++;
         ParsingObject parent = (ParsingObject)POP_OSP();
         P4D_lazyLink(context, parent, inst[pc].ndata[1], context->left);
