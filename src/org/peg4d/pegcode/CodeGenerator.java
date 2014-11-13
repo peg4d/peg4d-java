@@ -49,8 +49,10 @@ public class CodeGenerator extends GrammarFormatter {
 	int codeIndex = 0;
 	boolean backTrackFlag = false;
 	int optimizationLevel = 0;
+	int optimizationCount = 0;
 	
-	UList<Opcode> codeList = new UList<Opcode>(new Opcode[256]);	
+	UList<Opcode> codeList = new UList<Opcode>(new Opcode[256]);
+	UList<Opcode> optimizedCodeList = new UList<Opcode>(new Opcode[256]);
 	HashMap<Integer,Integer> labelMap = new HashMap<Integer,Integer>();
 	HashMap<String, Integer> callMap = new HashMap<String, Integer>();
 	
@@ -425,6 +427,7 @@ public class CodeGenerator extends GrammarFormatter {
 				}
 			}
 		}
+		//this.optimizeCode();
 		this.formatFooter();
 		writeByteCode(peg.getName());
 	}
@@ -461,6 +464,76 @@ public class CodeGenerator extends GrammarFormatter {
 			else {
 				System.out.println("[" + i + "] " + code);
 			}
+		}
+	}
+	
+	private void optimizeCode() {
+		int index;
+		for(int i = 0; i < this.codeList.size(); i++) {
+			Opcode code = this.codeList.ArrayValues[i];
+			if (code.isJumpCode()) {
+				switch (code.inst) {
+				case CALL:
+					int start = this.callMap.get(code.name);
+					if(checkInlineMethod(start)) {
+						writeInlineMethodCode(start);
+					}
+					else {
+						optimizedCodeList.add(code);
+					}
+					break;
+				case IFFAIL:
+					index = this.labelMap.remove(code.jump);
+					this.labelMap.put(code.jump, index + optimizationCount);
+					optimizedCodeList.add(code);
+					break;
+				case EXIT:
+					optimizedCodeList.add(code);
+					break;
+				default:
+					index = this.labelMap.remove(code.jump);
+					this.labelMap.put(code.jump, index + optimizationCount);
+					optimizedCodeList.add(code);
+					break;
+				}
+			}
+			else {
+				optimizedCodeList.add(code);
+			}
+		}
+		this.codeList = optimizedCodeList;
+	}
+	
+	private final boolean checkInlineMethod(int start) {
+		int i = start;
+		while(true) {
+			Opcode code = this.codeList.ArrayValues[i];
+			if (code.inst == Instruction.CALL) {
+				return false;
+			}
+			else if (code.inst == Instruction.RET) {
+				break;
+			}
+			else {
+				i++;
+				if (i - start > 10) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	
+	private final void writeInlineMethodCode(int start) {
+		int i = start;
+		while (true) {
+			Opcode code = this.codeList.ArrayValues[i];
+			if (code.inst == Instruction.RET) {
+				break;
+			}
+			this.optimizedCodeList.add(code);
+			optimizationCount++;
+			i++;
 		}
 	}
 
