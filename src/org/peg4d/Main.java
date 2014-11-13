@@ -11,7 +11,7 @@ import java.util.TreeMap;
 
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.ext.Generator;
-import org.peg4d.jvm.OldStyleJavaByteCodeGenerator;
+import org.peg4d.jvm.JavaByteCodeGenerator;
 import org.peg4d.pegcode.GrammarFormatter;
 
 public class Main {
@@ -104,8 +104,8 @@ public class Main {
 			GrammarFormatter fmt = loadGrammarFormatter(PEGFormatter);
 			StringBuilder sb = new StringBuilder();
 			fmt.formatGrammar(peg, sb);
-			if(fmt instanceof OldStyleJavaByteCodeGenerator) {
-				Class<?> parserClass = ((OldStyleJavaByteCodeGenerator) fmt).generateClass();
+			if(fmt instanceof JavaByteCodeGenerator) {
+				Class<?> parserClass = ((JavaByteCodeGenerator) fmt).generateClass();
 				if(InputFileName != null) {
 					loadInputFile(peg, InputFileName, parserClass);
 				}
@@ -275,8 +275,11 @@ public class Main {
 		driverMap.put("c2", org.peg4d.pegcode.CGenerator2.class);
 		driverMap.put("pegjs", org.peg4d.pegcode.PEGjsFormatter.class);
 		driverMap.put("py", org.peg4d.pegcode.PythonGenerator.class);
-		driverMap.put("old-jvm", org.peg4d.jvm.OldStyleJavaByteCodeGenerator.class);
-		driverMap.put("opt-jvm", org.peg4d.jvm.OptimizedByteCodeGenerator.class);
+		driverMap.put("jvm",          org.peg4d.jvm.JavaByteCodeGenerator.class);
+		driverMap.put("old-jvm",      org.peg4d.jvm.JavaByteCodeGenerator.class);
+		driverMap.put("opt-jvm",      org.peg4d.jvm.OptimizedByteCodeGenerator.class);
+		driverMap.put("jvm-dump",     org.peg4d.jvm.DebuggableJavaByteCodeGenerator.class);
+		driverMap.put("opt-jvm-dump", org.peg4d.jvm.DebuggableOptimizedByteCodeGenerator.class);
 	}
 
 	private static GrammarFormatter loadDriverImpl(String driverName) {

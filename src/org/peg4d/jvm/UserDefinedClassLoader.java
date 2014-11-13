@@ -14,7 +14,7 @@ public class UserDefinedClassLoader extends ClassLoader {
 	/**
 	 * if true, dump byte code.
 	 */
-	private static boolean enableDump = false;
+	private boolean enableDump = false;
 
 	/**
 	 * must be fully qualified binary name(contains . ).
@@ -100,7 +100,7 @@ public class UserDefinedClassLoader extends ClassLoader {
 		if(this.byteCodeMap.put(binaryName, byteCode) != null) {
 			throw new RuntimeException("already defined class: " + className);
 		}
-		dump(binaryName, byteCode);
+		this.dump(binaryName, byteCode);
 	}
 
 	/**
@@ -129,14 +129,16 @@ public class UserDefinedClassLoader extends ClassLoader {
 	 * @return
 	 */
 	public UserDefinedClassLoader createChild() {
-		return new UserDefinedClassLoader(this);
+		UserDefinedClassLoader loader = new UserDefinedClassLoader(this);
+		loader.setDump(this.enableDump);
+		return loader;
 	}
 
 	/**
 	 * for debug purpose.
 	 */
-	private static void dump(String binaryClassName, byte[] byteCode) {
-		if(!enableDump) {
+	private void dump(String binaryClassName, byte[] byteCode) {
+		if(!this.enableDump) {
 			return;
 		}
 		int index = binaryClassName.lastIndexOf('.');
@@ -150,7 +152,7 @@ public class UserDefinedClassLoader extends ClassLoader {
 		}
 	}
 
-	public static void setDump(boolean enableByteCodeDump) {
+	public void setDump(boolean enableByteCodeDump) {
 		enableDump = enableByteCodeDump;
 	}
 

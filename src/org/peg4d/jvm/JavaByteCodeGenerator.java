@@ -62,14 +62,15 @@ import org.peg4d.jvm.ClassBuilder.MethodBuilder;
 import org.peg4d.jvm.ClassBuilder.VarEntry;
 import org.peg4d.pegcode.GrammarFormatter;
 
-public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements Opcodes {
+public class JavaByteCodeGenerator extends GrammarFormatter implements Opcodes {
 	private final static String packagePrefix = "org/peg4d/generated/";
 
 	private final static Handle handle_utf8Codes = newBsmHandle("Utf8Codes", String.class);
 
 	private static int nameSuffix = -1;
 
-	public final boolean enableOptimization;
+	protected final boolean enableDump;
+	protected final boolean enableOptimization;
 
 	private int alternativeCount = -1;
 
@@ -123,12 +124,20 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 		return new Handle(H_INVOKESTATIC, Type.getType(JvmRuntime.class).getInternalName(), bsmName, methodDesc.getDescriptor());
 	}
 
-	public OldStyleJavaByteCodeGenerator() {
-		this(false);
+	public JavaByteCodeGenerator() {
+		this(false, false);
 	}
 
-	protected OldStyleJavaByteCodeGenerator(boolean enableOptimization) {
+	/**
+	 * 
+	 * @param enableOptimization
+	 * if true, enable optimization
+	 * @param enableDump
+	 * if true, enable byte code dump
+	 */
+	protected JavaByteCodeGenerator(boolean enableOptimization, boolean enableDump) {
 		this.enableOptimization = enableOptimization;
+		this.enableDump = enableDump;
 	}
 
 	/**
@@ -212,7 +221,8 @@ public class OldStyleJavaByteCodeGenerator extends GrammarFormatter implements O
 	 */
 	public Class<?> generateClass() {
 		UserDefinedClassLoader loader = new UserDefinedClassLoader();
-		return loader.definedAndLoadClass(this.cBuilder.getInternalName(), cBuilder.toByteArray());
+		loader.setDump(this.enableDump);
+		return loader.definedAndLoadClass(this.cBuilder.getInternalName(), this.cBuilder.toByteArray());
 	}
 
 	// helper method.
