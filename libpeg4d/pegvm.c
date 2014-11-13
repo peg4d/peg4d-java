@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <time.h>
+#include <getopt.h>
 #include "pegvm.h"
+#define PEGVM_DEBUG 0
 
-int execute(ParsingContext context, Instruction *inst, MemoryPool pool);
+long execute(ParsingContext context, Instruction *inst, MemoryPool pool);
 
 int main(int argc, char * const argv[])
 {
@@ -172,33 +174,36 @@ static inline int *POP_IP(ParsingContext context)
 #define JUMP pc = inst[pc].jump; goto *inst[pc].ptr;
 #define RET pc = *POP_IP(context) + 1; goto *inst[pc].ptr;
 
-int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
+
+long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
 {
-    PUSH_IP(context, -1);
-    P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
     static const void *table[] = {
 #define DEFINE_TABLE(NAME) &&PEGVM_OP_##NAME,
         PEGVM_OP_EACH(DEFINE_TABLE)
 #undef DEFINE_TABLE
     };
-    
+
     int failflag = 0;
-    
-    int pushcount[1000];
-    int popcount[1000];
-    int startpc[1000];
-    int endpc[1000];
+
+#if PEGVM_DEBUG
+    int pushcount[1024];
+    int popcount[1024];
+    int startpc[1024];
+    int endpc[1024];
     int count = 0;
-    
-    int pushOcount[1000];
-    int popOcount[1000];
+    int pushOcount[1024];
+    int popOcount[1024];
     
     pushcount[0] = 0;
     popcount[0] = 0;
     pushOcount[count] = 0;
     popOcount[count] = 0;
     startpc[0] = 1;
+#endif
     
+    PUSH_IP(context, -1);
+    P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
+
     for (int i = 0; i < context->bytecode_length; i++) {
         inst[i].ptr = table[inst[i].opcode];
     }
@@ -207,7 +212,7 @@ int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     goto *inst[pc].ptr;
                 
 #define OP(OP) PEGVM_OP_##OP:
-#define DISPATCH_NEXT pc++; goto *inst[pc].ptr;
+#define DISPATCH_NEXT goto *inst[++pc].ptr;
     OP(EXIT) {
         P4D_commitLog(context, 0, context->left, pool);
         return failflag;
@@ -219,15 +224,18 @@ int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         PUSH_IP(context, pc);
         //JUMP;
         pc = inst[pc].jump;
-        count++;
-        pushcount[count] = 0;
-        popcount[count] = 0;
-        pushOcount[count] = 0;
-        popOcount[count] = 0;
-        startpc[count] = pc;
+#if PEGVM_DEBUG
+            count++;
+            pushcount[count] = 0;
+            popcount[count] = 0;
+            pushOcount[count] = 0;
+            popOcount[count] = 0;
+            startpc[count] = pc;
+#endif
         goto *inst[pc].ptr;
     }
     OP(RET) {
+#if PEGVM_DEBUG
         endpc[count] = pc;
         if (pushcount[count] != popcount[count]) {
             fprintf(stderr, "(start:%d ~ end:%d) ", startpc[count], endpc[count]);
@@ -239,6 +247,7 @@ int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
             assert(0 && "pushOcount != popOcount");
         }
         count--;
+#endif
         RET;
     }
     OP(IFSUCC) {
@@ -248,23 +257,29 @@ int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(IFFAIL){
+#if PEGVM_DEBUG
         if (pc == 910) {
             pc = 910;
         }
+#endif
         if (failflag) {
             JUMP;
         }
         DISPATCH_NEXT;
     }
     OP(REPCOND) {
+#if PEGVM_DEBUG
         popcount[count]++;
+#endif
         if (context->pos == POP_SP()) {
             JUMP;
         }
         DISPATCH_NEXT;
     }
     OP(PUSHo){
+#if PEGVM_DEBUG
         pushOcount[count]++;
+#endif
         ParsingObject left = P4D_newObject(context, context->pos, pool);
         *left = *context->left;
         left->refc = 1;
@@ -272,16 +287,22 @@ int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(PUSHconnect) {
+#if PEGVM_DEBUG
         pushOcount[count]++;
+#endif
         ParsingObject left = context->left;
         context->left->refc++;
         PUSH_OSP(left);
+#if PEGVM_DEBUG
         pushcount[count]++;
+#endif
         PUSH_SP(P4D_markLogStack(context));
         DISPATCH_NEXT;
     }
     OP(PUSHp) {
+#if PEGVM_DEBUG
         pushcount[count]++;
+#endif
         PUSH_SP(context->pos);
         DISPATCH_NEXT;
     }
@@ -289,28 +310,38 @@ int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         assert(0 && "Not implemented");
     }
     OP(PUSHm){
+#if PEGVM_DEBUG
         pushcount[count]++;
+#endif
         PUSH_SP(P4D_markLogStack(context));
         DISPATCH_NEXT;
     }
     OP(POP){
+#if PEGVM_DEBUG
         popcount[count]++;
+#endif
         POP_SP();
         DISPATCH_NEXT;
     }
     OP(POPo){
+#if PEGVM_DEBUG
         popOcount[count]++;
+#endif
         ParsingObject left = POP_OSP();
         P4D_setObject(context, &left, NULL);
         DISPATCH_NEXT;
     }
     OP(STOREo){
+#if PEGVM_DEBUG
         popOcount[count]++;
+#endif
         ParsingObject left = POP_OSP();
         P4D_setObject(context, &context->left, left);
         DISPATCH_NEXT;}
     OP(STOREp){
+#if PEGVM_DEBUG
         popcount[count]++;
+#endif
         context->pos = POP_SP();
         DISPATCH_NEXT;
     }
@@ -387,10 +418,12 @@ int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(NEW){
+#if PEGVM_DEBUG
         if (pc == 977) {
             pc = 977;
         }
         pushcount[count]++;
+#endif
         PUSH_SP(P4D_markLogStack(context));
         P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
         DISPATCH_NEXT;
@@ -405,26 +438,36 @@ int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(COMMIT){
+#if PEGVM_DEBUG
         popcount[count]++;
+#endif
         P4D_commitLog(context, (int)POP_SP(), context->left, pool);
+#if PEGVM_DEBUG
         popOcount[count]++;
+#endif
         ParsingObject parent = (ParsingObject)POP_OSP();
         P4D_lazyLink(context, parent, inst[pc].ndata[1], context->left, pool);
         P4D_setObject(context, &context->left, parent);
         DISPATCH_NEXT;
     }
     OP(ABORT){
+#if PEGVM_DEBUG
         popcount[count]++;
+#endif
         P4D_abortLog(context, (int)POP_SP());
         DISPATCH_NEXT;
     }
     OP(LINK){
+#if PEGVM_DEBUG
         popOcount[count]++;
+#endif
         ParsingObject parent = (ParsingObject)POP_OSP();
         P4D_lazyLink(context, parent, inst[pc].ndata[1], context->left, pool);
         //P4D_setObject(context, &context->left, parent);
         PUSH_OSP(parent);
+#if PEGVM_DEBUG
         pushOcount[count]++;
+#endif
         DISPATCH_NEXT;
     }
     OP(SETendp){
@@ -438,6 +481,9 @@ int execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     OP(VALUE){
         context->left->value = inst[pc].name;
         DISPATCH_NEXT;
+    }
+    OP(DTHREAD) {
+        return (long)table;
     }
 
     return failflag;

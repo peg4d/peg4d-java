@@ -36,6 +36,7 @@ OP(LINK)\
 OP(SETendp)\
 OP(TAG)\
 OP(VALUE)\
+OP(DTABLE)
 
 enum pegvm_opcode {
 #define DEFINE_ENUM(NAME) PEGVM_OP_##NAME,
