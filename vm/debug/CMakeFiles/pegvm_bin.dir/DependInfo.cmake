@@ -1,0 +1,29 @@
+# The set of languages for which implicit dependencies are needed:
+set(CMAKE_DEPENDS_LANGUAGES
+  "C"
+  )
+# The set of files for implicit dependencies of each language:
+set(CMAKE_DEPENDS_CHECK_C
+  "/Users/hondashun/Documents/workspace/peg4d-java/libpeg4d/pegvm.c" "/Users/hondashun/Documents/workspace/peg4d-java/vm/debug/CMakeFiles/pegvm_bin.dir/Users/hondashun/Documents/workspace/peg4d-java/libpeg4d/pegvm.c.o"
+  )
+set(CMAKE_C_COMPILER_ID "Clang")
+
+# Preprocessor definitions for this target.
+set(CMAKE_TARGET_DEFINITIONS
+  "HAVE_CONFIG_H"
+  )
+
+# Targets to which this target links.
+set(CMAKE_TARGET_LINKED_INFO_FILES
+  "/Users/hondashun/Documents/workspace/peg4d-java/vm/debug/CMakeFiles/pegvm.dir/DependInfo.cmake"
+  )
+
+# The include file search paths:
+set(CMAKE_C_TARGET_INCLUDE_PATH
+  ".."
+  "../../libpeg4d"
+  "."
+  )
+set(CMAKE_CXX_TARGET_INCLUDE_PATH ${CMAKE_C_TARGET_INCLUDE_PATH})
+set(CMAKE_Fortran_TARGET_INCLUDE_PATH ${CMAKE_C_TARGET_INCLUDE_PATH})
+set(CMAKE_ASM_TARGET_INCLUDE_PATH ${CMAKE_C_TARGET_INCLUDE_PATH})

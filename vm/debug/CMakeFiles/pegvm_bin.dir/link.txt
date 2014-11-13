@@ -1,0 +1,1 @@
+/usr/bin/cc   -O0 -g3 -Wl,-search_paths_first -Wl,-headerpad_max_install_names   CMakeFiles/pegvm_bin.dir/Users/hondashun/Documents/workspace/peg4d-java/libpeg4d/pegvm.c.o  -o pegvm  libpegvm.dylib 
