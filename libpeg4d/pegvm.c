@@ -2,14 +2,13 @@
 #include <time.h>
 #include <getopt.h>
 #include "pegvm.h"
-#define PEGVM_DEBUG 0
 
 long execute(ParsingContext context, Instruction *inst, MemoryPool pool);
 
 int main(int argc, char * const argv[])
 {
     struct ParsingContext context;
-    PegVMInstruction *inst;
+    PegVMInstruction *inst = NULL;
     struct MemoryPool pool;
     const char *syntax_file = NULL;
     const char *output_type = NULL;
@@ -110,7 +109,6 @@ int ParserContext_IsFailure(ParsingContext context)
     return context->left == NULL;
 }
 
-#define MAX(A, B) ((A)>(B)?(A):(B))
 void ParserContext_RecordFailurePos(ParsingContext context, size_t consumed)
 {
     context->left = NULL;
@@ -170,9 +168,9 @@ static inline int *POP_IP(ParsingContext context)
 #define POP_SP(INST) (DEC_SP(context, 1))
 #define PUSH_OSP(INST) (*context->object_stack_pointer = (INST), INC_OSP(context, 1))
 #define POP_OSP(INST) (DEC_OSP(context, 1))
-#define TOP_SP() (*context->stack_pointer)
-#define JUMP pc = inst[pc].jump; goto *inst[pc].ptr;
-#define RET pc = *POP_IP(context) + 1; goto *inst[pc].ptr;
+//#define TOP_SP() (*context->stack_pointer)
+#define JUMP pc = (inst+pc)->jump; goto *(inst+pc)->ptr;
+#define RET pc = *POP_IP(context) + 1; goto *(inst+pc)->ptr;
 
 
 long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
@@ -204,15 +202,15 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     PUSH_IP(context, -1);
     P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
 
-    for (int i = 0; i < context->bytecode_length; i++) {
-        inst[i].ptr = table[inst[i].opcode];
+    for (uint64_t i = 0; i < context->bytecode_length; i++) {
+        (inst+i)->ptr = table[(inst+i)->opcode];
     }
     
     int pc = 1;
-    goto *inst[pc].ptr;
+    goto *(inst+pc)->ptr;
                 
 #define OP(OP) PEGVM_OP_##OP:
-#define DISPATCH_NEXT goto *inst[++pc].ptr;
+#define DISPATCH_NEXT ++pc; goto *(inst+pc)->ptr;
     OP(EXIT) {
         P4D_commitLog(context, 0, context->left, pool);
         return failflag;
@@ -222,8 +220,8 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     }
     OP(CALL) {
         PUSH_IP(context, pc);
-        //JUMP;
-        pc = inst[pc].jump;
+        JUMP;
+        //pc = inst[pc].jump;
 #if PEGVM_DEBUG
             count++;
             pushcount[count] = 0;
@@ -232,7 +230,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
             popOcount[count] = 0;
             startpc[count] = pc;
 #endif
-        goto *inst[pc].ptr;
+        //goto *inst[pc].ptr;
     }
     OP(RET) {
 #if PEGVM_DEBUG
@@ -360,7 +358,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(BYTE) {
-        if (context->inputs[context->pos] == inst[pc].ndata[1]) {
+        if (context->inputs[context->pos] == (inst+pc)->ndata[1]) {
             context->pos++;
         }
         else {
@@ -371,8 +369,8 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     }
     OP(STRING) {
         int j = 0;
-        while (j < inst[pc].ndata[0]) {
-            if (context->inputs[context->pos] == inst[pc].ndata[j+1]) {
+        while (j < (inst+pc)->ndata[0]) {
+            if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
                 context->pos++;
                 j++;
             }
@@ -384,7 +382,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(CHAR){
-        if (context->inputs[context->pos] >= inst[pc].ndata[1] && context->inputs[context->pos] <= inst[pc].ndata[2]) {
+        if (context->inputs[context->pos] >= (inst+pc)->ndata[1] && context->inputs[context->pos] <= (inst+pc)->ndata[2]) {
             context->pos++;
         }
         else {
@@ -395,8 +393,8 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     }
     OP(CHARSET){
         int j = 0;
-        while (j < inst[pc].ndata[0]) {
-            if (context->inputs[context->pos] == inst[pc].ndata[j+1]) {
+        while (j < (inst+pc)->ndata[0]) {
+            if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
                 context->pos++;
                 goto CHARSET_CONSUME;
             }
@@ -434,7 +432,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         P4D_setObject(context, &left, context->left);
         P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
         P4D_lazyJoin(context, left, pool);
-        P4D_lazyLink(context, context->left, inst[pc].ndata[1], left, pool);
+        P4D_lazyLink(context, context->left, (inst+pc)->ndata[1], left, pool);
         DISPATCH_NEXT;
     }
     OP(COMMIT){
@@ -446,7 +444,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         popOcount[count]++;
 #endif
         ParsingObject parent = (ParsingObject)POP_OSP();
-        P4D_lazyLink(context, parent, inst[pc].ndata[1], context->left, pool);
+        P4D_lazyLink(context, parent, (inst+pc)->ndata[1], context->left, pool);
         P4D_setObject(context, &context->left, parent);
         DISPATCH_NEXT;
     }
@@ -462,7 +460,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         popOcount[count]++;
 #endif
         ParsingObject parent = (ParsingObject)POP_OSP();
-        P4D_lazyLink(context, parent, inst[pc].ndata[1], context->left, pool);
+        P4D_lazyLink(context, parent, (inst+pc)->ndata[1], context->left, pool);
         //P4D_setObject(context, &context->left, parent);
         PUSH_OSP(parent);
 #if PEGVM_DEBUG
@@ -475,16 +473,16 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(TAG){
-        context->left->tag = inst[pc].name;
+        context->left->tag = (inst+pc)->name;
         DISPATCH_NEXT;
     }
     OP(VALUE){
-        context->left->value = inst[pc].name;
+        context->left->value = (inst+pc)->name;
         DISPATCH_NEXT;
     }
-    OP(DTHREAD) {
-        return (long)table;
-    }
+//    OP(DTHREAD) {
+//        return (long)table;
+//    }
 
     return failflag;
 }

@@ -1,6 +1,7 @@
 #include "parsing.h"
 #ifndef testGenerateC_pegvm_h
 #define testGenerateC_pegvm_h
+#define PEGVM_DEBUG 0
 
 #define PEGVM_OP_EACH(OP)\
 OP(EXIT)\
@@ -36,7 +37,7 @@ OP(LINK)\
 OP(SETendp)\
 OP(TAG)\
 OP(VALUE)\
-OP(DTABLE)
+//OP(DTABLE)
 
 enum pegvm_opcode {
 #define DEFINE_ENUM(NAME) PEGVM_OP_##NAME,
@@ -126,7 +127,7 @@ static uint64_t read64(char *inputs, byteCodeInfo *info)
 PegVMInstruction* loadByteCodeFile(ParsingContext context, PegVMInstruction *inst, const char *fileName) {
     size_t len;
     char *buf = loadFile(fileName, &len);
-    int i, j = 0;
+    int j = 0;
     byteCodeInfo info;
     info.pos = 0;
     
@@ -134,7 +135,7 @@ PegVMInstruction* loadByteCodeFile(ParsingContext context, PegVMInstruction *ins
     info.version1 = buf[info.pos++];
     info.filename_length = read32(buf, &info);
     info.filename = malloc(sizeof(uint8_t) * info.filename_length);
-    for (i = 0; i < info.filename_length; i++) {
+    for (uint32_t i = 0; i < info.filename_length; i++) {
         info.filename[i] = buf[info.pos++];
     }
     info.bytecode_length = read64(buf, &info);
@@ -147,7 +148,7 @@ PegVMInstruction* loadByteCodeFile(ParsingContext context, PegVMInstruction *ins
     //memset(inst, 0, sizeof(*inst) * info.bytecode_length);
     inst = malloc(sizeof(*inst) * info.bytecode_length);
     
-    for (i = 0; i < info.bytecode_length; i++) {
+    for (uint64_t i = 0; i < info.bytecode_length; i++) {
         int code_length;
         inst[i].opcode = buf[info.pos++];
         code_length = buf[info.pos++];
@@ -172,7 +173,9 @@ PegVMInstruction* loadByteCodeFile(ParsingContext context, PegVMInstruction *ins
         j = 0;
     }
     
-    //dump_PegVMInstructions(inst, info.bytecode_length);
+    if (PEGVM_DEBUG) {
+        dump_PegVMInstructions(inst, info.bytecode_length);
+    }
     
     context->bytecode_length = info.bytecode_length;
     

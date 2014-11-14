@@ -531,7 +531,18 @@ public class CodeGenerator extends GrammarFormatter {
 			if (code.inst == Instruction.RET) {
 				break;
 			}
-			this.optimizedCodeList.add(code);
+			else if (code.isJumpCode()) {
+				int index = this.labelMap.get(code.jump);
+				index = index-i+optimizedCodeList.size();
+				Opcode newcode = newCode(code.inst);
+				newcode.ndata = code.ndata;
+				newcode.jump = newLabel();
+				this.labelMap.put(newcode.jump, index);
+				optimizedCodeList.add(newcode);
+			}
+			else {
+				this.optimizedCodeList.add(code);
+			}
 			optimizationCount++;
 			i++;
 		}

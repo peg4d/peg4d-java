@@ -5,7 +5,7 @@
 /* #undef HAVE_STDBOOL_H */
 
 /* build revision */
-#define PEGVM_REVISION  "05bff0bd"
+#define PEGVM_REVISION  "d189995d"
 
 /* Define to the address where bug reports for this package should be sent. */
 /* #undef PACKAGE_BUGREPORT */
