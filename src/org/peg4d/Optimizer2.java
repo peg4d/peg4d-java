@@ -32,7 +32,7 @@ class Optimizer2 {
 		if(Main.DebugLevel > 0) {
 			InlineNonTerminal    = false;
 		}
-		if(Main.OptimizationLevel > 0) {
+		if(Main.OptimizationLevel > 1) {
 			Specialization       = true;
 			StringSpecialization = true;
 			CharacterChoice      = true;
