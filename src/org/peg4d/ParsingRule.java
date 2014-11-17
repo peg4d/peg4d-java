@@ -3,6 +3,7 @@ package org.peg4d;
 import java.util.TreeMap;
 
 import org.peg4d.expression.NonTerminal;
+import org.peg4d.expression.Optimizer;
 import org.peg4d.expression.ParsingExpression;
 
 public class ParsingRule {
@@ -148,7 +149,7 @@ public class ParsingRule {
 	}
 	
 	public ParsingExpression resolveNonTerminal() {
-		return Optimizer2.resolveNonTerminal(this.expr);
+		return Optimizer.resolveNonTerminal(this.expr);
 	}
 	
 	public UList<ParsingRule> subRule() {

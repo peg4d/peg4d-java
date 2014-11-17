@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.peg4d.expression.NonTerminal;
+import org.peg4d.expression.Optimizer;
 import org.peg4d.expression.ParsingConnector;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingMatcher;
@@ -112,7 +113,7 @@ public class MemoizationManager {
 			if(e instanceof NonTerminal) {
 				NonTerminal ne = (NonTerminal)e;
 				if(ne.getRule().type == ParsingRule.LexicalRule) {
-					ParsingExpression deref = Optimizer2.resolveNonTerminal(ne);
+					ParsingExpression deref = Optimizer.resolveNonTerminal(ne);
 					MemoPoint mp = getMemoPoint(deref);
 					MemoMatcher m = new NonTerminalMemoMatcher(ne, mp);
 					memoList.add(m);
@@ -307,7 +308,7 @@ public class MemoizationManager {
 		NonTerminalMemoMatcher(NonTerminal inner, MemoPoint memo) {
 			super(memo);
 			this.holder = inner;
-			this.key = Optimizer2.resolveNonTerminal(inner);
+			this.key = Optimizer.resolveNonTerminal(inner);
 			this.matchRef = key.matcher;
 		}
 		

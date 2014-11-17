@@ -1,54 +1,55 @@
-package org.peg4d;
+package org.peg4d.expression;
 
-import org.peg4d.expression.NonTerminal;
-import org.peg4d.expression.ParsingAny;
-import org.peg4d.expression.ParsingByte;
-import org.peg4d.expression.ParsingByteRange;
-import org.peg4d.expression.ParsingChoice;
-import org.peg4d.expression.ParsingConstructor;
-import org.peg4d.expression.ParsingExpression;
-import org.peg4d.expression.ParsingFailure;
-import org.peg4d.expression.ParsingMatcher;
-import org.peg4d.expression.ParsingNot;
-import org.peg4d.expression.ParsingOption;
-import org.peg4d.expression.ParsingRepetition;
-import org.peg4d.expression.ParsingSequence;
+import org.peg4d.Grammar;
+import org.peg4d.Main;
+import org.peg4d.ParsingContext;
+import org.peg4d.ParsingRule;
+import org.peg4d.ParsingSource;
+import org.peg4d.UList;
 
-class Optimizer2 {
-	public static boolean InlineNonTerminal     = true;
+public class Optimizer {
+	public int OptimizeLevel = 2;
+	public int OptimizedMask  = 1;
 
-	public static boolean NonZeroByte           = false;
-	public static boolean Specialization        = false;
-	public static boolean StringSpecialization  = false;
+	public static int NullTerminatedInput       = 1 << 8;
 	
-	public static boolean CharacterChoice   = false;
-	public static boolean StringChoice      = false;
-	public static boolean PredictedChoice   = false;
+	public static int InlineNonTerminalFlag     = 1;
+	
+	public static int SpecializationFlag        = 1 << 1;
+	public static int StringSpecializationFlag  = 1 << 2;
+	public static int NotAnyFlag                = 1 << 3;
+	
+	public static int LazyConstructorFlag       = 1 << 4;
+	public static int CharacterChoiceFlag       = 1 << 5;
+	public static int StringChoiceFlag          = 1 << 6;
+	public static int PredictedChoiceFlag       = 1 << 7;
 
-	public static boolean LazyConstructor   = false;
-	public static boolean NotCharacter      = false;
-
-	static void enableOptimizer() {
-		if(Main.DebugLevel > 0) {
-			InlineNonTerminal    = false;
-		}
-		if(Main.OptimizationLevel > 1) {
-			Specialization       = true;
-			StringSpecialization = true;
-			CharacterChoice      = true;
-		}
-		if(Main.OptimizationLevel > 1) {
-			LazyConstructor   = true;
-			StringChoice      = true;
-			NotCharacter      = true;
-		}
-		if(Main.OptimizationLevel > 2) {
-			PredictedChoice   = true;
-		}
-		if(Main.OptimizationLevel > 3) {
-			NonZeroByte  = true;
-		}
+	public static void enableOptimizer() {
+//		if(Main.DebugLevel > 0) {
+//			InlineNonTerminal    = false;
+//		}
+//		if(Main.OptimizationLevel > 1) {
+//			Specialization       = true;
+//			StringSpecialization = true;
+//			CharacterChoice      = true;
+//		}
+//		if(Main.OptimizationLevel > 1) {
+//			LazyConstructor   = true;
+//			StringChoice      = true;
+//			NotCharacter      = true;
+//		}
+//		if(Main.OptimizationLevel > 2) {
+//			PredictedChoice   = true;
+//		}
+//		if(Main.OptimizationLevel > 3) {
+//			NonZeroByte  = true;
+//		}
 	}
+	
+	private ParsingMatcher newByteChoiceMatcher(int[] c) {
+		return new ByteMapMatcher(c);
+	}
+
 
 	public static int countOptimizedNonTerminal = 0;
 
@@ -60,7 +61,41 @@ class Optimizer2 {
 	public static int countOptimizedStringChoice = 0;
 	public static int countOptimizedChoice       = 0;
 
-	final static void optimize(ParsingExpression e) {
+	
+
+	public final void optimize(Grammar peg) {
+		int OptimizationLevel = Main.OptimizationLevel;
+		this.OptimizedMask = 0;
+		if(Main.DebugLevel > 0) {
+			OptimizationLevel = 0;
+		}
+		if(OptimizationLevel > 0) {
+			this.OptimizedMask |= Optimizer.InlineNonTerminalFlag;
+			this.OptimizedMask |= Optimizer.CharacterChoiceFlag;
+			this.OptimizedMask |= Optimizer.SpecializationFlag;
+		}
+		if(OptimizationLevel > 1) {
+			this.OptimizedMask |= Optimizer.StringChoiceFlag;
+			this.OptimizedMask |= Optimizer.NotAnyFlag;
+			this.OptimizedMask |= Optimizer.PredictedChoiceFlag;
+		}
+		if(Main.OptimizationLevel > 2) {
+			this.OptimizedMask |= Optimizer.StringSpecializationFlag;
+			this.OptimizedMask |= Optimizer.LazyConstructorFlag;
+		}
+		for(int i = 0; i < peg.nameList.size(); i++) {
+			ParsingRule rule = peg.getRule(peg.nameList.ArrayValues[i]);
+			this.optimize(rule.expr);
+		}
+		if(this.isInlineNonTerminal()) {
+			for(int i = 0; i < peg.nameList.size(); i++) {
+				ParsingRule rule = peg.getRule(peg.nameList.ArrayValues[i]);
+				this.optimizeInline(rule.expr);
+			}
+		}
+	}
+	
+	public final void optimize(ParsingExpression e) {
 		for(int i = 0; i < e.size(); i++) {
 			optimize(e.get(i));
 		}
@@ -77,13 +112,13 @@ class Optimizer2 {
 				optimizeConstructor((ParsingConstructor)e);
 				return;
 			}
-			if(NonZeroByte) {
+			if(Main._IsFlag(this.OptimizedMask, Optimizer.NullTerminatedInput)) {
 				if(e instanceof ParsingByte && ((ParsingByte) e).byteChar != 0) {
 					e.matcher = new NonZeroByteMatcher(((ParsingByte) e).byteChar);
 					return;
 				}
 			}
-			if(Specialization) {
+			if(Main._IsFlag(this.OptimizedMask, Optimizer.SpecializationFlag)) {
 				if(e instanceof ParsingNot) {
 					optimizeNot((ParsingNot)e);
 					return;
@@ -100,7 +135,19 @@ class Optimizer2 {
 		}
 	}
 
-	final static void optimizeInline(ParsingExpression e) {
+	public final static ParsingExpression resolveNonTerminal(ParsingExpression e) {
+		while(e instanceof NonTerminal) {
+			NonTerminal nterm = (NonTerminal) e;
+			e = nterm.deReference();
+		}
+		return e;
+	}
+
+	private final boolean isInlineNonTerminal() {
+		return Main._IsFlag(this.OptimizedMask, Optimizer.InlineNonTerminalFlag);
+	}
+	
+	public final void optimizeInline(ParsingExpression e) {
 		if(!e.isOptimized()) {
 			if(e instanceof NonTerminal) {
 				optimizeNonTerminal((NonTerminal)e);
@@ -111,23 +158,15 @@ class Optimizer2 {
 		}
 	}
 
-	final static void optimizeNonTerminal(NonTerminal ne) {
+	final void optimizeNonTerminal(NonTerminal ne) {
 		ParsingExpression e = resolveNonTerminal(ne);
 		ne.matcher = e.matcher;
 		countOptimizedNonTerminal += 1;
 	}
 
-	final static ParsingExpression resolveNonTerminal(ParsingExpression e) {
-		while(e instanceof NonTerminal) {
-			NonTerminal nterm = (NonTerminal) e;
-			e = nterm.deReference();
-		}
-		return e;
-	}
-
-	final static void optimizeNot(ParsingNot holder) {
+	final void optimizeNot(ParsingNot holder) {
 		ParsingExpression inner = holder.inner;
-		if(InlineNonTerminal && inner instanceof NonTerminal) {
+		if(this.isInlineNonTerminal() && inner instanceof NonTerminal) {
 			inner = resolveNonTerminal(inner);
 		}
 		if(inner instanceof ParsingByte) {
@@ -141,8 +180,8 @@ class Optimizer2 {
 			return;
 		}
 		ParsingMatcher m = inner.matcher;
-		if(m instanceof ByteChoiceMatcher) {
-			holder.matcher = new NotByteChoiceMatcher(((ByteChoiceMatcher) m).bitMap);
+		if(m instanceof ByteMapMatcher) {
+			holder.matcher = new NotByteChoiceMatcher(((ByteMapMatcher) m).bitMap);
 			countSpecializedNot += 1;
 			return;
 		}
@@ -154,9 +193,9 @@ class Optimizer2 {
 		//System.out.println("not " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
 	}
 
-	final static void optimizeOption(ParsingOption holder) {
+	final void optimizeOption(ParsingOption holder) {
 		ParsingExpression inner = holder.inner;
-		if(InlineNonTerminal && inner instanceof NonTerminal) {
+		if(this.isInlineNonTerminal() && inner instanceof NonTerminal) {
 			inner = resolveNonTerminal(inner);
 		}
 //		if(inner instanceof ParsingByte) {
@@ -178,9 +217,9 @@ class Optimizer2 {
 		//System.out.println("option " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
 	}
 
-	final static void optimizeRepetition(ParsingRepetition holder) {
+	final void optimizeRepetition(ParsingRepetition holder) {
 		ParsingExpression inner = holder.inner;
-		if(InlineNonTerminal && inner instanceof NonTerminal) {
+		if(this.isInlineNonTerminal() && inner instanceof NonTerminal) {
 			inner = resolveNonTerminal(inner);
 		}
 //		if(inner instanceof ParsingByte) {
@@ -199,15 +238,15 @@ class Optimizer2 {
 			return;
 		}
 		ParsingMatcher m = inner.matcher;
-		if(m instanceof ByteChoiceMatcher) {
-			holder.matcher = new ZeroMoreByteChoiceMatcher(((ByteChoiceMatcher) m).bitMap);
+		if(m instanceof ByteMapMatcher) {
+			holder.matcher = new ZeroMoreByteChoiceMatcher(((ByteMapMatcher) m).bitMap);
 			countSpecializedNot += 1;
 			return;
 		}
 		//System.out.println("Unoptimized repetition " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
 	}
 
-	final static void optimizeConstructor(ParsingConstructor holder) {
+	final void optimizeConstructor(ParsingConstructor holder) {
 		int prefetchIndex = 0;
 		for(int i = 0; i < holder.size(); i++) {
 			ParsingExpression sub = holder.get(i);
@@ -216,32 +255,32 @@ class Optimizer2 {
 			}
 			prefetchIndex = i + 1;
 		}
-		if(prefetchIndex > 0 && LazyConstructor) {
+		if(prefetchIndex > 0 && Main._IsFlag(this.OptimizedMask, Optimizer.LazyConstructorFlag)) {
 			countLazyConstructor += 1;
 			holder.prefetchIndex = prefetchIndex;
 		}
 	}
 
-	final static void optimizeSequence(ParsingSequence holder) {
-		if(NotCharacter && holder.size() == 2 && holder.get(0) instanceof ParsingNot && holder.get(1) instanceof ParsingAny) {
+	final void optimizeSequence(ParsingSequence holder) {
+		if(Main._IsFlag(this.OptimizedMask, Optimizer.NotAnyFlag) && holder.size() == 2 && holder.get(0) instanceof ParsingNot && holder.get(1) instanceof ParsingAny) {
 			ParsingExpression inner = ((ParsingNot)holder.get(0)).inner;
-			if(InlineNonTerminal && inner instanceof NonTerminal) {
+			if(this.isInlineNonTerminal() && inner instanceof NonTerminal) {
 				inner = resolveNonTerminal(inner);
 			}
 			if(inner instanceof ParsingByte) {
-				holder.matcher = new ByteChoiceMatcher(((ParsingByte) inner).byteChar);
+				holder.matcher = new ByteMapMatcher(((ParsingByte) inner).byteChar);
 				countSpecializedNot += 1;
 				return;
 			}
 			ParsingMatcher m = inner.matcher;
-			if(m instanceof ByteChoiceMatcher) {
-				holder.matcher = new ByteChoiceMatcher(((ByteChoiceMatcher) m), false);
+			if(m instanceof ByteMapMatcher) {
+				holder.matcher = new ByteMapMatcher(((ByteMapMatcher) m), false);
 				countSpecializedNot += 1;
 				return;
 			}
 			//System.out.println("not any " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
 		}
-		if(StringSpecialization) {
+		if(Main._IsFlag(this.OptimizedMask, Optimizer.StringSpecializationFlag)) {
 			byte[] u = new byte[holder.size()];
 			for(int i = 0; i < holder.size(); i++) {
 				ParsingExpression inner = resolveNonTerminal(holder.get(i));				
@@ -257,16 +296,16 @@ class Optimizer2 {
 		}
 	}
 	
-	final static void optimizeChoice(ParsingChoice choice) {
+	final void optimizeChoice(ParsingChoice choice) {
 		int[] c = new int[256];
-		if(CharacterChoice && checkCharacterChoice(choice, c)) {
+		if(Main._IsFlag(this.OptimizedMask, Optimizer.CharacterChoiceFlag) && checkCharacterChoice(choice, c)) {
 //			System.out.println("Optimized1: " + choice);
 			for(int ch = 0; ch < 256; ch++) {
 //				if(c[ch] > 0) {
 //					System.out.println("|1 " + GrammarFormatter.stringfyByte(ch) + ": true" );
 //				}
 			}
-			choice.matcher = new ByteChoiceMatcher(c);
+			choice.matcher = this.newByteChoiceMatcher(c);
 			countOptimizedCharacterChoice += 1;
 			countOptimizedChoice += 1;
 			return;
@@ -274,7 +313,7 @@ class Optimizer2 {
 		for(int i = 0; i < c.length; i++) { 
 			c[i] = 0; 
 		}
-		if(StringChoice && checkStringChoice(choice, c)) {
+		if(Main._IsFlag(this.OptimizedMask, Optimizer.StringChoiceFlag) && checkStringChoice(choice, c)) {
 			ParsingExpression[] matchCase = new ParsingExpression[257];
 			ParsingExpression empty = ParsingExpression.newEmpty();
 			makeStringChoice(choice, matchCase, empty, empty);
@@ -297,7 +336,7 @@ class Optimizer2 {
 			countOptimizedStringChoice += 1;
 			return;
 		}
-		if(PredictedChoice) {
+		if(Main._IsFlag(this.OptimizedMask, Optimizer.PredictedChoiceFlag)) {
 			boolean selfChoice = false;
 			ParsingExpression[] matchCase = new ParsingExpression[257];
 			ParsingExpression fails = new ParsingFailure(choice);
@@ -322,7 +361,7 @@ class Optimizer2 {
 			choice.matcher = selfChoice ? new MappedSelfChoiceMatcher(choice, matchCase) : new MappedChoiceMatcher(choice, matchCase);
 		}
 	}
-		
+	
 	final static boolean checkCharacterChoice(ParsingChoice choice, int[] c) {
 		for(int i = 0; i < choice.size(); i++) {
 			ParsingExpression e = resolveNonTerminal(choice.get(i));
@@ -602,53 +641,6 @@ class OptionalStringSequenceMatcher extends ParsingMatcher {
 			context.consume(utf8.length);
 		}
 		return true;
-	}
-}
-
-class ByteChoiceMatcher extends ParsingMatcher {
-	boolean bitMap[];
-	ByteChoiceMatcher(int[] c) {
-		this.bitMap = new boolean[257];
-		for(int i = 0; i < c.length; i++) { 
-			if(c[i] > 0) {
-				this.bitMap[i] = true;
-			}
-		}
-	}
-	ByteChoiceMatcher(int beginChar, int endChar) {
-		this.bitMap = new boolean[257];
-		for(int i = 0; i < 256; i++) {
-			if(beginChar <= i && i <= endChar) {
-				this.bitMap[i] = true;
-			}
-			else {
-				this.bitMap[i] = false;
-			}
-		}
-	}
-	ByteChoiceMatcher(int NotChar) {
-		this.bitMap = new boolean[257];
-		for(int i = 0; i < 256; i++) { 
-			this.bitMap[i] = true;
-		}
-		this.bitMap[NotChar] = false;
-	}
-	ByteChoiceMatcher(ByteChoiceMatcher notByteChoice, boolean eof) {
-		this.bitMap = new boolean[257];
-		for(int i = 0; i < 256; i++) { 
-			this.bitMap[i] = !notByteChoice.bitMap[i];
-		}
-		this.bitMap[256] = eof;
-	}
-	@Override
-	public boolean simpleMatch(ParsingContext context) {
-		int c = context.source.byteAt(context.pos);
-		if(this.bitMap[c]) {
-			context.consume(1);
-			return true;
-		}
-		context.failure(this);
-		return false;
 	}
 }
 
