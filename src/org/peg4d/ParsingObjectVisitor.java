@@ -35,10 +35,17 @@ public class ParsingObjectVisitor {
 		Method m = this.methodMap.get(key);
 		if(m == null) {
 			String name = "visit" + ParsingTag.tagName(tagId);
-			m = this.getClass().getMethod(name, ParsingObject.class);
+			try{
+				m = this.getClass().getMethod(name, ParsingObject.class);
+			}catch(NoSuchMethodException e){
+				m = this.getClass().getMethod("onUnsupported", ParsingObject.class);
+			}
 			this.methodMap.put(key, m);
 		}
 		return m;
+	}
+	
+	public void onUnsupported(ParsingObject po){
 	}
 }
 
