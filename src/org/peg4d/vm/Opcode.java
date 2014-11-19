@@ -25,6 +25,10 @@ public class Opcode {
 		return this;
 	}
 	
+	public void add(int index, int ndata) {
+		this.ndata.add(index, ndata);
+	}
+	
 	public int get(int index) {
 		return this.ndata.get(index);
 	}

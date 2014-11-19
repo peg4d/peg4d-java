@@ -358,42 +358,39 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(BYTE) {
-        if (context->inputs[context->pos] == (inst+pc)->ndata[1]) {
-            context->pos++;
-        }
-        else {
+        if (context->inputs[context->pos] != (inst+pc)->ndata[1]) {
             failflag = 1;
             JUMP;
+
         }
+        context->pos++;
         DISPATCH_NEXT;
     }
     OP(STRING) {
         int j = 0;
-        while (j < (inst+pc)->ndata[0]) {
-            if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
-                context->pos++;
-                j++;
-            }
-            else {
+        int len = (inst+pc)->ndata[0];
+        while (j < len) {
+            if (context->inputs[context->pos] != (inst+pc)->ndata[j+1]) {
                 failflag = 1;
                 JUMP;
             }
+            context->pos++;
+            j++;
         }
         DISPATCH_NEXT;
     }
     OP(CHAR){
-        if (context->inputs[context->pos] >= (inst+pc)->ndata[1] && context->inputs[context->pos] <= (inst+pc)->ndata[2]) {
-            context->pos++;
-        }
-        else {
+        if (!(context->inputs[context->pos] >= (inst+pc)->ndata[1] && context->inputs[context->pos] <= (inst+pc)->ndata[2])) {
             failflag = 1;
             JUMP;
         }
+        context->pos++;
         DISPATCH_NEXT;
     }
     OP(CHARSET){
         int j = 0;
-        while (j < (inst+pc)->ndata[0]) {
+        int len = (inst+pc)->ndata[0];
+        while (j < len) {
             if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
                 context->pos++;
                 goto CHARSET_CONSUME;
@@ -406,13 +403,11 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT
     }
     OP(ANY){
-        if(context->inputs[context->pos] != 0) {
-            context->pos++;
-        }
-        else {
+        if(context->inputs[context->pos] == 0) {
             failflag = 1;
             JUMP;
         }
+        context->pos++;
         DISPATCH_NEXT;
     }
     OP(NEW){
@@ -478,6 +473,57 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     }
     OP(VALUE){
         context->left->value = (inst+pc)->name;
+        DISPATCH_NEXT;
+    }
+    OP(READAHEAD) {
+        if (pc == 101) {
+            pc = 101;
+        }
+        int len = (inst+pc)->ndata[0];
+        long count = 0;
+        PUSH_SP(0);
+        while (len > 0) {
+            if ((inst+pc)->ndata[len-1] == 0) {
+                if (len-2 > 0) {
+                    PUSH_IP(context, (inst+pc)->ndata[len]);
+                    count++;
+                    PUSH_SP(count);
+                }
+                else {
+                    pc = (inst+pc)->ndata[len];
+                    goto *(inst+pc)->ptr;
+                }
+            }
+            else if (context->inputs[context->pos] == (inst+pc)->ndata[len-1]) {
+                if (len-2 > 0) {
+                    PUSH_IP(context, (inst+pc)->ndata[len]);
+                    count++;
+                    PUSH_SP(count);
+                }
+                else {
+                    pc = (inst+pc)->ndata[len];
+                    goto *(inst+pc)->ptr;
+                }
+            }
+            len = len - 2;
+        }
+        
+        POP_SP();
+        pc = *POP_IP(context);
+        goto *(inst+pc)->ptr;
+    }
+    OP(NEXTCHOICE) {
+        POP_SP();
+        pc = *POP_IP(context);
+        goto *(inst+pc)->ptr;
+    }
+    OP(ENDCHOICE) {
+        long j = POP_SP();
+        while (j > 0) {
+            POP_IP(context);
+            POP_SP();
+            j--;
+        }
         DISPATCH_NEXT;
     }
 //    OP(DTHREAD) {

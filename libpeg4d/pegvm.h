@@ -37,6 +37,9 @@ OP(LINK)\
 OP(SETendp)\
 OP(TAG)\
 OP(VALUE)\
+OP(READAHEAD)\
+OP(NEXTCHOICE)\
+OP(ENDCHOICE)
 //OP(DTABLE)
 
 enum pegvm_opcode {

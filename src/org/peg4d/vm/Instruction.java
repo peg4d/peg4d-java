@@ -34,5 +34,7 @@ public enum Instruction {
 	SETendp,
 	TAG,
 	VALUE,
-	READAHEAD
+	READAHEAD,
+	NEXTCHOICE,
+	ENDCHOICE
 }

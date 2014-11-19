@@ -364,11 +364,18 @@ public class CodeGenerator extends GrammarFormatter {
 		codeList.add(code);
 	}
 	
-	public void readAheadChoice(ParsingChoice e) {
-		Opcode code = new Opcode(Instruction.READAHEAD);
+	public Opcode readAheadChoice(ParsingChoice e, Opcode code) {
+		if (checkCharset(e, 0) == e.size()) {
+			return null;
+		}
+		code = new Opcode(Instruction.READAHEAD);
+		System.out.println("\t" + code.toString());
+		codeList.add(code);
+		this.codeIndex++;
 		for(int i = 0; i < e.size(); i++) {
 			if (e.get(i) instanceof ParsingByte) {
 				code.append(((ParsingByte)e.get(i)).byteChar);
+				i += checkCharset(e, i+1);
 			}
 			else if (e.get(i) instanceof ParsingSequence) {
 				code.append(checkSequenceFirstChar((ParsingSequence)e.get(i)));
@@ -380,34 +387,38 @@ public class CodeGenerator extends GrammarFormatter {
 				code.append(0);
 			}
 		}
+		return code;
+	}
+	
+	public int checkCharset(ParsingChoice e, int index) {
+		int charCount = 0;
+		for (int i = index; i < e.size(); i++) {
+			if (e.get(i) instanceof ParsingByte) {
+				charCount++;
+			}
+			else {
+				break;
+			}
+		}
+		return charCount;
 	}
 	
 	public int checkSequenceFirstChar(ParsingSequence e) {
-		//for(int i = 0; i < e.size(); i++) {
-			if (e.get(0) instanceof ParsingByte) {
-				return ((ParsingByte)e.get(0)).byteChar;
-			}
-			else if (e.get(0) instanceof ParsingConstructor) {
-				return checkConstructorFirstChar((ParsingConstructor)e.get(0));
-			}
-			else {
-				return 0;
-			}
-		//}
+		if (e.get(0) instanceof ParsingByte) {
+			return ((ParsingByte)e.get(0)).byteChar;
+		}
+		else {
+			return 0;
+		}
 	}
 	
 	public int checkConstructorFirstChar(ParsingConstructor e) {
-		//for(int i = 0; i < e.size(); i++) {
-			if (e.get(0) instanceof ParsingByte) {
-				return ((ParsingByte)e.get(0)).byteChar;
-			}
-			else if (e.get(0) instanceof ParsingConstructor) {
-				return checkConstructorFirstChar((ParsingConstructor)e.get(0));
-			}
-			else {
-				return 0;
-			}
-		//}
+		if (e.get(0) instanceof ParsingByte) {
+			return ((ParsingByte)e.get(0)).byteChar;
+		}
+		else {
+			return 0;
+		}
 	}
 	
 	@Override
@@ -427,7 +438,6 @@ public class CodeGenerator extends GrammarFormatter {
 				}
 			}
 		}
-		//this.optimizeCode();
 		this.formatFooter();
 		writeByteCode(peg.getName());
 	}
@@ -464,87 +474,6 @@ public class CodeGenerator extends GrammarFormatter {
 			else {
 				System.out.println("[" + i + "] " + code);
 			}
-		}
-	}
-	
-	private void optimizeCode() {
-		int index;
-		for(int i = 0; i < this.codeList.size(); i++) {
-			Opcode code = this.codeList.ArrayValues[i];
-			if (code.isJumpCode()) {
-				switch (code.inst) {
-				case CALL:
-					int start = this.callMap.get(code.name);
-					if(checkInlineMethod(start)) {
-						writeInlineMethodCode(start);
-					}
-					else {
-						optimizedCodeList.add(code);
-					}
-					break;
-				case IFFAIL:
-					index = this.labelMap.remove(code.jump);
-					this.labelMap.put(code.jump, index + optimizationCount);
-					optimizedCodeList.add(code);
-					break;
-				case EXIT:
-					optimizedCodeList.add(code);
-					break;
-				default:
-					index = this.labelMap.remove(code.jump);
-					this.labelMap.put(code.jump, index + optimizationCount);
-					optimizedCodeList.add(code);
-					break;
-				}
-			}
-			else {
-				optimizedCodeList.add(code);
-			}
-		}
-		this.codeList = optimizedCodeList;
-	}
-	
-	private final boolean checkInlineMethod(int start) {
-		int i = start;
-		while(true) {
-			Opcode code = this.codeList.ArrayValues[i];
-			if (code.inst == Instruction.CALL) {
-				return false;
-			}
-			else if (code.inst == Instruction.RET) {
-				break;
-			}
-			else {
-				i++;
-				if (i - start > 10) {
-					return false;
-				}
-			}
-		}
-		return true;
-	}
-	
-	private final void writeInlineMethodCode(int start) {
-		int i = start;
-		while (true) {
-			Opcode code = this.codeList.ArrayValues[i];
-			if (code.inst == Instruction.RET) {
-				break;
-			}
-			else if (code.isJumpCode()) {
-				int index = this.labelMap.get(code.jump);
-				index = index-i+optimizedCodeList.size();
-				Opcode newcode = newCode(code.inst);
-				newcode.ndata = code.ndata;
-				newcode.jump = newLabel();
-				this.labelMap.put(newcode.jump, index);
-				optimizedCodeList.add(newcode);
-			}
-			else {
-				this.optimizedCodeList.add(code);
-			}
-			optimizationCount++;
-			i++;
 		}
 	}
 
@@ -668,9 +597,62 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitChoice(ParsingChoice e) {
-		//readAheadChoice(e);
 		int label = newLabel();
-		if (optimizationLevel > 0) {
+		if (optimizationLevel > 1) {
+			int optCount = 0;
+			Opcode code = null;
+			code = readAheadChoice(e, code);
+			if (code != null) {
+				boolean backTrackFlag = this.backTrackFlag = false;
+				for(int i = 0; i < e.size(); i++) {				
+					if (i != 0) {
+						writeCode(Instruction.NEXTCHOICE);
+					}
+					code.add(i+optCount+1, codeIndex);
+					optCount++;
+					i = writeChoiceCode(e, i, e.size());
+					backTrackFlag = this.backTrackFlag;
+					if (backTrackFlag) {
+						writeJumpCode(Instruction.JUMP, label);
+						this.popFailureJumpPoint(e.get(i));
+						if (i != e.size() - 1) {
+							writeCode(Instruction.SUCC);
+						}
+						writeCode(Instruction.STOREp);
+					}
+				}
+				if (backTrackFlag) {
+					writeCode(Instruction.ENDCHOICE);
+					writeJumpCode(Instruction.JUMP, jumpFailureJump());
+					writeLabel(label);
+					writeCode(Instruction.POP);
+				}
+				writeCode(Instruction.ENDCHOICE);
+				this.backTrackFlag = false;
+			}
+			else {
+				boolean backTrackFlag = this.backTrackFlag = false;
+				for(int i = 0; i < e.size(); i++) {
+					i = writeChoiceCode(e, i, e.size());
+					backTrackFlag = this.backTrackFlag;
+					if (backTrackFlag) {
+						writeJumpCode(Instruction.JUMP, label);
+						this.popFailureJumpPoint(e.get(i));
+						if (i != e.size() - 1) {
+							writeCode(Instruction.SUCC);
+						}
+						writeCode(Instruction.STOREp);
+					}
+				}
+				if (backTrackFlag) {
+					writeJumpCode(Instruction.JUMP, jumpFailureJump());
+					writeLabel(label);
+					writeCode(Instruction.POP);
+				}
+				this.backTrackFlag = false;
+			}
+		}
+		else if (optimizationLevel > 0) {
 			boolean backTrackFlag = this.backTrackFlag = false;
 			for(int i = 0; i < e.size(); i++) {
 				i = writeChoiceCode(e, i, e.size());
