@@ -711,6 +711,16 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return new ParsingIndent();
 	}
 
+	public final static ParsingExpression newPermutation(UList<ParsingExpression> l) {
+		if(l.size() == 0) {
+			return newEmpty();
+		}
+		if(l.size() == 1) {
+			return l.ArrayValues[0];
+		}
+		return new ParsingPermutation(l);
+	}
+
 	public static ParsingExpression newName(int tagId, ParsingExpression e) {
 		return checkUnique(new ParsingName(tagId, e), e.isUnique());
 	}

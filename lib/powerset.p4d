@@ -1,0 +1,17 @@
+File
+	= { <powerset A B C 'd' > #Source }
+
+Chunk
+	= { <powerset A B C > #Source }
+
+A
+	= 'a'
+
+B
+	= 'b'
+
+C
+	= 'c'
+
+D
+	= 'd'

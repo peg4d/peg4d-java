@@ -23,6 +23,7 @@ import org.peg4d.expression.ParsingMatch;
 import org.peg4d.expression.ParsingName;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
+import org.peg4d.expression.ParsingPermutation;
 import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingSequence;
 import org.peg4d.expression.ParsingString;
@@ -98,6 +99,7 @@ public abstract class GrammarVisitor {
 
 	public abstract void visitApply(ParsingApply e);
 
-	
+	public abstract void visitPermutation(ParsingPermutation e);
+
 }
 
