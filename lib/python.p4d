@@ -7,7 +7,7 @@ Chunk
 	= TopLevel
 
 TopLevel
-	= Stmt
+	= Statement
 
 W
 	= [a-zA-Z0-9_]
@@ -18,35 +18,42 @@ NL
 S
 	= [ \t]
 
+EOS
+	= ';'
+	/ NL
+	/ "#" (!'\n' .)* '\n'
+
 _
 	= S*
 
 // Token
 // ====
 
-"if"     = 'if' !W _
-"else"   = 'else' !W _
-"while"   = 'while' !W _
-"elif"     = 'elif' !W _
-"do"     = 'do' !W _
-"for"    = 'for' !W _
-"class"   = 'class' !W _
-"raise"   = 'raise' !W _
-"with"   = 'with' !W _
-"continue" = 'continue' !W _
-"break"    = 'break' !W _
-"return"   = 'return' !W _
-"print"    = 'print' !W _
-"as"       = 'as' !W _
-"in"       = 'in' !W _
-"import"   = 'import' !W _
-"from"     = 'from' !W _
-"def"      = 'def' !W _
-"try"      = 'try' !W _
-"except"   = 'except' !W _
-"or"       = 'or' !W _
-"and"      = 'and' !W _
-"not"      = 'not' !W _
+"if"     = 'if' !W
+"else"   = 'else' !W
+"while"   = 'while' !W
+"elif"     = 'elif' !W
+"do"     = 'do' !W
+"for"    = 'for' !W
+"class"   = 'class' !W
+"raise"   = 'raise' !W
+"with"   = 'with' !W
+"continue" = 'continue' !W
+"break"    = 'break' !W
+"return"   = 'return' !W
+"print"    = 'print' !W
+"as"       = 'as' !W
+"in"       = 'in' !W
+"import"   = 'import' !W
+"from"     = 'from' !W
+"def"      = 'def' !W
+"try"      = 'try' !W
+"except"   = 'except' !W
+"or"       = 'or' !W
+"and"      = 'and' !W
+"not"      = 'not' !W
+"True"     = 'True' !W
+"False"    = 'False' !W
 
 "*"      = '*' !'=' _
 "+"      = '+' ![+=] _
@@ -89,12 +96,12 @@ _
 
 // Block, Statement
 
-Stmt
-	= {"if" @Expr _ @Block (@Elif)* (_ NL* 'else' _ @Block)? #If }
-	/ {"while" @Expr @Block #While}
-	/ {"for" @Symbol "in" @Expr @Block #ForEach}
-	/ {"return" @Expr #Return}
-	/ ImportStmt EOS
+Statement
+	= { "if" @Expr _ @Block (@Elif)* (_ NL* 'else' _ @Block)? #If }
+	/ { "while" @Expr @Block #While}
+	/ { "for" @Symbol "in" @Expr @Block #ForEach}
+	/ { "return" @Expr #Return}
+	/ ImportStatement EOS
 	/ {"break" #Break}
 	/ {"continue" #Continue}
 	/ {"def" _  @Symbol "(" @Params ")" @Block #Function}
@@ -106,17 +113,12 @@ Stmt
 	/ {"with"   @Expr "as" @Symbol ":" @Block #With}
 	/ {'return' _ @Expr #Return}
 	/ Expr EOS?
-	/ EOS+
+	/ { #Empty } EOS
 
 Elif
 	= {"elif" S+ @Expr _ @Block #if }
 
-EOS
-	= ';'
-	/ NL
-	/ "#" (!'\n' .)* '\n'
-
-ImportStmt
+ImportStatement
 	= {"import" @ImportSymbol (S* "," S* @Symbol)* #Import}
 	/ {"from" @Symbol "import" @ImportSymbol (S* "," S* @ImportSymbol)* #FromImport}
 
@@ -127,25 +129,25 @@ ExtendContent
 	= Symbol
 
 Block
-	= { <indent ":" _ NL (_ NL / @IndentStmt)+ > #Block}
-	/ _ { @Stmt #Block}
+	= { <block ":" _ NL (_ NL / @IndentStatement)+ > #Block}
+	/ _ { @Statement #Block}
 
-IndentStmt
-	= <indent> S+ Stmt
+IndentStatement
+	= <indent> S+ Statement
 
 ClassBlock
-	= NL+ { <indent (S* EOS+ / @ClassStmt EOS?)+ > #Block};
+	= NL+ { <block (S* EOS+ / @ClassStatement EOS?)+ > #Block};
 
-ClassStmt
-	= <indent> _ Stmt
+ClassStatement
+	= <indent> _ Statement
 
 Expr
 	= Assign
 
 Assign
-	= OrExpr {@ S* AssignOp S* OrExpr@}*
+	= OrExpr {@ S* addAssignOp S* OrExpr@}*
 
-AssignOp
+addAssignOp
 	= '=' !'=' #Assign
 	/ '+='     #Addeq
 	/ '-='     #Subeq
@@ -162,9 +164,9 @@ BitwiseExpr
 	= Equal {@ S* ("|" !'|' #BitOr / "&" !'&' #BitAnd / "^" #BitXor) S* @Equal }*
 
 Equal
-	= Relation {@ S*  @EqOp S* @Relation}*
+	= Relation {@ S*  addEqOp S* @Relation}*
 
-EqOp
+addEqOp
 	= 'is' S+ 'not' #Noteq
 	/ 'is' #Eq
 	/ '==' #Eq
@@ -185,10 +187,10 @@ Product
 
 Unary
 	= { ("not" #Not / "!" #Not / "-" #Minus / "+" #Plus / "~" #Compl) @Unary }
-	/ Value {@ Selector }*
+	/ Value {@ addSelector }*
 
-Selector
-	= '.' Symbol@ #Field
+addSelector
+	= '.' @Symbol #Field
 	/ '[' S* (@Slice / @Expr) S* ']' #Index
 	/ '(' @{ _* ( _* @Expr ( _* ',' _* @Expr )* )? #Args } ')'  #Apply
 
@@ -208,21 +210,21 @@ Value
 	/ Symbol
 	/ Number
 	/ ArrayLiteral
-	/ MapLiteral
+	/ DictLiteral
 	/ TupleLiteral
 
 ArrayLiteral
 	= { "[" (@Expr)? (_* "," _* @Expr)* _* "]" #Array}
 	/ { "[" @Expr "for" @Symbol "in" @Expr (_* "if" Expr@)? _* "]" #ListComprehension }
 
-MapLiteral
-	= { "{" _* (@MapContent)? (_* "," _* @MapContent )* _* "}" #Map}
+DictLiteral
+	= { "{" _* (@DictContent)? (_* "," _* @DictContent )* _* "}" #Hash}
 
 TupleLiteral
-	= { "(" @Expr ")" #Group }
-	/ { "(" _* @Expr (_* "," _* @Expr)+ _* ")" #Tuple}
+	= "(" Expr ")"
+	/ { "(" _* @Expr (_* "," _* @Expr)+ _* ")" #List }
 
-MapContent
+DictContent
 	= { (@StringLiteral / @Symbol) ":" @Expr #KeyValue};
 
 Params
@@ -238,7 +240,15 @@ Symbol
 	= { "True" #TTrue }
 	/ { "False" #TFalse }
 	/ { "None" #TNull }
-	/ { [a-zA-Z_$][0-9a-zA-Z_$]* #Name}
+	/ { NAME #Name}
+
+KEYWORD
+	= 'if' / 'else' / 'while' / 'elif' / 'do' / 'for' / 'class' / 'raise' / 'with' / 'continue'
+	/ 'break' / 'return' / 'print' / 'as' / 'in' / 'import' / 'from' / 'def' / 'try' / 'except'
+	/ 'or' / 'and' / 'not' / 'True' / 'False'
+
+NAME
+	= !DIGIT !(KEYWORD !W) W+
 
 StringLiteral
 	= [bru]? '"""' { ('\\"' / !'"""' .)*  #String } '"""'
@@ -248,24 +258,24 @@ StringLiteral
 
 DIGIT = [0-9]
 
-Digits = DIGIT+
+digits = DIGIT+
 
-Exponent = [eE] [+-]? Digits
+EXPONENT = [eE] [+-]? digits
 
-FloatLiteral
-	= "." Digits Exponent?
-	/ Digits "." Exponent
-	/ Digits (("." (Digits Exponent?)?) / Exponent);
+FLOAT
+	= "." digits EXPONENT?
+	/ digits "." EXPONENT
+	/ digits (("." (digits EXPONENT?)?) / EXPONENT);
 
-IntegerLiteral
+INTEGER
 	= "0" [xX] [0-9a-fA-F]+      // hexadecimal integer
 	/ "0" [0-7]+                 // octal integer
 	/ "0"                        // zero
-	/ [1-9] Digits?             // decimal integer
+	/ [1-9] digits?             // decimal integer
 
 Number
-	= { ("-" / "+")? FloatLiteral   #Float }
-	/ { ("-" / "+")? IntegerLiteral #Int }
+	= { ("-" / "+")? FLOAT   #Float }
+	/ { ("-" / "+")? INTEGER #Int }
 
 Asterisk
 	= { '*' #Asterisk}
@@ -273,4 +283,3 @@ Asterisk
 ImportSymbol
 	= Symbol
 	/ Asterisk
-
