@@ -3,19 +3,22 @@ package org.peg4d.data;
 import org.peg4d.ParsingObject;
 import org.peg4d.ParsingTag;
 
-public class LappingObject {
+public class WrapperObject {
 	private ParsingObject node     = null;
 	private static int    idCount  = 0;
 	private int           objectId = -1;
 	private Coordinate    coord    = null;
 	private boolean       visited  = false;
-	private LappingObject AST[]    = null;
-	private LappingObject parent   = null;
+	private WrapperObject AST[]    = null;
+	private WrapperObject parent   = null;
+	private String        value    = null;
+	private int           size     = -1;
 
-	public LappingObject(ParsingObject node) {
+	public WrapperObject(ParsingObject node) {
 		this.objectId = idCount++;
 		this.node     = node;
 		this.coord    = new Coordinate();
+		this.size     = node.size();
 	}
 
 	public ParsingObject getParsingObject() {
@@ -30,35 +33,36 @@ public class LappingObject {
 		return this.coord;
 	}
 
-	public void setParent(LappingObject parent) {
+	public void setParent(WrapperObject parent) {
 		this.parent = parent;
 	}
 
-	public LappingObject getParent() {
+	public WrapperObject getParent() {
 		return this.parent;
 	}
 
-	public LappingObject[] getAST() {
+	public WrapperObject[] getAST() {
 		return this.AST;
 	}
 
-	public void setAST(LappingObject[] AST) {
+	public void setAST(WrapperObject[] AST) {
 		this.AST = AST;
+
 	}
 
-	public LappingObject get(int index) {
+	public WrapperObject get(int index) {
 		return this.AST[index];
 	}
 
 	public int size() {
-		return this.node.size();
+		return this.size;
 	}
 
 	public void visited() {
 		this.visited = true;
 	}
 
-	public boolean visitedNode() {
+	public boolean isVisitedNode() {
 		return this.visited;
 	}
 
@@ -67,6 +71,13 @@ public class LappingObject {
 	}
 
 	public String getText() {
-		return this.node.getText();
+		if(this.value == null) {
+			this.value = this.node.getText();
+		}
+		return this.value;
+	}
+
+	public boolean isTerminal() {
+		return this.size == 0;
 	}
 }

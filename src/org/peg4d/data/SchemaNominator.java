@@ -26,21 +26,20 @@ public class SchemaNominator {
 		return union;
 	}
 
-	private double calculatiingCoefficient(Set<String> setX, Set<String> setY) {
-		Set<String> intersection  = this.calcIntersection(setX, setY);
-		Set<String> union         = this.calcUnion(setX, setY);
+	private double calculatingCoefficient(SubNodeDataSet datasetX, SubNodeDataSet datasetY) {
+		Set<String> setX         = datasetX.getAssumedColumnSet();
+		Set<String> setY         = datasetY.getAssumedColumnSet();
+		Set<String> intersection = this.calcIntersection(setX, setY);
+		Set<String> union        = this.calcUnion(setX, setY);
 		return (double) intersection.size() / union.size(); // coefficient
 	}
 
 	private void nominateSchema(String tablename, SubNodeDataSet nodeX, SubNodeDataSet nodeY, double coefficient) {
 		Set<String> setX = nodeX.getAssumedColumnSet();
 		Set<String> setY = nodeY.getAssumedColumnSet();
-		nodeX.setCoefficient(coefficient);
-		nodeY.setCoefficient(coefficient);
 		if(this.schema.containsKey(tablename)) {
 			this.schema.get(tablename).getAssumedColumnSet().addAll(setX);
 			this.schema.get(tablename).getAssumedColumnSet().addAll(setY);
-			return;
 		}
 		else {
 			nodeX.getAssumedColumnSet().addAll(setY);
@@ -52,51 +51,88 @@ public class SchemaNominator {
 		return this.schema;
 	}
 
-	public void nominating() {
+	private boolean isNominatableSet(SubNodeDataSet datasetX, SubNodeDataSet datasetY) {
+		Set<String> setX  = datasetX.getAssumedColumnSet();
+		Set<String> setY  = datasetY.getAssumedColumnSet();
+		String tablenameX = datasetX.getAssumedTableName();
+		String tablenameY = datasetY.getAssumedTableName();
+		return tablenameX.equals(tablenameY) && setX.size() > 0 && setY.size() > 0;
+	}
+
+	private boolean checkThreshhold(double coefficient) {
+		return coefficient > 0.5 && coefficient <= 1.0;
+	}
+
+	private boolean isSubNode(Coordinate parentcoord, Coordinate subnodecoord) {
+		return Coordinate.checkLtpos(parentcoord, subnodecoord) && Coordinate.checkRtpos(parentcoord, subnodecoord);
+	}
+
+	private void removing(ArrayList<SubNodeDataSet> list, Coordinate parentcoord, Coordinate subnodecoord, int pos) {
+		if (this.isSubNode(parentcoord, subnodecoord)) {
+			list.remove(pos);
+		}
+	}
+
+	private void removeSubNodeinRemoveList(ArrayList<SubNodeDataSet> list, ArrayList<SubNodeDataSet> removelist) {
+		for (int i = 0; i < removelist.size(); i++) {
+			Coordinate parentcoord = removelist.get(i).getSubNode().getCoord();
+			for (int j = list.size() - 1; j >= 0; j--) {
+				Coordinate subnodecoord = list.get(j).getSubNode().getCoord();
+				this.removing(list, parentcoord, subnodecoord, j);
+			}
+		}
+		removelist.clear();
+	}
+
+	private void removeSubNodeinList(ArrayList<SubNodeDataSet> list, int pos) {
+		Coordinate parentcoord = list.get(pos).getSubNode().getCoord();
+		for (int i = list.size() - 1; i >= pos; i--) {
+			Coordinate subnodecoord = list.get(i).getSubNode().getCoord();
+			this.removing(list, parentcoord, subnodecoord, i);
+		}
+	}
+	
+	private int removeList(ArrayList<SubNodeDataSet> list, ArrayList<SubNodeDataSet> removelist, int pos) {
+		if (list.size() > 2) {
+			removelist.add(list.get(pos));
+			list.remove(pos);
+			return pos - 1;
+		}
+		return pos;
+	}
+
+	private void calcSetRelation(ArrayList<SubNodeDataSet> list, SubNodeDataSet datasetX, SubNodeDataSet datasetY, int pos) {
+		String setXname  = datasetX.getAssumedTableName();
+		double coefficient = this.calculatingCoefficient(datasetX, datasetY);
+		if (this.checkThreshhold(coefficient)) {
+			this.nominateSchema(setXname, datasetX, datasetY, coefficient);
+			this.removeSubNodeinList(list, pos);
+		}
+	}
+
+	private ArrayList<SubNodeDataSet> collectRemoveList(ArrayList<SubNodeDataSet> list, int i) {
+		ArrayList<SubNodeDataSet> removelist = new ArrayList<SubNodeDataSet>();
+		for(int j = i + 1; j < list.size(); j++) {
+			SubNodeDataSet datasetX = list.get(i);
+			SubNodeDataSet datasetY = list.get(j);
+			if (this.isNominatableSet(datasetX, datasetY) ) {
+				this.calcSetRelation(list, datasetX, datasetY, i);
+				j = this.removeList(list, removelist, j);
+			}
+		}
+		return removelist;
+	}
+
+	private void filter(ArrayList<SubNodeDataSet> list) {
+		for(int i = 0; i < list.size(); i++) {
+			ArrayList<SubNodeDataSet> removelist = this.collectRemoveList(list, i);
+			this.removeSubNodeinRemoveList(list, removelist);
+		}
+	}
+
+	public void nominate() {
 		ArrayList<SubNodeDataSet> list = this.relationbuilder.getSubNodeDataSetList();
 		list.sort(new SubNodeDataSet());
-		ArrayList<SubNodeDataSet> removelist = new ArrayList<SubNodeDataSet>();
-		for(int i = 0; i < list.size(); i++) {
-			boolean flag = true;
-			for(int j = i + 1; j < list.size(); j++) {
-				Set<String> setX = list.get(i).getAssumedColumnSet();
-				Set<String> setY = list.get(j).getAssumedColumnSet();
-				String setXname  = list.get(i).getAssumedTableName();
-				String setYname  = list.get(j).getAssumedTableName();
-				if (setXname.equals(setYname) && setX.size() > 0 && setY.size() > 0) {
-					double coefficient = this.calculatiingCoefficient(setX, setY);
-					if (coefficient > 0.5 && coefficient <= 1.0) {
-						this.nominateSchema(setXname, list.get(i), list.get(j), coefficient);
-						if (flag) {
-							Coordinate parentpoint = list.get(i).getSubNode().getCoord();
-							for (int k = list.size() - 1; k >= 0; k--) {
-								Coordinate subnodepoint = list.get(k).getSubNode().getCoord();
-								if (parentpoint.getLtpos() < subnodepoint.getLtpos() 
-										&& subnodepoint.getRtpos() < parentpoint.getRtpos()) {
-									list.remove(k);
-								}
-							}
-							flag = false;
-						}
-					}
-					if (list.size() > 2) {
-						removelist.add(list.get(j));
-						list.remove(j);
-						j = j - 1;
-					}
-				}
-			}
-			for (int j = 0; j < removelist.size(); j++) {
-				Coordinate parentpoint = removelist.get(j).getSubNode().getCoord();
-				for (int k = list.size() - 1; k >= 0; k--) {
-					Coordinate subnodepoint = list.get(k).getSubNode().getCoord();
-					if (parentpoint.getLtpos() < subnodepoint.getLtpos()
-							&& subnodepoint.getRtpos() < parentpoint.getRtpos()) {
-						list.remove(k);
-					}
-				}
-			}
-			removelist.clear();
-		}
+		this.filter(list);
 	}
 }
