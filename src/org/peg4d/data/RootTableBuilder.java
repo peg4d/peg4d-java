@@ -5,11 +5,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class RootTableBuilder {
-	private ArrayList<String> schema   = null;
-	private Map<String, String> table = null;
+	private ArrayList<String>   schema = null;
+	private Map<String, String> table  = null;
 	public RootTableBuilder() {
-		this.schema    = new ArrayList<String>();
-		this.table     = new LinkedHashMap<String, String>();
+		this.schema = new ArrayList<String>();
+		this.table  = new LinkedHashMap<String, String>();
 		this.initSchema();
 	}
 
@@ -19,64 +19,79 @@ public class RootTableBuilder {
 		this.schema.add("VALUE");
 	}
 
-	private void setTableData(LappingObject node) {
-		LappingObject parent = node.getParent();
-		String key = String.valueOf(parent.getObjectId());
-		String column = node.getText().toString();
-		StringBuffer sbuf = new StringBuffer();
-		sbuf.append(column);
-		//sbuf.append("\t");
-		sbuf.append(",");
-		sbuf.append("[");
-		for(int i = 1; i < parent.size(); i++) {
-			LappingObject sibling = parent.get(i);
-			if(sibling.size() == 0) {
-				sbuf.append(sibling.getText().toString());
-				sibling.visited();
-			}
-			else if(sibling.getTag().toString().equals("List")) {
-				for(int j = 0; j < sibling.size(); j++) {
-					if(sibling.get(j).size() == 0) {
-						sibling.get(j).visited();
-						sbuf.append(sibling.get(j).getText().toString());
-					}
-					else {
-						sbuf.append(sibling.get(j).getTag().toString());
-						sbuf.append(":");
-						sbuf.append(sibling.get(j).getObjectId());
-					}
-					if(j != sibling.size() - 1) {
-						sbuf.append("|");
-					}
-				}
+	private void insertDelimiter(WrapperObject node, StringBuffer sbuf, int index) {
+		if (index != node.size() - 1) {
+			sbuf.append("|");
+		}
+	}
+
+	private void getListData(WrapperObject sibling, StringBuffer sbuf) {
+		for(int i = 0; i < sibling.size(); i++) {
+			if(sibling.get(i).isTerminal()) {
+				sibling.get(i).visited();
+				sbuf.append(sibling.get(i).getText());
 			}
 			else {
-				LappingObject grandchild = sibling.get(0);
-				if(grandchild.size() == 0) {
-					sbuf.append(grandchild.getText().toString());
-				}
-				else {
-					sbuf.append(sibling.getTag().toString());
-				}
+				sbuf.append(sibling.get(i).getTag().toString());
 				sbuf.append(":");
-				sbuf.append(sibling.getObjectId());
+				sbuf.append(sibling.get(i).getObjectId());
 			}
-			if(i != parent.size() - 1) {
-				sbuf.append("|");
-			}
+			this.insertDelimiter(sibling, sbuf, i);
 		}
-		sbuf.append("]");
+	}
+
+	private void getTerminalData(WrapperObject sibling, StringBuffer sbuf) {
+		sbuf.append(sibling.getText());
+		sibling.visited();
+	}
+
+	private void getNonTerminalData(WrapperObject sibling, StringBuffer sbuf) {
+		WrapperObject grandchild = sibling.get(0);
+		if(grandchild.isTerminal()) {
+			sbuf.append(grandchild.getText());
+		}
+		else {
+			sbuf.append(sibling.getTag().toString());
+		}
+		sbuf.append(":");
+		sbuf.append(sibling.getObjectId());
+	}
+	
+	private void settingData(WrapperObject parent, StringBuffer sbuf) {
+		for(int i = 1; i < parent.size(); i++) {
+			WrapperObject sibling = parent.get(i);
+			if(sibling.isTerminal()) {
+				this.getTerminalData(sibling, sbuf);
+			}
+			else if(sibling.getTag().toString().equals("List")) {
+				this.getListData(sibling, sbuf);
+			}
+			else {
+				this.getNonTerminalData(sibling, sbuf);
+			}
+			this.insertDelimiter(parent, sbuf, i);
+		}
+	}
+	
+	private void setTableData(WrapperObject node) {
+		WrapperObject parent = node.getParent();
+		String        column = node.getText();
+		String        key    = String.valueOf(parent.getObjectId());
+		StringBuffer  sbuf   = new StringBuffer();
+		sbuf.append(column);
+		sbuf.append("\t");
+		this.settingData(parent, sbuf);
 		this.table.put(key, sbuf.toString());
 	}
 
-	private void buildRootTable(LappingObject node) {
+	private void buildRootTable(WrapperObject node) {
 		if(node == null) {
 			return;
 		}
-		if(node.visitedNode()) {
+		if(node.isVisitedNode()) {
 			return;
 		}
-		if(node.size() == 0 && !node.visitedNode()) {
+		if(node.isTerminal() && !node.isVisitedNode()) {
 			this.setTableData(node);
 		}
 		for(int i = 0; i < node.size(); i++) {
@@ -86,18 +101,16 @@ public class RootTableBuilder {
 
 	private void generateRootColumns() {
 		for(int i = 0; i < this.schema.size(); i++) {
-			//System.out.print(this.schema.get(i) + "\t");
-			System.out.print(this.schema.get(i) + ",");
+			System.out.print(this.schema.get(i) + "\t");
 		}
 		System.out.println();
 	}
 
-	public void build(LappingObject node) {
+	public void build(WrapperObject node) {
 		this.generateRootColumns();
 		this.buildRootTable(node);
 		for(String key : this.table.keySet()) {
-			//System.out.println(key + "\t" + this.table.get(key));
-			System.out.println(key + "," + this.table.get(key));
+			System.out.println(key + "\t" + this.table.get(key));
 		}
 		System.out.println("----------------------------------");
 		System.out.println();

@@ -113,7 +113,8 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 			return this.value.toString();
 		}
 		if(this.source != null) {
-			return this.source.substring(this.getSourcePosition(), this.getSourcePosition() + this.getLength());
+			this.value = this.source.substring(this.getSourcePosition(), this.getSourcePosition() + this.getLength());
+			return this.value.toString();
 		}
 		return "";
 	}

@@ -14,19 +14,15 @@ public class SchemaTypeChecker {
 		this.rtdomain = 1;
 	}
 
-	private ArrayList<int[]> getParsingObjectDomainList(LappingObject root,
-			SubNodeDataSet subnodedatasetX) {
-		if(root == null) {
-			return null;
-		}
+	private ArrayList<int[]> getParsingObjectDomainList(WrapperObject root, SubNodeDataSet subnodedatasetX) {
 		ArrayList<int[]> domainlist = new ArrayList<int[]>();
 		String tablename = subnodedatasetX.getAssumedTableName();
-		Queue<LappingObject> queue = new LinkedList<LappingObject>();
+		Queue<WrapperObject> queue = new LinkedList<WrapperObject>();
 		queue.offer(root);
 		while(!queue.isEmpty()) {
-			LappingObject node = queue.poll();
+			WrapperObject node = queue.poll();
 			if(node.size() == 0 && node.getText().toString().equals(tablename)) {
-				LappingObject target = node.getParent();
+				WrapperObject target = node.getParent();
 				int[] domain = new int[2];
 				domain[this.ltdomain] = target.getCoord().getLtpos();
 				domain[this.rtdomain] = target.getCoord().getRtpos();
@@ -50,8 +46,7 @@ public class SchemaTypeChecker {
 		return false;
 	}
 
-	public boolean check(LappingObject root, SubNodeDataSet subnodedatasetX,
-			SubNodeDataSet subnodedatasetY) {
+	public boolean check(WrapperObject root, SubNodeDataSet subnodedatasetX, SubNodeDataSet subnodedatasetY) {
 		ArrayList<int[]> list = this.getParsingObjectDomainList(root, subnodedatasetX);
 		return this.inList(list, subnodedatasetY);
 	}

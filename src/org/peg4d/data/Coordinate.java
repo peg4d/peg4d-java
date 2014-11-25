@@ -28,4 +28,12 @@ public class Coordinate {
 	public int getRange() {
 		return this.rtpos - this.ltpos;
 	}
+
+	static public boolean checkLtpos(Coordinate parentpoint, Coordinate subnodepoint) {
+		return parentpoint.getLtpos() < subnodepoint.getLtpos();
+	}
+
+	static public boolean checkRtpos(Coordinate parentpoint, Coordinate subnodepoint) {
+		return subnodepoint.getRtpos() < parentpoint.getRtpos();
+	}
 }

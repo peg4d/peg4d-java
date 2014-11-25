@@ -6,11 +6,11 @@ import java.util.Map;
 import java.util.Set;
 
 public class SchemaDecider{
-	private SchemaNominator    nominatedschema   = null;
+	private SchemaNominator   nominatedschema   = null;
 	private SchemaTypeChecker schematypechecker = null;
-	private LappingObject     root              = null;
+	private WrapperObject     root              = null;
 
-	public SchemaDecider(SchemaNominator nominatedschema, LappingObject root) {
+	public SchemaDecider(SchemaNominator nominatedschema, WrapperObject root) {
 		this.nominatedschema   = nominatedschema;
 		this.schematypechecker = new SchemaTypeChecker();
 		this.root              = root;
@@ -22,7 +22,7 @@ public class SchemaDecider{
 
 	private ArrayList<SubNodeDataSet> NominatedSchemaTable() {
 		Map<String, SubNodeDataSet> schema = this.nominatedschema.getSchema();
-		ArrayList<SubNodeDataSet> list = new ArrayList<SubNodeDataSet>();
+		ArrayList<SubNodeDataSet>   list   = new ArrayList<SubNodeDataSet>();
 		for(String tablename : schema.keySet()) {
 			SubNodeDataSet subnodedataset = schema.get(tablename);
 			list.add(subnodedataset);
@@ -34,7 +34,7 @@ public class SchemaDecider{
 		Map<String, SubNodeDataSet> map = new LinkedHashMap<String, SubNodeDataSet>();
 		for(int i = 0; i < list.size(); i++) {
 			SubNodeDataSet set = list.get(i);
-			String tablename   = set.getAssumedTableName();
+			String tablename = set.getAssumedTableName();
 			map.put(tablename, set);
 		}
 		for(String key : map.keySet()) {
