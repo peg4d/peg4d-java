@@ -32,6 +32,13 @@ struct ParsingLog {
     struct ParsingObject *childNode;
 };
 
+typedef int* caseList;
+
+struct MatchCase {
+    int index;
+    caseList* matchCase;
+};
+
 struct ParsingContext
 {
     char *inputs;
@@ -45,6 +52,7 @@ struct ParsingContext
     struct ParsingLog *logStack;
     
     uint64_t bytecode_length;
+    struct MatchCase *matchCase;
     
     long *stack_pointer;
     struct ParsingObject **object_stack_pointer;
@@ -66,6 +74,7 @@ typedef struct ParsingObject* ParsingObject;
 typedef struct ParsingContext* ParsingContext;
 typedef struct ParsingLog* ParsingLog;
 typedef struct MemoryPool* MemoryPool;
+typedef struct MatchCase* MatchCase;
 
 static char *loadFile(const char *filename, size_t *length)
 {

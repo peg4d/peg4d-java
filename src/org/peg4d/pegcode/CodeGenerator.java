@@ -5,7 +5,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Iterator;
 
 import org.peg4d.Grammar;
 import org.peg4d.Main;
@@ -50,6 +49,8 @@ public class CodeGenerator extends GrammarFormatter {
 	boolean backTrackFlag = false;
 	int optimizationLevel = 0;
 	int optimizationCount = 0;
+	int readAheadCount = 0;
+	Grammar peg;
 	
 	UList<Opcode> codeList = new UList<Opcode>(new Opcode[256]);
 	UList<Opcode> optimizedCodeList = new UList<Opcode>(new Opcode[256]);
@@ -85,6 +86,16 @@ public class CodeGenerator extends GrammarFormatter {
 			byteCode[pos] = name[i];
 			pos++;
 		}
+		
+		// Length of readAheadCount (4 byte)
+		byteCode[pos] = (byte) (0x000000ff & (this.readAheadCount));
+		pos++;
+		byteCode[pos] = (byte) (0x000000ff & (this.readAheadCount >> 8));
+		pos++;
+		byteCode[pos] = (byte) (0x000000ff & (this.readAheadCount >> 16));
+		pos++;
+		byteCode[pos] = (byte) (0x000000ff & (this.readAheadCount >> 24));
+		pos++;
 		
 		int bytecodelen_pos = pos;
 		pos = pos + 8;
@@ -372,22 +383,62 @@ public class CodeGenerator extends GrammarFormatter {
 		System.out.println("\t" + code.toString());
 		codeList.add(code);
 		this.codeIndex++;
-		for(int i = 0; i < e.size(); i++) {
-			if (e.get(i) instanceof ParsingByte) {
-				code.append(((ParsingByte)e.get(i)).byteChar);
-				i += checkCharset(e, i+1);
+		this.readAheadCount++;
+		if (optimizationLevel == 2) {
+			for(int i = 0; i < e.size(); i++) {
+				if (e.get(i) instanceof ParsingByte) {
+					code.append(((ParsingByte)e.get(i)).byteChar);
+					i += checkCharset(e, i+1);
+				}
+				else if (e.get(i) instanceof ParsingSequence) {
+					code.append(checkSequenceFirstChar((ParsingSequence)e.get(i)));
+				}
+				else if (e.get(i) instanceof ParsingConstructor) {
+					code.append(checkConstructorFirstChar((ParsingConstructor)e.get(i)));
+				}
+				else {
+					code.append(0);
+				}
 			}
-			else if (e.get(i) instanceof ParsingSequence) {
-				code.append(checkSequenceFirstChar((ParsingSequence)e.get(i)));
-			}
-			else if (e.get(i) instanceof ParsingConstructor) {
-				code.append(checkConstructorFirstChar((ParsingConstructor)e.get(i)));
-			}
-			else {
-				code.append(0);
+		}
+		else if (optimizationLevel == 3) {
+			for(int i = 0; i < e.size(); i++) {
+				if (e.get(i) instanceof ParsingByte) {
+					code.append(((ParsingByte)e.get(i)).byteChar);
+					i += checkCharset(e, i+1);
+				}
+				else if (e.get(i) instanceof ParsingSequence) {
+					code.append(checkSequenceFirstChar((ParsingSequence)e.get(i)));
+				}
+				else if (e.get(i) instanceof ParsingConstructor) {
+					code.append(checkConstructorFirstChar((ParsingConstructor)e.get(i)));
+				}
+				else if (e.get(i) instanceof NonTerminal) {
+					code.append(checkNonTerminal((NonTerminal)e.get(i)));
+				}
+				else {
+					code.append(0);
+				}
 			}
 		}
 		return code;
+	}
+	
+	public int checkNonTerminal(ParsingExpression e) {
+		while(e instanceof NonTerminal) {
+			NonTerminal nterm = (NonTerminal) e;
+			e = nterm.deReference();
+		}
+		if (e instanceof ParsingByte) {
+			return ((ParsingByte)e).byteChar;
+		}
+		else if (e instanceof ParsingSequence) {
+			return checkSequenceFirstChar((ParsingSequence)e);
+		}
+		else if (e instanceof ParsingConstructor) {
+			return checkConstructorFirstChar((ParsingConstructor)e);
+		}
+		return 0;
 	}
 	
 	public int checkCharset(ParsingChoice e, int index) {
@@ -424,6 +475,7 @@ public class CodeGenerator extends GrammarFormatter {
 	@Override
 	public void formatGrammar(Grammar peg, StringBuilder sb) {
 		this.optimizationLevel = Main.OptimizationLevel;
+		this.peg = peg;
 		this.formatHeader();
 		for(ParsingRule r: peg.getRuleList()) {
 			if (r.ruleName.equals("File")) {
@@ -626,8 +678,8 @@ public class CodeGenerator extends GrammarFormatter {
 					writeJumpCode(Instruction.JUMP, jumpFailureJump());
 					writeLabel(label);
 					writeCode(Instruction.POP);
+					writeCode(Instruction.ENDCHOICE);
 				}
-				writeCode(Instruction.ENDCHOICE);
 				this.backTrackFlag = false;
 			}
 			else {
@@ -694,14 +746,15 @@ public class CodeGenerator extends GrammarFormatter {
 	@Override
 	public void visitConstructor(ParsingConstructor e) {
 		int label = newLabel();
-		for(int i = 0; i < e.prefetchIndex; i++) {
-			if (optimizationLevel > 0) {
-				i = writeSequenceCode(e, i, e.prefetchIndex);
-			}
-			else {
-				e.get(i).visit(this);
-			}
-		}
+		//writeCode(Instruction.PUSHp);
+//		for(int i = 0; i < e.prefetchIndex; i++) {
+//			if (optimizationLevel > 0) {
+//				i = writeSequenceCode(e, i, e.prefetchIndex);
+//			}
+//			else {
+//				e.get(i).visit(this);
+//			}
+//		}
 		this.pushFailureJumpPoint();
 		if (e.leftJoin) {
 //			writeCode(Instruction.PUSHconnect);
@@ -715,7 +768,7 @@ public class CodeGenerator extends GrammarFormatter {
 			//writeCode(Instruction.PUSHm);
 			writeCode(Instruction.NEW);
 		}
-		for(int i = e.prefetchIndex; i < e.size(); i++) {
+		for(int i = 0; i < e.size(); i++) {
 			if (optimizationLevel > 0) {
 				i = writeSequenceCode(e, i, e.size());
 			}
