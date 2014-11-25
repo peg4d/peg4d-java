@@ -1,2 +1,0 @@
-/Users/hondashun/Documents/workspace/peg4d-java/vm/build/CMakeFiles/pegvm.dir
-/Users/hondashun/Documents/workspace/peg4d-java/vm/build/CMakeFiles/pegvm_bin.dir
