@@ -6,6 +6,8 @@ import java.lang.reflect.Method;
 import java.util.TreeMap;
 
 import org.peg4d.data.RelationBuilder;
+import org.peg4d.konoha.KSourceGenerator;
+import org.peg4d.konoha.SweetJSGenerator;
 import org.peg4d.pegcode.GrammarFormatter;
 
 public class Main {
@@ -326,13 +328,22 @@ public class Main {
 				System.out.println(context.maximumFailureTrace);
 			}
 		}
+		
+		if(OutputType != null && OutputType.equals("sjs")){
+			KSourceGenerator generator = new SweetJSGenerator();
+			generator.visit(pego);
+			System.out.println(generator.toString());
+		}else{
+			outputMap(pego);
+			return;
+		}
+		
 //		if(OutputType.equalsIgnoreCase("stat")) {
 //			context.recordStat(pego);
 //			return;
 //		}
 //		if(OutputType.equalsIgnoreCase("tag")) {
-			outputMap(pego);
-			return;
+
 //		}
 //		if(OutputType.equalsIgnoreCase("pego")) {
 //			new Generator(OutputFileName).writePego(pego);

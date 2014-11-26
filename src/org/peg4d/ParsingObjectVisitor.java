@@ -35,10 +35,25 @@ public class ParsingObjectVisitor {
 		Method m = this.methodMap.get(key);
 		if(m == null) {
 			String name = "visit" + ParsingTag.tagName(tagId);
-			m = this.getClass().getMethod(name, ParsingObject.class);
+			try{
+				m = this.getClass().getMethod(name, ParsingObject.class);
+			}catch(NoSuchMethodException e){
+				m = this.getClass().getMethod("onUnsupported", ParsingObject.class);
+			}
 			this.methodMap.put(key, m);
 		}
 		return m;
+	}
+	
+	public void onUnsupported(ParsingObject po){
+	}
+	
+	private static final int TAG_TEXT = ParsingTag.tagId("Text");
+	protected boolean isNullOrEmpty(ParsingObject po){
+		return po == null || po.is(TAG_TEXT) && po.size() == 0 && po.size() == 0 && po.getText().length() == 0;
+	}
+	protected boolean isNullOrEmpty(ParsingObject node, int index){
+		return node.size() <= index || isNullOrEmpty(node.get(index));
 	}
 }
 
