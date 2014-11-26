@@ -329,7 +329,7 @@ public class Main {
 			}
 		}
 		
-		if(OutputFileName.endsWith("sjs")){
+		if(OutputFileName != null && OutputFileName.endsWith("sjs")){
 			KSourceGenerator generator = new SweetJSGenerator();
 			generator.visit(pego);
 			System.out.println(generator.toString());

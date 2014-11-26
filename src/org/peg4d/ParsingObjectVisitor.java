@@ -47,5 +47,13 @@ public class ParsingObjectVisitor {
 	
 	public void onUnsupported(ParsingObject po){
 	}
+	
+	private static final int TAG_TEXT = ParsingTag.tagId("Text");
+	protected boolean isNullOrEmpty(ParsingObject po){
+		return po == null || po.is(TAG_TEXT) && po.size() == 0 && po.size() == 0 && po.getText().length() == 0;
+	}
+	protected boolean isNullOrEmpty(ParsingObject node, int index){
+		return node.size() <= index || isNullOrEmpty(node.get(index));
+	}
 }
 
