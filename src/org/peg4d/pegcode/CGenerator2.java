@@ -25,6 +25,7 @@ import org.peg4d.expression.ParsingMatch;
 import org.peg4d.expression.ParsingName;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
+import org.peg4d.expression.ParsingPermutation;
 import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingSequence;
 import org.peg4d.expression.ParsingString;
@@ -485,6 +486,12 @@ public class CGenerator2 extends GrammarFormatter {
 
 	@Override
 	public void visitApply(ParsingApply e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visitPermutation(ParsingPermutation e) {
 		// TODO Auto-generated method stub
 		
 	}

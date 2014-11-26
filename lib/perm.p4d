@@ -1,0 +1,35 @@
+File
+	= { (@{ <perm A B C D E F G> #Set })* @{ .* #Other } #Source }
+
+Chunk
+	= { (@{ <perm A B C D E F G H I J> #Set })* @{ .* #Other } #Source }
+
+A
+	= 'a'
+
+B
+	= 'b'
+
+C
+	= 'c'
+
+D
+	= 'd'
+
+E
+	= 'e'
+
+F
+	= 'f'
+
+G
+	= 'g'
+
+H
+	= 'h'
+
+I
+	= 'i'
+
+J
+	= 'j'
