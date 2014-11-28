@@ -3,6 +3,7 @@ package org.peg4d;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
+import java.util.Map;
 
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.jvm.JavaByteCodeGenerator;
@@ -11,6 +12,9 @@ import org.peg4d.pegcode.GrammarFormatter;
 import org.peg4d.writer.ParsingObjectWriter;
 import org.peg4d.writer.ParsingWriter;
 import org.peg4d.writer.TagWriter;
+import org.peg4d.regex.RegexObject;
+import org.peg4d.regex.RegexObjectConverter;
+import org.peg4d.regex.RegexPegGenerator;
 
 public class Main {
 	public final static String  ProgName  = "Nez";
@@ -47,13 +51,13 @@ public class Main {
 	private static String InputString = null;
 	// -i, --input
 	private static String InputFileName = null;
-	
+
 	// -o, --output
 	private static String OutputFileName = null;
-	
+
 	// -t, --type
 	private static String OutputType = null;
-	
+
 	// --start
 	private static String StartingPoint = "File";  // default
 	// -W
@@ -83,9 +87,9 @@ public class Main {
 	// --log
 	public static NezLogger  Logger = null;
 	public static String CSVFileName = "results.csv";
-	
+
 	private static String[] FileList = null;
-	
+
 	private static void parseCommandOption(String[] args) {
 		int index = 0;
 		if(args.length > 0) {
@@ -247,11 +251,12 @@ public class Main {
 		System.out.println("  check        Parse -i input or -s string");
 		System.out.println("  shell        Try parsing in an interactive way");
 		System.out.println("  rel          Convert -f file to relations (csv file)");
+		System.out.println("  nezex        Convert -i regex to peg");
 		System.out.println("  conv         Convert PEG4d rules to the specified format in -o");
 		System.out.println("  find         Search nonterminals that can match inputs");
 		Main._Exit(0, Message);
 	}
-	
+
 	private final static UMap<Class<?>> driverMap = new UMap<Class<?>>();
 	static {
 		driverMap.put("p4d", org.peg4d.pegcode.PEG4dFormatter.class);
@@ -271,7 +276,7 @@ public class Main {
 		}
 		return null;
 	}
-		
+
 	public final static String guessGrammarFile(String fileName) {
 		int loc = fileName.lastIndexOf('.');
 		if(loc > 0) {
@@ -304,9 +309,9 @@ public class Main {
 		}
 		return new StringSource(InputString);
 	}
-	
+
 	private static int StatTimes = 10;
-	
+
 	public static void check() {
 		Grammar peg = newGrammar();
 		if(Logger == null) {
@@ -339,7 +344,7 @@ public class Main {
 			//ParsingWriter.writeAs(OutputWriterClass, OutputFileName, po);
 		}
 	}
-	
+
 	public static void parse() {
 		Grammar peg = newGrammar();
 		if(Logger == null) {
@@ -404,7 +409,41 @@ public class Main {
 		RelationBuilder RBuilder = new RelationBuilder(pego);
 		RBuilder.build(InferRelation);
 	}
-	
+
+	public static void nezex() {
+		Grammar peg = new GrammarFactory().newGrammar("main", "src/resource/regex.p4d");
+		Main.printVerbose("Grammar", peg.getName());
+		Main.printVerbose("StartingPoint", StartingPoint);
+		ParsingContext context = new ParsingContext(newParsingSource(peg));
+		ParsingObject pego = context.parse(peg, StartingPoint, new MemoizationManager());
+		if(context.isFailure()) {
+			System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
+			System.out.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
+			if(Main.DebugLevel > 0) {
+				System.out.println(context.maximumFailureTrace);
+			}
+			return;
+		}
+		if(context.hasByteChar()) {
+			System.out.println(context.source.formatPositionLine("unconsumed", context.pos, ""));
+			System.out.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
+			if(Main.DebugLevel > 0) {
+				System.out.println(context.maximumFailureTrace);
+			}
+		}
+
+		System.out.println("Parsed: " + pego);
+
+		Map<String, RegexObject> ro = new RegexObjectConverter(pego).convert();
+		RegexPegGenerator pegfile = new RegexPegGenerator(OutputFileName, ro);
+
+		System.out.println();
+		pegfile.writePeg();
+		pegfile.close();
+
+		return;
+	}
+
 	private final static void displayShellVersion(Grammar peg) {
 		Main._PrintLine(ProgName + "-" + Version + " (" + CodeName + ") on " + Main._GetPlatform());
 		Main._PrintLine(Copyright);
@@ -435,7 +474,7 @@ public class Main {
 		}
 		System.out.println("");
 	}
-	
+
 	private static String switchStaringPoint(Grammar peg, String ruleName, String startPoint) {
 		if(peg.hasRule(ruleName)) {
 			peg.show(ruleName);
@@ -449,7 +488,7 @@ public class Main {
 		System.out.println("");
 		return startPoint;
 	}
-	
+
 	private static jline.ConsoleReader ConsoleReader = null;
 
 	private final static String readMultiLine(String prompt, String prompt2) {
@@ -594,5 +633,5 @@ public class Main {
 		e.printStackTrace();
 		Main._Exit(1, e.getMessage());
 	}
-	
+
 }
