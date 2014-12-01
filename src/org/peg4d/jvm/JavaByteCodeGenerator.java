@@ -177,9 +177,15 @@ public class JavaByteCodeGenerator extends GrammarFormatter implements Opcodes {
 	public void formatGrammar(Grammar peg, StringBuilder sb) {
 		this.formatHeader();
 		for(ParsingRule r: peg.getRuleList()) {
-			this.formatRule(r.ruleName, r.expr);
+			String methodName = this.checkAndReplaceRuleName(r.ruleName);
+			this.createMethod(methodName, r.expr);
+			r.expr = new EntryPoint(methodName);
 		}
 		this.formatFooter();
+		Class<?> parserClass = this.generateClass();
+		for(ParsingRule r: peg.getRuleList()) {
+			((EntryPoint)r.expr).setParserClass(parserClass);
+		}
 	}
 
 	@Override
@@ -192,9 +198,7 @@ public class JavaByteCodeGenerator extends GrammarFormatter implements Opcodes {
 		this.cBuilder.visitEnd();	// finalize class builder
 	}
 
-	private void formatRule(String ruleName, ParsingExpression e) { // not use string builder
-		String methodName = this.checkAndReplaceRuleName(ruleName);
-
+	private void createMethod(String methodName, ParsingExpression e) { // not use string builder
 		/**
 		 * create new method builder. 
 		 * ex. FILE ->  public static boolean FILE(ParsingContext ctx)
@@ -219,7 +223,7 @@ public class JavaByteCodeGenerator extends GrammarFormatter implements Opcodes {
 	 * @return
 	 * generated parser class
 	 */
-	public Class<?> generateClass() {
+	private Class<?> generateClass() {
 		UserDefinedClassLoader loader = new UserDefinedClassLoader();
 		loader.setDump(this.enableDump);
 		return loader.definedAndLoadClass(this.cBuilder.getInternalName(), this.cBuilder.toByteArray());
@@ -840,7 +844,7 @@ public class JavaByteCodeGenerator extends GrammarFormatter implements Opcodes {
 		MethodBuilder mBuilder = this.mBuilder;
 		String alterName = "___ALTER___" + ++this.alternativeCount;
 
-		this.formatRule(alterName, alter);
+		this.createMethod(alterName, alter);
 
 		this.mBuilder = mBuilder;
 		Method methodDesc = Methods.method(boolean.class, alterName, ParsingContext.class);

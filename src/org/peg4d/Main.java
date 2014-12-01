@@ -6,12 +6,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.InvocationTargetException;
 import java.util.TreeMap;
 
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.ext.Generator;
-import org.peg4d.jvm.JavaByteCodeGenerator;
 import org.peg4d.pegcode.GrammarFormatter;
 
 public class Main {
@@ -104,13 +102,6 @@ public class Main {
 			GrammarFormatter fmt = loadGrammarFormatter(PEGFormatter);
 			StringBuilder sb = new StringBuilder();
 			fmt.formatGrammar(peg, sb);
-			if(fmt instanceof JavaByteCodeGenerator) {
-				Class<?> parserClass = ((JavaByteCodeGenerator) fmt).generateClass();
-				if(InputFileName != null) {
-					loadInputFile(peg, InputFileName, parserClass);
-				}
-			}
-			return ;
 		}
 		if(InputFileName != null) {
 			loadInputFile(peg, InputFileName);
@@ -312,23 +303,20 @@ public class Main {
 		return d;
 	}
 	
-	private synchronized static void loadStat(Grammar peg, String fileName, Class<?> parserClass) {
+	private synchronized static void loadStat(Grammar peg, String fileName) {
 		String startPoint = StartingPoint;
 		ParsingSource source = null;
 		ParsingContext context = null;
 		ParsingObject po = null;
 		long bestTime = Long.MAX_VALUE;
 		ParsingStatistics stat = null;
-		for(int i = 0; i < 100; i++) {
+		for(int i = 0; i < 20; i++) {
 			source = Main.loadSource(peg, fileName);
 			context = new ParsingContext(Main.loadSource(peg, fileName));
 			stat = new ParsingStatistics(peg, source);
 			context.initStat(stat);
 			if(Main.RecognitionOnlyMode) {
 				context.match(peg, startPoint, new MemoizationManager());
-			}
-			else if(parserClass != null) {
-				po = startParsing(context, peg, startPoint, parserClass);
 			}
 			else {
 				po = context.parse(peg, startPoint, new MemoizationManager());
@@ -347,16 +335,12 @@ public class Main {
 	}
 	
 	private synchronized static void loadInputFile(Grammar peg, String fileName) {
-		loadInputFile(peg, fileName, null);
-	}
-
-	private synchronized static void loadInputFile(Grammar peg, String fileName, Class<?> parserClass) {
 		String startPoint = StartingPoint;
 		Main.printVerbose("FileName", fileName);
 		Main.printVerbose("Grammar", peg.getName());
 		Main.printVerbose("StartingPoint", StartingPoint);
 		if(OutputType.equalsIgnoreCase("stat")) {
-			loadStat(peg, fileName, parserClass);
+			loadStat(peg, fileName);
 			return;
 		}
 		ParsingSource source = Main.loadSource(peg, fileName);
@@ -389,8 +373,7 @@ public class Main {
 			}
 			System.exit(res ? 0 : 1);
 		}
-		ParsingObject pego = parserClass == null ? context.parse(peg, startPoint, new MemoizationManager())
-				: startParsing(context, peg, startPoint, parserClass);
+		ParsingObject pego = context.parse(peg, startPoint, new MemoizationManager());
 		if(Relation) {
 			RelationBuilder RBuilder = new RelationBuilder();
 			RBuilder.build(pego);
@@ -427,38 +410,6 @@ public class Main {
 		else if(OutputType.equalsIgnoreCase("csv")) {
 			new Generator(OutputFileName).writeCommaSeparateValue(pego, 0.9);
 		}
-	}
-
-	private static ParsingObject startParsing(ParsingContext context, Grammar peg, String startPoint, Class<?> parserClass) {
-		context.emptyTag = peg.newStartTag();
-		// init object
-		ParsingObject po = new ParsingObject(context.emptyTag, context.source, 0);
-		context.left = po;
-
-		try {
-			// start parsing
-			java.lang.reflect.Method method = parserClass.getMethod(startPoint, ParsingContext.class);
-			Object status = method.invoke(null, context);
-			if((Boolean)status) {
-				context.commitLog(0, context.left);
-			}
-			else {
-				context.abortLog(0);
-				context.unusedLog = null;
-			}
-		} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException e) {
-			System.err.println("invocation problem");
-			e.printStackTrace();
-			System.exit(1);
-		} catch(InvocationTargetException e) {
-			e.getCause().printStackTrace();
-		}
-
-		// check unused text
-		if(context.left == po) {
-			po.setEndPosition(context.pos);
-		}
-		return context.left;
 	}
 
 	private static void outputMap(ParsingObject po) {
