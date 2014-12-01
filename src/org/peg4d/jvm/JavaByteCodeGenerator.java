@@ -125,20 +125,20 @@ public class JavaByteCodeGenerator extends GrammarFormatter implements Opcodes {
 		return new Handle(H_INVOKESTATIC, Type.getType(JvmRuntime.class).getInternalName(), bsmName, methodDesc.getDescriptor());
 	}
 
-	public JavaByteCodeGenerator() {
-		this(false, false);
+	private static boolean checkProperty(final String propertyName, final boolean defaultValue) {
+		String property = System.getProperty(propertyName);
+		if("on".equalsIgnoreCase(property) || "true".equalsIgnoreCase(property) || "enable".equalsIgnoreCase(property)) {
+			return true;
+		}
+		if("off".equalsIgnoreCase(property) || "false".equalsIgnoreCase(property) || "disable".equalsIgnoreCase(property)) {
+			return false;
+		}
+		return defaultValue;
 	}
 
-	/**
-	 * 
-	 * @param enableOptimization
-	 * if true, enable optimization
-	 * @param enableDump
-	 * if true, enable byte code dump
-	 */
-	protected JavaByteCodeGenerator(boolean enableOptimization, boolean enableDump) {
-		this.enableOptimization = enableOptimization;
-		this.enableDump = enableDump;
+	public JavaByteCodeGenerator() {
+		this.enableOptimization = checkProperty("jvm_opt", true);
+		this.enableDump = checkProperty("jvm_dump", false);
 	}
 
 	/**

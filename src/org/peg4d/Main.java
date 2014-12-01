@@ -7,7 +7,6 @@ import java.util.TreeMap;
 
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.jvm.JavaByteCodeGenerator;
-import org.peg4d.jvm.OptimizedByteCodeGenerator;
 import org.peg4d.konoha.KSourceGenerator;
 import org.peg4d.konoha.SweetJSGenerator;
 import org.peg4d.pegcode.GrammarFormatter;
@@ -218,11 +217,6 @@ public class Main {
 		driverMap.put("c2", org.peg4d.pegcode.CGenerator2.class);
 		driverMap.put("pegjs", org.peg4d.pegcode.PEGjsFormatter.class);
 		driverMap.put("py", org.peg4d.pegcode.PythonGenerator.class);
-		driverMap.put("jvm",          org.peg4d.jvm.JavaByteCodeGenerator.class);
-		driverMap.put("old-jvm",      org.peg4d.jvm.JavaByteCodeGenerator.class);
-		driverMap.put("opt-jvm",      org.peg4d.jvm.OptimizedByteCodeGenerator.class);
-		driverMap.put("jvm-dump",     org.peg4d.jvm.DebuggableJavaByteCodeGenerator.class);
-		driverMap.put("opt-jvm-dump", org.peg4d.jvm.DebuggableOptimizedByteCodeGenerator.class);
 	}
 
 	private static GrammarFormatter loadDriverImpl(String driverName) {
@@ -303,7 +297,7 @@ public class Main {
 	static Grammar newGrammar() {
 		Grammar grammar = GrammarFile == null ? GrammarFactory.Grammar : new GrammarFactory().newGrammar("main", GrammarFile);
 		if(JavaByteCodeGeneration) {
-			OptimizedByteCodeGenerator g = new OptimizedByteCodeGenerator();
+			JavaByteCodeGenerator g = new JavaByteCodeGenerator();
 			g.formatGrammar(grammar, null);
 		}
 		return grammar;
