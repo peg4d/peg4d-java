@@ -25,6 +25,7 @@ import org.peg4d.expression.ParsingMatch;
 import org.peg4d.expression.ParsingName;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
+import org.peg4d.expression.ParsingPermutation;
 import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingSequence;
 import org.peg4d.expression.ParsingString;
@@ -128,26 +129,44 @@ public class CGenerator2 extends GrammarFormatter {
 		writeLine("{");
 		writeLine("    struct ParsingContext context;");
 		writeLine("    const char *orig_argv0 = argv[0];");
-		writeLine("    const char *parser = NULL;");
+		writeLine("    const char *input_fileName = NULL;");
+		writeLine("    const char *output_type = NULL;");
 		writeLine("    int opt;");
-		writeLine("    while ((opt = getopt(argc, argv, \"p:\")) != -1) {");
+		writeLine("    while ((opt = getopt(argc, argv, \"p:t:\")) != -1) {");
 		writeLine("        switch (opt) {");
 		writeLine("            case 'p':");
-		writeLine("                parser = optarg;");
+		writeLine("                input_fileName = optarg;");
+		writeLine("                break;");
+		writeLine("            case 't':");
+		writeLine("                output_type = optarg;");
 		writeLine("                break;");
 		writeLine("            default: /* '?' */");
 		writeLine("                peg_usage(orig_argv0);");
 		writeLine("        }");
 		writeLine("    }");
-		writeLine("    ParsingContext_Init(&context, parser);");
+		writeLine("    ParsingContext_Init(&context, input_fileName);");
 		writeLine("    fprintf(stderr, \"generatedParserMode\\n\");");
-		writeLine("    fprintf(stderr, \"parser:%s\\n\", parser);");
-		writeLine("    if (pFile(&context)) {");
-		writeLine("        peg_error(\"parse_error\");");
+		writeLine("    fprintf(stderr, \"input_file:%s\\n\", input_fileName);");
+		writeLine("    if(output_type == NULL || !strcmp(output_type, \"pego\")) {");
+		writeLine("        if (pFile(&context)) {");
+		writeLine("            peg_error(\"parse_error\");");
+		writeLine("        }");
+		writeLine("        P4D_commitLog(&context, 0, context.left);");
+		writeLine("        dump_pego(context.left, context.inputs, 0);");
 		writeLine("    }");
-		writeLine("    P4D_commitLog(&context, 0, context.left);");
-		writeLine("    dump_pego(context.left, context.inputs, 0);");
-		writeLine("    ParsingContext_Dispose(&context);");
+		writeLine("    else if(!strcmp(output_type, \"stat\")) {");
+		writeLine("        for (int i = 0; i < 20; i++) {");
+		writeLine("            ParsingContext_Init(&context, input_fileName);");
+		writeLine("            clock_t start = clock();");
+		writeLine("            if (pFile(&context)) {");
+		writeLine("                peg_error(\"parse_error\");");
+		writeLine("            }");
+		writeLine("            P4D_commitLog(&context, 0, context.left);");
+		writeLine("            clock_t end = clock();");
+		writeLine("            fprintf(stderr, \"EraspedTime: %lf\\n\", (double)(end - start) / CLOCKS_PER_SEC);");
+		writeLine("            ParsingContext_Dispose(&context);");
+		writeLine("        }");
+		writeLine("    }");
 		writeLine("    return 0;");
 		writeLine("}");
 	}
@@ -173,6 +192,7 @@ public class CGenerator2 extends GrammarFormatter {
 	@Override
 	public void formatHeader() {
 		writeLine("#include \"parsing.h\"");
+		writeLine("#include <time.h>");
 	}
 
 
@@ -273,15 +293,21 @@ public class CGenerator2 extends GrammarFormatter {
 	@Override
 	public void visitOptional(ParsingOption e) {
 		this.pushFailureJumpPoint();
+		String labelName = "EXIT_OPTIONAL" + this.fID;
+		String posName = "pos" + this.fID;
+		let("long", posName, "c->pos");
 		e.inner.visit(this);
-		this.popFailureJumpPointEmptyState(e);
+		this.gotoLabel(labelName);
+		this.popFailureJumpPoint(e);
+		let(null, "c->pos", posName);
+		this.exitLabel(labelName);
 	}
 
 	@Override
 	public void visitRepetition(ParsingRepetition e) {
+		this.pushFailureJumpPoint();
 		String posName = "pos" + this.fID;
 		String pposName = "ppos" + this.fID;
-		this.pushFailureJumpPoint();
 		let("long", posName, "c->pos");
 		let("long", pposName, "-1");
 		writeLine("while(" + pposName + " < " + posName + ")");
@@ -291,7 +317,8 @@ public class CGenerator2 extends GrammarFormatter {
 		let(null, pposName, posName);
 		let(null, posName, "c->pos");
 		this.closeIndent();
-		this.popFailureJumpPoint(e);		
+		this.popFailureJumpPointEmptyState(e);
+		let(null, "c->pos", posName);
 	}
 
 	@Override
@@ -308,15 +335,14 @@ public class CGenerator2 extends GrammarFormatter {
 		String posName = "pos" + fid;
 		openIndent();
 		let("long", posName, "c->pos");
-		for(int i = 0; i < e.size() - 1; i++) {
+		for(int i = 0; i < e.size(); i++) {
 			this.pushFailureJumpPoint();
 			e.get(i).visit(this);
 			this.gotoLabel(labelName);
 			this.popFailureJumpPoint(e.get(i));
 			let(null, "c->pos", posName);
 		}
-		e.get(e.size() - 1).visit(this);
-		this.gotoLabel(labelName);
+		jumpFailureJump();
 		closeIndent();
 		this.exitLabel(labelName);
 	}
@@ -460,6 +486,12 @@ public class CGenerator2 extends GrammarFormatter {
 
 	@Override
 	public void visitApply(ParsingApply e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visitPermutation(ParsingPermutation e) {
 		// TODO Auto-generated method stub
 		
 	}

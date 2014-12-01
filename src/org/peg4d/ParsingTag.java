@@ -34,6 +34,10 @@ public class ParsingTag {
 	public ParsingTag(String tagName) {
 		this.tagId = ParsingTag.tagId(tagName);
 	}
+	
+	public int getId(){
+		return tagId;
+	}
 
 	protected int tagId;
 

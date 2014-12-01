@@ -5,8 +5,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.peg4d.ParsingCharset;
 import org.peg4d.ParsingRule;
+import org.peg4d.Utils;
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.ParsingAnd;
 import org.peg4d.expression.ParsingAny;
@@ -33,6 +33,7 @@ import org.peg4d.expression.ParsingMatch;
 import org.peg4d.expression.ParsingName;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
+import org.peg4d.expression.ParsingPermutation;
 import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingSequence;
 import org.peg4d.expression.ParsingString;
@@ -130,7 +131,7 @@ public class PEGjsFormatter extends GrammarFormatter {
 	@Override
 	public void visitString(ParsingString e) {
 		char quote = '\'';
-		this.formatString(ParsingCharset.quoteString(quote, e.text, quote));
+		this.formatString(Utils.quoteString(quote, e.text, quote));
 	}
 	
 	@Override
@@ -237,7 +238,7 @@ public class PEGjsFormatter extends GrammarFormatter {
 			break;
 		}
 		if(s.length() > 1) {
-			this.formatString(ParsingCharset.quoteString('\'', s, '\''));
+			this.formatString(Utils.quoteString('\'', s, '\''));
 		}
 		return end - 1;
 	}
@@ -352,6 +353,12 @@ public class PEGjsFormatter extends GrammarFormatter {
 	public void visitApply(ParsingApply e) {
 		//this.formatParsingFunction(e);
 		this.formatParsingFunction(e);
+	}
+
+	@Override
+	public void visitPermutation(ParsingPermutation e) {
+		// TODO Auto-generated method stub
+		
 	}	
 
 

@@ -27,7 +27,7 @@ public class UList<T> extends AbstractList<T> {
 
 	protected String Stringify(Object Value) {
 		if(Value instanceof String) {
-			return ParsingCharset.quoteString('"', (String) Value, '"');
+			return Utils.quoteString('"', (String) Value, '"');
 		}
 		return Value.toString();
 	}
