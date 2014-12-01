@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import java.util.TreeMap;
 
 import org.peg4d.data.RelationBuilder;
+import org.peg4d.jvm.JavaByteCodeGenerator;
 import org.peg4d.konoha.KSourceGenerator;
 import org.peg4d.konoha.SweetJSGenerator;
 import org.peg4d.pegcode.GrammarFormatter;
@@ -62,6 +63,9 @@ public class Main {
 
 	//--infer
 	public static boolean InferRelation = false;
+
+	// --jvm
+	public static boolean JavaByteCodeGeneration = false;
 
 	// -O
 	public static int OptimizationLevel = 2;
@@ -124,6 +128,9 @@ public class Main {
 			}
 			else if (argument.equals("--infer")) {
 				InferRelation = true;
+			}
+			else if(argument.equals("--jvm")) {
+				JavaByteCodeGeneration = true;
 			}
 			else if(argument.startsWith("--memo")) {
 				if(argument.equals("--memo:none")) {
@@ -191,6 +198,7 @@ public class Main {
 		System.out.println("  --verbose                  Printing Debug infomation");
 		System.out.println("  --verbose:memo             Printing Memoization information");
 		System.out.println("  --infer                    Specify an inference schema for rel command");
+		System.out.println("  --jvm                      Generate java byte code at runtime");
 		System.out.println("");
 		System.out.println("The most commonly used nez commands are:");
 		System.out.println("  parse        Parse -i input or -s string to -o output");
@@ -287,7 +295,12 @@ public class Main {
 	}
 
 	static Grammar newGrammar() {
-		return GrammarFile == null ? GrammarFactory.Grammar : new GrammarFactory().newGrammar("main", GrammarFile);
+		Grammar grammar = GrammarFile == null ? GrammarFactory.Grammar : new GrammarFactory().newGrammar("main", GrammarFile);
+		if(JavaByteCodeGeneration) {
+			JavaByteCodeGenerator g = new JavaByteCodeGenerator();
+			g.formatGrammar(grammar, null);
+		}
+		return grammar;
 	}
 
 	static ParsingSource newParsingSource(Grammar peg) {

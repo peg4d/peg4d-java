@@ -5,6 +5,7 @@
 	<property name="build_dir"  value="build" />
 	<property name="root_dir"   value="." />
 	<property name="jline_jar"  value="ext/jline-1.0.jar" />
+	<property name="asm_jar"    value="ext/asm-all-4.0.jar" />
 	<property name="lib.cobertura.dir" location="/opt/java/cobertura" />
 	<property name="lib.pmd.dir" location="/opt/java/pmd" />
 
@@ -24,6 +25,7 @@
 		<javac fork="true" srcdir="${source_dir}" destdir="${build_dir}" target="1.8" source="1.8"
 			debug="yes" debuglevel="lines,vars,source" includeantruntime="false">
 			<classpath path="${jline_jar}" />
+			<classpath path="${asm_jar}" />
 			<include name="**/*.java" />
 			<exclude name="**/*Test.java" />
 			<compilerarg value="-Xlint:deprecation" />
@@ -44,6 +46,7 @@
 				<attribute name="Main-Class" value="org.peg4d.Main" />
 			</manifest>
 			<zipfileset src="${jline_jar}" />
+			<zipfileset src="${asm_jar}" />
 		</jar>
 	</target>
 
