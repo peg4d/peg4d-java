@@ -16,6 +16,13 @@ OP(STRING)\
 OP(CHAR)\
 OP(CHARSET)\
 OP(ANY)\
+OP(NOTBYTE)\
+OP(NOTANY)\
+OP(NOTCHARSET)\
+OP(NOTBYTERANGE)\
+OP(NOTSTRING)\
+OP(ZEROMOREBYTERANGE)\
+OP(ZEROMORECHARSET)\
 OP(PUSHo)\
 OP(PUSHconnect)\
 OP(PUSHp)\
@@ -37,9 +44,7 @@ OP(LINK)\
 OP(SETendp)\
 OP(TAG)\
 OP(VALUE)\
-OP(READAHEAD)\
-OP(NEXTCHOICE)\
-OP(ENDCHOICE)
+OP(MAPPEDCHOICE)
 //OP(DTABLE)
 
 enum pegvm_opcode {
@@ -99,7 +104,6 @@ typedef struct byteCodeInfo {
     uint8_t version1;
     uint32_t filename_length;
     uint8_t *filename;
-    uint32_t readAheadCount;
     uint64_t bytecode_length;
 } byteCodeInfo;
 
@@ -142,7 +146,6 @@ PegVMInstruction* loadByteCodeFile(ParsingContext context, PegVMInstruction *ins
     for (uint32_t i = 0; i < info.filename_length; i++) {
         info.filename[i] = buf[info.pos++];
     }
-    info.readAheadCount = read32(buf, &info);
     info.bytecode_length = read64(buf, &info);
     
     // dump byte code infomation
@@ -152,12 +155,12 @@ PegVMInstruction* loadByteCodeFile(ParsingContext context, PegVMInstruction *ins
     
     //memset(inst, 0, sizeof(*inst) * info.bytecode_length);
     inst = malloc(sizeof(*inst) * info.bytecode_length);
-    context->matchCase = malloc(sizeof(struct MatchCase) * info.readAheadCount);
     
     for (uint64_t i = 0; i < info.bytecode_length; i++) {
         int code_length;
         inst[i].opcode = buf[info.pos++];
-        code_length = buf[info.pos++];
+        code_length = (uint8_t)buf[info.pos++];
+        code_length = (code_length) | ((uint8_t)buf[info.pos++] << 8);
         if (code_length != 0) {
             inst[i].ndata = malloc(sizeof(int) * (code_length + 1));
             inst[i].ndata[0] = code_length;

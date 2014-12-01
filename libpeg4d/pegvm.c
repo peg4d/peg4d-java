@@ -39,7 +39,7 @@ int main(int argc, char * const argv[])
     ParsingContext_Init(&context, input_file);
     inst = loadByteCodeFile(&context, inst, syntax_file);
     uint64_t bytecode_length = context.bytecode_length;
-    pool.pool_size = context.input_size * bytecode_length / 100;
+    pool.pool_size = context.input_size * bytecode_length / 1000;
     createMemoryPool(&pool);
     if(output_type == NULL || !strcmp(output_type, "pego")) {
         context.bytecode_length = bytecode_length;
@@ -198,10 +198,6 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     popOcount[count] = 0;
     startpc[0] = 1;
 #endif
-    
-    int push[1024];
-    int pop[1024];
-    int index = -1;
     
     PUSH_IP(context, -1);
     P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
@@ -365,7 +361,6 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         if (context->inputs[context->pos] != (inst+pc)->ndata[1]) {
             failflag = 1;
             JUMP;
-
         }
         context->pos++;
         DISPATCH_NEXT;
@@ -397,21 +392,90 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         while (j < len) {
             if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
                 context->pos++;
-                goto CHARSET_CONSUME;
+                DISPATCH_NEXT;
             }
             j++;
         }
         failflag = 1;
         JUMP;
-    CHARSET_CONSUME:
-        DISPATCH_NEXT
     }
     OP(ANY){
-        if(context->inputs[context->pos] == 0) {
+        if(context->inputs[context->pos] != 0) {
+            context->pos++;
+            DISPATCH_NEXT;
+        }
+        failflag = 1;
+        JUMP;
+    }
+    OP(NOTBYTE){
+        if (context->inputs[context->pos] != (inst+pc)->ndata[1]) {
+            DISPATCH_NEXT;
+        }
+        failflag = 1;
+        JUMP;
+    }
+    OP(NOTANY){
+        if(context->inputs[context->pos] != 0) {
             failflag = 1;
             JUMP;
         }
-        context->pos++;
+        DISPATCH_NEXT;
+    }
+    OP(NOTCHARSET){
+        int j = 0;
+        int len = (inst+pc)->ndata[0];
+        while (j < len) {
+            if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
+                failflag = 1;
+                JUMP;
+            }
+            j++;
+        }
+        DISPATCH_NEXT;
+    }
+    OP(NOTBYTERANGE){
+        if (!(context->inputs[context->pos] >= (inst+pc)->ndata[1] && context->inputs[context->pos] <= (inst+pc)->ndata[2])) {
+            DISPATCH_NEXT;
+        }
+        failflag = 1;
+        JUMP;
+    }
+    OP(NOTSTRING){
+        int j = 0;
+        int len = (inst+pc)->ndata[0];
+        long pos = context->pos;
+        while (j < len) {
+            if (context->inputs[context->pos] != (inst+pc)->ndata[j+1]) {
+                context->pos = pos;
+                DISPATCH_NEXT;
+            }
+            context->pos++;
+            j++;
+        }
+        context->pos = pos;
+        failflag = 1;
+        JUMP;
+    }
+    OP(ZEROMOREBYTERANGE){
+        while (1) {
+            if (!(context->inputs[context->pos] >= (inst+pc)->ndata[1] && context->inputs[context->pos] <= (inst+pc)->ndata[2])) {
+                DISPATCH_NEXT;
+            }
+            context->pos++;
+        }
+    }
+    OP(ZEROMORECHARSET){
+        int j;
+        int len = (inst+pc)->ndata[0];
+    ZEROMORECHARSET_LABEL:
+        j = 0;
+        while (j < len) {
+            if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
+                context->pos++;
+                goto ZEROMORECHARSET_LABEL;
+            }
+            j++;
+        }
         DISPATCH_NEXT;
     }
     OP(NEW){
@@ -419,12 +483,6 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         
         pushcount[count]++;
 #endif
-        if (pc == 319) {
-            pc = 319;
-        }
-        if (pc == 44) {
-            pc = 44;
-        }
         PUSH_SP(P4D_markLogStack(context));
         P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
         //PUSH_SP(P4D_markLogStack(context));
@@ -432,7 +490,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     }
     OP(NEWJOIN){
         //popOcount[count]++;
-        ParsingObject left;
+        ParsingObject left = NULL;
         P4D_setObject(context, &left, context->left);
         P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
         //PUSH_SP(P4D_markLogStack(context));
@@ -485,67 +543,9 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         context->left->value = (inst+pc)->name;
         DISPATCH_NEXT;
     }
-    OP(READAHEAD) {
-        if (pc == 176) {
-            pc = 176;
-        }
-        index++;
-        push[index] = 0;
-        pop[index] = 0;
-        int len = (inst+pc)->ndata[0];
-        long count = 1;
-        PUSH_SP(0);
-        while (len > 0) {
-            if ((inst+pc)->ndata[len-1] == 0) {
-                if (len-2 > 0) {
-                    PUSH_IP(context, (inst+pc)->ndata[len]);
-                    PUSH_SP(count);
-                    push[index]++;
-                    count++;
-                }
-                else {
-                    pc = (inst+pc)->ndata[len];
-                    goto *(inst+pc)->ptr;
-                }
-            }
-            else if (context->inputs[context->pos] == (inst+pc)->ndata[len-1]) {
-                if (len-2 > 0) {
-                    PUSH_IP(context, (inst+pc)->ndata[len]);
-                    PUSH_SP(count);
-                    push[index]++;
-                    count++;
-                }
-                else {
-                    pc = (inst+pc)->ndata[len];
-                    goto *(inst+pc)->ptr;
-                }
-            }
-            len = len - 2;
-        }
-        
-        POP_SP();
-        pc = *POP_IP(context);
-        pop[index]++;
+    OP(MAPPEDCHOICE) {
+        pc = (inst+pc)->ndata[context->inputs[context->pos] + 1];
         goto *(inst+pc)->ptr;
-    }
-    OP(NEXTCHOICE) {
-        pop[index]++;
-        long i = POP_SP();
-        pc = *POP_IP(context);
-        goto *(inst+pc)->ptr;
-    }
-    OP(ENDCHOICE) {
-        long j = POP_SP();
-        while (j > 0) {
-            pop[index]++;
-            POP_IP(context);
-            POP_SP();
-            j--;
-        }
-        //fprintf(stderr, "%d\n", pc);
-        assert(push[index] == pop[index] && "push != pop");
-        index--;
-        DISPATCH_NEXT;
     }
 //    OP(DTHREAD) {
 //        return (long)table;

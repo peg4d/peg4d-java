@@ -5,6 +5,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
+
+import javax.xml.crypto.dsig.keyinfo.RetrievalMethod;
 
 import org.peg4d.Grammar;
 import org.peg4d.Main;
@@ -47,6 +50,8 @@ public class CodeGenerator extends GrammarFormatter {
 	
 	int codeIndex = 0;
 	boolean backTrackFlag = false;
+	boolean optChoiceMode = true;
+	boolean optNonTerminalMode = true;
 	int optimizationLevel = 0;
 	int optimizationCount = 0;
 	int readAheadCount = 0;
@@ -58,7 +63,7 @@ public class CodeGenerator extends GrammarFormatter {
 	HashMap<String, Integer> callMap = new HashMap<String, Integer>();
 	
 	private void writeByteCode(String grammerfileName) {
-		byte[] byteCode = new byte[codeList.size() * 16];
+		byte[] byteCode = new byte[codeList.size() * 64];
 		int pos = 0;
 		// Version of the specification (2 byte)
 		byte[] version = new byte[2];
@@ -86,17 +91,7 @@ public class CodeGenerator extends GrammarFormatter {
 			byteCode[pos] = name[i];
 			pos++;
 		}
-		
-		// Length of readAheadCount (4 byte)
-		byteCode[pos] = (byte) (0x000000ff & (this.readAheadCount));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (this.readAheadCount >> 8));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (this.readAheadCount >> 16));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (this.readAheadCount >> 24));
-		pos++;
-		
+
 		int bytecodelen_pos = pos;
 		pos = pos + 8;
 		
@@ -107,6 +102,8 @@ public class CodeGenerator extends GrammarFormatter {
 			pos++;
 			if (code.ndata != null) {
 				byteCode[pos] = (byte) (0x000000ff & (code.ndata.size()));
+				pos++;
+				byteCode[pos] = (byte) (0x000000ff & (code.ndata.size() >> 8));
 				pos++;
 				for(int j = 0; j < code.ndata.size(); j++){
 					byteCode[pos] = (byte) (0x000000ff & (code.ndata.get(j)));
@@ -375,101 +372,218 @@ public class CodeGenerator extends GrammarFormatter {
 		codeList.add(code);
 	}
 	
-	public Opcode readAheadChoice(ParsingChoice e, Opcode code) {
-		if (checkCharset(e, 0) == e.size()) {
-			return null;
-		}
-		code = new Opcode(Instruction.READAHEAD);
-		System.out.println("\t" + code.toString());
-		codeList.add(code);
-		this.codeIndex++;
-		this.readAheadCount++;
-		if (optimizationLevel == 2) {
-			for(int i = 0; i < e.size(); i++) {
-				if (e.get(i) instanceof ParsingByte) {
-					code.append(((ParsingByte)e.get(i)).byteChar);
-					i += checkCharset(e, i+1);
-				}
-				else if (e.get(i) instanceof ParsingSequence) {
-					code.append(checkSequenceFirstChar((ParsingSequence)e.get(i)));
-				}
-				else if (e.get(i) instanceof ParsingConstructor) {
-					code.append(checkConstructorFirstChar((ParsingConstructor)e.get(i)));
-				}
-				else {
-					code.append(0);
-				}
-			}
-		}
-		else if (optimizationLevel == 3) {
-			for(int i = 0; i < e.size(); i++) {
-				if (e.get(i) instanceof ParsingByte) {
-					code.append(((ParsingByte)e.get(i)).byteChar);
-					i += checkCharset(e, i+1);
-				}
-				else if (e.get(i) instanceof ParsingSequence) {
-					code.append(checkSequenceFirstChar((ParsingSequence)e.get(i)));
-				}
-				else if (e.get(i) instanceof ParsingConstructor) {
-					code.append(checkConstructorFirstChar((ParsingConstructor)e.get(i)));
-				}
-				else if (e.get(i) instanceof NonTerminal) {
-					code.append(checkNonTerminal((NonTerminal)e.get(i)));
-				}
-				else {
-					code.append(0);
-				}
-			}
-		}
-		return code;
+	public void writeNotCode(ParsingNot e) {
+		this.pushFailureJumpPoint();
+		writeCode(Instruction.PUSHp);
+		e.inner.visit(this);
+		writeCode(Instruction.STOREp);
+		writeCode(Instruction.FAIL);
+		writeJumpCode(Instruction.JUMP, this.jumpPrevFailureJump());
+		this.popFailureJumpPoint(e);
+		writeCode(Instruction.SUCC);
+		writeCode(Instruction.STOREp);
 	}
 	
-	public int checkNonTerminal(ParsingExpression e) {
+	public void writeNotCharsetCode(ParsingChoice e) {
+		Opcode code = new Opcode(Instruction.NOTCHARSET);
+		for(int i = 0; i < e.size(); i++) {
+			code.append(((ParsingByte)e.get(i)).byteChar);
+		}
+		code.jump = this.jumpFailureJump();
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		codeList.add(code);
+	}
+	
+	public void writeNotStringCode(ParsingSequence e) {
+		Opcode code = new Opcode(Instruction.NOTSTRING);
+		for(int i = 0; i < e.size(); i++) {
+			code.append(((ParsingByte)e.get(i)).byteChar);
+		}
+		code.jump = this.jumpFailureJump();
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		codeList.add(code);
+	}
+	
+	public void writeRepetitionCode(ParsingRepetition e) {
+		int label = newLabel();
+		int end = newLabel();
+		this.pushFailureJumpPoint();
+		writeLabel(label);
+		writeCode(Instruction.PUSHp);
+		e.inner.visit(this);
+		writeJumpCode(Instruction.REPCOND, end);
+		writeJumpCode(Instruction.JUMP, label);
+		this.popFailureJumpPoint(e);
+		writeCode(Instruction.SUCC);
+		writeCode(Instruction.STOREp);
+		writeLabel(end);
+	}
+	
+	public void writeZeroMoreByteRangeCode(ParsingByteRange e) {
+		Opcode code = new Opcode(Instruction.ZEROMOREBYTERANGE);
+		code.append(e.startByteChar);
+		code.append(e.endByteChar);
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		codeList.add(code);
+	}
+	
+	public void writeZeroMoreCharsetCode(ParsingChoice e) {
+		Opcode code = new Opcode(Instruction.ZEROMORECHARSET);
+		for(int i = 0; i < e.size(); i++) {
+			code.append(((ParsingByte)e.get(i)).byteChar);
+		}
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		codeList.add(code);
+	}
+	
+	public boolean checkCharset(ParsingChoice e) {
+		for (int i = 0; i < e.size(); i++) {
+			if (!(e.get(i) instanceof ParsingByte)) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	public boolean checkString(ParsingSequence e) {
+		for(int i = 0; i < e.size(); i++) {
+			if (!(e.get(i) instanceof ParsingByte)) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	public ParsingExpression checkChoice(ParsingChoice e, int c, ParsingExpression failed) {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[2]);
+		checkChoice(e, c, l);
+		if(l.size() == 0) {
+			l.add(failed);
+		}
+		return ParsingExpression.newChoice(l).uniquefy();
+	}
+	
+	public void checkChoice(ParsingChoice choice, int c, UList<ParsingExpression> l) {
+		for(int i = 0; i < choice.size(); i++) {
+			ParsingExpression e = getNonTerminalRule(choice.get(i));
+			if (e instanceof ParsingChoice) {
+				checkChoice((ParsingChoice)e, c, l);
+			}
+			else {
+				short r = e.acceptByte(c);
+				if(r != ParsingExpression.Reject) {
+					l.add(e);
+				}
+			}
+		}
+	}
+	
+	public ParsingExpression getNonTerminalRule(ParsingExpression e) {
 		while(e instanceof NonTerminal) {
 			NonTerminal nterm = (NonTerminal) e;
 			e = nterm.deReference();
 		}
-		if (e instanceof ParsingByte) {
-			return ((ParsingByte)e).byteChar;
-		}
-		else if (e instanceof ParsingSequence) {
-			return checkSequenceFirstChar((ParsingSequence)e);
-		}
-		else if (e instanceof ParsingConstructor) {
-			return checkConstructorFirstChar((ParsingConstructor)e);
-		}
-		return 0;
+		return e;
 	}
 	
-	public int checkCharset(ParsingChoice e, int index) {
-		int charCount = 0;
-		for (int i = index; i < e.size(); i++) {
-			if (e.get(i) instanceof ParsingByte) {
-				charCount++;
-			}
-			else {
-				break;
-			}
-		}
-		return charCount;
-	}
-	
-	public int checkSequenceFirstChar(ParsingSequence e) {
-		if (e.get(0) instanceof ParsingByte) {
-			return ((ParsingByte)e.get(0)).byteChar;
+	public void optimizeChoice(ParsingChoice e) {
+		if (checkCharset(e)) {
+			writeCharsetCode(e, 0, e.size());
 		}
 		else {
-			return 0;
+			ParsingExpression[] matchCase = new ParsingExpression[257];
+			UList<ParsingExpression> caseList = new UList<ParsingExpression>(new ParsingExpression[257]);
+			ParsingExpression fails = new ParsingFailure(e);
+			for(int i = 0; i < 257; i++) {
+				boolean isNotGenerated = true;
+				matchCase[i] = checkChoice(e, i, fails);
+				for(int j = 0; j < caseList.size(); j++) {
+					if (matchCase[i] == caseList.get(j)) {
+						isNotGenerated = false;
+					}
+				}
+				if (isNotGenerated) {
+					caseList.add(matchCase[i]);
+				}
+			}
+			Opcode code = new Opcode(Instruction.MAPPEDCHOICE);
+			System.out.println("\t" + code.toString());
+			codeList.add(code);
+			this.codeIndex++;
+			HashMap<ParsingExpression, Integer> choiceMap = new HashMap<ParsingExpression, Integer>();
+			optChoiceMode = false;
+			int label = newLabel();
+			for(int i = 0; i < caseList.size(); i++) {
+				ParsingExpression caseElement = caseList.get(i);
+				choiceMap.put(caseElement, codeIndex);
+				caseElement.visit(this);
+				if (caseElement instanceof ParsingFailure) {
+					writeJumpCode(Instruction.JUMP, this.jumpFailureJump());
+				}
+				else {
+					writeJumpCode(Instruction.JUMP, label);
+				}
+			}
+			writeLabel(label);
+			optChoiceMode = true;
+			for(int i = 0; i < matchCase.length; i++) {
+				code.append(choiceMap.get(matchCase[i]));
+			}
 		}
 	}
 	
-	public int checkConstructorFirstChar(ParsingConstructor e) {
-		if (e.get(0) instanceof ParsingByte) {
-			return ((ParsingByte)e.get(0)).byteChar;
+	public boolean optimizeNot(ParsingNot e) {
+		ParsingExpression inner = e.inner;
+		if (inner instanceof NonTerminal) {
+			inner = getNonTerminalRule(inner);
 		}
-		else {
-			return 0;
+		if (inner instanceof ParsingByte) {
+			writeCode(Instruction.NOTBYTE, ((ParsingByte)inner).byteChar, this.jumpFailureJump());
+			return true;
 		}
+		if (inner instanceof ParsingByteRange) {
+			writeCode(Instruction.NOTBYTERANGE, ((ParsingByteRange)inner).startByteChar, ((ParsingByteRange)inner).endByteChar, this.jumpFailureJump());
+			return true;
+		}
+		if(inner instanceof ParsingAny) {
+			writeJumpCode(Instruction.NOTANY, this.jumpFailureJump());
+			return true;
+		}
+		if(inner instanceof ParsingChoice) {
+			if (checkCharset((ParsingChoice)inner)) {
+				writeNotCharsetCode((ParsingChoice)inner);
+				return true;
+			}
+		}
+		if (inner instanceof ParsingSequence) {
+			if (checkString((ParsingSequence)inner)) {
+				writeNotStringCode((ParsingSequence)inner);
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public boolean optimizeRepetition(ParsingRepetition e) {
+		ParsingExpression inner = e.inner;
+		if (inner instanceof NonTerminal) {
+			inner = getNonTerminalRule(inner);
+		}
+		if (inner instanceof ParsingByteRange) {
+			writeZeroMoreByteRangeCode((ParsingByteRange)inner);
+			return true;
+		}
+		if (inner instanceof ParsingChoice) {
+			if (checkCharset((ParsingChoice)inner)) {
+				writeZeroMoreCharsetCode((ParsingChoice)inner);
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	@Override
@@ -545,9 +659,17 @@ public class CodeGenerator extends GrammarFormatter {
 	}
 
 	@Override
-	public void visitNonTerminal(NonTerminal e) {
-		writeCode(Instruction.CALL, e.ruleName);
-		writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
+	public void visitNonTerminal(NonTerminal ne) {
+		if (optimizationLevel > 0 && optNonTerminalMode) {
+			optNonTerminalMode = false;
+			ParsingExpression e = getNonTerminalRule(ne);
+			e.visit(this);
+			optNonTerminalMode = true;
+		}
+		else {
+			writeCode(Instruction.CALL, ne.ruleName);
+			writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
+		}
 	}
 
 	@Override
@@ -584,15 +706,14 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitNot(ParsingNot e) {
-		this.pushFailureJumpPoint();
-		writeCode(Instruction.PUSHp);
-		e.inner.visit(this);
-		writeCode(Instruction.STOREp);
-		writeCode(Instruction.FAIL);
-		writeJumpCode(Instruction.JUMP, this.jumpPrevFailureJump());
-		this.popFailureJumpPoint(e);
-		writeCode(Instruction.SUCC);
-		writeCode(Instruction.STOREp);
+		if (optimizationLevel > 2) {
+			if (!optimizeNot(e)) {
+				writeNotCode(e);
+			}
+		}
+		else {
+			writeNotCode(e);
+		}
 	}
 
 	@Override
@@ -621,18 +742,14 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitRepetition(ParsingRepetition e) {
-		int label = newLabel();
-		int end = newLabel();
-		this.pushFailureJumpPoint();
-		writeLabel(label);
-		writeCode(Instruction.PUSHp);
-		e.inner.visit(this);
-		writeJumpCode(Instruction.REPCOND, end);
-		writeJumpCode(Instruction.JUMP, label);
-		this.popFailureJumpPoint(e);
-		writeCode(Instruction.SUCC);
-		writeCode(Instruction.STOREp);
-		writeLabel(end);
+		if (optimizationLevel > 2) {
+			if (!optimizeRepetition(e)) {
+				writeRepetitionCode(e);
+			}
+		}
+		else {
+			writeRepetitionCode(e);
+		}
 	}
 
 	@Override
@@ -650,59 +767,8 @@ public class CodeGenerator extends GrammarFormatter {
 	@Override
 	public void visitChoice(ParsingChoice e) {
 		int label = newLabel();
-		if (optimizationLevel > 1) {
-			int optCount = 0;
-			Opcode code = null;
-			code = readAheadChoice(e, code);
-			if (code != null) {
-				boolean backTrackFlag = this.backTrackFlag = false;
-				for(int i = 0; i < e.size(); i++) {				
-					if (i != 0) {
-						writeCode(Instruction.NEXTCHOICE);
-					}
-					code.add(i+optCount+1, codeIndex);
-					optCount++;
-					i = writeChoiceCode(e, i, e.size());
-					backTrackFlag = this.backTrackFlag;
-					if (backTrackFlag) {
-						writeJumpCode(Instruction.JUMP, label);
-						this.popFailureJumpPoint(e.get(i));
-						if (i != e.size() - 1) {
-							writeCode(Instruction.SUCC);
-						}
-						writeCode(Instruction.STOREp);
-					}
-				}
-				if (backTrackFlag) {
-					writeCode(Instruction.ENDCHOICE);
-					writeJumpCode(Instruction.JUMP, jumpFailureJump());
-					writeLabel(label);
-					writeCode(Instruction.POP);
-					writeCode(Instruction.ENDCHOICE);
-				}
-				this.backTrackFlag = false;
-			}
-			else {
-				boolean backTrackFlag = this.backTrackFlag = false;
-				for(int i = 0; i < e.size(); i++) {
-					i = writeChoiceCode(e, i, e.size());
-					backTrackFlag = this.backTrackFlag;
-					if (backTrackFlag) {
-						writeJumpCode(Instruction.JUMP, label);
-						this.popFailureJumpPoint(e.get(i));
-						if (i != e.size() - 1) {
-							writeCode(Instruction.SUCC);
-						}
-						writeCode(Instruction.STOREp);
-					}
-				}
-				if (backTrackFlag) {
-					writeJumpCode(Instruction.JUMP, jumpFailureJump());
-					writeLabel(label);
-					writeCode(Instruction.POP);
-				}
-				this.backTrackFlag = false;
-			}
+		if (optimizationLevel > 2 && optChoiceMode) {
+			optimizeChoice(e);
 		}
 		else if (optimizationLevel > 0) {
 			boolean backTrackFlag = this.backTrackFlag = false;
@@ -746,15 +812,6 @@ public class CodeGenerator extends GrammarFormatter {
 	@Override
 	public void visitConstructor(ParsingConstructor e) {
 		int label = newLabel();
-		//writeCode(Instruction.PUSHp);
-//		for(int i = 0; i < e.prefetchIndex; i++) {
-//			if (optimizationLevel > 0) {
-//				i = writeSequenceCode(e, i, e.prefetchIndex);
-//			}
-//			else {
-//				e.get(i).visit(this);
-//			}
-//		}
 		this.pushFailureJumpPoint();
 		if (e.leftJoin) {
 //			writeCode(Instruction.PUSHconnect);

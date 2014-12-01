@@ -13,6 +13,13 @@ public enum Instruction {
 	CHAR,
 	CHARSET,
 	ANY,
+	NOTBYTE,
+	NOTANY,
+	NOTCHARSET,
+	NOTBYTERANGE,
+	NOTSTRING,
+	ZEROMOREBYTERANGE,
+	ZEROMORECHARSET,
 	PUSHo,
 	PUSHconnect,
 	PUSHp,
@@ -34,7 +41,5 @@ public enum Instruction {
 	SETendp,
 	TAG,
 	VALUE,
-	READAHEAD,
-	NEXTCHOICE,
-	ENDCHOICE
+	MAPPEDCHOICE
 }
