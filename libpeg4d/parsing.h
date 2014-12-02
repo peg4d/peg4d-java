@@ -38,13 +38,13 @@ struct ParsingContext
 	size_t input_size;
 	long pos;
 	struct ParsingObject *left;
-
     struct ParsingObject *unusedObject;
     
 	int    logStackSize;
     struct ParsingLog *logStack;
     
     uint64_t bytecode_length;
+    size_t pool_size;
     
     long *stack_pointer;
     struct ParsingObject **object_stack_pointer;
@@ -186,6 +186,11 @@ void dump_pego_file(FILE *file, ParsingObject *pego, char* source, int level)
     else {
         fprintf(file, "%p tag:null\n", pego);
     }
+}
+
+void dump_json_file(FILE *file, ParsingObject *pego, char* source, int level)
+{
+    
 }
 
 ParsingObject P4D_newObject(ParsingContext this, long start, MemoryPool pool);

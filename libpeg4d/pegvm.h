@@ -104,6 +104,7 @@ typedef struct byteCodeInfo {
     uint8_t version1;
     uint32_t filename_length;
     uint8_t *filename;
+    uint32_t pool_size_info;
     uint64_t bytecode_length;
 } byteCodeInfo;
 
@@ -146,6 +147,7 @@ PegVMInstruction* loadByteCodeFile(ParsingContext context, PegVMInstruction *ins
     for (uint32_t i = 0; i < info.filename_length; i++) {
         info.filename[i] = buf[info.pos++];
     }
+    info.pool_size_info = read32(buf, &info);
     info.bytecode_length = read64(buf, &info);
     
     // dump byte code infomation
@@ -188,6 +190,7 @@ PegVMInstruction* loadByteCodeFile(ParsingContext context, PegVMInstruction *ins
     }
     
     context->bytecode_length = info.bytecode_length;
+    context->pool_size = info.pool_size_info;
     
     //free(buf);
     return inst;

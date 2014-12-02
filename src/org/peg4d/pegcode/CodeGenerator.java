@@ -5,9 +5,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Iterator;
-
-import javax.xml.crypto.dsig.keyinfo.RetrievalMethod;
 
 import org.peg4d.Grammar;
 import org.peg4d.Main;
@@ -54,7 +51,8 @@ public class CodeGenerator extends GrammarFormatter {
 	boolean optNonTerminalMode = true;
 	int optimizationLevel = 0;
 	int optimizationCount = 0;
-	int readAheadCount = 0;
+	int choiceCaseCount = 0;
+	int constructorCount = 0;
 	Grammar peg;
 	
 	UList<Opcode> codeList = new UList<Opcode>(new Opcode[256]);
@@ -63,6 +61,7 @@ public class CodeGenerator extends GrammarFormatter {
 	HashMap<String, Integer> callMap = new HashMap<String, Integer>();
 	
 	private void writeByteCode(String grammerfileName) {
+		System.out.println("choiceCase: " + choiceCaseCount + "\nconstructor: " + constructorCount);
 		byte[] byteCode = new byte[codeList.size() * 64];
 		int pos = 0;
 		// Version of the specification (2 byte)
@@ -91,6 +90,17 @@ public class CodeGenerator extends GrammarFormatter {
 			byteCode[pos] = name[i];
 			pos++;
 		}
+		
+		// pool_size_info
+		int poolSizeInfo = choiceCaseCount * constructorCount;
+		byteCode[pos] = (byte) (0x000000ff & (poolSizeInfo));
+		pos++;
+		byteCode[pos] = (byte) (0x000000ff & (poolSizeInfo >> 8));
+		pos++;
+		byteCode[pos] = (byte) (0x000000ff & (poolSizeInfo >> 16));
+		pos++;
+		byteCode[pos] = (byte) (0x000000ff & (poolSizeInfo >> 24));
+		pos++;
 
 		int bytecodelen_pos = pos;
 		pos = pos + 8;
@@ -766,6 +776,7 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitChoice(ParsingChoice e) {
+		this.choiceCaseCount += e.size();
 		int label = newLabel();
 		if (optimizationLevel > 2 && optChoiceMode) {
 			optimizeChoice(e);
@@ -811,6 +822,7 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitConstructor(ParsingConstructor e) {
+		this.constructorCount++;
 		int label = newLabel();
 		this.pushFailureJumpPoint();
 		if (e.leftJoin) {

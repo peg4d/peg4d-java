@@ -39,7 +39,7 @@ int main(int argc, char * const argv[])
     ParsingContext_Init(&context, input_file);
     inst = loadByteCodeFile(&context, inst, syntax_file);
     uint64_t bytecode_length = context.bytecode_length;
-    pool.pool_size = context.input_size * bytecode_length / 1000;
+    pool.pool_size = context.pool_size * context.input_size / 100;
     createMemoryPool(&pool);
     if(output_type == NULL || !strcmp(output_type, "pego")) {
         context.bytecode_length = bytecode_length;
@@ -49,7 +49,7 @@ int main(int argc, char * const argv[])
         }
         clock_t end = clock();
         dump_pego(&context.left, context.inputs, 0);
-        fprintf(stderr, "EraspedTime: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
+        fprintf(stderr, "ErapsedTime: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
     }
     else if(!strcmp(output_type, "stat")) {
         for (int i = 0; i < 20; i++) {
@@ -59,7 +59,7 @@ int main(int argc, char * const argv[])
                 peg_error("parse error");
             }
             clock_t end = clock();
-            fprintf(stderr, "EraspedTime: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
+            fprintf(stderr, "ErapsedTime: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
             dispose_pego(&context.left);
             context.pos = 0;
         }
