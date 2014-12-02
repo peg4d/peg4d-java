@@ -3,6 +3,7 @@ package org.peg4d;
 import java.util.TreeMap;
 
 import org.peg4d.expression.NonTerminal;
+import org.peg4d.expression.Optimizer;
 import org.peg4d.expression.ParsingChoice;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.model.ParsingModel;
@@ -13,7 +14,7 @@ public class Grammar {
 	
 	GrammarFactory      factory;
 	String              name;
-	UList<String>       nameList;
+	public UList<String>       nameList;
 	UMap<ParsingRule>    ruleMap;
 
 	UList<ParsingRule>   exportedRuleList;
@@ -44,7 +45,7 @@ public class Grammar {
 	
 	final boolean loadGrammarFile(String fileName) {
 		Grammar peg4d = GrammarFactory.Grammar;
-		ParsingSource s = Main.loadSource(peg4d, fileName);
+		ParsingSource s = ParsingSource.loadSource(fileName);
 		ParsingContext context = new ParsingContext(s); //peg4d.newParserContext();
 		this.name = fileName;
 		if(fileName.indexOf('/') > 0) {
@@ -202,18 +203,7 @@ public class Grammar {
 				rule.expr = e;
 			}
 		}
-
-		Optimizer2.enableOptimizer();
-		for(int i = 0; i < nameList.size(); i++) {
-			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
-			Optimizer2.optimize(rule.expr);
-		}
-		if(Optimizer2.InlineNonTerminal) {
-			for(int i = 0; i < nameList.size(); i++) {
-				ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
-				Optimizer2.optimizeInline(rule.expr);
-			}
-		}
+		new Optimizer().optimize(this);
 		ParsingContext context = new ParsingContext(null);
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);

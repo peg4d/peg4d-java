@@ -48,6 +48,10 @@ public class PEG4d extends ParsingBuilder {
 	static final int Stringfy    = ParsingTag.tagId("Stringfy");
 	static final int Apply       = ParsingTag.tagId("Apply");
 
+	static final int PowerSet     = ParsingTag.tagId("PowerSet");
+	static final int Permutation     = ParsingTag.tagId("Permutation");
+	static final int PermutationExpr = ParsingTag.tagId("PermutationExpr");
+
 	Grammar peg;
 	
 	PEG4d(Grammar peg) {
@@ -153,11 +157,11 @@ public class PEG4d extends ParsingBuilder {
 			Main.printVerbose("direct inlining", t);
 			return peg.getExpression(t);
 		}
-		return ParsingExpression.newString(ParsingCharset.unquoteString(po.getText()));
+		return ParsingExpression.newString(Utils.unquoteString(po.getText()));
 	}
 
 	public ParsingExpression toCharacterSequence(ParsingObject po) {
-		return ParsingExpression.newString(ParsingCharset.unquoteString(po.getText()));
+		return ParsingExpression.newString(Utils.unquoteString(po.getText()));
 	}
 
 	public ParsingExpression toCharacter(ParsingObject po) {
@@ -235,7 +239,7 @@ public class PEG4d extends ParsingBuilder {
 
 	public ParsingExpression toRepetition(ParsingObject po) {
 		if(po.size() == 2) {
-			int ntimes = ParsingCharset.parseInt(po.textAt(1, ""), -1);
+			int ntimes = Utils.parseInt(po.textAt(1, ""), -1);
 			if(ntimes != 1) {
 				UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[ntimes]);
 				for(int i = 0; i < ntimes; i++) {
@@ -262,7 +266,7 @@ public class PEG4d extends ParsingBuilder {
 	public ParsingExpression toConnector(ParsingObject po) {
 		int index = -1;
 		if(po.size() == 2) {
-			index = ParsingCharset.parseInt(po.textAt(1, ""), -1);
+			index = Utils.parseInt(po.textAt(1, ""), -1);
 		}
 		return ParsingExpression.newConnector(toParsingExpression(po.get(0)), index);
 	}
@@ -290,7 +294,7 @@ public class PEG4d extends ParsingBuilder {
 	}
 
 	public ParsingExpression toFail(ParsingObject po) {
-		return ParsingExpression.newFail(ParsingCharset.unquoteString(po.textAt(0, "")));
+		return ParsingExpression.newFail(Utils.unquoteString(po.textAt(0, "")));
 	}
 
 	public ParsingExpression toWith(ParsingObject po) {
@@ -323,4 +327,71 @@ public class PEG4d extends ParsingBuilder {
 		return ParsingExpression.newIsa(tagId);
 	}
 
+	private UList<ParsingExpression> createOrder(int ruleSize, ParsingObject seq) {
+		UList<ParsingExpression> l2 = new UList<ParsingExpression>(new ParsingExpression[ruleSize]);
+		UPermutation p = new UPermutation(seq.size());
+		do {
+			int[] a = p.next();
+			UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[a.length]);
+			for(int v: a) {
+				l.add(toParsingExpression(seq.get(v)));
+			}
+			ParsingExpression.addChoice(l2, ParsingExpression.newSequence(l));
+		} while(p.hasNext());
+		return l2;
+	}
+
+	private UList<ParsingExpression> createPowerSet(int ruleSize, ParsingObject seq) {
+		UList<ParsingExpression> ret = new UList<ParsingExpression>(new ParsingExpression[ruleSize]);
+		//nCn
+		UList<ParsingExpression> l1 = new UList<ParsingExpression>(new ParsingExpression[seq.size()]);
+		for(int i = 0; i < seq.size(); i++) {
+			l1.add(toParsingExpression(seq.get(i)));
+		}
+		ParsingExpression.addChoice(ret, ParsingExpression.newSequence(l1));
+		//nC(n-1)
+		for(int i = 0; i < seq.size(); i++) {
+			UList<ParsingExpression> l2 = new UList<ParsingExpression>(new ParsingExpression[seq.size()-1]);
+			for(int j = 0; j < seq.size(); j++) {
+				if(i==j) {
+					continue;
+				}
+				l2.add(toParsingExpression(seq.get(j)));
+			}
+			ParsingExpression.addChoice(ret, ParsingExpression.newSequence(l2));
+		}
+		//TODO create nC(n-2) ... nC1
+		return ret;
+	}
+
+	public ParsingExpression toPermutationExpr(ParsingObject po) {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[po.size()]);
+		for(int i = 0; i < po.size(); i++) {
+			ParsingExpression.addSequence(l, toParsingExpression(po.get(i)));
+		}
+		return ParsingExpression.newPermutation(l);
+	}
+
+	public ParsingExpression toPermutation(ParsingObject po) {
+		ParsingObject seq = po.get(0);
+		if(seq.getTag().tagId == Sequence) {
+			int ruleChoiceSize = 1;
+			for(int i = 2; i <= seq.size(); i++) {
+				ruleChoiceSize *= i;
+			}
+			return ParsingExpression.newChoice(createOrder(ruleChoiceSize, seq));
+		}
+		// not Sequence
+		return toParsingExpression(po.get(0));
+	}
+
+	public ParsingExpression toPowerSet(ParsingObject po) {
+		ParsingObject seq = po.get(0);
+		if(seq.getTag().tagId == Sequence) {
+			int ruleChoiceSize = seq.size() + 1;
+			return ParsingExpression.newChoice(createPowerSet(ruleChoiceSize, seq));
+		}
+		// not Sequence
+		return toParsingExpression(po.get(0));
+	}
 }

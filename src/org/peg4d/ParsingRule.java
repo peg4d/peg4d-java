@@ -3,6 +3,7 @@ package org.peg4d;
 import java.util.TreeMap;
 
 import org.peg4d.expression.NonTerminal;
+import org.peg4d.expression.Optimizer;
 import org.peg4d.expression.ParsingExpression;
 
 public class ParsingRule {
@@ -84,7 +85,7 @@ public class ParsingRule {
 			boolean isBadExample = a.key.equals("bad-example");
 			if(isExample || isBadExample) {
 				boolean ok = true;
-				ParsingSource s = ParsingObjectUtils.newStringSource(a.value);
+				ParsingSource s = Utils.newStringSource(a.value);
 				context.resetSource(s, 0);
 				context.parse(peg, this.ruleName, null);
 //				System.out.println("@@ " + context.isFailure() + " " + context.hasByteChar() + " " + isExample + " " + isBadExample);
@@ -148,7 +149,7 @@ public class ParsingRule {
 	}
 	
 	public ParsingExpression resolveNonTerminal() {
-		return Optimizer2.resolveNonTerminal(this.expr);
+		return Optimizer.resolveNonTerminal(this.expr);
 	}
 	
 	public UList<ParsingRule> subRule() {

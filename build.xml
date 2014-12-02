@@ -1,10 +1,11 @@
 <project name="libbun" default="jar">
 	<!-- directory / file definition -->
-	<property name="BinaryName" value="peg4d" />
+	<property name="BinaryName" value="nez-0.9" />
 	<property name="source_dir" value="src" />
 	<property name="build_dir"  value="build" />
 	<property name="root_dir"   value="." />
 	<property name="jline_jar"  value="ext/jline-1.0.jar" />
+	<property name="asm_jar"    value="ext/asm-all-4.0.jar" />
 	<property name="lib.cobertura.dir" location="/opt/java/cobertura" />
 	<property name="lib.pmd.dir" location="/opt/java/pmd" />
 
@@ -24,6 +25,7 @@
 		<javac fork="true" srcdir="${source_dir}" destdir="${build_dir}" target="1.8" source="1.8"
 			debug="yes" debuglevel="lines,vars,source" includeantruntime="false">
 			<classpath path="${jline_jar}" />
+			<classpath path="${asm_jar}" />
 			<include name="**/*.java" />
 			<exclude name="**/*Test.java" />
 			<compilerarg value="-Xlint:deprecation" />
@@ -37,12 +39,14 @@
 	<target name="jar" depends="build">
 		<jar jarfile="${BinaryName}.jar">
 			<fileset dir="${build_dir}" includes="**/*.class" />
+			<fileset dir="${source_dir}" includes="**/*.p4d" />
 			<fileset dir="." includes="lib/**" />
 			<exclude name="**/*Test.class" />
 			<manifest>
 				<attribute name="Main-Class" value="org.peg4d.Main" />
 			</manifest>
 			<zipfileset src="${jline_jar}" />
+			<zipfileset src="${asm_jar}" />
 		</jar>
 	</target>
 

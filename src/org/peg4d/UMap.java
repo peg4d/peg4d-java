@@ -25,7 +25,7 @@ public final class UMap <T> {
 	}
 	protected String stringify(Object Value) {
 		if(Value instanceof String) {
-			return ParsingCharset.quoteString('"', (String) Value, '"');
+			return Utils.quoteString('"', (String) Value, '"');
 		}
 		return Value.toString();
 	}

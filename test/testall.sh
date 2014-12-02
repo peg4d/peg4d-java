@@ -7,9 +7,10 @@ OUT=/dev/null
 PASS="\0033[34m((PASS))"
 FAIL="\0033[91m((FAIL))"
 NL="\0033[0m"
+JAR="nez-0.9.jar"
 
 function test_failure {
-	java -ea -jar peg4d.jar -p $1 $OPTION test/empty >> OUT
+	java -ea -jar $JAR parse -p $1 $OPTION -i test/empty >> OUT
 	if [ $? -eq 0 ]; then
         	echo -e "$FAIL $1 $NL"
 	else
@@ -18,7 +19,7 @@ function test_failure {
 }
 
 function test_match {
-	java -ea -jar peg4d.jar -p $1 $OPTION test/empty >> OUT
+	java -ea -jar $JAR parse -p $1 $OPTION -i test/empty >> OUT
 	if [ $? -eq 0 ]; then
 		echo -e "$PASS $1 $NL"
 	else
@@ -27,7 +28,7 @@ function test_match {
 }
 
 function test_tag {
-	RESULT=$(java -ea -jar peg4d.jar -p $1 -t tag $OPTION $2)
+	RESULT=$(java -ea -jar $JAR parse -p $1 -t tag $OPTION -i $2)
 	if [ $? -eq 0 -a {$RESULT} = {$3} ]; then
 		echo -e "$PASS $1 $NL"
 	else
@@ -36,7 +37,6 @@ function test_tag {
 		echo "{$3}"
 	fi
 }
-
 
 test_failure test/always_fail.p4d
 test_failure test/example.p4d

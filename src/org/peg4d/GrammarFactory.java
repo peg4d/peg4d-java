@@ -43,9 +43,6 @@ public class GrammarFactory {
 				filePath = LibraryPath + filePath;
 			}
 		}
-		if(Main.VerbosePeg) {
-			System.out.println("importing " + filePath);
-		}
 		return this.newGrammar(filePath, filePath);
 	}
 
