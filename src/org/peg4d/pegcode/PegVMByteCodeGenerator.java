@@ -33,6 +33,7 @@ import org.peg4d.expression.ParsingMatch;
 import org.peg4d.expression.ParsingName;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
+import org.peg4d.expression.ParsingPermutation;
 import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingSequence;
 import org.peg4d.expression.ParsingString;
@@ -43,7 +44,7 @@ import org.peg4d.expression.ParsingWithoutFlag;
 import org.peg4d.vm.Opcode;
 import org.peg4d.vm.Instruction;
 
-public class CodeGenerator extends GrammarFormatter {
+public class PegVMByteCodeGenerator extends GrammarFormatter {
 	
 	int codeIndex = 0;
 	boolean backTrackFlag = false;
@@ -60,8 +61,8 @@ public class CodeGenerator extends GrammarFormatter {
 	HashMap<Integer,Integer> labelMap = new HashMap<Integer,Integer>();
 	HashMap<String, Integer> callMap = new HashMap<String, Integer>();
 	
-	private void writeByteCode(String grammerfileName) {
-		System.out.println("choiceCase: " + choiceCaseCount + "\nconstructor: " + constructorCount);
+	public void writeByteCode(String grammerfileName, String outputFileName) {
+		//System.out.println("choiceCase: " + choiceCaseCount + "\nconstructor: " + constructorCount);
 		byte[] byteCode = new byte[codeList.size() * 64];
 		int pos = 0;
 		// Version of the specification (2 byte)
@@ -174,8 +175,7 @@ public class CodeGenerator extends GrammarFormatter {
 		byteCode[pos] = (byte) (0x000000ff & (byteCodelength >> 56));
 		
 		try {
-			String fileName = "mytest/" + grammerfileName.substring(0, grammerfileName.indexOf(".")) + ".bin";
-			FileOutputStream fos = new FileOutputStream(fileName);
+			FileOutputStream fos = new FileOutputStream(outputFileName);
 			BufferedOutputStream bos = new BufferedOutputStream(fos);
 			bos.write(byteCode);
 			bos.flush();
@@ -239,28 +239,24 @@ public class CodeGenerator extends GrammarFormatter {
 		return code;
 	}
 	
-	public final void writeCode(Instruction inst) {
+	private final void writeCode(Instruction inst) {
 		codeList.add(newCode(inst));
 	}
 	
-	public final void writeCode(Instruction inst, int ndata) {
+	private final void writeCode(Instruction inst, int ndata) {
 		codeList.add(newCode(inst, ndata));
 	}
 	
-	public final void writeCode(Instruction inst, int ndata1, int jump) {
+	private final void writeCode(Instruction inst, int ndata1, int jump) {
 		codeList.add(newCode(inst, ndata1, jump));
 	}
 	
-	public final void writeCode(Instruction inst, int ndata1, int ndata2, int jump) {
+	private final void writeCode(Instruction inst, int ndata1, int ndata2, int jump) {
 		codeList.add(newCode(inst, ndata1, ndata2, jump));
 	}
 	
-	public final void writeCode(Instruction inst, String name) {
+	private final void writeCode(Instruction inst, String name) {
 		codeList.add(newCode(inst, name));
-	}
-	
-	public final void writeCode(Instruction inst, int ndata, String name) {
-		codeList.add(newCode(inst, ndata, name));
 	}
 	
 	class FailurePoint {
@@ -303,22 +299,22 @@ public class CodeGenerator extends GrammarFormatter {
 		return this.fLabel.prev.id;
 	}
 	
-	public final int newLabel() {
+	private final int newLabel() {
 		int l = labelId;
 		labelId++;
 		return l;
 	}
 	
-	public final void writeLabel(int label) {
+	private final void writeLabel(int label) {
 		labelMap.put(label, codeIndex);
 		System.out.println("L" + label);
 	}
 	
-	public final void writeJumpCode(Instruction inst, int labelId) {
+	private final void writeJumpCode(Instruction inst, int labelId) {
 		codeList.add(newJumpCode(inst, labelId));
 	}
 	
-	public final int writeSequenceCode(ParsingExpression e, int index, int size) {
+	private final int writeSequenceCode(ParsingExpression e, int index, int size) {
 		int count = 0;
 		for (int i = index; i < size; i++) {
 			if (e.get(i) instanceof ParsingByte) {
@@ -344,7 +340,7 @@ public class CodeGenerator extends GrammarFormatter {
 		return index + count - 1;
 	}
 	
-	public final int writeChoiceCode(ParsingExpression e, int index, int size) {
+	private final int writeChoiceCode(ParsingExpression e, int index, int size) {
 		int charCount = 0;
 		for (int i = index; i < size; i++) {
 			if (e.get(i) instanceof ParsingByte) {
@@ -371,7 +367,7 @@ public class CodeGenerator extends GrammarFormatter {
 		return index + charCount - 1;
 	}
 	
-	public void writeCharsetCode(ParsingExpression e, int index, int charCount) {
+	private void writeCharsetCode(ParsingExpression e, int index, int charCount) {
 		Opcode code = new Opcode(Instruction.CHARSET);
 		for(int i = index; i < index + charCount; i++) {
 			code.append(((ParsingByte)e.get(i)).byteChar);
@@ -382,7 +378,7 @@ public class CodeGenerator extends GrammarFormatter {
 		codeList.add(code);
 	}
 	
-	public void writeNotCode(ParsingNot e) {
+	private void writeNotCode(ParsingNot e) {
 		this.pushFailureJumpPoint();
 		writeCode(Instruction.PUSHp);
 		e.inner.visit(this);
@@ -394,7 +390,7 @@ public class CodeGenerator extends GrammarFormatter {
 		writeCode(Instruction.STOREp);
 	}
 	
-	public void writeNotCharsetCode(ParsingChoice e) {
+	private void writeNotCharsetCode(ParsingChoice e) {
 		Opcode code = new Opcode(Instruction.NOTCHARSET);
 		for(int i = 0; i < e.size(); i++) {
 			code.append(((ParsingByte)e.get(i)).byteChar);
@@ -405,7 +401,7 @@ public class CodeGenerator extends GrammarFormatter {
 		codeList.add(code);
 	}
 	
-	public void writeNotStringCode(ParsingSequence e) {
+	private void writeNotStringCode(ParsingSequence e) {
 		Opcode code = new Opcode(Instruction.NOTSTRING);
 		for(int i = 0; i < e.size(); i++) {
 			code.append(((ParsingByte)e.get(i)).byteChar);
@@ -416,7 +412,7 @@ public class CodeGenerator extends GrammarFormatter {
 		codeList.add(code);
 	}
 	
-	public void writeRepetitionCode(ParsingRepetition e) {
+	private void writeRepetitionCode(ParsingRepetition e) {
 		int label = newLabel();
 		int end = newLabel();
 		this.pushFailureJumpPoint();
@@ -431,7 +427,7 @@ public class CodeGenerator extends GrammarFormatter {
 		writeLabel(end);
 	}
 	
-	public void writeZeroMoreByteRangeCode(ParsingByteRange e) {
+	private void writeZeroMoreByteRangeCode(ParsingByteRange e) {
 		Opcode code = new Opcode(Instruction.ZEROMOREBYTERANGE);
 		code.append(e.startByteChar);
 		code.append(e.endByteChar);
@@ -440,7 +436,7 @@ public class CodeGenerator extends GrammarFormatter {
 		codeList.add(code);
 	}
 	
-	public void writeZeroMoreCharsetCode(ParsingChoice e) {
+	private void writeZeroMoreCharsetCode(ParsingChoice e) {
 		Opcode code = new Opcode(Instruction.ZEROMORECHARSET);
 		for(int i = 0; i < e.size(); i++) {
 			code.append(((ParsingByte)e.get(i)).byteChar);
@@ -450,7 +446,7 @@ public class CodeGenerator extends GrammarFormatter {
 		codeList.add(code);
 	}
 	
-	public boolean checkCharset(ParsingChoice e) {
+	private boolean checkCharset(ParsingChoice e) {
 		for (int i = 0; i < e.size(); i++) {
 			if (!(e.get(i) instanceof ParsingByte)) {
 				return false;
@@ -459,7 +455,7 @@ public class CodeGenerator extends GrammarFormatter {
 		return true;
 	}
 	
-	public boolean checkString(ParsingSequence e) {
+	private boolean checkString(ParsingSequence e) {
 		for(int i = 0; i < e.size(); i++) {
 			if (!(e.get(i) instanceof ParsingByte)) {
 				return false;
@@ -468,7 +464,7 @@ public class CodeGenerator extends GrammarFormatter {
 		return true;
 	}
 	
-	public ParsingExpression checkChoice(ParsingChoice e, int c, ParsingExpression failed) {
+	private ParsingExpression checkChoice(ParsingChoice e, int c, ParsingExpression failed) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[2]);
 		checkChoice(e, c, l);
 		if(l.size() == 0) {
@@ -477,7 +473,7 @@ public class CodeGenerator extends GrammarFormatter {
 		return ParsingExpression.newChoice(l).uniquefy();
 	}
 	
-	public void checkChoice(ParsingChoice choice, int c, UList<ParsingExpression> l) {
+	private void checkChoice(ParsingChoice choice, int c, UList<ParsingExpression> l) {
 		for(int i = 0; i < choice.size(); i++) {
 			ParsingExpression e = getNonTerminalRule(choice.get(i));
 			if (e instanceof ParsingChoice) {
@@ -492,7 +488,7 @@ public class CodeGenerator extends GrammarFormatter {
 		}
 	}
 	
-	public ParsingExpression getNonTerminalRule(ParsingExpression e) {
+	private ParsingExpression getNonTerminalRule(ParsingExpression e) {
 		while(e instanceof NonTerminal) {
 			NonTerminal nterm = (NonTerminal) e;
 			e = nterm.deReference();
@@ -500,7 +496,7 @@ public class CodeGenerator extends GrammarFormatter {
 		return e;
 	}
 	
-	public void optimizeChoice(ParsingChoice e) {
+	private void optimizeChoice(ParsingChoice e) {
 		if (checkCharset(e)) {
 			writeCharsetCode(e, 0, e.size());
 		}
@@ -546,7 +542,7 @@ public class CodeGenerator extends GrammarFormatter {
 		}
 	}
 	
-	public boolean optimizeNot(ParsingNot e) {
+	private boolean optimizeNot(ParsingNot e) {
 		ParsingExpression inner = e.inner;
 		if (inner instanceof NonTerminal) {
 			inner = getNonTerminalRule(inner);
@@ -578,7 +574,7 @@ public class CodeGenerator extends GrammarFormatter {
 		return false;
 	}
 	
-	public boolean optimizeRepetition(ParsingRepetition e) {
+	private boolean optimizeRepetition(ParsingRepetition e) {
 		ParsingExpression inner = e.inner;
 		if (inner instanceof NonTerminal) {
 			inner = getNonTerminalRule(inner);
@@ -615,7 +611,6 @@ public class CodeGenerator extends GrammarFormatter {
 			}
 		}
 		this.formatFooter();
-		writeByteCode(peg.getName());
 	}
 
 	@Override
@@ -655,7 +650,7 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public String getDesc() {
-		return "vm";
+		return "pegvm";
 	}
 
 	@Override
@@ -948,6 +943,11 @@ public class CodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitApply(ParsingApply e) {
+		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+	}
+
+	@Override
+	public void visitPermutation(ParsingPermutation e) {
 		throw new RuntimeException("unimplemented visit method: " + e.getClass());
 	}
 
