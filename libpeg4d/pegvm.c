@@ -66,7 +66,7 @@ int main(int argc, char * const argv[])
     }
     else if (!strcmp(output_type, "file")) {
         context.bytecode_length = bytecode_length;
-        char output_file[256] = "dump/dump_parsed_";
+        char output_file[256] = "dump_parsed_";
         char fileName[256];
         size_t input_fileName_len = strlen(input_file);
         size_t start = 0;
@@ -96,7 +96,39 @@ int main(int argc, char * const argv[])
         dump_pego_file(file, &context.left, context.inputs, 0);
         fclose(file);
     }
-    destroyMemoryPool(&pool);
+    else if(!strcmp(output_type, "json")) {
+        context.bytecode_length = bytecode_length;
+        char output_file[256] = "dump_parsed_";
+        char fileName[256];
+        size_t input_fileName_len = strlen(input_file);
+        size_t start = 0;
+        size_t index = 0;
+        while (input_fileName_len > 0) {
+            input_fileName_len--;
+            if (input_file[input_fileName_len] == '/') {
+                start = input_fileName_len + 1;
+                break;
+            }
+            if (input_file[input_fileName_len] == '.') {
+                index = input_fileName_len;
+            }
+            
+        }
+        strncpy(fileName, input_file + start, index-start);
+        strcat(output_file, fileName);
+        strcat(output_file, ".json");
+        if(execute(&context, inst, &pool)) {
+            peg_error("parse error");
+        }
+        FILE *file;
+        file = fopen(output_file, "w");
+        if (file == NULL) {
+            assert(0 && "can not open file");
+        }
+        dump_json_file(file, &context.left, context.inputs, 0);
+        fclose(file);
+    }
+    destroy_pool(&pool);
     ParsingContext_Dispose(&context);
     free(inst);
     inst = NULL;

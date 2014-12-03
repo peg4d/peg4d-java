@@ -188,9 +188,112 @@ void dump_pego_file(FILE *file, ParsingObject *pego, char* source, int level)
     }
 }
 
+void write_json(FILE *file, ParsingObject *pego, char* source, int level);
+int isJsonArray(ParsingObject pego);
+void write_json_array(FILE *file, ParsingObject *pego, char* source, int level);
+void write_json_indent(FILE *file, int level);
+void write_json_object(FILE *file, ParsingObject *pego, char* source, int level);
+
 void dump_json_file(FILE *file, ParsingObject *pego, char* source, int level)
 {
-    
+    fprintf(file, "{\n" );
+    fprintf(file, " \"tag\": \"%s\", \"value\": ", pego[0]->tag);
+    write_json(file, pego, source, level+1);
+    fprintf(file, "\n}");
+}
+
+void write_json(FILE *file, ParsingObject *pego, char* source, int level)
+{
+    if (pego[0]) {
+        if (pego[0]->child_size > 0) {
+            if (isJsonArray(pego[0])) {
+                write_json_array(file, pego, source, level);
+            }
+            else {
+                write_json_object(file, pego, source, level);
+            }
+        }
+        else {
+            fprintf(file, "\"");
+            if (pego[0]->value == NULL) {
+                for (long j = pego[0]->start_pos; j < pego[0]->end_pos; j++) {
+                    fprintf(file, "%c", source[j]);
+                }
+            }
+            else {
+                fprintf(file, "%s", pego[0]->value);
+            }
+            fprintf(file, "\"");
+        }
+    }
+    else {
+        fprintf(stderr, "%p tag:null\n", pego);
+    }
+}
+
+int isJsonArray(ParsingObject pego) {
+    return pego->child_size > 1;
+}
+
+void write_json_array(FILE *file, ParsingObject *pego, char* source, int level)
+{
+    fprintf(file, "[");
+    for (int i = 0; i < pego[0]->child_size; i++) {
+        fprintf(file, "\n");
+        write_json_indent(file, level + 1);
+        fprintf(file, "{");
+        fprintf(file, "\n");
+        write_json_indent(file, level + 2);
+        fprintf(file, "\"tag\": \"%s\", \"value\": ", pego[0]->child[i]->tag);
+        write_json(file, &pego[0]->child[i], source, level + 3);
+        fprintf(file, "\n");
+        write_json_indent(file, level + 1);
+        fprintf(file, "}");
+        if (i+1 < pego[0]->child_size) {
+            fprintf(file, ",");
+        }
+    }
+    fprintf(file, "\n");
+    write_json_indent(file, level);
+    fprintf(file, "]");
+}
+
+void write_json_object(FILE *file, ParsingObject *pego, char* source, int level)
+{
+    if (pego[0]) {
+        if (pego[0]->child_size > 0) {
+            fprintf(file, "{");
+            for (int i = 0; i < pego[0]->child_size; i++) {
+                fprintf(file, "\n");
+                write_json_indent(file, level + 1);
+                fprintf(file, "\"%s\": ", pego[0]->child[i]->tag);
+                write_json(file, &pego[0]->child[i], source, level + 2);
+                if (i+1 < pego[0]->child_size) {
+                        fprintf(file, ",");
+                }
+            }
+            fprintf(file, "\n");
+            write_json_indent(file, level + 1);
+            fprintf(file, "}");
+        }
+        else {
+            if (pego[0]->value == NULL) {
+                for (long j = pego[0]->start_pos; j < pego[0]->end_pos; j++) {
+                    fprintf(file, "%c", source[j]);
+                }
+            }
+            else {
+                fprintf(file, "%s", pego[0]->value);
+            }
+        }
+    }
+}
+
+void write_json_indent(FILE *file, int level)
+{
+    for (int i = 0; i < level; i++) {
+        fprintf(file, " ");
+    }
 }
 
 ParsingObject P4D_newObject(ParsingContext this, long start, MemoryPool pool);
@@ -238,7 +341,7 @@ void init_pool(MemoryPool pool) {
     pool->log_pool_index = 0;
 }
 
-void destroyMemoryPool(MemoryPool pool) {
+void destroy_pool(MemoryPool pool) {
     free(pool->object_pool);
     pool->object_pool = NULL;
     free(pool->log_pool);
