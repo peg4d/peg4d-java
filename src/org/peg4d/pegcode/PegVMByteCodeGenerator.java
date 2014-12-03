@@ -175,6 +175,10 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		byteCode[pos] = (byte) (0x000000ff & (byteCodelength >> 56));
 		
 		try {
+			if (outputFileName == null) {
+				System.out.println("unspecified outputfile");
+				System.exit(0);
+			}
 			FileOutputStream fos = new FileOutputStream(outputFileName);
 			BufferedOutputStream bos = new BufferedOutputStream(fos);
 			bos.write(byteCode);
