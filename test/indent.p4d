@@ -1,25 +1,47 @@
 // PEG4d Indent
 
+/*
+a
+block:
+  b
+  block:
+    c
+  d
+e
+block:
+  f
+    
+  block:
+  g
 
-File
-	= { (_ NL / @Statement)* #File}
+  block:
 
-Block
-	= { <block ':' _ NL (_ NL / @IndentStatement)+ > #Block}
+    h
+  block: i
+  j
+*/
 
-IndentStatement
-	= <indent> S+ Statement
+File = Chunk
+Chunk = Block
+
+S   = [ \t]
+_   = S*
+NL  = [\n\r]+
+W   = [a-zA-Z0-9_]
+EOS = (_ NL)+ / !.
 
 Statement
-	= { @{W+ #Name} @Block #Label }
-	/ { (!NL .)+ #Line } NL?
+    = BlockStatement / SingleStatement
 
-NL
-	= '\r'? '\n'
+SingleStatement
+    = { W+ #Statement } EOS
 
-S
-	= [ \t]
-_
-	= [ \t]*
+BlockStatement
+    = "block:" EOS <indent> S+ Block   // Multi-line block
+    / "block:" _ { @Statement #Block } // Single-line block
+    / "block:" { #Block } EOS          // Empty block
+
+Block
+    = { <block @Statement (<indent> @Statement)*> #Block }
 
 
