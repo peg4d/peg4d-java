@@ -10,26 +10,38 @@ block:
 e
 block:
   f
-
-  g
+    
   block:
+  g
+
+  block:
+
     h
+  block: i
+  j
 */
 
 File = Chunk
+Chunk = Block
 
-Chunk
-    = { @Statement (NL @Statement)* #Source }
-
-_   = [ \t]*
+S   = [ \t]
+_   = S*
 NL  = [\n\r]+
-W = [a-zA-Z0-9_]
-
-NameStatement
-    = { W+ #Statement }
+W   = [a-zA-Z0-9_]
+EOS = (_ NL)+ / !.
 
 Statement
-    = Block / NameStatement
+    = BlockStatement / SingleStatement
+
+SingleStatement
+    = { W+ #Statement } EOS
+
+BlockStatement
+    = "block:" EOS <indent> S+ Block   // Multi-line block
+    / "block:" _ { @Statement #Block } // Single-line block
+    / "block:" { #Block } EOS          // Empty block
 
 Block
-    = "block:" NL _ { <block @Statement ((_ NL)+ <indent> @Statement)*> #Block }
+    = { <block @Statement (<indent> @Statement)*> #Block }
+
+

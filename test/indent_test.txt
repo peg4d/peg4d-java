@@ -7,7 +7,12 @@ block:
 e
 block:
   f
-
-  g
+    
   block:
+  g
+
+  block:
+
     h
+  block: i
+  j
