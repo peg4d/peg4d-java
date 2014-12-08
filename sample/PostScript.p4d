@@ -1,0 +1,103 @@
+
+// http://www.tailrecursive.org/postscript/operators.html#showpage
+
+Chunk
+	= Expr
+_
+	= [ \t\r\t]
+
+Expr
+	= Value {@ _ addTail}*
+
+addTail
+	= 'sqrt' #Sqrt
+	/ 'sin'  #Sin
+	/ @Expr _ 'add'  #Add
+	/ @Expr _ 'sub'  #Sub
+	/ @Expr _ 'mul'  #Mul
+	/ @Expr _ 'div'  #fDiv
+	/ @Expr _ 'idiv' #Div
+	/ @Expr _ 'mod'  #Mod
+	/ @Expr _ 'exp' #Exp
+	
+Value
+	= { DIGIT+ #Integer }
+	/ { '.' DIGIT+ #Float }
+
+
+
+Value
+	= Integer
+	/ Float
+
+Expr
+	= Value {@ _ addBinary }
+
+addBinary
+	= @Expr _ ("add" #Add / "sub" #Sub / "mul" #Mul / "div" #Div )
+
+
+
+
+// num1 num2 add num3
+
+Add
+	= { @Expr _ @Expr _ "add" #Add}
+
+
+// x-coord y-coord r ang1 ang2 arc -
+
+Arc
+	= { @Expr _ @Expr _ @Expr _ @Expr _ @Expr _ "arc" #Arc}
+
+Begin
+	= { @Dict _ "begin" #Begin}
+
+// procedure1 bind procedure2
+// - clip -
+// - closepath -
+// string bool charpath -
+// width height bppc data_1 ... data_n separate channels colorimage -
+// x1 y1 x2 y2 x3 y3 curveto -
+
+Def
+	= { @name _ @Expr _ "def" #Def }
+
+Div
+	= { @Expr _ @Expr _ "div" #Div}
+
+// object dup object object
+
+Dup
+	= { @Expr _ "dup" #Dup }
+
+End
+	= { "end" #End }
+
+Exch
+	= { @Expr _ @Expr _ "exch" }
+
+Fill
+	= { "fill" #Fill }
+
+FindFont
+	= { @Name _ "findfont" #FindFont}
+
+For
+	= { @Expr _ @Expr _ @Expr _ @Expr _ "for" #For }
+
+GRestore
+	= { "grestore" #GRestore }
+
+GSave
+	= { "gsave" #GSave }
+
+If
+	= { @Expr _ @Expr _ "if" #If }
+
+IfElse
+	= { @Expr _ @Expr _ @Expr _ "ifelse" #If }
+
+
+
+	
