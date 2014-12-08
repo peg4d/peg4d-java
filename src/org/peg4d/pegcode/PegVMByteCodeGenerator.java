@@ -228,13 +228,6 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		return code;
 	}
 	
-	private Opcode newCode(Instruction inst, int ndata, String name) {
-		Opcode code = new Opcode(inst, name).append(ndata);
-		System.out.println("\t" + code.toString());
-		this.codeIndex++;
-		return code;
-	}
-	
 	private Opcode newJumpCode(Instruction inst, int jump) {
 		Opcode code = new Opcode(inst);
 		code.jump = jump;
@@ -416,6 +409,79 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		codeList.add(code);
 	}
 	
+	private void writeAndCode(ParsingAnd e) {
+		this.pushFailureJumpPoint();
+		writeCode(Instruction.PUSHp);
+		e.inner.visit(this);
+		this.popFailureJumpPoint(e);
+		writeCode(Instruction.STOREp);
+		writeJumpCode(Instruction.IFFAIL, jumpFailureJump());
+	}
+	
+	private void writeAndCharsetCode(ParsingChoice e) {
+		Opcode code = new Opcode(Instruction.ANDCHARSET);
+		for(int i = 0; i < e.size(); i++) {
+			code.append(((ParsingByte)e.get(i)).byteChar);
+		}
+		code.jump = this.jumpFailureJump();
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		codeList.add(code);
+	}
+	
+	private void writeAndStringCode(ParsingSequence e) {
+		Opcode code = new Opcode(Instruction.ANDSTRING);
+		for(int i = 0; i < e.size(); i++) {
+			code.append(((ParsingByte)e.get(i)).byteChar);
+		}
+		code.jump = this.jumpFailureJump();
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		codeList.add(code);
+	}
+	
+	private void writeOptionalCode(ParsingOption e) {
+		int label = newLabel();
+		this.pushFailureJumpPoint();
+		writeCode(Instruction.PUSHp);
+		e.inner.visit(this);
+		writeCode(Instruction.POP);
+		writeJumpCode(Instruction.JUMP, label);
+		this.popFailureJumpPoint(e);
+		writeCode(Instruction.SUCC);
+		writeCode(Instruction.STOREp);
+		writeLabel(label);
+	}
+	
+	private void writeOptionalByteRangeCode(ParsingByteRange e) {
+		Opcode code = new Opcode(Instruction.OPTIONALBYTERANGE);
+		code.append(e.startByteChar);
+		code.append(e.endByteChar);
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		codeList.add(code);
+	}
+	
+	private void writeOptionalCharsetCode(ParsingChoice e) {
+		Opcode code = new Opcode(Instruction.OPTIONALCHARSET);
+		for(int i = 0; i < e.size(); i++) {
+			code.append(((ParsingByte)e.get(i)).byteChar);
+		}
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		codeList.add(code);
+	}
+	
+	private void writeOptionalStringCode(ParsingSequence e) {
+		Opcode code = new Opcode(Instruction.OPTIONALSTRING);
+		for(int i = 0; i < e.size(); i++) {
+			code.append(((ParsingByte)e.get(i)).byteChar);
+		}
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		codeList.add(code);
+	}
+	
 	private void writeRepetitionCode(ParsingRepetition e) {
 		int label = newLabel();
 		int end = newLabel();
@@ -546,6 +612,34 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		}
 	}
 	
+	private boolean optimizeAnd(ParsingAnd e) {
+		ParsingExpression inner = e.inner;
+		if (inner instanceof NonTerminal) {
+			inner = getNonTerminalRule(inner);
+		}
+		if (inner instanceof ParsingByte) {
+			writeCode(Instruction.ANDBYTE, ((ParsingByte)inner).byteChar, this.jumpFailureJump());
+			return true;
+		}
+		if (inner instanceof ParsingByteRange) {
+			writeCode(Instruction.ANDBYTERANGE, ((ParsingByteRange)inner).startByteChar, ((ParsingByteRange)inner).endByteChar, this.jumpFailureJump());
+			return true;
+		}
+		if(inner instanceof ParsingChoice) {
+			if (checkCharset((ParsingChoice)inner)) {
+				writeAndCharsetCode((ParsingChoice)inner);
+				return true;
+			}
+		}
+		if (inner instanceof ParsingSequence) {
+			if (checkString((ParsingSequence)inner)) {
+				writeAndStringCode((ParsingSequence)inner);
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	private boolean optimizeNot(ParsingNot e) {
 		ParsingExpression inner = e.inner;
 		if (inner instanceof NonTerminal) {
@@ -572,6 +666,34 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		if (inner instanceof ParsingSequence) {
 			if (checkString((ParsingSequence)inner)) {
 				writeNotStringCode((ParsingSequence)inner);
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private boolean optimizeOptional(ParsingOption e) {
+		ParsingExpression inner = e.inner;
+		if (inner instanceof NonTerminal) {
+			inner = getNonTerminalRule(inner);
+		}
+		if (inner instanceof ParsingByte) {
+			writeCode(Instruction.OPTIONALBYTE, ((ParsingByte)inner).byteChar);
+			return true;
+		}
+		if (inner instanceof ParsingByteRange) {
+			writeOptionalByteRangeCode((ParsingByteRange)inner);
+			return true;
+		}
+		if(inner instanceof ParsingChoice) {
+			if (checkCharset((ParsingChoice)inner)) {
+				writeOptionalCharsetCode((ParsingChoice)inner);
+				return true;
+			}
+		}
+		if (inner instanceof ParsingSequence) {
+			if (checkString((ParsingSequence)inner)) {
+				writeOptionalStringCode((ParsingSequence)inner);
 				return true;
 			}
 		}
@@ -727,26 +849,26 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitAnd(ParsingAnd e) {
-		this.pushFailureJumpPoint();
-		writeCode(Instruction.PUSHp);
-		e.inner.visit(this);
-		this.popFailureJumpPoint(e);
-		writeCode(Instruction.STOREp);
-		writeJumpCode(Instruction.IFFAIL, jumpFailureJump());
+		if (optimizationLevel > 2) {
+			if (!optimizeAnd(e)) {
+				writeAndCode(e);
+			}
+		}
+		else {
+			writeAndCode(e);
+		}
 	}
 
 	@Override
 	public void visitOptional(ParsingOption e) {
-		int label = newLabel();
-		this.pushFailureJumpPoint();
-		writeCode(Instruction.PUSHp);
-		e.inner.visit(this);
-		writeCode(Instruction.POP);
-		writeJumpCode(Instruction.JUMP, label);
-		this.popFailureJumpPoint(e);
-		writeCode(Instruction.SUCC);
-		writeCode(Instruction.STOREp);
-		writeLabel(label);
+		if (optimizationLevel > 2) {
+			if (!optimizeOptional(e)) {
+				writeOptionalCode(e);
+			}
+		}
+		else {
+			writeOptionalCode(e);
+		}
 	}
 
 	@Override

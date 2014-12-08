@@ -488,6 +488,86 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         failflag = 1;
         JUMP;
     }
+    OP(ANDBYTE){
+        if (context->inputs[context->pos] != (inst+pc)->ndata[1]) {
+            failflag = 1;
+            JUMP;
+        }
+        DISPATCH_NEXT;
+    }
+    OP(ANDCHARSET){
+        int j = 0;
+        int len = (inst+pc)->ndata[0];
+        while (j < len) {
+            if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
+                DISPATCH_NEXT;
+            }
+            j++;
+        }
+        failflag = 1;
+        JUMP;
+    }
+    OP(ANDBYTERANGE){
+        if (!(context->inputs[context->pos] >= (inst+pc)->ndata[1] && context->inputs[context->pos] <= (inst+pc)->ndata[2])) {
+            failflag = 1;
+            JUMP;
+        }
+        DISPATCH_NEXT;
+    }
+    OP(ANDSTRING){
+        int j = 0;
+        int len = (inst+pc)->ndata[0];
+        long pos = context->pos;
+        while (j < len) {
+            if (context->inputs[context->pos] != (inst+pc)->ndata[j+1]) {
+                failflag = 1;
+                context->pos = pos;
+                JUMP;
+            }
+            context->pos++;
+            j++;
+        }
+        context->pos = pos;
+        DISPATCH_NEXT;
+    }
+    OP(OPTIONALBYTE){
+        if (context->inputs[context->pos] == (inst+pc)->ndata[1]) {
+            context->pos++;
+        }
+        DISPATCH_NEXT;
+    }
+    OP(OPTIONALCHARSET){
+        int j = 0;
+        int len = (inst+pc)->ndata[0];
+        while (j < len) {
+            if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
+                context->pos++;
+                DISPATCH_NEXT;
+            }
+            j++;
+        }
+        DISPATCH_NEXT;
+    }
+    OP(OPTIONALBYTERANGE){
+        if (context->inputs[context->pos] >= (inst+pc)->ndata[1] && context->inputs[context->pos] <= (inst+pc)->ndata[2]) {
+            context->pos++;
+        }
+        DISPATCH_NEXT;
+    }
+    OP(OPTIONALSTRING){
+        int j = 0;
+        int len = (inst+pc)->ndata[0];
+        long pos = context->pos;
+        while (j < len) {
+            if (context->inputs[context->pos] != (inst+pc)->ndata[j+1]) {
+                context->pos = pos;
+                DISPATCH_NEXT;
+            }
+            context->pos++;
+            j++;
+        }
+        DISPATCH_NEXT;
+    }
     OP(ZEROMOREBYTERANGE){
         while (1) {
             if (!(context->inputs[context->pos] >= (inst+pc)->ndata[1] && context->inputs[context->pos] <= (inst+pc)->ndata[2])) {
