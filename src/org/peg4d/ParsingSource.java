@@ -125,13 +125,19 @@ public abstract class ParsingSource {
 	public final String getIndentText(long fromPosition) {
 		long startPosition = this.getLineStartPosition(fromPosition);
 		long i = startPosition;
+		String indent = "";
 		for(; i < fromPosition; i++) {
 			int ch = this.byteAt(i);
 			if(ch != ' ' && ch != '\t') {
+				if(i + 1 != fromPosition) {
+					for(long j = i;j < fromPosition; j++) {
+						indent = indent + " ";
+					}
+				}
 				break;
 			}
 		}
-		String indent = this.substring(startPosition, i);
+		indent = this.substring(startPosition, i) + indent;
 		return indent;
 	}
 
