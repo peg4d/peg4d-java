@@ -201,8 +201,8 @@ static inline int *POP_IP(ParsingContext context)
 #define PUSH_OSP(INST) (*context->object_stack_pointer = (INST), INC_OSP(context, 1))
 #define POP_OSP(INST) (DEC_OSP(context, 1))
 //#define TOP_SP() (*context->stack_pointer)
-#define JUMP pc = (inst+pc)->jump; goto *(inst+pc)->ptr;
-#define RET pc = *POP_IP(context) + 1; goto *(inst+pc)->ptr;
+#define JUMP pc = (pc)->jump; goto *(pc)->ptr;
+#define RET pc = *POP_IP(context) + 1; goto *(pc)->ptr;
 
 
 long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
@@ -212,37 +212,37 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         PEGVM_OP_EACH(DEFINE_TABLE)
 #undef DEFINE_TABLE
     };
-
+	
+    int i;
     int failflag = 0;
-
-#if PEGVM_DEBUG
-    int pushcount[1024];
-    int popcount[1024];
-    int startpc[1024];
-    int endpc[1024];
-    int count = 0;
-    int pushOcount[1024];
-    int popOcount[1024];
-    
-    pushcount[0] = 0;
-    popcount[0] = 0;
-    pushOcount[count] = 0;
-    popOcount[count] = 0;
-    startpc[0] = 1;
-#endif
     
     PUSH_IP(context, -1);
     P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
 
-    for (uint64_t i = 0; i < context->bytecode_length; i++) {
+    for (i = 0; i < context->bytecode_length; i++) {
+        switch ((inst+i)->opcode) {
+            case PEGVM_OP_JUMP:
+            case PEGVM_OP_CALL:
+            case PEGVM_OP_IFSUCC:
+            case PEGVM_OP_IFFAIL:
+            case PEGVM_OP_REPCOND:
+            case PEGVM_OP_BYTE:
+            case PEGVM_OP_STRING:
+            case PEGVM_OP_:
+            default:
+                break;
+        }
+    }
+
+    for (i = 0; i < context->bytecode_length; i++) {
         (inst+i)->ptr = table[(inst+i)->opcode];
     }
     
-    int pc = 1;
-    goto *(inst+pc)->ptr;
+    Instruction *pc = inst + 1;
+    goto *(pc)->ptr;
                 
 #define OP(OP) PEGVM_OP_##OP:
-#define DISPATCH_NEXT ++pc; goto *(inst+pc)->ptr;
+#define DISPATCH_NEXT ++pc; goto *(pc)->ptr;
     OP(EXIT) {
         P4D_commitLog(context, 0, context->left, pool);
         return failflag;
@@ -254,30 +254,9 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         PUSH_IP(context, pc);
         JUMP;
         //pc = inst[pc].jump;
-#if PEGVM_DEBUG
-            count++;
-            pushcount[count] = 0;
-            popcount[count] = 0;
-            pushOcount[count] = 0;
-            popOcount[count] = 0;
-            startpc[count] = pc;
-#endif
         //goto *inst[pc].ptr;
     }
     OP(RET) {
-#if PEGVM_DEBUG
-        endpc[count] = pc;
-        if (pushcount[count] != popcount[count]) {
-            fprintf(stderr, "(start:%d ~ end:%d) ", startpc[count], endpc[count]);
-            assert(0 && "pushcount != popcount");
-        }
-        if (pushOcount[count] != popOcount[count]) {
-            fprintf(stderr, "(push:%d ~ pop:%d) \n", pushOcount[count], popOcount[count]);
-            fprintf(stderr, "(start:%d ~ end:%d) ", startpc[count], endpc[count]);
-            assert(0 && "pushOcount != popOcount");
-        }
-        count--;
-#endif
         RET;
     }
     OP(IFSUCC) {
@@ -287,29 +266,18 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(IFFAIL){
-#if PEGVM_DEBUG
-        if (pc == 910) {
-            pc = 910;
-        }
-#endif
         if (failflag) {
             JUMP;
         }
         DISPATCH_NEXT;
     }
     OP(REPCOND) {
-#if PEGVM_DEBUG
-        popcount[count]++;
-#endif
         if (context->pos == POP_SP()) {
             JUMP;
         }
         DISPATCH_NEXT;
     }
     OP(PUSHo){
-#if PEGVM_DEBUG
-        pushOcount[count]++;
-#endif
         ParsingObject left = P4D_newObject(context, context->pos, pool);
         *left = *context->left;
         left->refc = 1;
@@ -317,22 +285,13 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(PUSHconnect) {
-#if PEGVM_DEBUG
-        pushOcount[count]++;
-#endif
         ParsingObject left = context->left;
         context->left->refc++;
         PUSH_OSP(left);
-#if PEGVM_DEBUG
-        pushcount[count]++;
-#endif
         PUSH_SP(P4D_markLogStack(context));
         DISPATCH_NEXT;
     }
     OP(PUSHp) {
-#if PEGVM_DEBUG
-        pushcount[count]++;
-#endif
         PUSH_SP(context->pos);
         DISPATCH_NEXT;
     }
@@ -340,38 +299,23 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         assert(0 && "Not implemented");
     }
     OP(PUSHm){
-#if PEGVM_DEBUG
-        pushcount[count]++;
-#endif
         PUSH_SP(P4D_markLogStack(context));
         DISPATCH_NEXT;
     }
     OP(POP){
-#if PEGVM_DEBUG
-        popcount[count]++;
-#endif
         POP_SP();
         DISPATCH_NEXT;
     }
     OP(POPo){
-#if PEGVM_DEBUG
-        popOcount[count]++;
-#endif
         ParsingObject left = POP_OSP();
         P4D_setObject(context, &left, NULL);
         DISPATCH_NEXT;
     }
     OP(STOREo){
-#if PEGVM_DEBUG
-        popOcount[count]++;
-#endif
         ParsingObject left = POP_OSP();
         P4D_setObject(context, &context->left, left);
         DISPATCH_NEXT;}
     OP(STOREp){
-#if PEGVM_DEBUG
-        popcount[count]++;
-#endif
         context->pos = POP_SP();
         DISPATCH_NEXT;
     }
@@ -390,7 +334,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(BYTE) {
-        if (context->inputs[context->pos] != (inst+pc)->ndata[1]) {
+        if (context->inputs[context->pos] != (pc)->ndata[1]) {
             failflag = 1;
             JUMP;
         }
@@ -399,9 +343,9 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     }
     OP(STRING) {
         int j = 0;
-        int len = (inst+pc)->ndata[0];
+        int len = (pc)->ndata[0];
         while (j < len) {
-            if (context->inputs[context->pos] != (inst+pc)->ndata[j+1]) {
+            if (context->inputs[context->pos] != (pc)->ndata[j+1]) {
                 failflag = 1;
                 JUMP;
             }
@@ -411,7 +355,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(CHAR){
-        if (!(context->inputs[context->pos] >= (inst+pc)->ndata[1] && context->inputs[context->pos] <= (inst+pc)->ndata[2])) {
+        if (!(context->inputs[context->pos] >= (pc)->ndata[1] && context->inputs[context->pos] <= (pc)->ndata[2])) {
             failflag = 1;
             JUMP;
         }
@@ -420,9 +364,9 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     }
     OP(CHARSET){
         int j = 0;
-        int len = (inst+pc)->ndata[0];
+        int len = (pc)->ndata[0];
         while (j < len) {
-            if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
+            if (context->inputs[context->pos] == (pc)->ndata[j+1]) {
                 context->pos++;
                 DISPATCH_NEXT;
             }
@@ -440,7 +384,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         JUMP;
     }
     OP(NOTBYTE){
-        if (context->inputs[context->pos] != (inst+pc)->ndata[1]) {
+        if (context->inputs[context->pos] != (pc)->ndata[1]) {
             DISPATCH_NEXT;
         }
         failflag = 1;
@@ -455,9 +399,9 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     }
     OP(NOTCHARSET){
         int j = 0;
-        int len = (inst+pc)->ndata[0];
+        int len = (pc)->ndata[0];
         while (j < len) {
-            if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
+            if (context->inputs[context->pos] == (pc)->ndata[j+1]) {
                 failflag = 1;
                 JUMP;
             }
@@ -466,7 +410,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(NOTBYTERANGE){
-        if (!(context->inputs[context->pos] >= (inst+pc)->ndata[1] && context->inputs[context->pos] <= (inst+pc)->ndata[2])) {
+        if (!(context->inputs[context->pos] >= (pc)->ndata[1] && context->inputs[context->pos] <= (pc)->ndata[2])) {
             DISPATCH_NEXT;
         }
         failflag = 1;
@@ -474,10 +418,10 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     }
     OP(NOTSTRING){
         int j = 0;
-        int len = (inst+pc)->ndata[0];
+        int len = (pc)->ndata[0];
         long pos = context->pos;
         while (j < len) {
-            if (context->inputs[context->pos] != (inst+pc)->ndata[j+1]) {
+            if (context->inputs[context->pos] != (pc)->ndata[j+1]) {
                 context->pos = pos;
                 DISPATCH_NEXT;
             }
@@ -489,7 +433,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         JUMP;
     }
     OP(ANDBYTE){
-        if (context->inputs[context->pos] != (inst+pc)->ndata[1]) {
+        if (context->inputs[context->pos] != (pc)->ndata[1]) {
             failflag = 1;
             JUMP;
         }
@@ -497,9 +441,9 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     }
     OP(ANDCHARSET){
         int j = 0;
-        int len = (inst+pc)->ndata[0];
+        int len = (pc)->ndata[0];
         while (j < len) {
-            if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
+            if (context->inputs[context->pos] == (pc)->ndata[j+1]) {
                 DISPATCH_NEXT;
             }
             j++;
@@ -508,7 +452,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         JUMP;
     }
     OP(ANDBYTERANGE){
-        if (!(context->inputs[context->pos] >= (inst+pc)->ndata[1] && context->inputs[context->pos] <= (inst+pc)->ndata[2])) {
+        if (!(context->inputs[context->pos] >= (pc)->ndata[1] && context->inputs[context->pos] <= (pc)->ndata[2])) {
             failflag = 1;
             JUMP;
         }
@@ -516,10 +460,10 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     }
     OP(ANDSTRING){
         int j = 0;
-        int len = (inst+pc)->ndata[0];
+        int len = (pc)->ndata[0];
         long pos = context->pos;
         while (j < len) {
-            if (context->inputs[context->pos] != (inst+pc)->ndata[j+1]) {
+            if (context->inputs[context->pos] != (pc)->ndata[j+1]) {
                 failflag = 1;
                 context->pos = pos;
                 JUMP;
@@ -531,16 +475,16 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(OPTIONALBYTE){
-        if (context->inputs[context->pos] == (inst+pc)->ndata[1]) {
+        if (context->inputs[context->pos] == (pc)->ndata[1]) {
             context->pos++;
         }
         DISPATCH_NEXT;
     }
     OP(OPTIONALCHARSET){
         int j = 0;
-        int len = (inst+pc)->ndata[0];
+        int len = (pc)->ndata[0];
         while (j < len) {
-            if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
+            if (context->inputs[context->pos] == (pc)->ndata[j+1]) {
                 context->pos++;
                 DISPATCH_NEXT;
             }
@@ -549,17 +493,17 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(OPTIONALBYTERANGE){
-        if (context->inputs[context->pos] >= (inst+pc)->ndata[1] && context->inputs[context->pos] <= (inst+pc)->ndata[2]) {
+        if (context->inputs[context->pos] >= (pc)->ndata[1] && context->inputs[context->pos] <= (pc)->ndata[2]) {
             context->pos++;
         }
         DISPATCH_NEXT;
     }
     OP(OPTIONALSTRING){
         int j = 0;
-        int len = (inst+pc)->ndata[0];
+        int len = (pc)->ndata[0];
         long pos = context->pos;
         while (j < len) {
-            if (context->inputs[context->pos] != (inst+pc)->ndata[j+1]) {
+            if (context->inputs[context->pos] != (pc)->ndata[j+1]) {
                 context->pos = pos;
                 DISPATCH_NEXT;
             }
@@ -570,7 +514,7 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     }
     OP(ZEROMOREBYTERANGE){
         while (1) {
-            if (!(context->inputs[context->pos] >= (inst+pc)->ndata[1] && context->inputs[context->pos] <= (inst+pc)->ndata[2])) {
+            if (!(context->inputs[context->pos] >= (pc)->ndata[1] && context->inputs[context->pos] <= (pc)->ndata[2])) {
                 DISPATCH_NEXT;
             }
             context->pos++;
@@ -578,11 +522,11 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     }
     OP(ZEROMORECHARSET){
         int j;
-        int len = (inst+pc)->ndata[0];
+        int len = (pc)->ndata[0];
     ZEROMORECHARSET_LABEL:
         j = 0;
         while (j < len) {
-            if (context->inputs[context->pos] == (inst+pc)->ndata[j+1]) {
+            if (context->inputs[context->pos] == (pc)->ndata[j+1]) {
                 context->pos++;
                 goto ZEROMORECHARSET_LABEL;
             }
@@ -591,56 +535,36 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(NEW){
-#if PEGVM_DEBUG
-        
-        pushcount[count]++;
-#endif
         PUSH_SP(P4D_markLogStack(context));
         P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
         //PUSH_SP(P4D_markLogStack(context));
         DISPATCH_NEXT;
     }
     OP(NEWJOIN){
-        //popOcount[count]++;
         ParsingObject left = NULL;
         P4D_setObject(context, &left, context->left);
         P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
         //PUSH_SP(P4D_markLogStack(context));
         P4D_lazyJoin(context, left, pool);
-        P4D_lazyLink(context, context->left, (inst+pc)->ndata[1], left, pool);
+        P4D_lazyLink(context, context->left, (pc)->ndata[1], left, pool);
         DISPATCH_NEXT;
     }
     OP(COMMIT){
-#if PEGVM_DEBUG
-        popcount[count]++;
-#endif
         P4D_commitLog(context, (int)POP_SP(), context->left, pool);
-#if PEGVM_DEBUG
-        popOcount[count]++;
-#endif
         ParsingObject parent = (ParsingObject)POP_OSP();
-        P4D_lazyLink(context, parent, (inst+pc)->ndata[1], context->left, pool);
+        P4D_lazyLink(context, parent, (pc)->ndata[1], context->left, pool);
         P4D_setObject(context, &context->left, parent);
         DISPATCH_NEXT;
     }
     OP(ABORT){
-#if PEGVM_DEBUG
-        popcount[count]++;
-#endif
         P4D_abortLog(context, (int)POP_SP());
         DISPATCH_NEXT;
     }
     OP(LINK){
-#if PEGVM_DEBUG
-        popOcount[count]++;
-#endif
         ParsingObject parent = (ParsingObject)POP_OSP();
-        P4D_lazyLink(context, parent, (inst+pc)->ndata[1], context->left, pool);
+        P4D_lazyLink(context, parent, (pc)->ndata[1], context->left, pool);
         //P4D_setObject(context, &context->left, parent);
         PUSH_OSP(parent);
-#if PEGVM_DEBUG
-        pushOcount[count]++;
-#endif
         DISPATCH_NEXT;
     }
     OP(SETendp){
@@ -648,16 +572,16 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         DISPATCH_NEXT;
     }
     OP(TAG){
-        context->left->tag = (inst+pc)->name;
+        context->left->tag = (pc)->name;
         DISPATCH_NEXT;
     }
     OP(VALUE){
-        context->left->value = (inst+pc)->name;
+        context->left->value = (pc)->name;
         DISPATCH_NEXT;
     }
     OP(MAPPEDCHOICE) {
-        pc = (inst+pc)->ndata[context->inputs[context->pos] + 1];
-        goto *(inst+pc)->ptr;
+        pc = (pc)->ndata[context->inputs[context->pos] + 1];
+        goto *(pc)->ptr;
     }
 //    OP(DTHREAD) {
 //        return (long)table;
