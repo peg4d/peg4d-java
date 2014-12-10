@@ -1,0 +1,148 @@
+/*
+
+  PEG4d Sample Grammar
+
+  Authors:
+    Tetsuro Matsumura (https://github.com/tetsurom/)
+
+*/
+
+
+File = Chunk
+Chunk = TopLevel
+
+TopLevel
+    = { (__ @Statement)* __ #Source }
+
+SP = [ \t]
+NL = "\n" / "\r\n" / "\r"
+_  = SP*
+__ = (SP / NL)*
+
+EOF = !.
+
+EOS
+    = _ COMMENT? NL
+    / _ &'}'
+    / _ EOF
+
+COMMENT
+    = '//' (!NL .)*
+
+DIGIT
+    = [0-9]
+
+IDENTIFIER_START
+    = [a-zA-Z_]
+
+IDENTIFIER_PART
+    = IDENTIFIER_START / DIGIT
+
+KEYWORD
+    = "if" / "else" / "while" / "return" / "def" / "and" / "or" / "not"
+
+"if"     = 'if' !IDENTIFIER_PART
+"else"   = 'else' !IDENTIFIER_PART
+"while"  = 'while' !IDENTIFIER_PART
+"return" = 'return' !IDENTIFIER_PART
+"def"    = 'def' !IDENTIFIER_PART
+"and"    = 'and' !IDENTIFIER_PART
+"or"     = 'or' !IDENTIFIER_PART
+"not"    = 'not' !IDENTIFIER_PART
+
+"<" = '<' ![-=]
+">" = '>' ![=]
+"/" = '/' ![=]
+
+Identifier
+    = !KEYWORD { IDENTIFIER_START IDENTIFIER_PART* #Name }
+
+IntegerLiteral
+    = { [1-9] DIGIT* / '0' #Integer }
+
+// Expression
+
+PrimaryExpression
+    = Identifier
+    / IntegerLiteral
+    / '(' __ Expression __ ')'
+
+CallExpression
+    = PrimaryExpression {@ __ @Arguments #Apply }*
+
+Arguments
+    = { '(' __ (addArgumentList __)? ')' #List }
+
+addArgumentList
+    = @Expression (__ ',' __ @Expression)*
+
+UnaryExpression
+    = CallExpression / { ("+" #Plus / "-" #Minus / "not" #Not ) _ @UnaryExpression }
+
+MultiplicativeExpression
+    = UnaryExpression {@ __ ( "*" #Mul / "/" #Div / "%" #Mod ) __ @UnaryExpression }*
+
+AdditiveExpression
+    = MultiplicativeExpression {@ __ ( "+" #Add / "-" #Sub ) __ @MultiplicativeExpression }*
+
+RelationalExpression
+    = AdditiveExpression {@ __ addRelationalOperator __ @AdditiveExpression }*
+
+addRelationalOperator
+    = "<=" #LessThanEquals / ">=" #GreaterThanEquals
+    / "<"  #LessThan / ">"  #GreaterThan
+
+EqualityExpression
+    = RelationalExpression {@ __ ("="  #Equals / "/="  #NotEquals) __ @RelationalExpression }*
+
+AndExpression
+    = EqualityExpression {@ __ "and" __ @EqualityExpression #And }*
+
+OrExpression
+    = AndExpression {@ __ "or" __ @AndExpression #Or }*
+
+Expression
+    = OrExpression
+
+// Statement
+
+Statement
+    = Block
+    / ExpressionStatement
+    / IfStatement
+    / WhileStatement
+    / ReturnStatement
+    / AssignmentStatement
+    / VariableDeclaration
+    / FunctionDeclaration
+
+Block
+    = '{' { (__ @Statement)* __ #Block } __ '}'
+
+ExpressionStatement
+    = Expression EOS
+
+addCondition
+    = '(' __ @Expression __ ')'
+
+IfStatement
+    = { "if" __ addCondition __ @Statement (__ "else" __ @Statement)? #If }
+
+WhileStatement
+    = { "while" __ addCondition __ @Statement (__ "else" __ @Statement)? #If }
+
+ReturnStatement
+    = { "return" _ @Expression EOS #Return }
+
+AssignmentStatement
+    = { @Identifier __ "<-" __ @Expression EOS #Assign }
+
+VariableDeclaration
+    = { "var" __ @Identifier (__ "<-" __ @Expression)? EOS #VarDecl }
+
+FunctionDeclaration
+    = { "def" __ @Identifier __ @ParameterList __ @Block #Function }
+
+ParameterList
+    = '(' __ { ( @Identifier (__ ',' __ @Identifier)* )? #List } __ ')'
+
