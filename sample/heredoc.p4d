@@ -1,0 +1,46 @@
+
+/*
+
+1 + <<EOS + 2
+This is here-document
+EOS
++ 3
+
+*/
+
+File
+	= Expr
+_
+	= ([ \t] / <isa HD_IGNORE>)*
+
+__ = ([ \t\n\r] / <isa HD_IGNORE>)*
+
+NL
+    = [\n\r]+
+
+Expr = Sum
+Sum = Product {@ __ ( '+' #Add / '-' #Sub ) __ @Product }*
+Product = Value {@ __ ( '*' #Mul / '/' #Div) __ @Value }*
+Value = { [0-9]+ #Integer } / '(' __ Expr __ ')' / HereDoc
+
+HEREDOC_EOS
+    = [a-zA-Z]+
+
+HereDoc
+    = "<<" &HereDocConsume HD_START_NC
+
+HereDocConsume
+    = HD_START <name HD_IGNORE HereDocBody HD_END>
+
+HD_START
+    = <name EOS HEREDOC_EOS> (!NL .)* NL
+
+HD_START_NC
+    = HEREDOC_EOS
+
+HD_END
+    = <isa EOS> NL
+    // Note: This should be <is EOS> but <is e> has not been implemented yet.
+
+HereDocBody
+    = { (!HD_END (!NL .)* NL)* #HereDoc }
