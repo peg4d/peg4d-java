@@ -725,6 +725,10 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return checkUnique(new ParsingName(tagId, e), e.isUnique());
 	}
 
+	public static ParsingExpression newIs(int tagId) {
+		return new ParsingIs(tagId);
+	}
+	
 	public static ParsingExpression newIsa(int tagId) {
 		return new ParsingIsa(tagId);
 	}

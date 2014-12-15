@@ -43,6 +43,7 @@ public class PEG4d extends ParsingBuilder {
 	static final int With        = ParsingTag.tagId("With");
 	static final int If          = ParsingTag.tagId("If");
 	static final int Name        = ParsingTag.tagId("Name");
+	static final int Is          = ParsingTag.tagId("Is");
 	static final int Isa         = ParsingTag.tagId("Isa");
 
 	static final int Stringfy    = ParsingTag.tagId("Stringfy");
@@ -322,11 +323,16 @@ public class PEG4d extends ParsingBuilder {
 		return ParsingExpression.newName(tagId, toParsingExpression(po.get(1)));
 	}
 
+	public ParsingExpression toIs(ParsingObject po) {
+		int tagId = ParsingTag.tagId(po.textAt(0, ""));
+		return ParsingExpression.newIs(tagId);
+	}
+
 	public ParsingExpression toIsa(ParsingObject po) {
 		int tagId = ParsingTag.tagId(po.textAt(0, ""));
 		return ParsingExpression.newIsa(tagId);
 	}
-
+	
 	private UList<ParsingExpression> createOrder(int ruleSize, ParsingObject seq) {
 		UList<ParsingExpression> l2 = new UList<ParsingExpression>(new ParsingExpression[ruleSize]);
 		UPermutation p = new UPermutation(seq.size());
