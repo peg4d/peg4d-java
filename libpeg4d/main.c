@@ -1,4 +1,242 @@
+#include <stdio.h>
+#include <sys/time.h> // gettimeofday
+#include <string.h>
+#include <assert.h>
+#include <unistd.h>
+
+#include "parsing.h"
+
+static void createMemoryPool(MemoryPool pool) {
+    pool->object_pool = (ParsingObject)malloc(sizeof(struct ParsingObject) * pool->pool_size);
+    pool->log_pool = (ParsingLog)malloc(sizeof(struct ParsingLog) * pool->pool_size);
+    pool->object_pool_index = 0;
+    pool->log_pool_index = 0;
+}
+
+static void init_pool(MemoryPool pool) {
+    pool->object_pool_index = 0;
+    pool->log_pool_index = 0;
+}
+
+static void destroy_pool(MemoryPool pool) {
+    free(pool->object_pool);
+    pool->object_pool = NULL;
+    free(pool->log_pool);
+    pool->log_pool = NULL;
+}
+
 long execute(ParsingContext context, Instruction *inst, MemoryPool pool);
+PegVMInstruction *loadByteCodeFile(ParsingContext context, PegVMInstruction *inst, const char *fileName);
+
+static void dump_pego(ParsingObject *pego, char *source, int level)
+{
+    int i;
+    long j;
+    if (pego[0]) {
+        for (i = 0; i < level; i++) {
+            fprintf(stderr, "  ");
+        }
+        fprintf(stderr, "{%s ", pego[0]->tag);
+        if (pego[0]->child_size == 0) {
+            fprintf(stderr, "'");
+            if (pego[0]->value == NULL) {
+                for (j = pego[0]->start_pos; j < pego[0]->end_pos; j++) {
+                    fprintf(stderr, "%c", source[j]);
+                }
+            }
+            else {
+                fprintf(stderr, "%s", pego[0]->value);
+            }
+            fprintf(stderr, "'");
+        }
+        else {
+            fprintf(stderr, "\n");
+            for (j = 0; j < pego[0]->child_size; j++) {
+                dump_pego(&pego[0]->child[j], source, level + 1);
+            }
+            for (i = 0; i < level; i++) {
+                fprintf(stderr, "  ");
+            }
+            free(pego[0]->child);
+            pego[0]->child = NULL;
+        }
+        fprintf(stderr, "}\n");
+        //free(pego[0]);
+        //pego[0] = NULL;
+    }
+    else {
+        fprintf(stderr, "%p tag:null\n", pego);
+    }
+}
+
+static void write_json(FILE *file, ParsingObject *pego, char* source, int level);
+static int isJsonArray(ParsingObject pego);
+static void write_json_array(FILE *file, ParsingObject *pego, char* source, int level);
+static void write_json_indent(FILE *file, int level);
+static void write_json_object(FILE *file, ParsingObject *pego, char* source, int level);
+
+static void dump_json_file(FILE *file, ParsingObject *pego, char* source, int level)
+{
+    fprintf(file, "{\n" );
+    fprintf(file, " \"tag\": \"%s\", \"value\": ", pego[0]->tag);
+    write_json(file, pego, source, level+1);
+    fprintf(file, "\n}");
+}
+
+static void write_json(FILE *file, ParsingObject *pego, char* source, int level)
+{
+    if (pego[0]) {
+        if (pego[0]->child_size > 0) {
+            if (isJsonArray(pego[0])) {
+                write_json_array(file, pego, source, level);
+            }
+            else {
+                write_json_object(file, pego, source, level);
+            }
+        }
+        else {
+            fprintf(file, "\"");
+            if (pego[0]->value == NULL) {
+                for (long j = pego[0]->start_pos; j < pego[0]->end_pos; j++) {
+                    fprintf(file, "%c", source[j]);
+                }
+            }
+            else {
+                fprintf(file, "%s", pego[0]->value);
+            }
+            fprintf(file, "\"");
+        }
+    }
+    else {
+        fprintf(stderr, "%p tag:null\n", pego);
+    }
+}
+
+static int isJsonArray(ParsingObject pego) {
+    return pego->child_size > 1;
+}
+
+static void write_json_array(FILE *file, ParsingObject *pego, char* source, int level)
+{
+    fprintf(file, "[");
+    for (int i = 0; i < pego[0]->child_size; i++) {
+        fprintf(file, "\n");
+        write_json_indent(file, level + 1);
+        fprintf(file, "{");
+        fprintf(file, "\n");
+        write_json_indent(file, level + 2);
+        fprintf(file, "\"tag\": \"%s\", \"value\": ", pego[0]->child[i]->tag);
+        write_json(file, &pego[0]->child[i], source, level + 3);
+        fprintf(file, "\n");
+        write_json_indent(file, level + 1);
+        fprintf(file, "}");
+        if (i+1 < pego[0]->child_size) {
+            fprintf(file, ",");
+        }
+    }
+    fprintf(file, "\n");
+    write_json_indent(file, level);
+    fprintf(file, "]");
+}
+
+static void write_json_object(FILE *file, ParsingObject *pego, char* source, int level)
+{
+    if (pego[0]) {
+        if (pego[0]->child_size > 0) {
+            fprintf(file, "{");
+            for (int i = 0; i < pego[0]->child_size; i++) {
+                fprintf(file, "\n");
+                write_json_indent(file, level + 1);
+                fprintf(file, "\"%s\": ", pego[0]->child[i]->tag);
+                write_json(file, &pego[0]->child[i], source, level + 2);
+                if (i+1 < pego[0]->child_size) {
+                    fprintf(file, ",");
+                }
+            }
+            fprintf(file, "\n");
+            write_json_indent(file, level + 1);
+            fprintf(file, "}");
+        }
+        else {
+            if (pego[0]->value == NULL) {
+                for (long j = pego[0]->start_pos; j < pego[0]->end_pos; j++) {
+                    fprintf(file, "%c", source[j]);
+                }
+            }
+            else {
+                fprintf(file, "%s", pego[0]->value);
+            }
+        }
+    }
+}
+
+static void write_json_indent(FILE *file, int level)
+{
+    for (int i = 0; i < level; i++) {
+        fprintf(file, " ");
+    }
+}
+
+static void dump_pego_file(FILE *file, ParsingObject *pego, char* source, int level)
+{
+    int i;
+    long j;
+    if (pego[0]) {
+        for (i = 0; i < level; i++) {
+            fprintf(file, " ");
+        }
+        fprintf(file, "{%s ", pego[0]->tag);
+        if (pego[0]->child_size == 0) {
+            fprintf(file, "'");
+            if (pego[0]->value == NULL) {
+                for (j = pego[0]->start_pos; j < pego[0]->end_pos; j++) {
+                    fprintf(file, "%c", source[j]);
+                }
+            }
+            else {
+                fprintf(file, "%s", pego[0]->value);
+            }
+            fprintf(file, "'");
+        }
+        else {
+            fprintf(file, "\n");
+            for (j = 0; j < pego[0]->child_size; j++) {
+                dump_pego_file(file, &pego[0]->child[j], source, level + 1);
+            }
+            for (i = 0; i < level; i++) {
+                fprintf(file, " ");
+            }
+            free(pego[0]->child);
+            pego[0]->child = NULL;
+        }
+        fprintf(file, "}\n");
+        //free(pego[0]);
+        //pego[0] = NULL;
+    }
+    else {
+        fprintf(file, "%p tag:null\n", pego);
+    }
+}
+
+
+static uint64_t timer()
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
+static void peg_usage(const char *file)
+{
+    fprintf(stderr, "Usage: %s -f peg_bytecode target_file\n", file);
+    exit(EXIT_FAILURE);
+}
+
+static void peg_error(const char *errmsg)
+{
+    fprintf(stderr, "%s\n", errmsg);
+    exit(EXIT_FAILURE);
+}
 
 int main(int argc, char * const argv[])
 {
@@ -12,14 +250,14 @@ int main(int argc, char * const argv[])
     int opt;
     while ((opt = getopt(argc, argv, "p:t:")) != -1) {
         switch (opt) {
-            case 'p':
-                syntax_file = optarg;
-                break;
-            case 't':
-                output_type = optarg;
-                break;
-            default: /* '?' */
-                peg_usage(orig_argv0);
+        case 'p':
+            syntax_file = optarg;
+            break;
+        case 't':
+            output_type = optarg;
+            break;
+        default: /* '?' */
+            peg_usage(orig_argv0);
         }
     }
     argc -= optind;
@@ -37,24 +275,26 @@ int main(int argc, char * const argv[])
     pool.pool_size = context.pool_size * context.input_size / 100;
     createMemoryPool(&pool);
     if(output_type == NULL || !strcmp(output_type, "pego")) {
+        uint64_t start, end;
         context.bytecode_length = bytecode_length;
-        clock_t start = clock();
+        start = timer();
         if(execute(&context, inst, &pool)) {
             peg_error("parse error");
         }
-        clock_t end = clock();
+        end = timer();
         dump_pego(&context.left, context.inputs, 0);
-        fprintf(stderr, "ErapsedTime: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
+        fprintf(stderr, "ErapsedTime: %llu msec\n", end - start);
     }
     else if(!strcmp(output_type, "stat")) {
         for (int i = 0; i < 20; i++) {
+            uint64_t start, end;
             init_pool(&pool);
-            clock_t start = clock();
+            start = timer();
             if(execute(&context, inst, &pool)) {
                 peg_error("parse error");
             }
-            clock_t end = clock();
-            fprintf(stderr, "ErapsedTime: %lf\n", (double)(end - start) / CLOCKS_PER_SEC);
+            end = timer();
+            fprintf(stderr, "ErapsedTime: %llu msec\n", end - start);
             dispose_pego(&context.left);
             context.pos = 0;
         }
@@ -107,7 +347,7 @@ int main(int argc, char * const argv[])
             if (input_file[input_fileName_len] == '.') {
                 index = input_fileName_len;
             }
-            
+
         }
         strncpy(fileName, input_file + start, index-start);
         strcat(output_file, fileName);
@@ -129,5 +369,3 @@ int main(int argc, char * const argv[])
     inst = NULL;
     return 0;
 }
-
-

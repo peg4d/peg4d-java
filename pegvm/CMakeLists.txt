@@ -32,7 +32,7 @@ else(MSVC)
 endif(MSVC)
 
 ## Source Code settings
-set(PEGVM_SOURCE ../libpeg4d/pegvm.c)
+set(PEGVM_SOURCE ../libpeg4d/pegvm.c ../libpeg4d/main.c)
 
 set(PACKAGE_NAME    ${PROJECT_NAME})
 set(PACKAGE_VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
