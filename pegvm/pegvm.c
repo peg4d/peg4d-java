@@ -5,6 +5,10 @@
 #include "parsing.h"
 #include "pegvm.h"
 
+#ifdef DHAVE_CONFIG_H
+#include "config.h"
+#endif
+
 static char *loadFile(const char *filename, size_t *length)
 {
     size_t len = 0;
