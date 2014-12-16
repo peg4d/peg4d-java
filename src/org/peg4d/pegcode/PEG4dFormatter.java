@@ -22,6 +22,7 @@ import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingFunction;
 import org.peg4d.expression.ParsingIf;
 import org.peg4d.expression.ParsingIndent;
+import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
@@ -336,6 +337,12 @@ public class PEG4dFormatter extends GrammarFormatter {
 		this.formatString("<perm ");
 		this.formatSequence( e);
 		this.formatString(">");
+		
+	}
+
+	@Override
+	public void visitIs(ParsingIs e) {
+		// TODO Auto-generated method stub
 		
 	}	
 

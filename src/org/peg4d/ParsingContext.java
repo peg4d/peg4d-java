@@ -7,14 +7,10 @@ import org.peg4d.expression.ParsingConstructor;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingMatcher;
 
-
 public class ParsingContext {
-	public ParsingObject left;
 	public ParsingSource source;
-
-	ParsingTag    emptyTag;	
-	ParsingStatistics          stat   = null;
-
+	ParsingStatistics    stat   = null;
+	
 	public ParsingContext(ParsingSource s, long pos, int stacksize, MemoTable memo) {
 		this.left = null;
 		this.source = s;
@@ -32,6 +28,271 @@ public class ParsingContext {
 		this.fpos = 0;
 		this.initCallStack();
 	}
+
+	/* parsing position */
+	public long pos;
+	long head_pos;
+	
+	public final long getPosition() {
+		return this.pos;
+	}
+	
+	final void setPosition(long pos) {
+		this.pos = pos;
+	}
+	
+	public final void consume(int length) {
+		this.pos += length;
+		if(head_pos < pos) {
+			this.head_pos = pos;
+			if(this.stackedNonTerminals != null) {
+				this.maximumFailureTrace = new StackTrace();
+			}
+		}
+	}
+
+	public final void rollback(long pos) {
+		if(stat != null && this.pos > pos) {
+			stat.statBacktrack(pos, this.pos);
+		}
+		this.pos = pos;
+	}
+
+	public long fpos;
+	StackTrace maximumFailureTrace = null;
+	String failureInfo  = null;	
+	ParsingMatcher[] errorbuf = new ParsingMatcher[512];
+	long[] posbuf = new long[errorbuf.length];
+
+	public final boolean isFailure() {
+		return this.left == null;
+	}
+	
+	public final void failure(ParsingMatcher errorInfo) {
+		if(this.pos > fpos) {  // adding error location
+			this.fpos = this.pos;
+		}
+		this.left = null;
+	}
+	
+	public final long rememberFailure() {
+		return this.fpos;
+	}
+	
+	public final void forgetFailure(long fpos) {
+//		if(this.fpos != fpos) {
+//			this.removeErrorInfo(this.fpos);
+//		}
+//		this.fpos = fpos;
+	}
+	
+	private ParsingMatcher getErrorInfo(long fpos) {
+		int index = (int)this.pos % errorbuf.length;
+		if(posbuf[index] == fpos) {
+			return errorbuf[index];
+		}
+		return null;
+	}
+
+//	private void setErrorInfo(ParsingMatcher errorInfo) {
+//		int index = (int)this.pos % errorbuf.length;
+//		errorbuf[index] = errorInfo;
+//		posbuf[index] = this.pos;
+//		//System.out.println("push " + this.pos + " @" + errorInfo);
+//	}
+//
+//	private void removeErrorInfo(long fpos) {
+//		int index = (int)this.pos % errorbuf.length;
+//		if(posbuf[index] == fpos) {
+//			//System.out.println("pop " + fpos + " @" + errorbuf[index]);
+//			errorbuf[index] = null;
+//		}
+//	}
+
+	public String getErrorMessage() {
+		ParsingMatcher errorInfo = this.getErrorInfo(this.fpos);
+		if(errorInfo == null) {
+			return "syntax error";
+		}
+		return "syntax error: expecting " + errorInfo.expectedToken() + " <- Never believe this";
+	}
+	
+	
+	
+	/* PEG4d : AST construction */
+
+	public ParsingObject left;
+	ParsingTag    emptyTag;	
+
+	public final ParsingObject newParsingObject(long pos, ParsingConstructor created) {
+		return new ParsingObject(this.emptyTag, this.source, pos, created);
+	}
+
+	private class ParsingLog {
+		ParsingLog next;
+		int  index;
+		ParsingObject childNode;
+	}
+
+	private ParsingLog logStack = null;
+	private ParsingLog unusedLog = null;
+	private int        logStackSize = 0;
+	
+	private ParsingLog newLog() {
+		if(this.unusedLog == null) {
+			return new ParsingLog();
+		}
+		ParsingLog l = this.unusedLog;
+		this.unusedLog = l.next;
+		l.next = null;
+		return l;
+	}
+
+	private void unuseLog(ParsingLog log) {
+		log.childNode = null;
+		log.next = this.unusedLog;
+		this.unusedLog = log;
+	}
+	
+	public int markLogStack() {
+		return logStackSize;
+	}
+
+	public final void lazyLink(ParsingObject parent, int index, ParsingObject child) {
+		ParsingLog l = this.newLog();
+		l.childNode  = child;
+		child.parent = parent;
+		l.index = index;
+		l.next = this.logStack;
+		this.logStack = l;
+		this.logStackSize += 1;
+	}
+	
+	public final void lazyJoin(ParsingObject left) {
+		ParsingLog l = this.newLog();
+		l.childNode  = left;
+		l.index = -9;
+		l.next = this.logStack;
+		this.logStack = l;
+		this.logStackSize += 1;
+	}
+
+	private final void checkNullEntry(ParsingObject o) {
+		for(int i = 0; i < o.size(); i++) {
+			if(o.get(i) == null) {
+				o.set(i, new ParsingObject(emptyTag, this.source, 0));
+			}
+		}
+	}
+
+	public final void commitLog(int mark, ParsingObject newnode) {
+		ParsingLog first = null;
+		int objectSize = 0;
+		while(mark < this.logStackSize) {
+			ParsingLog cur = this.logStack;
+			this.logStack = this.logStack.next;
+			this.logStackSize--;
+			if(cur.index == -9) { // lazyCommit
+				commitLog(mark, cur.childNode);
+				unuseLog(cur);
+				break;
+			}
+			if(cur.childNode.parent == newnode) {
+				cur.next = first;
+				first = cur;
+				objectSize += 1;
+			}
+			else {
+				unuseLog(cur);
+			}
+		}
+		if(objectSize > 0) {
+			newnode.expandAstToSize(objectSize);
+			for(int i = 0; i < objectSize; i++) {
+				ParsingLog cur = first;
+				first = first.next;
+				if(cur.index == -1) {
+					cur.index = i;
+				}
+				newnode.set(cur.index, cur.childNode);
+				this.unuseLog(cur);
+			}
+			checkNullEntry(newnode);
+		}
+	}
+	
+	public final void abortLog(int mark) {
+		while(mark < this.logStackSize) {
+			ParsingLog l = this.logStack;
+			this.logStack = this.logStack.next;
+			this.logStackSize--;
+			unuseLog(l);
+		}
+		assert(mark == this.logStackSize);
+	}
+
+	/* context-sensitivity parsing */
+	/* <block e> <indent> */
+	/* <def T e>, <is T>, <isa T> */
+	
+	private class SymbolTableEntry {
+		int tableType;  // T in <def T e>
+		byte[] utf8;
+		SymbolTableEntry(int tableType, String indent) {
+			this.tableType = tableType;
+			this.utf8 = indent.getBytes();
+		}
+	}
+	
+	private UList<SymbolTableEntry> stackedSymbolTable = new UList<SymbolTableEntry>(new SymbolTableEntry[4]);
+	
+	public final int pushSymbolTable(int tableType, String s) {
+		int stackTop = this.stackedSymbolTable.size();
+		this.stackedSymbolTable.add(new SymbolTableEntry(tableType, s));
+		return stackTop;
+	}
+
+	public final void popSymbolTable(int stackTop) {
+		this.stackedSymbolTable.clear(stackTop);
+	}
+
+	public final boolean matchSymbolTableTop(int tableType) {
+		for(int i = stackedSymbolTable.size() - 1; i >= 0; i--) {
+			SymbolTableEntry s = stackedSymbolTable.ArrayValues[i];
+			if(s.tableType == tableType) {
+				if(this.source.match(this.pos, s.utf8)) {
+					this.consume(s.utf8.length);
+					return true;
+				}
+				break;
+			}
+		}
+		this.failure(null);
+		return false;
+	}
+
+	public final boolean matchSymbolTable(int tableType) {
+		for(int i = stackedSymbolTable.size() - 1; i >= 0; i--) {
+			SymbolTableEntry s = stackedSymbolTable.ArrayValues[i];
+			if(s.tableType == tableType) {
+				if(this.source.match(this.pos, s.utf8)) {
+					this.consume(s.utf8.length);
+					return true;
+				}
+			}
+		}
+		this.failure(null);
+		return false;
+	}
+
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	public final boolean hasByteChar() {
 		return this.source.byteAt(this.pos) != ParsingSource.EOF;
@@ -152,275 +413,7 @@ public class ParsingContext {
 	public String getName() {
 		return this.getClass().getSimpleName();
 	}	
-	
-	public long pos;
-	long head_pos;
-	public long fpos;
-
-	StackTrace maximumFailureTrace = null;
-	String failureInfo  = null;
-	
-	public final long getPosition() {
-		return this.pos;
-	}
-	
-	final void setPosition(long pos) {
-		this.pos = pos;
-	}
-	
-	public final void consume(int length) {
-		this.pos += length;
-		if(head_pos < pos) {
-			this.head_pos = pos;
-			if(this.stackedNonTerminals != null) {
-				this.maximumFailureTrace = new StackTrace();
-			}
-		}
-	}
-
-	public final void rollback(long pos) {
-		if(stat != null && this.pos > pos) {
-			stat.statBacktrack(pos, this.pos);
-		}
-		this.pos = pos;
-	}
-
-	ParsingMatcher[] errorbuf = new ParsingMatcher[512];
-	long[] posbuf = new long[errorbuf.length];
-
-	public final boolean isFailure() {
-		return this.left == null;
-	}
-	
-	public final long rememberFailure() {
-		return this.fpos;
-	}
-	
-	public final void forgetFailure(long fpos) {
-//		if(this.fpos != fpos) {
-//			this.removeErrorInfo(this.fpos);
-//		}
-//		this.fpos = fpos;
-	}
-	
-	private ParsingMatcher getErrorInfo(long fpos) {
-		int index = (int)this.pos % errorbuf.length;
-		if(posbuf[index] == fpos) {
-			return errorbuf[index];
-		}
-		return null;
-	}
-
-//	private void setErrorInfo(ParsingMatcher errorInfo) {
-//		int index = (int)this.pos % errorbuf.length;
-//		errorbuf[index] = errorInfo;
-//		posbuf[index] = this.pos;
-//		//System.out.println("push " + this.pos + " @" + errorInfo);
-//	}
-//
-//	private void removeErrorInfo(long fpos) {
-//		int index = (int)this.pos % errorbuf.length;
-//		if(posbuf[index] == fpos) {
-//			//System.out.println("pop " + fpos + " @" + errorbuf[index]);
-//			errorbuf[index] = null;
-//		}
-//	}
-
-	public String getErrorMessage() {
-		ParsingMatcher errorInfo = this.getErrorInfo(this.fpos);
-		if(errorInfo == null) {
-			return "syntax error";
-		}
-		return "syntax error: expecting " + errorInfo.expectedToken() + " <- Never believe this";
-	}
-	
-	public final void failure(ParsingMatcher errorInfo) {
-		if(this.pos > fpos) {  // adding error location
-			this.fpos = this.pos;
-		}
-		this.left = null;
-	}
 		
-	public final ParsingObject newParsingObject(long pos, ParsingConstructor created) {
-		return new ParsingObject(this.emptyTag, this.source, pos, created);
-	}
-
-	private class ParsingLog {
-		ParsingLog next;
-		int  index;
-		ParsingObject childNode;
-	}
-
-	ParsingLog logStack = null;
-	ParsingLog unusedLog = null;
-	int   logStackSize = 0;
-	
-	private ParsingLog newLog() {
-		if(this.unusedLog == null) {
-			return new ParsingLog();
-		}
-		ParsingLog l = this.unusedLog;
-		this.unusedLog = l.next;
-		l.next = null;
-		return l;
-	}
-
-	private void unuseLog(ParsingLog log) {
-		log.childNode = null;
-		log.next = this.unusedLog;
-		this.unusedLog = log;
-	}
-	
-	public int markLogStack() {
-		return logStackSize;
-	}
-
-	public final void lazyLink(ParsingObject parent, int index, ParsingObject child) {
-		ParsingLog l = this.newLog();
-		l.childNode  = child;
-		child.parent = parent;
-		l.index = index;
-		l.next = this.logStack;
-		this.logStack = l;
-		this.logStackSize += 1;
-	}
-	
-	public final void lazyJoin(ParsingObject left) {
-		ParsingLog l = this.newLog();
-		l.childNode  = left;
-		l.index = -9;
-		l.next = this.logStack;
-		this.logStack = l;
-		this.logStackSize += 1;
-	}
-
-	private final void checkNullEntry(ParsingObject o) {
-		for(int i = 0; i < o.size(); i++) {
-			if(o.get(i) == null) {
-				o.set(i, new ParsingObject(emptyTag, this.source, 0));
-			}
-		}
-	}
-
-	public final void commitLog(int mark, ParsingObject newnode) {
-		ParsingLog first = null;
-		int objectSize = 0;
-		while(mark < this.logStackSize) {
-			ParsingLog cur = this.logStack;
-			this.logStack = this.logStack.next;
-			this.logStackSize--;
-			if(cur.index == -9) { // lazyCommit
-				commitLog(mark, cur.childNode);
-				unuseLog(cur);
-				break;
-			}
-			if(cur.childNode.parent == newnode) {
-				cur.next = first;
-				first = cur;
-				objectSize += 1;
-			}
-			else {
-				unuseLog(cur);
-			}
-		}
-		if(objectSize > 0) {
-			newnode.expandAstToSize(objectSize);
-			for(int i = 0; i < objectSize; i++) {
-				ParsingLog cur = first;
-				first = first.next;
-				if(cur.index == -1) {
-					cur.index = i;
-				}
-				newnode.set(cur.index, cur.childNode);
-				this.unuseLog(cur);
-			}
-			checkNullEntry(newnode);
-		}
-	}
-	
-	public final void abortLog(int mark) {
-		while(mark < this.logStackSize) {
-			ParsingLog l = this.logStack;
-			this.logStack = this.logStack.next;
-			this.logStackSize--;
-			unuseLog(l);
-		}
-		assert(mark == this.logStackSize);
-	}
-
-	
-	//	public final void opStringfy() {
-//		if(this.canTransCapture()) {
-//			StringBuilder sb = new StringBuilder();
-//			joinText(this.left, sb);
-//			this.left.setValue(sb.toString());
-//		}
-//	}
-//	
-//	private void joinText(ParsingObject po, StringBuilder sb) {
-//		if(po.size() == 0) {
-//			sb.append(po.getText());
-//		}
-//		else {
-//			for(int i = 0; i < po.size(); i++) {
-//				joinText(po.get(i), sb);
-//			}
-//		}
-//	}
-	
-	// <indent Expr>  <indent>
-	
-	private class StringStack {
-		int tagId;
-		String token;
-		byte[] utf8;
-		StringStack(int tagId, String indent) {
-			this.tagId = tagId;
-			this.token = indent;
-			this.utf8 = indent.getBytes();
-		}
-	}
-	
-	private UList<StringStack> tokenStack = new UList<StringStack>(new StringStack[4]);
-	
-	public final int pushTokenStack(int tagId, String s) {
-		int stackTop = this.tokenStack.size();
-		this.tokenStack.add(new StringStack(tagId, s));
-		return stackTop;
-	}
-
-	public final void popTokenStack(int stackTop) {
-		this.tokenStack.clear(stackTop);
-	}
-
-	public final boolean matchTokenStackTop(int tagId) {
-		for(int i = tokenStack.size() - 1; i >= 0; i--) {
-			StringStack s = tokenStack.ArrayValues[i];
-			if(s.tagId == tagId) {
-				if(this.source.match(this.pos, s.utf8)) {
-					this.consume(s.utf8.length);
-					return true;
-				}
-				break;
-			}
-		}
-		this.failure(null);
-		return false;
-	}
-
-	public final boolean matchTokenStack(int tagId) {
-		for(int i = tokenStack.size() - 1; i >= 0; i--) {
-			StringStack s = tokenStack.ArrayValues[i];
-			if(s.tagId == tagId) {
-				if(this.source.match(this.pos, s.utf8)) {
-					this.consume(s.utf8.length);
-					return true;
-				}
-			}
-		}
-		this.failure(null);
-		return false;
-	}
 	
 	UList<NonTerminal> stackedNonTerminals;
 	int[]         stackedPositions;

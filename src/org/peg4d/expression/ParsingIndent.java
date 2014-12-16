@@ -18,7 +18,7 @@ public class ParsingIndent extends ParsingCommand {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		return context.matchTokenStackTop(PEG4d.Indent);
+		return context.matchSymbolTableTop(PEG4d.Indent);
 	}
 	@Override
 	public void visit(GrammarVisitor visitor) {

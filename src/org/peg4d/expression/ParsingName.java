@@ -31,7 +31,7 @@ public class ParsingName extends ParsingFunction {
 		if(this.inner.matcher.simpleMatch(context)) {
 			long endIndex = context.getPosition();
 			String s = context.source.substring(startIndex, endIndex);
-			context.pushTokenStack(tagId, s);
+			context.pushSymbolTable(tagId, s);
 			return true;
 		}
 		return false;

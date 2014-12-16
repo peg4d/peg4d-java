@@ -27,6 +27,7 @@ import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingFunction;
 import org.peg4d.expression.ParsingIf;
 import org.peg4d.expression.ParsingIndent;
+import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
@@ -357,6 +358,12 @@ public class PEGjsFormatter extends GrammarFormatter {
 
 	@Override
 	public void visitPermutation(ParsingPermutation e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visitIs(ParsingIs e) {
 		// TODO Auto-generated method stub
 		
 	}	

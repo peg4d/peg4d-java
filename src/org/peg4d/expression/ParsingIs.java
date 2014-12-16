@@ -21,7 +21,7 @@ public class ParsingIs extends ParsingCommand {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		return context.matchTokenStackTop(tagId);
+		return context.matchSymbolTableTop(tagId);
 	}
 	@Override
 	public void visit(GrammarVisitor visitor) {

@@ -1,5 +1,7 @@
 package org.peg4d.jvm;
 
+import static org.peg4d.jvm.InvocationTarget.newVirtualTarget;
+
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -38,6 +40,7 @@ import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingIf;
 import org.peg4d.expression.ParsingIndent;
+import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
@@ -52,13 +55,6 @@ import org.peg4d.expression.ParsingTagging;
 import org.peg4d.expression.ParsingValue;
 import org.peg4d.expression.ParsingWithFlag;
 import org.peg4d.expression.ParsingWithoutFlag;
-import org.peg4d.jvm.ClassBuilder;
-import org.peg4d.jvm.InvocationTarget;
-
-import static org.peg4d.jvm.InvocationTarget.*;
-
-import org.peg4d.jvm.Methods;
-import org.peg4d.jvm.UserDefinedClassLoader;
 import org.peg4d.jvm.ClassBuilder.MethodBuilder;
 import org.peg4d.jvm.ClassBuilder.VarEntry;
 import org.peg4d.pegcode.GrammarFormatter;
@@ -313,7 +309,7 @@ public class JavaByteCodeGenerator extends GrammarFormatter implements Opcodes {
 
 		// generate if block
 		this.mBuilder.loadFromVar(this.entry_context);
-		this.mBuilder.push((int) 1);
+		this.mBuilder.push(1);
 		this.mBuilder.callInvocationTarget(this.target_consume);
 		this.mBuilder.push(true);
 		this.mBuilder.goTo(mergeLabel);
@@ -1274,5 +1270,11 @@ public class JavaByteCodeGenerator extends GrammarFormatter implements Opcodes {
 	public void visitPermutation(ParsingPermutation e) {
 		// TODO Auto-generated method stub
 		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+	}
+
+	@Override
+	public void visitIs(ParsingIs e) {
+		// TODO Auto-generated method stub
+		
 	}
 }
