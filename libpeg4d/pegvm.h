@@ -2,6 +2,8 @@
 #ifndef testGenerateC_pegvm_h
 #define testGenerateC_pegvm_h
 #define PEGVM_DEBUG 0
+#define PEGVM_PROFILE 1;
+#define PEGVM_OP_MAX 74
 
 #define PEGVM_OP_EACH(OP)\
 OP(EXIT)\
