@@ -1,0 +1,118 @@
+TopLevel
+    = Document
+    ;
+    
+Chunk 
+    = Document
+    
+File 
+    = Document
+
+Document
+    = MISC* DocType MISC* 
+    
+    
+DocType
+    = '<!DOCTYPE' _* {@DocTypeName '[' (@Dtd)* #doctype } ']>'
+    
+
+Dtd
+    =  _*  '<!' (Element/Entity/Attlist) '>'  _*
+    
+
+Element
+	= _* 'ELEMENT' _* {@ElementName _*  ( '(' @Model (VS @Model)* ')' (@Regex)? / @OtherMember ) #element} _*
+	
+
+Attlist
+	= _* 'ATTLIST' _* {@AttElementName _* (@AttParameter)* #attlist} _*
+	
+	
+Entity
+	= _* 'ENTITY' _* {@EntityName _* @String #entity} _*
+	
+
+
+//for Element
+Model
+	=  _* Member _* 
+	
+Member
+	= { (@Data/@MemberName) (@Or)? ((VS)? (@Data/@MemberName) (@Or)?)* #member} 
+	
+Data
+	= { '#PCDATA'  #data}
+	
+Regex
+	= { ( '*' / '+' / '?') #regex}
+	
+Or
+	= { _* '|'  _* #or}
+	
+OtherMember
+	= { ('EMPTY' / 'ANY') #others}
+	
+	
+//for Attlist
+AttParameter
+	= { _* @AttName _* @DataType _* @Default _* #attParameter}
+	 
+DataType
+	= { ('CDATA'/'IDREF'/'ID'/'ENTITY'/'ENTITIES'/'NMTOKENS'/'NMTOKEN'/'Enumerated') #dataType}
+	
+Default
+	= { @DefaultType  _* (@DefaultValue)* #default}
+	
+DefaultType
+	= {('#REQUIRED' / '#IMPLIED' / '#FIXED' ) #defaultType}	
+	
+DefaultValue
+	= { @String #defaultValue}
+	
+
+
+//Name
+AttName
+	= {@Name #attName}
+	
+ElementName
+	= {@Name #elementName}
+	
+AttElementName
+	= {@Name #attElementName}
+	
+MemberName
+	= {@Name (@Regex)? #memberName}
+	
+EntityName
+	= {@Name #entityName}
+	
+DocTypeName
+	= {@Name #docTypeName}
+	
+
+Name
+    = { [A-Za-z:] ( '-' / [A-Za-z0-9:._])*  #name }
+    
+
+String
+    = { '"' ( !'"' . )* '"' #string }
+    
+
+
+//Reference //TODO
+
+
+MISC
+    = COMMENT / _+
+    
+
+COMMENT
+    = '<!--' (!'-->' . )* '-->'
+    
+    
+VS
+	= _* ',' _*
+	
+
+_ = [ \t\r\n]
