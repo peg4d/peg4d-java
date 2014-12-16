@@ -1,9 +1,27 @@
-#include "parsing.h"
-#ifndef testGenerateC_pegvm_h
-#define testGenerateC_pegvm_h
+#include <stdint.h>
+#ifndef PEGVM_H
+#define PEGVM_H
 #define PEGVM_DEBUG 0
 #define PEGVM_PROFILE 1;
 #define PEGVM_OP_MAX 74
+
+typedef struct byteCodeInfo {
+    int pos;
+    uint8_t version0;
+    uint8_t version1;
+    uint32_t filename_length;
+    uint8_t *filename;
+    uint32_t pool_size_info;
+    uint64_t bytecode_length;
+} byteCodeInfo;
+
+typedef struct Instruction {
+    long opcode;
+    int *ndata;
+    char *name;
+    const void *ptr;
+    struct Instruction *jump;
+} PegVMInstruction, Instruction;
 
 #define PEGVM_OP_EACH(OP)\
     OP(EXIT)\
@@ -88,58 +106,6 @@ enum pegvm_opcode {
 #undef DEFINE_ENUM
     PEGVM_OP_ERROR = -1
 };
-
-static const char *get_opname(uint8_t opcode)
-{
-    switch (opcode) {
-#define OP_DUMPCASE(OP) case PEGVM_OP_##OP : return "" #OP;
-    PEGVM_OP_EACH(OP_DUMPCASE);
-    default:
-        assert(0 && "UNREACHABLE");
-        break;
-#undef OP_DUMPCASE
-    }
-    return "";
-}
-
-static void dump_PegVMInstructions(Instruction *inst, uint64_t size) {
-    uint64_t i;
-    int j;
-    for (i = 0; i < size; i++) {
-        j = 0;
-        fprintf(stderr, "[%llu] %s ", i, get_opname(inst[i].opcode));
-        if (inst[i].ndata) {
-            switch (inst->opcode) {
-#define OP_DUMPCASE(OP) case PEGVM_OP_##OP:
-            OP_DUMPCASE(CHAR) {
-                fprintf(stderr, "[%d-", inst[i].ndata[1]);
-                fprintf(stderr, "%d] ", inst[i].ndata[2]);
-                //fprintf(stderr, "%d ", inst[i].jump);
-            }
-            OP_DUMPCASE(CHARSET) {
-                //fprintf(stderr, "%d ", inst[i].jump);
-            }
-            default:
-            //fprintf(stderr, "%d ", inst[i].jump);
-            break;
-            }
-        }
-        if (inst[i].name) {
-            fprintf(stderr, "%s", inst[i].name);
-        }
-        fprintf(stderr, "\n");
-    }
-}
-
-typedef struct byteCodeInfo {
-    int pos;
-    uint8_t version0;
-    uint8_t version1;
-    uint32_t filename_length;
-    uint8_t *filename;
-    uint32_t pool_size_info;
-    uint64_t bytecode_length;
-} byteCodeInfo;
 
 PegVMInstruction *loadByteCodeFile(ParsingContext context, PegVMInstruction *inst, const char *fileName);
 int ParserContext_Execute(ParsingContext context, PegVMInstruction *inst);
