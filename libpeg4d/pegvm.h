@@ -3,6 +3,16 @@
 #define PEGVM_H
 #define PEGVM_DEBUG 0
 
+typedef struct byteCodeInfo {
+    int pos;
+    uint8_t version0;
+    uint8_t version1;
+    uint32_t filename_length;
+    uint8_t *filename;
+    uint32_t pool_size_info;
+    uint64_t bytecode_length;
+} byteCodeInfo;
+
 typedef struct Instruction {
     long opcode;
     int *ndata;
@@ -94,16 +104,6 @@ enum pegvm_opcode {
 #undef DEFINE_ENUM
     PEGVM_OP_ERROR = -1
 };
-
-typedef struct byteCodeInfo {
-    int pos;
-    uint8_t version0;
-    uint8_t version1;
-    uint32_t filename_length;
-    uint8_t *filename;
-    uint32_t pool_size_info;
-    uint64_t bytecode_length;
-} byteCodeInfo;
 
 PegVMInstruction *loadByteCodeFile(ParsingContext context, PegVMInstruction *inst, const char *fileName);
 int ParserContext_Execute(ParsingContext context, PegVMInstruction *inst);

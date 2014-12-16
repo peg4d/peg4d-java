@@ -1,52 +1,63 @@
 #include "parsing.h"
 
-ParsingLog P4D_newLog(ParsingContext this, MemoryPool pool) {
-    //ParsingLog l = (ParsingLog)malloc(sizeof (struct ParsingLog));
-    ParsingLog l = MemoryPool_AllocParsingLog(pool);
+ParsingLog P4D_newLog(ParsingContext ctx, MemoryPool pool)
+{
+    ParsingLog l;
+#ifdef USE_MALLOC
+    l = (ParsingLog)malloc(sizeof (struct ParsingLog));
+#else
+    l = MemoryPool_AllocParsingLog(pool);
+#endif
     l->next = NULL;
     l->childNode = NULL;
     return l;
 }
 
-void P4D_unuseLog(ParsingContext this, ParsingLog log) {
-    P4D_setObject(this, &log->childNode, NULL);
-    //free(log);
-    //log = NULL;
+void P4D_unuseLog(ParsingContext ctx, ParsingLog log)
+{
+    P4D_setObject(ctx, &log->childNode, NULL);
+#ifdef USE_MALLOC
+    free(log);
+#endif
 }
 
-int P4D_markLogStack(ParsingContext this) {
-    return this->logStackSize;
+int P4D_markLogStack(ParsingContext ctx)
+{
+    return ctx->logStackSize;
 }
 
-void P4D_lazyLink(ParsingContext this, ParsingObject parent, int index, ParsingObject child, MemoryPool pool) {
-    ParsingLog l = P4D_newLog(this, pool);
-    P4D_setObject(this, &l->childNode, child);
+void P4D_lazyLink(ParsingContext ctx, ParsingObject parent, int index, ParsingObject child, MemoryPool pool)
+{
+    ParsingLog l = P4D_newLog(ctx, pool);
+    P4D_setObject(ctx, &l->childNode, child);
     child->parent = parent;
     l->index = index;
-    l->next = this->logStack;
-    this->logStack = l;
-    this->logStackSize += 1;
+    l->next = ctx->logStack;
+    ctx->logStack = l;
+    ctx->logStackSize += 1;
 }
 
-void P4D_lazyJoin(ParsingContext this, ParsingObject left, MemoryPool pool) {
-    ParsingLog l = P4D_newLog(this, pool);
-    P4D_setObject(this, &l->childNode, left);
+void P4D_lazyJoin(ParsingContext ctx, ParsingObject left, MemoryPool pool)
+{
+    ParsingLog l = P4D_newLog(ctx, pool);
+    P4D_setObject(ctx, &l->childNode, left);
     l->index = -9;
-    l->next = this->logStack;
-    this->logStack = l;
-    this->logStackSize += 1;
+    l->next = ctx->logStack;
+    ctx->logStack = l;
+    ctx->logStackSize += 1;
 }
 
-void P4D_commitLog(ParsingContext this, int mark, ParsingObject newnode, MemoryPool pool) {
+void P4D_commitLog(ParsingContext ctx, int mark, ParsingObject newnode, MemoryPool pool)
+{
     ParsingLog first = NULL;
     int objectSize = 0;
-    while(mark < this->logStackSize) {
-        ParsingLog cur = this->logStack;
-        this->logStack = this->logStack->next;
-        this->logStackSize--;
+    while(mark < ctx->logStackSize) {
+        ParsingLog cur = ctx->logStack;
+        ctx->logStack = ctx->logStack->next;
+        ctx->logStackSize--;
         if(cur->index == -9) { // lazyCommit
-            P4D_commitLog(this, mark, cur->childNode, pool);
-            P4D_unuseLog(this, cur);
+            P4D_commitLog(ctx, mark, cur->childNode, pool);
+            P4D_unuseLog(ctx, cur);
             break;
         }
         if(cur->childNode->parent == newnode) {
@@ -55,7 +66,7 @@ void P4D_commitLog(ParsingContext this, int mark, ParsingObject newnode, MemoryP
             objectSize += 1;
         }
         else {
-            P4D_unuseLog(this, cur);
+            P4D_unuseLog(ctx, cur);
         }
     }
     if(objectSize > 0) {
@@ -67,27 +78,28 @@ void P4D_commitLog(ParsingContext this, int mark, ParsingObject newnode, MemoryP
             if(cur->index == -1) {
                 cur->index = i;
             }
-            P4D_setObject(this, &newnode->child[cur->index], cur->childNode);
-            P4D_unuseLog(this, cur);
+            P4D_setObject(ctx, &newnode->child[cur->index], cur->childNode);
+            P4D_unuseLog(ctx, cur);
         }
         for(int i = 0; i < objectSize; i++) {
             if(newnode->child[i] == NULL) {
-                P4D_setObject(this, &newnode->child[i], P4D_newObject(this, 0, pool));
+                P4D_setObject(ctx, &newnode->child[i], P4D_newObject(ctx, 0, pool));
             }
         }
     }
 }
 
-void P4D_abortLog(ParsingContext this, int mark) {
-    while(mark < this->logStackSize) {
-        ParsingLog l = this->logStack;
-        this->logStack = this->logStack->next;
-        this->logStackSize--;
-        P4D_unuseLog(this, l);
+void P4D_abortLog(ParsingContext ctx, int mark)
+{
+    while(mark < ctx->logStackSize) {
+        ParsingLog l = ctx->logStack;
+        ctx->logStack = ctx->logStack->next;
+        ctx->logStackSize--;
+        P4D_unuseLog(ctx, l);
     }
 }
 
-ParsingObject P4D_newObject(ParsingContext this, long start, MemoryPool pool)
+ParsingObject P4D_newObject(ParsingContext ctx, long start, MemoryPool pool)
 {
     ParsingObject o = MemoryPool_AllocParsingObject(pool);
     o->refc       = 0;
@@ -102,25 +114,25 @@ ParsingObject P4D_newObject(ParsingContext this, long start, MemoryPool pool)
     return o;
 }
 
-void P4D_unusedObject(ParsingContext this, ParsingObject o)
+void P4D_unusedObject(ParsingContext ctx, ParsingObject o)
 {
-    o->parent = this->unusedObject;
-    this->unusedObject = o;
+    o->parent = ctx->unusedObject;
+    ctx->unusedObject = o;
     if(o->child_size > 0) {
         for(int i = 0; i < o->child_size; i++) {
-            P4D_setObject(this, &(o->child[i]), NULL);
+            P4D_setObject(ctx, &(o->child[i]), NULL);
         }
         free(o->child);
         o->child = NULL;
     }
 }
 
-void P4D_setObject(ParsingContext this, ParsingObject *var, ParsingObject o)
+void P4D_setObject(ParsingContext ctx, ParsingObject *var, ParsingObject o)
 {
     if (var[0] != NULL) {
         var[0]->refc -= 1;
         if(var[0]->refc == 0) {
-            P4D_unusedObject(this, var[0]);
+            P4D_unusedObject(ctx, var[0]);
         }
     }
     var[0] = o;
@@ -128,6 +140,3 @@ void P4D_setObject(ParsingContext this, ParsingObject *var, ParsingObject o)
         o->refc += 1;
     }
 }
-
-
-
