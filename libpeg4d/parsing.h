@@ -23,7 +23,7 @@ typedef struct Instruction {
     int *ndata;
     char *name;
     const void *ptr;
-    int jump;
+    struct Instruction *jump;
 } PegVMInstruction, Instruction;
 
 struct ParsingLog {
@@ -43,15 +43,15 @@ struct ParsingContext
 	int    logStackSize;
     struct ParsingLog *logStack;
     
-    uint64_t bytecode_length;
+    long bytecode_length;
     size_t pool_size;
     
     long *stack_pointer;
     struct ParsingObject **object_stack_pointer;
-    int *call_stack_pointer;
+    struct Instruction **call_stack_pointer;
     long *stack_pointer_base;
     struct ParsingObject **object_stack_pointer_base;
-    int *call_stack_pointer_base;
+    struct Instruction **call_stack_pointer_base;
 };
 
 struct MemoryPool {
@@ -310,7 +310,7 @@ void ParsingContext_Init(ParsingContext this, const char *filename)
     //P4D_setObject(this, &this->left, P4D_newObject(this, this->pos));
     this->stack_pointer_base = (long *) malloc(sizeof(long) * PARSING_CONTEXT_MAX_STACK_LENGTH);
     this->object_stack_pointer_base = (ParsingObject *) malloc(sizeof(ParsingObject) * PARSING_CONTEXT_MAX_STACK_LENGTH);
-    this->call_stack_pointer_base = (int*) malloc(sizeof(int) * PARSING_CONTEXT_MAX_STACK_LENGTH);
+    this->call_stack_pointer_base = (Instruction **) malloc(sizeof(Instruction *) * PARSING_CONTEXT_MAX_STACK_LENGTH);
     this->stack_pointer = &this->stack_pointer_base[0];
     this->object_stack_pointer = &this->object_stack_pointer_base[0];
     this->call_stack_pointer = &this->call_stack_pointer_base[0];
