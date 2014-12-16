@@ -285,7 +285,7 @@ void PegVM_PrintProfile()
 {
 #ifdef PEGVM_PROFILE
     for (int i = 0; i < PEGVM_OP_MAX; i++) {
-        fprintf(stderr, "%llu %s\n", count[i], get_opname(i), count[i]);
+        fprintf(stderr, "%llu %s\n", count[i], get_opname(i));
         //fprintf(stderr, "%s: %llu (%0.2f%%)\n", get_opname(i), count[i], (double)count[i]*100/(double)count_all);
     }
 #endif
