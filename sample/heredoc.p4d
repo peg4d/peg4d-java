@@ -1,0 +1,50 @@
+
+/*
+
+1 + <<EOS1 + <<EOS2 + 2
+This is here-document
+EOS1
+This is also here-document
+EOS2
++ 3
+
+*/
+
+File
+	= __ Expr __
+_
+	= ([ \t] / <isa HD_IGNORE>)*
+
+__ = ([ \t\n\r] / <isa HD_IGNORE>)*
+
+NL
+    = [\n\r]+ <isa HD_IGNORE>*
+
+Expr = Sum
+Sum = Product {@ __ ( '+' #Add / '-' #Sub ) __ @Product }*
+Product = Value {@ __ ( '*' #Mul / '/' #Div) __ @Value }*
+Value = { [0-9]+ #Integer } / '(' __ Expr __ ')' / HereDoc
+
+HEREDOC_TAG
+    = [a-zA-Z_] [a-zA-Z0-9_]*
+
+HereDoc
+    = "<<" &HereDocConsume HD_START_SKIP
+
+HereDocConsume
+    = HD_START <name HD_IGNORE HereDocBody HD_END>
+
+HD_START
+    = <name EOS HEREDOC_TAG> LINE
+
+HD_START_SKIP
+    = HEREDOC_TAG
+
+HD_END
+    = <is EOS> NL
+
+HereDocBody
+    = { (!HD_END LINE)* #String }
+
+LINE
+    = (!NL .)* NL
