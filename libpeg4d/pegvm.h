@@ -1,7 +1,15 @@
-#include "parsing.h"
-#ifndef testGenerateC_pegvm_h
-#define testGenerateC_pegvm_h
+#include <stdint.h>
+#ifndef PEGVM_H
+#define PEGVM_H
 #define PEGVM_DEBUG 0
+
+typedef struct Instruction {
+    long opcode;
+    int *ndata;
+    char *name;
+    const void *ptr;
+    struct Instruction *jump;
+} PegVMInstruction, Instruction;
 
 #define PEGVM_OP_EACH(OP)\
     OP(EXIT)\

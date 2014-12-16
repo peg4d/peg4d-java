@@ -23,14 +23,6 @@ struct ParsingLog {
     int    index;
 } __attribute__ ((packed));
 
-typedef struct Instruction {
-    long opcode;
-    int *ndata;
-    char *name;
-    const void *ptr;
-    struct Instruction *jump;
-} PegVMInstruction, Instruction;
-
 struct ParsingContext {
     char *inputs;
     size_t input_size;

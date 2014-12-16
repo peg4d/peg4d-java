@@ -6,8 +6,8 @@
 
 #include "parsing.h"
 
-long execute(ParsingContext context, Instruction *inst, MemoryPool pool);
-PegVMInstruction *loadByteCodeFile(ParsingContext context, PegVMInstruction *inst, const char *fileName);
+long execute(ParsingContext context, struct Instruction *inst, MemoryPool pool);
+struct Instruction *loadByteCodeFile(ParsingContext context, struct Instruction *inst, const char *fileName);
 
 static void dump_pego(ParsingObject *pego, char *source, int level)
 {
@@ -222,7 +222,7 @@ static void peg_error(const char *errmsg)
 int main(int argc, char * const argv[])
 {
     struct ParsingContext context;
-    PegVMInstruction *inst = NULL;
+    struct Instruction *inst = NULL;
     struct MemoryPool pool;
     const char *syntax_file = NULL;
     const char *output_type = NULL;

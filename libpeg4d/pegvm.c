@@ -2,6 +2,7 @@
 #include <time.h>
 #include <assert.h>
 #include <string.h>
+#include "parsing.h"
 #include "pegvm.h"
 
 ParsingLog P4D_newLog(ParsingContext this, MemoryPool pool) {
