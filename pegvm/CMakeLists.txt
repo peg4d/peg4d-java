@@ -32,8 +32,8 @@ else(MSVC)
 endif(MSVC)
 
 ## Source Code settings
-set(PEGVM_SOURCE main.c memroy_pool.c dump.c)
-set(P4D_SOURCE ../libpeg4d/pegvm.c ../libpeg4d/p4d.c)
+set(PEGVM_SOURCE pegvm.c main.c memroy_pool.c dump.c)
+set(P4D_SOURCE ../libpeg4d/p4d.c)
 
 set(PACKAGE_NAME    ${PROJECT_NAME})
 set(PACKAGE_VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
@@ -92,10 +92,13 @@ set(INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/../libpeg4d/ ${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${INCLUDE_DIRS})
 
+add_library(p4d ${PEGVM_SOURCE})
 add_executable(pegvm ${P4D_SOURCE} ${PEGVM_SOURCE})
+target_link_libraries(pegvm p4d)
 
 install(TARGETS pegvm pegvm
 		RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib${LIB_SUFFIX}
 		)
 
 MESSAGE(STATUS)
