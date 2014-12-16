@@ -82,6 +82,17 @@ void dispose_pego(ParsingObject *pego);
 void ParsingContext_Init(ParsingContext this, const char *filename);
 void ParsingContext_Dispose(ParsingContext this);
 
+ParsingLog P4D_newLog(ParsingContext this, MemoryPool pool);
+void P4D_unuseLog(ParsingContext this, ParsingLog log);
+int P4D_markLogStack(ParsingContext this);
+void P4D_commitLog(ParsingContext this, int mark, ParsingObject newnode, MemoryPool pool);
+void P4D_abortLog(ParsingContext this, int mark);
+void P4D_lazyLink(ParsingContext this, ParsingObject parent, int index, ParsingObject child, MemoryPool pool);
+void P4D_lazyJoin(ParsingContext this, ParsingObject left, MemoryPool pool);
+ParsingObject P4D_newObject(ParsingContext this, long start, MemoryPool pool);
+void P4D_unusedObject(ParsingContext this, ParsingObject o);
+void P4D_setObject(ParsingContext this, ParsingObject *var, ParsingObject o);
+
 // static void P4D_consume(long *pos, long length)
 // {
 //     *pos += length;
