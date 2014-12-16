@@ -6,81 +6,81 @@
 #define PEGVM_OP_MAX 74
 
 #define PEGVM_OP_EACH(OP)\
-OP(EXIT)\
-OP(JUMP)\
-OP(CALL)\
-OP(RET)\
-OP(IFSUCC)\
-OP(IFFAIL)\
-OP(REPCOND)\
-OP(BYTE)\
-OP(STRING)\
-OP(CHAR)\
-OP(CHARSET)\
-OP(ANY)\
-OP(NOTBYTE)\
-OP(NOTANY)\
-OP(NOTCHARSET)\
-OP(NOTBYTERANGE)\
-OP(NOTSTRING)\
-OP(ANDBYTE)\
-OP(ANDCHARSET)\
-OP(ANDBYTERANGE)\
-OP(ANDSTRING)\
-OP(OPTIONALBYTE)\
-OP(OPTIONALCHARSET)\
-OP(OPTIONALBYTERANGE)\
-OP(OPTIONALSTRING)\
-OP(ZEROMOREBYTERANGE)\
-OP(ZEROMORECHARSET)\
-OP(PUSHo)\
-OP(PUSHconnect)\
-OP(PUSHp)\
-OP(PUSHf)\
-OP(PUSHm)\
-OP(POP)\
-OP(POPo)\
-OP(STOREo)\
-OP(STOREp)\
-OP(STOREf)\
-OP(STOREm)\
-OP(FAIL)\
-OP(SUCC)\
-OP(NEW)\
-OP(NEWJOIN)\
-OP(COMMIT)\
-OP(ABORT)\
-OP(LINK)\
-OP(SETendp)\
-OP(TAG)\
-OP(VALUE)\
-OP(MAPPEDCHOICE)\
-OP(PUSHconnect_CALL)\
-OP(PUSHp_CALL)\
-OP(PUSHp_STRING)\
-OP(PUSHp_CHAR)\
-OP(PUSHp_ZEROMORECHARSET)\
-OP(PUSHp_PUSHp)\
-OP(POP_JUMP)\
-OP(POP_REPCOND)\
-OP(STOREo_JUMP)\
-OP(STOREp_JUMP)\
-OP(STOREp_ZEROMORECHARSET)\
-OP(STOREp_PUSHp)\
-OP(STOREp_POP)\
-OP(STOREp_TAG)\
-OP(FAIL_JUMP)\
-OP(SUCC_STOREp)\
-OP(NEW_BYTE)\
-OP(NEW_STRING)\
-OP(NEW_PUSHp)\
-OP(COMMIT_JUMP)\
-OP(ABORT_JUMP)\
-OP(ABORT_STOREo)\
-OP(SETendp_POP)\
-OP(TAG_JUMP)\
-OP(TAG_SETendp)
-//OP(DTABLE)
+    OP(EXIT)\
+    OP(JUMP)\
+    OP(CALL)\
+    OP(RET)\
+    OP(IFSUCC)\
+    OP(IFFAIL)\
+    OP(REPCOND)\
+    OP(BYTE)\
+    OP(STRING)\
+    OP(CHAR)\
+    OP(CHARSET)\
+    OP(ANY)\
+    OP(NOTBYTE)\
+    OP(NOTANY)\
+    OP(NOTCHARSET)\
+    OP(NOTBYTERANGE)\
+    OP(NOTSTRING)\
+    OP(ANDBYTE)\
+    OP(ANDCHARSET)\
+    OP(ANDBYTERANGE)\
+    OP(ANDSTRING)\
+    OP(OPTIONALBYTE)\
+    OP(OPTIONALCHARSET)\
+    OP(OPTIONALBYTERANGE)\
+    OP(OPTIONALSTRING)\
+    OP(ZEROMOREBYTERANGE)\
+    OP(ZEROMORECHARSET)\
+    OP(PUSHo)\
+    OP(PUSHconnect)\
+    OP(PUSHp)\
+    OP(PUSHf)\
+    OP(PUSHm)\
+    OP(POP)\
+    OP(POPo)\
+    OP(STOREo)\
+    OP(STOREp)\
+    OP(STOREf)\
+    OP(STOREm)\
+    OP(FAIL)\
+    OP(SUCC)\
+    OP(NEW)\
+    OP(NEWJOIN)\
+    OP(COMMIT)\
+    OP(ABORT)\
+    OP(LINK)\
+    OP(SETendp)\
+    OP(TAG)\
+    OP(VALUE)\
+    OP(MAPPEDCHOICE)\
+    OP(PUSHconnect_CALL)\
+    OP(PUSHp_CALL)\
+    OP(PUSHp_STRING)\
+    OP(PUSHp_CHAR)\
+    OP(PUSHp_ZEROMORECHARSET)\
+    OP(PUSHp_PUSHp)\
+    OP(POP_JUMP)\
+    OP(POP_REPCOND)\
+    OP(STOREo_JUMP)\
+    OP(STOREp_JUMP)\
+    OP(STOREp_ZEROMORECHARSET)\
+    OP(STOREp_PUSHp)\
+    OP(STOREp_POP)\
+    OP(STOREp_TAG)\
+    OP(FAIL_JUMP)\
+    OP(SUCC_STOREp)\
+    OP(NEW_BYTE)\
+    OP(NEW_STRING)\
+    OP(NEW_PUSHp)\
+    OP(COMMIT_JUMP)\
+    OP(ABORT_JUMP)\
+    OP(ABORT_STOREo)\
+    OP(SETendp_POP)\
+    OP(TAG_JUMP)\
+    OP(TAG_SETendp)
+    //OP(DTABLE)
 
 enum pegvm_opcode {
 #define DEFINE_ENUM(NAME) PEGVM_OP_##NAME,
@@ -93,10 +93,10 @@ static const char *get_opname(uint8_t opcode)
 {
     switch (opcode) {
 #define OP_DUMPCASE(OP) case PEGVM_OP_##OP : return "" #OP;
-            PEGVM_OP_EACH(OP_DUMPCASE);
-        default:
-            assert(0 && "UNREACHABLE");
-            break;
+    PEGVM_OP_EACH(OP_DUMPCASE);
+    default:
+        assert(0 && "UNREACHABLE");
+        break;
 #undef OP_DUMPCASE
     }
     return "";
@@ -110,20 +110,18 @@ static void dump_PegVMInstructions(Instruction *inst, uint64_t size) {
         fprintf(stderr, "[%llu] %s ", i, get_opname(inst[i].opcode));
         if (inst[i].ndata) {
             switch (inst->opcode) {
-                    
 #define OP_DUMPCASE(OP) case PEGVM_OP_##OP:
-                    
-                    OP_DUMPCASE(CHAR) {
-                        fprintf(stderr, "[%d-", inst[i].ndata[1]);
-                        fprintf(stderr, "%d] ", inst[i].ndata[2]);
-                        //fprintf(stderr, "%d ", inst[i].jump);
-                    }
-                    OP_DUMPCASE(CHARSET) {
-                        //fprintf(stderr, "%d ", inst[i].jump);
-                    }
-                    default:
-                        //fprintf(stderr, "%d ", inst[i].jump);
-                        break;
+            OP_DUMPCASE(CHAR) {
+                fprintf(stderr, "[%d-", inst[i].ndata[1]);
+                fprintf(stderr, "%d] ", inst[i].ndata[2]);
+                //fprintf(stderr, "%d ", inst[i].jump);
+            }
+            OP_DUMPCASE(CHARSET) {
+                //fprintf(stderr, "%d ", inst[i].jump);
+            }
+            default:
+            //fprintf(stderr, "%d ", inst[i].jump);
+            break;
             }
         }
         if (inst[i].name) {
@@ -143,102 +141,6 @@ typedef struct byteCodeInfo {
     uint64_t bytecode_length;
 } byteCodeInfo;
 
-static void dump_byteCodeInfo(byteCodeInfo *info)
-{
-    fprintf(stderr, "ByteCodeVersion:%u.%u\n", info->version0, info->version1);
-    fprintf(stderr, "PEGFile:%s\n", info->filename);
-    fprintf(stderr, "LengthOfByteCode:%llu\n", info->bytecode_length);
-    fprintf(stderr, "\n");
-}
-
-static uint32_t read32(char *inputs, byteCodeInfo *info)
-{
-    uint32_t value = 0;
-    value = (uint8_t)inputs[info->pos++];
-    value = (value) | ((uint8_t)inputs[info->pos++] << 8);
-    value = (value) | ((uint8_t)inputs[info->pos++] << 16);
-    value = (value) | ((uint8_t)inputs[info->pos++] << 24);
-    return value;
-}
-
-static uint64_t read64(char *inputs, byteCodeInfo *info)
-{
-    uint64_t value1 = read32(inputs, info);
-    uint64_t value2 = read32(inputs, info);
-    return value2 << 32 | value1;
-}
-
-PegVMInstruction* loadByteCodeFile(ParsingContext context, PegVMInstruction *inst, const char *fileName) {
-    size_t len;
-    char *buf = loadFile(fileName, &len);
-    int j = 0;
-    byteCodeInfo info;
-    info.pos = 0;
-    
-    info.version0 = buf[info.pos++];
-    info.version1 = buf[info.pos++];
-    info.filename_length = read32(buf, &info);
-    info.filename = malloc(sizeof(uint8_t) * info.filename_length);
-    for (uint32_t i = 0; i < info.filename_length; i++) {
-        info.filename[i] = buf[info.pos++];
-    }
-    info.pool_size_info = read32(buf, &info);
-    info.bytecode_length = read64(buf, &info);
-    
-    // dump byte code infomation
-    dump_byteCodeInfo(&info);
-    
-    free(info.filename);
-    
-    //memset(inst, 0, sizeof(*inst) * info.bytecode_length);
-    inst = malloc(sizeof(*inst) * info.bytecode_length);
-    
-    for (uint64_t i = 0; i < info.bytecode_length; i++) {
-        int code_length;
-        inst[i].opcode = buf[info.pos++];
-        code_length = (uint8_t)buf[info.pos++];
-        code_length = (code_length) | ((uint8_t)buf[info.pos++] << 8);
-        if (code_length != 0) {
-            inst[i].ndata = malloc(sizeof(int) * (code_length + 1));
-            inst[i].ndata[0] = code_length;
-            while (j < code_length) {
-                inst[i].ndata[j+1] = read32(buf, &info);
-                j++;
-            }
-        }
-        j = 0;
-        inst[i].jump = inst+read32(buf, &info);
-        code_length = buf[info.pos++];
-        if (code_length != 0) {
-            inst[i].name = malloc(sizeof(int) * code_length);
-            while (j < code_length) {
-                inst[i].name[j] = buf[info.pos++];
-                j++;
-            }
-        }
-        j = 0;
-        
-    }
-    
-    if (PEGVM_DEBUG) {
-        dump_PegVMInstructions(inst, info.bytecode_length);
-    }
-    
-    context->bytecode_length = info.bytecode_length;
-    context->pool_size = info.pool_size_info;
-    
-//    for (long i = 0; i < context->bytecode_length; i++) {
-//        if((inst+i)->opcode < PEGVM_OP_ANDSTRING) {
-//            (inst+i)->jump_inst = inst+(inst+i)->jump;
-//        }
-//    }
-    
-    //free(buf);
-    return inst;
-}
-
-
+PegVMInstruction *loadByteCodeFile(ParsingContext context, PegVMInstruction *inst, const char *fileName);
 int ParserContext_Execute(ParsingContext context, PegVMInstruction *inst);
-
-
 #endif

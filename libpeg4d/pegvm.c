@@ -1,8 +1,296 @@
 #include <stdio.h>
 #include <time.h>
-#include <getopt.h>
+#include <assert.h>
+#include <string.h>
 #include "pegvm.h"
 
+ParsingLog P4D_newLog(ParsingContext this, MemoryPool pool) {
+    //ParsingLog l = (ParsingLog)malloc(sizeof (struct ParsingLog));
+    ParsingLog l = MemoryPool_AllocParsingLog(pool);
+    l->next = NULL;
+    l->childNode = NULL;
+    return l;
+}
+
+void P4D_unuseLog(ParsingContext this, ParsingLog log) {
+    P4D_setObject(this, &log->childNode, NULL);
+    //free(log);
+    //log = NULL;
+}
+
+int P4D_markLogStack(ParsingContext this) {
+    return this->logStackSize;
+}
+
+void P4D_lazyLink(ParsingContext this, ParsingObject parent, int index, ParsingObject child, MemoryPool pool) {
+    ParsingLog l = P4D_newLog(this, pool);
+    P4D_setObject(this, &l->childNode, child);
+    child->parent = parent;
+    l->index = index;
+    l->next = this->logStack;
+    this->logStack = l;
+    this->logStackSize += 1;
+}
+
+void P4D_lazyJoin(ParsingContext this, ParsingObject left, MemoryPool pool) {
+    ParsingLog l = P4D_newLog(this, pool);
+    P4D_setObject(this, &l->childNode, left);
+    l->index = -9;
+    l->next = this->logStack;
+    this->logStack = l;
+    this->logStackSize += 1;
+}
+
+void P4D_commitLog(ParsingContext this, int mark, ParsingObject newnode, MemoryPool pool) {
+    ParsingLog first = NULL;
+    int objectSize = 0;
+    while(mark < this->logStackSize) {
+        ParsingLog cur = this->logStack;
+        this->logStack = this->logStack->next;
+        this->logStackSize--;
+        if(cur->index == -9) { // lazyCommit
+            P4D_commitLog(this, mark, cur->childNode, pool);
+            P4D_unuseLog(this, cur);
+            break;
+        }
+        if(cur->childNode->parent == newnode) {
+            cur->next = first;
+            first = cur;
+            objectSize += 1;
+        }
+        else {
+            P4D_unuseLog(this, cur);
+        }
+    }
+    if(objectSize > 0) {
+        newnode->child = (ParsingObject*)calloc(sizeof(ParsingObject), objectSize);
+        newnode->child_size = objectSize;
+        for(int i = 0; i < objectSize; i++) {
+            ParsingLog cur = first;
+            first = first->next;
+            if(cur->index == -1) {
+                cur->index = i;
+            }
+            P4D_setObject(this, &newnode->child[cur->index], cur->childNode);
+            P4D_unuseLog(this, cur);
+        }
+        for(int i = 0; i < objectSize; i++) {
+            if(newnode->child[i] == NULL) {
+                P4D_setObject(this, &newnode->child[i], P4D_newObject(this, 0, pool));
+            }
+        }
+    }
+}
+
+void P4D_abortLog(ParsingContext this, int mark) {
+    while(mark < this->logStackSize) {
+        ParsingLog l = this->logStack;
+        this->logStack = this->logStack->next;
+        this->logStackSize--;
+        P4D_unuseLog(this, l);
+    }
+}
+
+ParsingObject P4D_newObject(ParsingContext this, long start, MemoryPool pool)
+{
+    ParsingObject o = MemoryPool_AllocParsingObject(pool);
+    o->refc       = 0;
+    o->oid        = 0;
+    o->start_pos  = start;
+    o->end_pos    = start;
+    o->tag        = "#empty";  // default
+    o->value      = NULL;
+    o->parent     = NULL;
+    o->child      = NULL;
+    o->child_size = 0;
+    return o;
+}
+
+void P4D_unusedObject(ParsingContext this, ParsingObject o)
+{
+    o->parent = this->unusedObject;
+    this->unusedObject = o;
+    if(o->child_size > 0) {
+        for(int i = 0; i < o->child_size; i++) {
+            P4D_setObject(this, &(o->child[i]), NULL);
+        }
+        free(o->child);
+        o->child = NULL;
+    }
+}
+
+void P4D_setObject(ParsingContext this, ParsingObject *var, ParsingObject o)
+{
+    if (var[0] != NULL) {
+        var[0]->refc -= 1;
+        if(var[0]->refc == 0) {
+            P4D_unusedObject(this, var[0]);
+        }
+    }
+    var[0] = o;
+    if (o != NULL) {
+        o->refc += 1;
+    }
+}
+
+
+static char *loadFile(const char *filename, size_t *length)
+{
+    size_t len = 0;
+    FILE *fp = fopen(filename, "rb");
+    char *source;
+    if (!fp) {
+        return NULL;
+    }
+    fseek(fp, 0, SEEK_END);
+    len = (size_t)ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    source = (char *)malloc(len + 1);
+    if (len != fread(source, 1, len, fp)) {
+        fprintf(stderr, "fread error\n");
+        exit(EXIT_FAILURE);
+    }
+    source[len] = '\0';
+    fclose(fp);
+    *length = len;
+    return source;
+}
+
+static void dump_byteCodeInfo(byteCodeInfo *info)
+{
+    fprintf(stderr, "ByteCodeVersion:%u.%u\n", info->version0, info->version1);
+    fprintf(stderr, "PEGFile:%s\n", info->filename);
+    fprintf(stderr, "LengthOfByteCode:%llu\n", info->bytecode_length);
+    fprintf(stderr, "\n");
+}
+
+static uint32_t read32(char *inputs, byteCodeInfo *info)
+{
+    uint32_t value = 0;
+    value = (uint8_t)inputs[info->pos++];
+    value = (value) | ((uint8_t)inputs[info->pos++] << 8);
+    value = (value) | ((uint8_t)inputs[info->pos++] << 16);
+    value = (value) | ((uint8_t)inputs[info->pos++] << 24);
+    return value;
+}
+
+static uint64_t read64(char *inputs, byteCodeInfo *info)
+{
+    uint64_t value1 = read32(inputs, info);
+    uint64_t value2 = read32(inputs, info);
+    return value2 << 32 | value1;
+}
+
+PegVMInstruction *loadByteCodeFile(ParsingContext context, PegVMInstruction *inst, const char *fileName) {
+    size_t len;
+    char *buf = loadFile(fileName, &len);
+    int j = 0;
+    byteCodeInfo info;
+    info.pos = 0;
+
+    info.version0 = buf[info.pos++];
+    info.version1 = buf[info.pos++];
+    info.filename_length = read32(buf, &info);
+    info.filename = malloc(sizeof(uint8_t) * info.filename_length);
+    for (uint32_t i = 0; i < info.filename_length; i++) {
+        info.filename[i] = buf[info.pos++];
+    }
+    info.pool_size_info = read32(buf, &info);
+    info.bytecode_length = read64(buf, &info);
+
+    // dump byte code infomation
+    dump_byteCodeInfo(&info);
+
+    free(info.filename);
+
+    //memset(inst, 0, sizeof(*inst) * info.bytecode_length);
+    inst = malloc(sizeof(*inst) * info.bytecode_length);
+
+    for (uint64_t i = 0; i < info.bytecode_length; i++) {
+        int code_length;
+        inst[i].opcode = buf[info.pos++];
+        code_length = (uint8_t)buf[info.pos++];
+        code_length = (code_length) | ((uint8_t)buf[info.pos++] << 8);
+        if (code_length != 0) {
+            inst[i].ndata = malloc(sizeof(int) * (code_length + 1));
+            inst[i].ndata[0] = code_length;
+            while (j < code_length) {
+                inst[i].ndata[j+1] = read32(buf, &info);
+                j++;
+            }
+        }
+        j = 0;
+        inst[i].jump = inst+read32(buf, &info);
+        code_length = buf[info.pos++];
+        if (code_length != 0) {
+            inst[i].name = malloc(sizeof(int) * code_length);
+            while (j < code_length) {
+                inst[i].name[j] = buf[info.pos++];
+                j++;
+            }
+        }
+        j = 0;
+
+    }
+
+    if (PEGVM_DEBUG) {
+        dump_PegVMInstructions(inst, info.bytecode_length);
+    }
+
+    context->bytecode_length = info.bytecode_length;
+    context->pool_size = info.pool_size_info;
+
+    //    for (long i = 0; i < context->bytecode_length; i++) {
+    //        if((inst+i)->opcode < PEGVM_OP_ANDSTRING) {
+    //            (inst+i)->jump_inst = inst+(inst+i)->jump;
+    //        }
+    //    }
+
+    //free(buf);
+    return inst;
+}
+
+void ParsingContext_Init(ParsingContext this, const char *filename)
+{
+    memset(this, 0, sizeof(*this));
+    this->pos = this->input_size = 0;
+    this->inputs = loadFile(filename, &this->input_size);
+    //P4D_setObject(this, &this->left, P4D_newObject(this, this->pos));
+    this->stack_pointer_base = (long *) malloc(sizeof(long) * PARSING_CONTEXT_MAX_STACK_LENGTH);
+    this->object_stack_pointer_base = (ParsingObject *) malloc(sizeof(ParsingObject) * PARSING_CONTEXT_MAX_STACK_LENGTH);
+    this->call_stack_pointer_base = (Instruction **) malloc(sizeof(Instruction *) * PARSING_CONTEXT_MAX_STACK_LENGTH);
+    this->stack_pointer = &this->stack_pointer_base[0];
+    this->object_stack_pointer = &this->object_stack_pointer_base[0];
+    this->call_stack_pointer = &this->call_stack_pointer_base[0];
+}
+
+void dispose_pego(ParsingObject *pego)
+{
+    if (pego[0] != NULL) {
+        if (pego[0]->child_size != 0) {
+            for (int i = 0; i < pego[0]->child_size; i++) {
+                dispose_pego(&pego[0]->child[i]);
+            }
+            free(pego[0]->child);
+            pego[0]->child = NULL;
+        }
+        //free(pego[0]);
+        //pego[0] = NULL;
+    }
+}
+
+void ParsingContext_Dispose(ParsingContext this)
+{
+    free(this->inputs);
+    this->inputs = NULL;
+    free(this->call_stack_pointer_base);
+    this->call_stack_pointer_base = NULL;
+    free(this->stack_pointer_base);
+    this->stack_pointer_base = NULL;
+    free(this->object_stack_pointer_base);
+    this->object_stack_pointer_base = NULL;
+    //dispose_pego(&this->unusedObject);
+}
 
 int ParserContext_IsFailure(ParsingContext context)
 {
@@ -88,20 +376,19 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
         PEGVM_OP_EACH(DEFINE_TABLE)
 #undef DEFINE_TABLE
     };
-	
+
     long i;
     int failflag = 0;
-    
+
     PUSH_IP(context, inst);
     P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
 
     for (i = 0; i < context->bytecode_length; i++) {
         (inst+i)->ptr = table[(inst+i)->opcode];
     }
-    
+
     Instruction *pc = inst + 1;
     goto *(pc)->ptr;
-                
 
 #define DISPATCH_NEXT ++pc; goto *(pc)->ptr;
     OP(EXIT) {
