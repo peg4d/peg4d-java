@@ -6,8 +6,7 @@
 
 ParsingLog P4D_newLog(ParsingContext this, MemoryPool pool) {
     //ParsingLog l = (ParsingLog)malloc(sizeof (struct ParsingLog));
-    ParsingLog l = &pool->log_pool[pool->log_pool_index];
-    pool->log_pool_index++;
+    ParsingLog l = MemoryPool_AllocParsingLog(pool);
     l->next = NULL;
     l->childNode = NULL;
     return l;
@@ -94,9 +93,7 @@ void P4D_abortLog(ParsingContext this, int mark) {
 
 ParsingObject P4D_newObject(ParsingContext this, long start, MemoryPool pool)
 {
-    ParsingObject o;
-    o = &pool->object_pool[pool->object_pool_index];
-    pool->object_pool_index++;
+    ParsingObject o = MemoryPool_AllocParsingObject(pool);
     o->refc       = 0;
     o->oid        = 0;
     o->start_pos  = start;

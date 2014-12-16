@@ -6,25 +6,6 @@
 
 #include "parsing.h"
 
-static void createMemoryPool(MemoryPool pool) {
-    pool->object_pool = (ParsingObject)malloc(sizeof(struct ParsingObject) * pool->pool_size);
-    pool->log_pool = (ParsingLog)malloc(sizeof(struct ParsingLog) * pool->pool_size);
-    pool->object_pool_index = 0;
-    pool->log_pool_index = 0;
-}
-
-static void init_pool(MemoryPool pool) {
-    pool->object_pool_index = 0;
-    pool->log_pool_index = 0;
-}
-
-static void destroy_pool(MemoryPool pool) {
-    free(pool->object_pool);
-    pool->object_pool = NULL;
-    free(pool->log_pool);
-    pool->log_pool = NULL;
-}
-
 long execute(ParsingContext context, Instruction *inst, MemoryPool pool);
 PegVMInstruction *loadByteCodeFile(ParsingContext context, PegVMInstruction *inst, const char *fileName);
 
@@ -272,8 +253,7 @@ int main(int argc, char * const argv[])
     ParsingContext_Init(&context, input_file);
     inst = loadByteCodeFile(&context, inst, syntax_file);
     uint64_t bytecode_length = context.bytecode_length;
-    pool.pool_size = context.pool_size * context.input_size / 100;
-    createMemoryPool(&pool);
+    MemoryPool_Init(&pool, context.pool_size * context.input_size / 100);
     if(output_type == NULL || !strcmp(output_type, "pego")) {
         uint64_t start, end;
         context.bytecode_length = bytecode_length;
@@ -288,7 +268,7 @@ int main(int argc, char * const argv[])
     else if(!strcmp(output_type, "stat")) {
         for (int i = 0; i < 20; i++) {
             uint64_t start, end;
-            init_pool(&pool);
+            MemoryPool_Reset(&pool);
             start = timer();
             if(execute(&context, inst, &pool)) {
                 peg_error("parse error");
@@ -363,7 +343,7 @@ int main(int argc, char * const argv[])
         dump_json_file(file, &context.left, context.inputs, 0);
         fclose(file);
     }
-    destroy_pool(&pool);
+    MemoryPool_Dispose(&pool);
     ParsingContext_Dispose(&context);
     free(inst);
     inst = NULL;

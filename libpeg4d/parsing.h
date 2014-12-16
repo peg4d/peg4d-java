@@ -1,20 +1,27 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #ifndef PEGVM_PARSING_H
 #define PEGVM_PARSING_H
 
 struct ParsingObject {
-    int  refc;  // referencing counting gc
+    int refc;  // referencing counting gc
+    int child_size;
+    struct ParsingObject **child;
+    struct ParsingObject *parent;
     long oid;
     long start_pos;
     long end_pos;
     const char *tag;
     const char *value;
-    struct ParsingObject *parent;
-    int child_size;
-    struct ParsingObject **child;
 };
+
+struct ParsingLog {
+    struct ParsingLog *next;
+    struct ParsingObject *childNode;
+    int    index;
+} __attribute__ ((packed));
 
 typedef struct Instruction {
     long opcode;
@@ -23,12 +30,6 @@ typedef struct Instruction {
     const void *ptr;
     struct Instruction *jump;
 } PegVMInstruction, Instruction;
-
-struct ParsingLog {
-    struct ParsingLog *next;
-    int    index;
-    struct ParsingObject *childNode;
-};
 
 struct ParsingContext {
     char *inputs;
@@ -51,18 +52,33 @@ struct ParsingContext {
     struct Instruction **call_stack_pointer_base;
 };
 
-struct MemoryPool {
-    size_t pool_size;
-    struct ParsingObject *object_pool;
-    struct ParsingLog *log_pool;
-    long object_pool_index;
-    long log_pool_index;
-};
-
 typedef struct ParsingObject* ParsingObject;
 typedef struct ParsingContext* ParsingContext;
 typedef struct ParsingLog* ParsingLog;
-typedef struct MemoryPool* MemoryPool;
+
+typedef struct MemoryPool {
+    struct ParsingObject *object_pool;
+    struct ParsingLog *log_pool;
+    size_t oidx;
+    size_t lidx;
+    size_t init_size;
+} *MemoryPool;
+
+extern MemoryPool MemoryPool_Init(MemoryPool mpool, size_t init_size);
+extern void MemoryPool_Reset(MemoryPool mpool);
+extern void MemoryPool_Dispose(MemoryPool mpool);
+
+static inline ParsingObject MemoryPool_AllocParsingObject(MemoryPool mpool)
+{
+    assert(mpool->oidx < mpool->init_size);
+    return &mpool->object_pool[mpool->oidx++];
+}
+
+static inline ParsingLog MemoryPool_AllocParsingLog(MemoryPool mpool)
+{
+    assert(mpool->lidx < mpool->init_size);
+    return &mpool->log_pool[mpool->lidx++];
+}
 
 ParsingObject P4D_newObject(ParsingContext this, long start, MemoryPool pool);
 void P4D_setObject(ParsingContext this, ParsingObject *var, ParsingObject o);
