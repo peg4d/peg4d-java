@@ -6,6 +6,7 @@
 
 #include "parsing.h"
 
+extern void PegVM_PrintProfile(void);
 long execute(ParsingContext context, struct Instruction *inst, MemoryPool pool);
 struct Instruction *loadByteCodeFile(ParsingContext context, struct Instruction *inst, const char *fileName);
 
@@ -156,6 +157,7 @@ int main(int argc, char * const argv[])
         dump_json_file(file, &context.left, context.inputs, 0);
         fclose(file);
     }
+    PegVM_PrintProfile();
     MemoryPool_Dispose(&pool);
     ParsingContext_Dispose(&context);
     free(inst);

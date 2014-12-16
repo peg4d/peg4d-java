@@ -276,11 +276,20 @@ static inline Instruction **POP_IP(ParsingContext context)
 #ifdef PEGVM_PROFILE
 static uint64_t count[PEGVM_OP_MAX];
 static uint64_t count_all;
-#define COUNT(OP) count[PEGVM_OP_##OP]++; count_all++;
 #define OP(OP) PEGVM_OP_##OP: count[PEGVM_OP_##OP]++; count_all++;
 #else
 #define OP(OP) PEGVM_OP_##OP:
 #endif
+
+void PegVM_PrintProfile()
+{
+#ifdef PEGVM_PROFILE
+    for (int i = 0; i < PEGVM_OP_MAX; i++) {
+        fprintf(stderr, "%llu %s\n", count[i], get_opname(i), count[i]);
+        //fprintf(stderr, "%s: %llu (%0.2f%%)\n", get_opname(i), count[i], (double)count[i]*100/(double)count_all);
+    }
+#endif
+}
 
 long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
 {
@@ -305,11 +314,6 @@ long execute(ParsingContext context, Instruction *inst, MemoryPool pool)
 
 #define DISPATCH_NEXT ++pc; goto *(pc)->ptr;
     OP(EXIT) {
-#ifdef PEGVM_PROFILE
-        for (int i = 0; i < PEGVM_OP_MAX; i++) {
-            fprintf(stderr, "%s: %llu (%0.2f%%)\n", get_opname(i), count[i], (double)count[i]*100/(double)count_all);
-        }
-#endif
         P4D_commitLog(context, 0, context->left, pool);
         return failflag;
     }
