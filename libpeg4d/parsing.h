@@ -23,14 +23,6 @@ struct ParsingLog {
     int    index;
 } __attribute__ ((packed));
 
-typedef struct Instruction {
-    long opcode;
-    int *ndata;
-    char *name;
-    const void *ptr;
-    struct Instruction *jump;
-} PegVMInstruction, Instruction;
-
 struct ParsingContext {
     char *inputs;
     size_t input_size;
@@ -80,15 +72,26 @@ static inline ParsingLog MemoryPool_AllocParsingLog(MemoryPool mpool)
     return &mpool->log_pool[mpool->lidx++];
 }
 
-ParsingObject P4D_newObject(ParsingContext this, long start, MemoryPool pool);
-void P4D_setObject(ParsingContext this, ParsingObject *var, ParsingObject o);
+ParsingObject P4D_newObject(ParsingContext ctx, long start, MemoryPool pool);
+void P4D_setObject(ParsingContext ctx, ParsingObject *var, ParsingObject o);
 void dispose_pego(ParsingObject *pego);
 
 #define PARSING_CONTEXT_MAX_ERROR_LENGTH 256
 #define PARSING_CONTEXT_MAX_STACK_LENGTH 1024
 
-void ParsingContext_Init(ParsingContext this, const char *filename);
-void ParsingContext_Dispose(ParsingContext this);
+void ParsingContext_Init(ParsingContext ctx, const char *filename);
+void ParsingContext_Dispose(ParsingContext ctx);
+
+ParsingLog P4D_newLog(ParsingContext ctx, MemoryPool pool);
+void P4D_unuseLog(ParsingContext ctx, ParsingLog log);
+int P4D_markLogStack(ParsingContext ctx);
+void P4D_commitLog(ParsingContext ctx, int mark, ParsingObject newnode, MemoryPool pool);
+void P4D_abortLog(ParsingContext ctx, int mark);
+void P4D_lazyLink(ParsingContext ctx, ParsingObject parent, int index, ParsingObject child, MemoryPool pool);
+void P4D_lazyJoin(ParsingContext ctx, ParsingObject left, MemoryPool pool);
+ParsingObject P4D_newObject(ParsingContext ctx, long start, MemoryPool pool);
+void P4D_unusedObject(ParsingContext ctx, ParsingObject o);
+void P4D_setObject(ParsingContext ctx, ParsingObject *var, ParsingObject o);
 
 // static void P4D_consume(long *pos, long length)
 // {
