@@ -27,6 +27,48 @@ static char *loadFile(const char *filename, size_t *length)
     return source;
 }
 
+static const char *get_opname(uint8_t opcode)
+{
+    switch (opcode) {
+#define OP_DUMPCASE(OP) case PEGVM_OP_##OP : return "" #OP;
+    PEGVM_OP_EACH(OP_DUMPCASE);
+    default:
+        assert(0 && "UNREACHABLE");
+        break;
+#undef OP_DUMPCASE
+    }
+    return "";
+}
+
+static void dump_PegVMInstructions(Instruction *inst, uint64_t size) {
+    uint64_t i;
+    int j;
+    for (i = 0; i < size; i++) {
+        j = 0;
+        fprintf(stderr, "[%llu] %s ", i, get_opname(inst[i].opcode));
+        if (inst[i].ndata) {
+            switch (inst->opcode) {
+#define OP_DUMPCASE(OP) case PEGVM_OP_##OP:
+            OP_DUMPCASE(CHAR) {
+                fprintf(stderr, "[%d-", inst[i].ndata[1]);
+                fprintf(stderr, "%d] ", inst[i].ndata[2]);
+                //fprintf(stderr, "%d ", inst[i].jump);
+            }
+            OP_DUMPCASE(CHARSET) {
+                //fprintf(stderr, "%d ", inst[i].jump);
+            }
+            default:
+            //fprintf(stderr, "%d ", inst[i].jump);
+            break;
+            }
+        }
+        if (inst[i].name) {
+            fprintf(stderr, "%s", inst[i].name);
+        }
+        fprintf(stderr, "\n");
+    }
+}
+
 static void dump_byteCodeInfo(byteCodeInfo *info)
 {
     fprintf(stderr, "ByteCodeVersion:%u.%u\n", info->version0, info->version1);
