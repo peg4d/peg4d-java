@@ -130,7 +130,7 @@ PegVMInstruction *loadByteCodeFile(ParsingContext context, PegVMInstruction *ins
         code_length = (uint8_t)buf[info.pos++];
         code_length = (code_length) | ((uint8_t)buf[info.pos++] << 8);
         if (code_length != 0) {
-            inst[i].ndata = malloc(sizeof(struct pegvm_string) + (code_length + 1));
+            inst[i].ndata = malloc(sizeof(int) * (code_length + 1));
 //            inst[i].ndata.len = code_length;
             inst[i].ndata[0] = code_length;
             while (j < code_length) {
@@ -311,8 +311,6 @@ Instruction* PegVM_Prepare(ParsingContext context, Instruction *inst, MemoryPool
 {
     long i;
     const void **table = (const void **) PegVM_Execute(context, NULL, NULL);
-    PUSH_IP(context, inst);
-    P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
     for (i = 0; i < context->bytecode_length; i++) {
         (inst+i)->ptr = table[(inst+i)->opcode];
     }
@@ -336,6 +334,9 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     long pos = context->pos;
     Instruction *pc = inst+1;
     const char *inputs = context->inputs;
+    
+    PUSH_IP(context, inst);
+    P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
     
     goto *(pc)->ptr;
 
