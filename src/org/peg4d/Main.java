@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import java.util.TreeMap;
 
 import org.peg4d.data.RelationBuilder;
+import org.peg4d.ext.Generator;
 import org.peg4d.jvm.JavaByteCodeGenerator;
 import org.peg4d.konoha.KSourceGenerator;
 import org.peg4d.konoha.SweetJSGenerator;
@@ -341,32 +342,35 @@ public class Main {
 				System.out.println(context.maximumFailureTrace);
 			}
 		}
-		
-		if(OutputType != null && OutputType.equals("sjs")){
+		if (OutputType == null) {
+			OutputType = "";
+		}
+		if(OutputType.equals("sjs")){
 			KSourceGenerator generator = new SweetJSGenerator();
 			generator.visit(pego);
 			System.out.println(generator.toString());
-		}else{
+		}
+		else if(OutputType.equalsIgnoreCase("stat")) {
+			parse_stat();
+			return;
+		}
+		else if(OutputType.equalsIgnoreCase("tag")) {
 			outputMap(pego);
 			return;
 		}
-		
-//		if(OutputType.equalsIgnoreCase("stat")) {
-//			context.recordStat(pego);
-//			return;
-//		}
-//		if(OutputType.equalsIgnoreCase("tag")) {
-
-//		}
-//		if(OutputType.equalsIgnoreCase("pego")) {
-//			new Generator(OutputFileName).writePego(pego);
-//		}
-//		else if(OutputType.equalsIgnoreCase("json")) {
-//			new Generator(OutputFileName).writeJSON(pego);
-//		}
-//		else if(OutputType.equalsIgnoreCase("csv")) {
-//			new Generator(OutputFileName).writeCommaSeparateValue(pego, 0.9);
-//		}
+		else if(OutputType.equalsIgnoreCase("pego")) {
+			new Generator(OutputFileName).writePego(pego);
+		}
+		else if(OutputType.equalsIgnoreCase("json")) {
+			new Generator(OutputFileName).writeJSON(pego);
+		}
+		else if(OutputType.equalsIgnoreCase("csv")) {
+			new Generator(OutputFileName).writeCommaSeparateValue(pego, 0.9);
+		}
+		else{
+			outputMap(pego);
+			return;
+		}
 	}
 
 	private static void outputMap(ParsingObject po) {
