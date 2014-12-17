@@ -154,6 +154,7 @@ public class CGenerator2 extends GrammarFormatter {
 		writeLine("        }");
 		writeLine("        P4D_commitLog(&context, 0, context.left);");
 		writeLine("        dump_pego(context.left, context.inputs, 0);");
+		writeLine("        ParsingContext_Dispose(&context);");
 		writeLine("    }");
 		writeLine("    else if(!strcmp(output_type, \"stat\")) {");
 		writeLine("        for (int i = 0; i < 20; i++) {");
@@ -364,6 +365,7 @@ public class CGenerator2 extends GrammarFormatter {
 		if(e.leftJoin) {
 			//context.lazyJoin(context.left);
 			//context.lazyLink(newnode, 0, context.left);
+			//writeLine("ParsingObject", leftName, "P4D_setObject(c, &c->left, P4D_newObject(c, c->pos))");
 			writeLine("P4D_lazyJoin(c, "+ leftName +");");
 			writeLine("P4D_lazyLink(c, c->left, 0, " + leftName + ");");
 		}

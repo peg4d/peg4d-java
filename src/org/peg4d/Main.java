@@ -9,6 +9,7 @@ import org.peg4d.data.RelationBuilder;
 import org.peg4d.jvm.JavaByteCodeGenerator;
 import org.peg4d.konoha.KSourceGenerator;
 import org.peg4d.konoha.SweetJSGenerator;
+import org.peg4d.pegcode.PegVMByteCodeGenerator;
 import org.peg4d.pegcode.GrammarFormatter;
 
 public class Main {
@@ -66,6 +67,9 @@ public class Main {
 
 	// --jvm
 	public static boolean JavaByteCodeGeneration = false;
+	
+	// --pegvm
+	public static boolean PegVMByteCodeGeneration = false;
 
 	// -O
 	public static int OptimizationLevel = 2;
@@ -131,6 +135,9 @@ public class Main {
 			}
 			else if(argument.equals("--jvm")) {
 				JavaByteCodeGeneration = true;
+			}
+			else if(argument.equals("--pegvm")) {
+				PegVMByteCodeGeneration = true;
 			}
 			else if(argument.startsWith("--memo")) {
 				if(argument.equals("--memo:none")) {
@@ -217,6 +224,7 @@ public class Main {
 		driverMap.put("c2", org.peg4d.pegcode.CGenerator2.class);
 		driverMap.put("pegjs", org.peg4d.pegcode.PEGjsFormatter.class);
 		driverMap.put("py", org.peg4d.pegcode.PythonGenerator.class);
+		driverMap.put("vm", org.peg4d.pegcode.PegVMByteCodeGenerator.class);
 	}
 
 	private static GrammarFormatter loadDriverImpl(String driverName) {
@@ -367,6 +375,15 @@ public class Main {
 //		else if(OutputType.equalsIgnoreCase("csv")) {
 //			new Generator(OutputFileName).writeCommaSeparateValue(pego, 0.9);
 //		}
+	}
+	
+	public static void conv() {
+		Grammar peg = newGrammar();
+		if (PegVMByteCodeGeneration) {
+			PegVMByteCodeGenerator g = new PegVMByteCodeGenerator();
+			g.formatGrammar(peg, null);
+			g.writeByteCode(GrammarFile, OutputFileName);
+		}
 	}
 
 	private static void outputMap(ParsingObject po) {
