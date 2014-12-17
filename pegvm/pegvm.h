@@ -2,7 +2,7 @@
 #ifndef PEGVM_H
 #define PEGVM_H
 #define PEGVM_DEBUG 0
-#define PEGVM_PROFILE 1;
+#define PEGVM_PROFILE 0
 #define PEGVM_OP_MAX 74
 
 typedef struct byteCodeInfo {

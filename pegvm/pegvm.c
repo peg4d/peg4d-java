@@ -231,7 +231,7 @@ void ParsingContext_Dispose(ParsingContext this)
 static inline long INC_SP(ParsingContext context, int N)
 {
     context->stack_pointer += (N);
-#ifdef PEGVM_DEBUG
+#if PEGVM_DEBUG
     assert(context->stack_pointer >= context->stack_pointer_base &&
            context->stack_pointer < &context->stack_pointer_base[PARSING_CONTEXT_MAX_STACK_LENGTH]);
 #endif
@@ -241,7 +241,7 @@ static inline long INC_SP(ParsingContext context, int N)
 static inline long DEC_SP(ParsingContext context, int N)
 {
     context->stack_pointer -= N;
-#ifdef PEGVM_DEBUG
+#if PEGVM_DEBUG
     assert(context->stack_pointer >= context->stack_pointer_base &&
            context->stack_pointer < &context->stack_pointer_base[PARSING_CONTEXT_MAX_STACK_LENGTH]);
 #endif
@@ -251,7 +251,7 @@ static inline long DEC_SP(ParsingContext context, int N)
 static inline ParsingObject INC_OSP(ParsingContext context, int N)
 {
     context->object_stack_pointer += (N);
-#ifdef PEGVM_DEBUG
+#if PEGVM_DEBUG
     assert(context->object_stack_pointer >= context->object_stack_pointer_base &&
            context->object_stack_pointer < &context->object_stack_pointer_base[PARSING_CONTEXT_MAX_STACK_LENGTH]);
 #endif
@@ -261,7 +261,7 @@ static inline ParsingObject INC_OSP(ParsingContext context, int N)
 static inline ParsingObject DEC_OSP(ParsingContext context, int N)
 {
     context->object_stack_pointer -= N;
-#ifdef PEGVM_DEBUG
+#if PEGVM_DEBUG
     assert(context->object_stack_pointer >= context->object_stack_pointer_base &&
            context->object_stack_pointer < &context->object_stack_pointer_base[PARSING_CONTEXT_MAX_STACK_LENGTH]);
 #endif
@@ -271,7 +271,7 @@ static inline ParsingObject DEC_OSP(ParsingContext context, int N)
 static inline void PUSH_IP(ParsingContext context, Instruction *pc)
 {
     *context->call_stack_pointer++ = pc;
-#ifdef PEGVM_DEBUG
+#if PEGVM_DEBUG
     assert(context->call_stack_pointer >= context->call_stack_pointer_base &&
            context->call_stack_pointer < &context->call_stack_pointer_base[PARSING_CONTEXT_MAX_STACK_LENGTH]);
 #endif
@@ -293,7 +293,7 @@ static inline Instruction **POP_IP(ParsingContext context)
 #define JUMP pc = (pc)->jump; goto *(pc)->ptr;
 #define RET pc = *POP_IP(context); goto *(pc)->ptr;
 
-#ifdef PEGVM_PROFILE
+#if PEGVM_PROFILE
 static uint64_t count[PEGVM_OP_MAX];
 static uint64_t count_all;
 #define OP(OP) PEGVM_OP_##OP: count[PEGVM_OP_##OP]++; count_all++;
@@ -303,7 +303,7 @@ static uint64_t count_all;
 
 void PegVM_PrintProfile()
 {
-#ifdef PEGVM_PROFILE
+#if PEGVM_PROFILE
     for (int i = 0; i < PEGVM_OP_MAX; i++) {
         fprintf(stderr, "%llu %s\n", count[i], get_opname(i));
         //fprintf(stderr, "%s: %llu (%0.2f%%)\n", get_opname(i), count[i], (double)count[i]*100/(double)count_all);
