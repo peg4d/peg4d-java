@@ -5,9 +5,9 @@
 #include <unistd.h>
 
 #include "parsing.h"
+#include "pegvm.h"
 
 extern void PegVM_PrintProfile(void);
-long execute(ParsingContext context, struct Instruction *inst, MemoryPool pool);
 struct Instruction *loadByteCodeFile(ParsingContext context, struct Instruction *inst, const char *fileName);
 
 void dump_pego(ParsingObject *pego, char *source, int level);
@@ -68,11 +68,12 @@ int main(int argc, char * const argv[])
     inst = loadByteCodeFile(&context, inst, syntax_file);
     uint64_t bytecode_length = context.bytecode_length;
     MemoryPool_Init(&pool, context.pool_size * context.input_size / 100);
+    inst = PegVM_Prepare(&context, inst, &pool);
     if(output_type == NULL || !strcmp(output_type, "pego")) {
         uint64_t start, end;
         context.bytecode_length = bytecode_length;
         start = timer();
-        if(execute(&context, inst, &pool)) {
+        if(PegVM_Execute(&context, inst, &pool)) {
             peg_error("parse error");
         }
         end = timer();
@@ -84,7 +85,7 @@ int main(int argc, char * const argv[])
             uint64_t start, end;
             MemoryPool_Reset(&pool);
             start = timer();
-            if(execute(&context, inst, &pool)) {
+            if(PegVM_Execute(&context, inst, &pool)) {
                 peg_error("parse error");
             }
             end = timer();
@@ -114,7 +115,7 @@ int main(int argc, char * const argv[])
         strncpy(fileName, input_file + start, index-start);
         strcat(output_file, fileName);
         strcat(output_file, ".txt");
-        if(execute(&context, inst, &pool)) {
+        if(PegVM_Execute(&context, inst, &pool)) {
             peg_error("parse error");
         }
         FILE *file;
@@ -146,7 +147,7 @@ int main(int argc, char * const argv[])
         strncpy(fileName, input_file + start, index-start);
         strcat(output_file, fileName);
         strcat(output_file, ".json");
-        if(execute(&context, inst, &pool)) {
+        if(PegVM_Execute(&context, inst, &pool)) {
             peg_error("parse error");
         }
         FILE *file;
