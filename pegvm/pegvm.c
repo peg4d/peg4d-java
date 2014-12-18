@@ -110,10 +110,11 @@ PegVMInstruction *loadByteCodeFile(ParsingContext context, PegVMInstruction *ins
     info.version0 = buf[info.pos++];
     info.version1 = buf[info.pos++];
     info.filename_length = read32(buf, &info);
-    info.filename = malloc(sizeof(uint8_t) * info.filename_length);
+    info.filename = malloc(sizeof(uint8_t) * info.filename_length + 1);
     for (uint32_t i = 0; i < info.filename_length; i++) {
         info.filename[i] = buf[info.pos++];
     }
+    info.filename[info.filename_length] = 0;
     info.pool_size_info = read32(buf, &info);
     info.bytecode_length = read64(buf, &info);
 
