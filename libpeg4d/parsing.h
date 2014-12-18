@@ -10,7 +10,6 @@ struct ParsingObject {
     int child_size;
     struct ParsingObject **child;
     struct ParsingObject *parent;
-    long oid;
     long start_pos;
     long end_pos;
     const char *tag;

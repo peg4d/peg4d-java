@@ -103,7 +103,6 @@ ParsingObject P4D_newObject(ParsingContext ctx, long start, MemoryPool pool)
 {
     ParsingObject o = MemoryPool_AllocParsingObject(pool);
     o->refc       = 0;
-    o->oid        = 0;
     o->start_pos  = start;
     o->end_pos    = start;
     o->tag        = "#empty";  // default
