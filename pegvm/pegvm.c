@@ -355,7 +355,7 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool)
     const char *inputs = context->inputs;
     
     PUSH_IP(context, inst);
-    P4D_setObject(context, &context->left, P4D_newObject(context, context->pos, pool));
+    P4D_setObject(context, &left, P4D_newObject(context, context->pos, pool));
     
     goto *(pc)->ptr;
 
