@@ -18,7 +18,7 @@ typedef struct byteCodeInfo {
 typedef struct Instruction {
     long opcode;
     int *ndata;
-    char *name;
+    char *chardata;
     const void *ptr;
     struct Instruction *jump;
 } PegVMInstruction, Instruction;
