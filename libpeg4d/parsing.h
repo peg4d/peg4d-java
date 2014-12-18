@@ -6,7 +6,7 @@
 #define PEGVM_PARSING_H
 
 struct ParsingObject {
-    int refc;  // referencing counting gc
+    int refc; // referencing counting gc
     int child_size;
     struct ParsingObject **child;
     struct ParsingObject *parent;
@@ -20,8 +20,8 @@ struct ParsingObject {
 struct ParsingLog {
     struct ParsingLog *next;
     struct ParsingObject *childNode;
-    int    index;
-} __attribute__ ((packed));
+    int index;
+} __attribute__((packed));
 
 struct ParsingContext {
     char *inputs;
@@ -30,7 +30,7 @@ struct ParsingContext {
     struct ParsingObject *left;
     struct ParsingObject *unusedObject;
 
-    int    logStackSize;
+    int logStackSize;
     struct ParsingLog *logStack;
 
     long bytecode_length;
@@ -44,30 +44,30 @@ struct ParsingContext {
     struct Instruction **call_stack_pointer_base;
 };
 
-typedef struct ParsingObject* ParsingObject;
-typedef struct ParsingContext* ParsingContext;
-typedef struct ParsingLog* ParsingLog;
+typedef struct ParsingObject *ParsingObject;
+typedef struct ParsingContext *ParsingContext;
+typedef struct ParsingLog *ParsingLog;
 
-typedef struct MemoryPool {
+struct MemoryPool {
     struct ParsingObject *object_pool;
     struct ParsingLog *log_pool;
     size_t oidx;
     size_t lidx;
     size_t init_size;
-} *MemoryPool;
+};
+
+typedef struct MemoryPool *MemoryPool;
 
 extern MemoryPool MemoryPool_Init(MemoryPool mpool, size_t init_size);
 extern void MemoryPool_Reset(MemoryPool mpool);
 extern void MemoryPool_Dispose(MemoryPool mpool);
 
-static inline ParsingObject MemoryPool_AllocParsingObject(MemoryPool mpool)
-{
+static inline ParsingObject MemoryPool_AllocParsingObject(MemoryPool mpool) {
     assert(mpool->oidx < mpool->init_size);
     return &mpool->object_pool[mpool->oidx++];
 }
 
-static inline ParsingLog MemoryPool_AllocParsingLog(MemoryPool mpool)
-{
+static inline ParsingLog MemoryPool_AllocParsingLog(MemoryPool mpool) {
     assert(mpool->lidx < mpool->init_size);
     return &mpool->log_pool[mpool->lidx++];
 }
@@ -101,6 +101,5 @@ void P4D_setObject(ParsingContext ctx, ParsingObject *var, ParsingObject o);
 // {
 //     free(o);
 // }
-
 
 #endif /* end of include guard */

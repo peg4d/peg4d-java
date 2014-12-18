@@ -11,30 +11,26 @@ extern void PegVM_PrintProfile(void);
 struct Instruction *loadByteCodeFile(ParsingContext context, struct Instruction *inst, const char *fileName);
 
 void dump_pego(ParsingObject *pego, char *source, int level);
-void dump_json_file(FILE *file, ParsingObject *pego, char* source, int level);
-void dump_pego_file(FILE *file, ParsingObject *pego, char* source, int level);
+void dump_json_file(FILE *file, ParsingObject *pego, char *source, int level);
+void dump_pego_file(FILE *file, ParsingObject *pego, char *source, int level);
 
-static uint64_t timer()
-{
+static uint64_t timer() {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
 
-static void peg_usage(const char *file)
-{
+static void peg_usage(const char *file) {
     fprintf(stderr, "Usage: %s -f peg_bytecode target_file\n", file);
     exit(EXIT_FAILURE);
 }
 
-static void peg_error(const char *errmsg)
-{
+static void peg_error(const char *errmsg) {
     fprintf(stderr, "%s\n", errmsg);
     exit(EXIT_FAILURE);
 }
 
-int main(int argc, char * const argv[])
-{
+int main(int argc, char *const argv[]) {
     struct ParsingContext context;
     struct Instruction *inst = NULL;
     struct MemoryPool pool;
@@ -69,23 +65,22 @@ int main(int argc, char * const argv[])
     uint64_t bytecode_length = context.bytecode_length;
     MemoryPool_Init(&pool, context.pool_size * context.input_size / 100);
     inst = PegVM_Prepare(&context, inst, &pool);
-    if(output_type == NULL || !strcmp(output_type, "pego")) {
+    if (output_type == NULL || !strcmp(output_type, "pego")) {
         uint64_t start, end;
         context.bytecode_length = bytecode_length;
         start = timer();
-        if(PegVM_Execute(&context, inst, &pool)) {
+        if (PegVM_Execute(&context, inst, &pool)) {
             peg_error("parse error");
         }
         end = timer();
         dump_pego(&context.left, context.inputs, 0);
         fprintf(stderr, "ErapsedTime: %llu msec\n", end - start);
-    }
-    else if(!strcmp(output_type, "stat")) {
+    } else if (!strcmp(output_type, "stat")) {
         for (int i = 0; i < 20; i++) {
             uint64_t start, end;
             MemoryPool_Reset(&pool);
             start = timer();
-            if(PegVM_Execute(&context, inst, &pool)) {
+            if (PegVM_Execute(&context, inst, &pool)) {
                 peg_error("parse error");
             }
             end = timer();
@@ -93,8 +88,7 @@ int main(int argc, char * const argv[])
             dispose_pego(&context.left);
             context.pos = 0;
         }
-    }
-    else if (!strcmp(output_type, "file")) {
+    } else if (!strcmp(output_type, "file")) {
         context.bytecode_length = bytecode_length;
         char output_file[256] = "dump_parsed_";
         char fileName[256];
@@ -110,12 +104,11 @@ int main(int argc, char * const argv[])
             if (input_file[input_fileName_len] == '.') {
                 index = input_fileName_len;
             }
-
         }
-        strncpy(fileName, input_file + start, index-start);
+        strncpy(fileName, input_file + start, index - start);
         strcat(output_file, fileName);
         strcat(output_file, ".txt");
-        if(PegVM_Execute(&context, inst, &pool)) {
+        if (PegVM_Execute(&context, inst, &pool)) {
             peg_error("parse error");
         }
         FILE *file;
@@ -125,8 +118,7 @@ int main(int argc, char * const argv[])
         }
         dump_pego_file(file, &context.left, context.inputs, 0);
         fclose(file);
-    }
-    else if(!strcmp(output_type, "json")) {
+    } else if (!strcmp(output_type, "json")) {
         context.bytecode_length = bytecode_length;
         char output_file[256] = "dump_parsed_";
         char fileName[256];
@@ -142,12 +134,11 @@ int main(int argc, char * const argv[])
             if (input_file[input_fileName_len] == '.') {
                 index = input_fileName_len;
             }
-
         }
-        strncpy(fileName, input_file + start, index-start);
+        strncpy(fileName, input_file + start, index - start);
         strcat(output_file, fileName);
         strcat(output_file, ".json");
-        if(PegVM_Execute(&context, inst, &pool)) {
+        if (PegVM_Execute(&context, inst, &pool)) {
             peg_error("parse error");
         }
         FILE *file;
