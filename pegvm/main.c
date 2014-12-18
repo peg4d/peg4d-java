@@ -8,9 +8,7 @@
 #include "pegvm.h"
 
 extern void PegVM_PrintProfile(void);
-struct Instruction *loadByteCodeFile(ParsingContext context,
-                                     struct Instruction *inst,
-                                     const char *fileName);
+struct Instruction *loadByteCodeFile(ParsingContext context, struct Instruction *inst, const char *fileName);
 
 void dump_pego(ParsingObject *pego, char *source, int level);
 void dump_json_file(FILE *file, ParsingObject *pego, char *source, int level);

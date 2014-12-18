@@ -100,8 +100,7 @@ struct pegvm_string {
     const char txt[0];
 };
 
-PegVMInstruction *loadByteCodeFile(ParsingContext context,
-                                   PegVMInstruction *inst, const char *fileName) {
+PegVMInstruction *loadByteCodeFile(ParsingContext context, PegVMInstruction *inst, const char *fileName) {
     size_t len;
     char *buf = loadFile(fileName, &len);
     int j = 0;
@@ -324,8 +323,7 @@ void PegVM_PrintProfile() {
 #endif
 }
 
-Instruction *PegVM_Prepare(ParsingContext context, Instruction *inst,
-                           MemoryPool pool) {
+Instruction *PegVM_Prepare(ParsingContext context, Instruction *inst, MemoryPool pool) {
     long i;
     const void **table = (const void **)PegVM_Execute(context, NULL, NULL);
     for (i = 0; i < context->bytecode_length; i++) {

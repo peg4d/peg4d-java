@@ -23,8 +23,7 @@ int P4D_markLogStack(ParsingContext ctx) {
     return ctx->logStackSize;
 }
 
-void P4D_lazyLink(ParsingContext ctx, ParsingObject parent, int index,
-                  ParsingObject child, MemoryPool pool) {
+void P4D_lazyLink(ParsingContext ctx, ParsingObject parent, int index, ParsingObject child, MemoryPool pool) {
     ParsingLog l = P4D_newLog(ctx, pool);
     P4D_setObject(ctx, &l->childNode, child);
     child->parent = parent;
@@ -43,8 +42,7 @@ void P4D_lazyJoin(ParsingContext ctx, ParsingObject left, MemoryPool pool) {
     ctx->logStackSize += 1;
 }
 
-void P4D_commitLog(ParsingContext ctx, int mark, ParsingObject newnode,
-                   MemoryPool pool) {
+void P4D_commitLog(ParsingContext ctx, int mark, ParsingObject newnode, MemoryPool pool) {
     ParsingLog first = NULL;
     int objectSize = 0;
     while (mark < ctx->logStackSize) {

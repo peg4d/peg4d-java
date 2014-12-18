@@ -108,12 +108,8 @@ enum pegvm_opcode {
         PEGVM_OP_ERROR = -1
 };
 
-PegVMInstruction *loadByteCodeFile(ParsingContext context,
-                                   PegVMInstruction *inst,
-                                   const char *fileName);
+PegVMInstruction *loadByteCodeFile(ParsingContext context, PegVMInstruction *inst, const char *fileName);
 int ParserContext_Execute(ParsingContext context, PegVMInstruction *inst);
-extern long PegVM_Execute(ParsingContext context, Instruction *inst,
-                          MemoryPool pool);
-extern Instruction *PegVM_Prepare(ParsingContext context, Instruction *inst,
-                                  MemoryPool pool);
+extern long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool);
+extern Instruction *PegVM_Prepare(ParsingContext context, Instruction *inst, MemoryPool pool);
 #endif

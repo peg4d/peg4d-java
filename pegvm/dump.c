@@ -75,14 +75,11 @@ void dump_pego_file(FILE *file, ParsingObject *pego, char *source, int level) {
     }
 }
 
-static void write_json(FILE *file, ParsingObject *pego, char *source,
-                       int level);
+static void write_json(FILE *file, ParsingObject *pego, char *source, int level);
 static int isJsonArray(ParsingObject pego);
-static void write_json_array(FILE *file, ParsingObject *pego, char *source,
-                             int level);
+static void write_json_array(FILE *file, ParsingObject *pego, char *source, int level);
 static void write_json_indent(FILE *file, int level);
-static void write_json_object(FILE *file, ParsingObject *pego, char *source,
-                              int level);
+static void write_json_object(FILE *file, ParsingObject *pego, char *source, int level);
 
 void dump_json_file(FILE *file, ParsingObject *pego, char *source, int level) {
     fprintf(file, "{\n");
@@ -119,8 +116,7 @@ static int isJsonArray(ParsingObject pego) {
     return pego->child_size > 1;
 }
 
-static void write_json_array(FILE *file, ParsingObject *pego, char *source,
-                             int level) {
+static void write_json_array(FILE *file, ParsingObject *pego, char *source, int level) {
     fprintf(file, "[");
     for (int i = 0; i < pego[0]->child_size; i++) {
         fprintf(file, "\n");
@@ -142,8 +138,7 @@ static void write_json_array(FILE *file, ParsingObject *pego, char *source,
     fprintf(file, "]");
 }
 
-static void write_json_object(FILE *file, ParsingObject *pego, char *source,
-                              int level) {
+static void write_json_object(FILE *file, ParsingObject *pego, char *source, int level) {
     if (pego[0]) {
         if (pego[0]->child_size > 0) {
             fprintf(file, "{");
