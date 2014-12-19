@@ -754,6 +754,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 				switch (code.inst) {
 				case CALL:
 					code.jump = this.callMap.get(code.name);
+					code.name = null;
 					System.out.println("[" + i + "] " + code + " " + code.jump);
 					break;
 				case RET:

@@ -66,8 +66,8 @@ static void dump_PegVMInstructions(Instruction *inst, uint64_t size) {
                 break;
             }
         }
-        if (inst[i].name) {
-            fprintf(stderr, "%s", inst[i].name);
+        if (inst[i].chardata) {
+            fprintf(stderr, "%s", inst[i].chardata);
         }
         fprintf(stderr, "\n");
     }
@@ -133,23 +133,40 @@ PegVMInstruction *loadByteCodeFile(ParsingContext context, PegVMInstruction *ins
         code_length = (code_length) | ((uint8_t)buf[info.pos++] << 8);
         if (code_length != 0) {
             inst[i].ndata = malloc(sizeof(int) * (code_length + 1));
-            //            inst[i].ndata.len = code_length;
             inst[i].ndata[0] = code_length;
-            while (j < code_length) {
-                inst[i].ndata[j + 1] = read32(buf, &info);
-                j++;
+            if (code_length == 1) {
+                inst[i].ndata = malloc(sizeof(int));
+                inst[i].ndata[0] = read32(buf, &info);
+            }
+            else if(inst[i].opcode == PEGVM_OP_MAPPEDCHOICE) {
+                inst[i].ndata = malloc(sizeof(int)*code_length);
+                while (j < code_length) {
+                    inst[i].ndata[j] = read32(buf, &info);
+                    j++;
+                }
+            }
+            else {
+//              inst[i].ndata = malloc(sizeof(int) * (code_length + 1));
+//              inst[i].ndata.len = code_length;
+                inst[i].ndata = malloc(sizeof(int));
+                inst[i].ndata[0] = code_length;
+                inst[i].chardata = malloc(sizeof(int) * code_length);
+                while (j < code_length) {
+                    inst[i].chardata[j] = read32(buf, &info);
+                    j++;
+                }
             }
         }
         j = 0;
         inst[i].jump = inst + read32(buf, &info);
         code_length = buf[info.pos++];
         if (code_length != 0) {
-            inst[i].name = malloc(sizeof(char) * code_length + 1);
+            inst[i].chardata = malloc(sizeof(char) * code_length + 1);
             while (j < code_length) {
-                inst[i].name[j] = buf[info.pos++];
+                inst[i].chardata[j] = buf[info.pos++];
                 j++;
             }
-            inst[i].name[code_length] = 0;
+            inst[i].chardata[code_length] = 0;
         }
         j = 0;
     }
@@ -352,8 +369,7 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     const char *inputs = context->inputs;
 
     PUSH_IP(context, inst);
-    P4D_setObject(context, &context->left,
-                  P4D_newObject(context, context->pos, pool));
+    P4D_setObject(context, &left, P4D_newObject(context, context->pos, pool));
 
     goto *(pc)->ptr;
 
@@ -454,7 +470,7 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         DISPATCH_NEXT;
     }
     OP(BYTE) {
-        if (inputs[pos] != (pc)->ndata[1]) {
+        if (inputs[pos] != *(pc)->ndata) {
             failflag = 1;
             JUMP;
         }
@@ -462,10 +478,10 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         DISPATCH_NEXT;
     }
     OP(STRING) {
-        int j = 1;
-        int len = (pc)->ndata[0] + 1;
+        int j = 0;
+        int len = *(pc)->ndata;
         while (j < len) {
-            if (inputs[pos] != (pc)->ndata[j]) {
+            if (inputs[pos] != (pc)->chardata[j]) {
                 failflag = 1;
                 JUMP;
             }
@@ -474,19 +490,19 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         }
         DISPATCH_NEXT;
     }
-    OP(CHAR) {
-        if (!(inputs[pos] >= (pc)->ndata[1] && inputs[pos] <= (pc)->ndata[2])) {
+    OP(CHAR){
+        if (!(inputs[pos] >= (pc)->chardata[0] && inputs[pos] <= (pc)->chardata[1])) {
             failflag = 1;
             JUMP;
         }
         pos++;
         DISPATCH_NEXT;
     }
-    OP(CHARSET) {
-        int j = 1;
-        int len = (pc)->ndata[0] + 1;
+    OP(CHARSET){
+        int j = 0;
+        int len = *(pc)->ndata;
         while (j < len) {
-            if (inputs[pos] == (pc)->ndata[j]) {
+            if (inputs[pos] == (pc)->chardata[j]) {
                 pos++;
                 DISPATCH_NEXT;
             }
@@ -503,8 +519,8 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         failflag = 1;
         JUMP;
     }
-    OP(NOTBYTE) {
-        if (inputs[pos] != (pc)->ndata[1]) {
+    OP(NOTBYTE){
+        if (inputs[pos] != *(pc)->ndata) {
             DISPATCH_NEXT;
         }
         failflag = 1;
@@ -517,11 +533,11 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         }
         DISPATCH_NEXT;
     }
-    OP(NOTCHARSET) {
-        int j = 1;
-        int len = (pc)->ndata[0] + 1;
+    OP(NOTCHARSET){
+        int j = 0;
+        int len = *(pc)->ndata;
         while (j < len) {
-            if (inputs[pos] == (pc)->ndata[j]) {
+            if (inputs[pos] == (pc)->chardata[j]) {
                 failflag = 1;
                 JUMP;
             }
@@ -529,19 +545,19 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         }
         DISPATCH_NEXT;
     }
-    OP(NOTBYTERANGE) {
-        if (!(inputs[pos] >= (pc)->ndata[1] && inputs[pos] <= (pc)->ndata[2])) {
+    OP(NOTBYTERANGE){
+        if (!(inputs[pos] >= (pc)->chardata[0] && inputs[pos] <= (pc)->chardata[1])) {
             DISPATCH_NEXT;
         }
         failflag = 1;
         JUMP;
     }
-    OP(NOTSTRING) {
-        int j = 1;
-        int len = (pc)->ndata[0] + 1;
+    OP(NOTSTRING){
+        int j = 0;
+        int len = *(pc)->ndata;
         long backtrack_pos = pos;
         while (j < len) {
-            if (inputs[pos] != (pc)->ndata[j]) {
+            if (inputs[pos] != (pc)->chardata[j]) {
                 pos = backtrack_pos;
                 DISPATCH_NEXT;
             }
@@ -552,18 +568,18 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         failflag = 1;
         JUMP;
     }
-    OP(ANDBYTE) {
-        if (inputs[pos] != (pc)->ndata[1]) {
+    OP(ANDBYTE){
+        if (inputs[pos] != *(pc)->ndata) {
             failflag = 1;
             JUMP;
         }
         DISPATCH_NEXT;
     }
-    OP(ANDCHARSET) {
-        int j = 1;
-        int len = (pc)->ndata[0] + 1;
+    OP(ANDCHARSET){
+        int j = 0;
+        int len = *(pc)->ndata;
         while (j < len) {
-            if (inputs[pos] == (pc)->ndata[j]) {
+            if (inputs[pos] == (pc)->chardata[j]) {
                 DISPATCH_NEXT;
             }
             j++;
@@ -571,19 +587,19 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         failflag = 1;
         JUMP;
     }
-    OP(ANDBYTERANGE) {
-        if (!(inputs[pos] >= (pc)->ndata[1] && inputs[pos] <= (pc)->ndata[2])) {
+    OP(ANDBYTERANGE){
+        if (!(inputs[pos] >= (pc)->chardata[0] && inputs[pos] <= (pc)->chardata[1])) {
             failflag = 1;
             JUMP;
         }
         DISPATCH_NEXT;
     }
-    OP(ANDSTRING) {
-        int j = 1;
-        int len = (pc)->ndata[0] + 1;
+    OP(ANDSTRING){
+        int j = 0;
+        int len = *(pc)->ndata;
         long backtrack_pos = pos;
         while (j < len) {
-            if (inputs[pos] != (pc)->ndata[j]) {
+            if (inputs[pos] != (pc)->chardata[j]) {
                 failflag = 1;
                 pos = backtrack_pos;
                 JUMP;
@@ -594,17 +610,17 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         pos = backtrack_pos;
         DISPATCH_NEXT;
     }
-    OP(OPTIONALBYTE) {
-        if (inputs[pos] == (pc)->ndata[1]) {
+    OP(OPTIONALBYTE){
+        if (inputs[pos] == *(pc)->ndata) {
             pos++;
         }
         DISPATCH_NEXT;
     }
-    OP(OPTIONALCHARSET) {
-        int j = 1;
-        int len = (pc)->ndata[0] + 1;
+    OP(OPTIONALCHARSET){
+        int j = 0;
+        int len = *(pc)->ndata;
         while (j < len) {
-            if (inputs[pos] == (pc)->ndata[j]) {
+            if (inputs[pos] == (pc)->chardata[j]) {
                 pos++;
                 DISPATCH_NEXT;
             }
@@ -612,18 +628,18 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         }
         DISPATCH_NEXT;
     }
-    OP(OPTIONALBYTERANGE) {
-        if (inputs[pos] >= (pc)->ndata[1] && inputs[pos] <= (pc)->ndata[2]) {
+    OP(OPTIONALBYTERANGE){
+        if (inputs[pos] >= (pc)->chardata[0] && inputs[pos] <= (pc)->chardata[1]) {
             pos++;
         }
         DISPATCH_NEXT;
     }
-    OP(OPTIONALSTRING) {
-        int j = 1;
-        int len = (pc)->ndata[0] + 1;
+    OP(OPTIONALSTRING){
+        int j = 0;
+        int len = *(pc)->ndata;
         long backtrack_pos = pos;
         while (j < len) {
-            if (inputs[pos] != (pc)->ndata[j]) {
+            if (inputs[pos] != (pc)->chardata[j]) {
                 pos = backtrack_pos;
                 DISPATCH_NEXT;
             }
@@ -634,8 +650,7 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     }
     OP(ZEROMOREBYTERANGE) {
         while (1) {
-            if (!(inputs[pos] >= (pc)->ndata[1] &&
-                  inputs[pos] <= (pc)->ndata[2])) {
+            if (!(inputs[pos] >= (pc)->chardata[0] && inputs[pos] <= (pc)->chardata[1])) {
                 DISPATCH_NEXT;
             }
             pos++;
@@ -643,11 +658,11 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     }
     OP(ZEROMORECHARSET) {
         int j;
-        int len = (pc)->ndata[0];
+        int len = *(pc)->ndata;
     ZEROMORECHARSET_LABEL:
         j = 0;
         while (j < len) {
-            if (inputs[pos] == (pc)->ndata[j + 1]) {
+            if (inputs[pos] == (pc)->chardata[j]) {
                 pos++;
                 goto ZEROMORECHARSET_LABEL;
             }
@@ -667,13 +682,13 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         P4D_setObject(context, &left, P4D_newObject(context, pos, pool));
         // PUSH_SP(P4D_markLogStack(context));
         P4D_lazyJoin(context, po, pool);
-        P4D_lazyLink(context, left, (pc)->ndata[1], po, pool);
+        P4D_lazyLink(context, left, *(pc)->ndata, po, pool);
         DISPATCH_NEXT;
     }
     OP(COMMIT) {
         P4D_commitLog(context, (int)POP_SP(), left, pool);
         ParsingObject parent = (ParsingObject)POP_OSP();
-        P4D_lazyLink(context, parent, (pc)->ndata[1], left, pool);
+        P4D_lazyLink(context, parent, *(pc)->ndata, left, pool);
         P4D_setObject(context, &left, parent);
         DISPATCH_NEXT;
     }
@@ -683,8 +698,8 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     }
     OP(LINK) {
         ParsingObject parent = (ParsingObject)POP_OSP();
-        P4D_lazyLink(context, parent, (pc)->ndata[1], left, pool);
-        // P4D_setObject(context, &left, parent);
+        P4D_lazyLink(context, parent, *(pc)->ndata, left, pool);
+        //P4D_setObject(context, &left, parent);
         PUSH_OSP(parent);
         DISPATCH_NEXT;
     }
@@ -692,16 +707,16 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         left->end_pos = pos;
         DISPATCH_NEXT;
     }
-    OP(TAG) {
-        left->tag = (pc)->name;
+    OP(TAG){
+        left->tag = (pc)->chardata;
         DISPATCH_NEXT;
     }
-    OP(VALUE) {
-        left->value = (pc)->name;
+    OP(VALUE){
+        left->value = (pc)->chardata;
         DISPATCH_NEXT;
     }
     OP(MAPPEDCHOICE) {
-        pc = inst + (pc)->ndata[inputs[pos] + 1];
+        pc = inst+(pc)->ndata[(int)inputs[pos]];
         goto *(pc)->ptr;
     }
     OP(PUSHconnect_CALL) {
@@ -719,10 +734,10 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     }
     OP(PUSHp_STRING) {
         PUSH_SP(pos);
-        int j = 1;
-        int len = (pc)->ndata[0] + 1;
+        int j = 0;
+        int len = *(pc)->ndata;
         while (j < len) {
-            if (inputs[pos] != (pc)->ndata[j]) {
+            if (inputs[pos] != (pc)->chardata[j]) {
                 failflag = 1;
                 JUMP;
             }
@@ -733,7 +748,7 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     }
     OP(PUSHp_CHAR) {
         PUSH_SP(pos);
-        if (!(inputs[pos] >= (pc)->ndata[1] && inputs[pos] <= (pc)->ndata[2])) {
+        if (!(inputs[pos] >= (pc)->chardata[0] && inputs[pos] <= (pc)->chardata[1])) {
             failflag = 1;
             JUMP;
         }
@@ -743,11 +758,11 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     OP(PUSHp_ZEROMORECHARSET) {
         PUSH_SP(pos);
         int j;
-        int len = (pc)->ndata[0];
+        int len = *(pc)->ndata;
     PUSHp_ZEROMORECHARSET_LABEL:
         j = 0;
         while (j < len) {
-            if (inputs[pos] == (pc)->ndata[j + 1]) {
+            if (inputs[pos] == (pc)->chardata[j]) {
                 pos++;
                 goto PUSHp_ZEROMORECHARSET_LABEL;
             }
@@ -783,11 +798,11 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     OP(STOREp_ZEROMORECHARSET) {
         pos = POP_SP();
         int j;
-        int len = (pc)->ndata[0];
+        int len = *(pc)->ndata;
     STOREp_ZEROMORECHARSET_LABEL:
         j = 0;
         while (j < len) {
-            if (inputs[pos] == (pc)->ndata[j + 1]) {
+            if (inputs[pos] == (pc)->chardata[j]) {
                 pos++;
                 goto STOREp_ZEROMORECHARSET_LABEL;
             }
@@ -807,7 +822,7 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     }
     OP(STOREp_TAG) {
         pos = POP_SP();
-        left->tag = (pc)->name;
+        left->tag = (pc)->chardata;
         DISPATCH_NEXT;
     }
     OP(FAIL_JUMP) {
@@ -822,7 +837,7 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     OP(NEW_BYTE) {
         PUSH_SP(P4D_markLogStack(context));
         P4D_setObject(context, &left, P4D_newObject(context, pos, pool));
-        if (inputs[pos] != (pc)->ndata[1]) {
+        if (inputs[pos] != *(pc)->ndata) {
             failflag = 1;
             JUMP;
         }
@@ -832,10 +847,10 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     OP(NEW_STRING) {
         PUSH_SP(P4D_markLogStack(context));
         P4D_setObject(context, &left, P4D_newObject(context, pos, pool));
-        int j = 1;
-        int len = (pc)->ndata[0] + 1;
+        int j = 0;
+        int len = *(pc)->ndata;
         while (j < len) {
-            if (inputs[pos] != (pc)->ndata[j]) {
+            if (inputs[pos] != (pc)->chardata[j]) {
                 failflag = 1;
                 JUMP;
             }
@@ -853,7 +868,7 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     OP(COMMIT_JUMP) {
         P4D_commitLog(context, (int)POP_SP(), left, pool);
         ParsingObject parent = (ParsingObject)POP_OSP();
-        P4D_lazyLink(context, parent, (pc)->ndata[1], left, pool);
+        P4D_lazyLink(context, parent, *(pc)->ndata, left, pool);
         P4D_setObject(context, &left, parent);
         JUMP;
     }
@@ -872,12 +887,12 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         POP_SP();
         DISPATCH_NEXT;
     }
-    OP(TAG_JUMP) {
-        left->tag = (pc)->name;
+    OP(TAG_JUMP){
+        left->tag = (pc)->chardata;
         JUMP;
     }
-    OP(TAG_SETendp) {
-        left->tag = (pc)->name;
+    OP(TAG_SETendp){
+        left->tag = (pc)->chardata;
         left->end_pos = pos;
         DISPATCH_NEXT;
     }

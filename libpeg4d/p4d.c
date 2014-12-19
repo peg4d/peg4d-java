@@ -95,14 +95,13 @@ void P4D_abortLog(ParsingContext ctx, int mark) {
 
 ParsingObject P4D_newObject(ParsingContext ctx, long start, MemoryPool pool) {
     ParsingObject o = MemoryPool_AllocParsingObject(pool);
-    o->refc = 0;
-    o->oid = 0;
-    o->start_pos = start;
-    o->end_pos = start;
-    o->tag = "#empty"; // default
-    o->value = NULL;
-    o->parent = NULL;
-    o->child = NULL;
+    o->refc       = 0;
+    o->start_pos  = start;
+    o->end_pos    = start;
+    o->tag        = "#empty";  // default
+    o->value      = NULL;
+    o->parent     = NULL;
+    o->child      = NULL;
     o->child_size = 0;
     return o;
 }
