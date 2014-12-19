@@ -144,11 +144,12 @@ PegVMInstruction *loadByteCodeFile(ParsingContext context, PegVMInstruction *ins
         inst[i].jump = inst + read32(buf, &info);
         code_length = buf[info.pos++];
         if (code_length != 0) {
-            inst[i].name = malloc(sizeof(int) * code_length);
+            inst[i].name = malloc(sizeof(char) * code_length + 1);
             while (j < code_length) {
                 inst[i].name[j] = buf[info.pos++];
                 j++;
             }
+            inst[i].name[code_length] = 0;
         }
         j = 0;
     }
