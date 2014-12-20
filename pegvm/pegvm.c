@@ -315,12 +315,21 @@ static inline Instruction **POP_IP(ParsingContext context) {
 
 #if PEGVM_PROFILE
 static uint64_t count[PEGVM_OP_MAX];
+static uint64_t conbination_count[PEGVM_OP_MAX][PEGVM_OP_MAX];
 static uint64_t count_all;
+#define DISPATCH_NEXT                          \
+  int first = (int)pc->opcode;                 \
+  ++pc;                                        \
+  conbination_count[first][(int)pc->opcode]++; \
+  goto *(pc)->ptr;
 #define OP(OP)                            \
   PEGVM_OP_##OP : count[PEGVM_OP_##OP]++; \
   count_all++;
 #else
 #define OP(OP) PEGVM_OP_##OP:
+#define DISPATCH_NEXT \
+  ++pc;               \
+  goto *(pc)->ptr;
 #endif
 
 void PegVM_PrintProfile() {
@@ -330,6 +339,35 @@ void PegVM_PrintProfile() {
     // fprintf(stderr, "%s: %llu (%0.2f%%)\n", get_opname(i), count[i],
     // (double)count[i]*100/(double)count_all);
   }
+  FILE *file;
+  file = fopen("pegvm_profile.csv", "w");
+  if (file == NULL) {
+    assert(0 && "can not open file");
+  }
+  fprintf(file, ",");
+  for (int i = 0; i < PEGVM_OP_MAX; i++) {
+    fprintf(file, "%s", get_opname(i));
+    if (i != PEGVM_OP_MAX - 1) {
+      fprintf(file, ",");
+    }
+  }
+  for (int i = 0; i < PEGVM_OP_MAX; i++) {
+    fprintf(file, "%s,", get_opname(i));
+    for (int j = 0; j < PEGVM_OP_MAX; j++) {
+      fprintf(file, "%llu", conbination_count[i][j]);
+      if (j != PEGVM_OP_MAX - 1) {
+        fprintf(file, ",");
+      }
+    }
+    fprintf(file, "\n");
+  }
+  for (int i = 0; i < PEGVM_OP_MAX; i++) {
+    for (int j = 0; j < PEGVM_OP_MAX; j++) {
+      fprintf(stderr, "%llu %s_%s\n", conbination_count[i][j], get_opname(i),
+              get_opname(j));
+    }
+  }
+  fclose(file);
 #endif
 }
 
@@ -365,9 +403,6 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
 
   goto *(pc)->ptr;
 
-#define DISPATCH_NEXT \
-  ++pc;               \
-  goto *(pc)->ptr;
   OP(EXIT) {
     P4D_commitLog(context, 0, left, pool);
     context->left = left;
