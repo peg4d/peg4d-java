@@ -44,7 +44,7 @@ import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
-import org.peg4d.expression.ParsingName;
+import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
 import org.peg4d.expression.ParsingPermutation;
@@ -1205,7 +1205,7 @@ public class JavaByteCodeGenerator extends GrammarFormatter implements Opcodes {
 	}
 
 	@Override
-	public void visitName(ParsingName e) {
+	public void visitDef(ParsingDef e) {
 		this.mBuilder.enterScope();
 
 		this.mBuilder.loadFromVar(this.entry_context);

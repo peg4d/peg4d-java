@@ -20,11 +20,7 @@ public class MemoizationManager {
 	public static boolean VerboseMemo = false;
 	
 	UList<MemoMatcher> memoList = new UList<MemoMatcher>(new MemoMatcher[16]);
-	
-	MemoizationManager() {
 		
-	}
-	
 	HashMap<Integer, MemoPoint> memoMap = new HashMap<Integer, MemoPoint>();
     
 	MemoPoint getMemoPoint(ParsingExpression e) {
@@ -334,12 +330,13 @@ public class MemoizationManager {
 
 }
 
-final class MemoEntry {
+class MemoEntry {
 	long key = -1;
 	ParsingObject result;
 	int  consumed;
 	int  memoPoint;
 	MemoEntry next;
+	int stateValue = 0;
 }
 
 abstract class MemoTable {
@@ -355,7 +352,6 @@ abstract class MemoTable {
 	int MemoStored = 0;
 	int MemoUsed   = 0;
 	int MemoMissed = 0;
-	
 	
 	protected final MemoEntry newMemo() {
 		if(UnusedMemo != null) {
@@ -374,13 +370,6 @@ abstract class MemoTable {
 		this.appendMemo2(m, UnusedMemo);
 		UnusedMemo = m;
 	}
-
-//	protected final MemoEntry findTail(MemoEntry m) {
-//		while(m.next != null) {
-//			m = m.next;
-//		}
-//		return m;
-//	}			
 
 	private void appendMemo2(MemoEntry m, MemoEntry n) {
 		while(m.next != null) {

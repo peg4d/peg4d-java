@@ -21,7 +21,7 @@ import org.peg4d.expression.ParsingIndent;
 import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingMatch;
-import org.peg4d.expression.ParsingName;
+import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
 import org.peg4d.expression.ParsingPermutation;
@@ -95,7 +95,7 @@ public abstract class GrammarVisitor {
 	
 	public abstract void visitBlock(ParsingBlock e);
 	public abstract void visitIndent(ParsingIndent e);
-	public abstract void visitName(ParsingName e);
+	public abstract void visitDef(ParsingDef e);
 	public abstract void visitIs(ParsingIs e);
 	public abstract void visitIsa(ParsingIsa e);
 
