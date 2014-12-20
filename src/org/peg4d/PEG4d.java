@@ -42,7 +42,7 @@ public class PEG4d extends ParsingBuilder {
 	static final int Without     = ParsingTag.tagId("Without");
 	static final int With        = ParsingTag.tagId("With");
 	static final int If          = ParsingTag.tagId("If");
-	static final int Name        = ParsingTag.tagId("Name");
+	static final int Def         = ParsingTag.tagId("Def");
 	static final int Is          = ParsingTag.tagId("Is");
 	static final int Isa         = ParsingTag.tagId("Isa");
 
