@@ -124,15 +124,6 @@ public class Main {
 			else if (argument.startsWith("-g")) {
 				DebugLevel = Utils.parseInt(argument.substring(2), 1);
 			}
-			else if (argument.equals("-a")) {
-				DiskMode = true;
-			}
-			else if (argument.equals("--infer")) {
-				InferRelation = true;
-			}
-			else if(argument.equals("--jvm")) {
-				JavaByteCodeGeneration = true;
-			}
 			else if(argument.startsWith("--memo")) {
 				if(argument.equals("--memo:none")) {
 					MemoizationManager.NoMemo = true;
@@ -166,6 +157,12 @@ public class Main {
 				else {
 					VerboseMode = true;
 				}
+			}
+			else if (argument.equals("--infer")) {
+				InferRelation = true;
+			}
+			else if(argument.equals("--jvm")) {
+				JavaByteCodeGeneration = true;
 			}
 			else {
 				showUsage("unknown option: " + argument);
@@ -230,25 +227,25 @@ public class Main {
 		return null;
 	}
 	
-	private static GrammarFormatter loadGrammarFormatter(String driverName) {
-		GrammarFormatter d = loadDriverImpl(driverName);
-		if(d == null) {
-			System.out.println("Supported formatter list:");
-			UList<String> driverList = driverMap.keys();
-			for(int i = 0; i < driverList.size(); i++) {
-				String k = driverList.ArrayValues[i];
-				d = loadDriverImpl(k);
-				if(d != null) {
-					System.out.println("\t" + k + " - " + d.getDesc());
-				}
-				else {
-					System.out.println("\t" + k + " - " + d);
-				}
-			}
-			Main._Exit(1, "undefined formatter: " + driverName);
-		}
-		return d;
-	}
+//	private static GrammarFormatter loadGrammarFormatter(String driverName) {
+//		GrammarFormatter d = loadDriverImpl(driverName);
+//		if(d == null) {
+//			System.out.println("Supported formatter list:");
+//			UList<String> driverList = driverMap.keys();
+//			for(int i = 0; i < driverList.size(); i++) {
+//				String k = driverList.ArrayValues[i];
+//				d = loadDriverImpl(k);
+//				if(d != null) {
+//					System.out.println("\t" + k + " - " + d.getDesc());
+//				}
+//				else {
+//					System.out.println("\t" + k + " - " + d);
+//				}
+//			}
+//			Main._Exit(1, "undefined formatter: " + driverName);
+//		}
+//		return d;
+//	}
 	
 //	private synchronized static void loadStat(Grammar peg, String fileName) {
 //		String startPoint = StartingPoint;
