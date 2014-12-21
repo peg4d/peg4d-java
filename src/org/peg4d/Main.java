@@ -3,13 +3,10 @@ package org.peg4d;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.util.TreeMap;
 
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.ext.Generator;
 import org.peg4d.jvm.JavaByteCodeGenerator;
-import org.peg4d.konoha.KSourceGenerator;
-import org.peg4d.konoha.SweetJSGenerator;
 import org.peg4d.pegcode.GrammarFormatter;
 
 public class Main {
@@ -17,7 +14,7 @@ public class Main {
 	public final static String  CodeName  = "yokohama";
 	public final static int     MajorVersion = 0;
 	public final static int     MinerVersion = 9;
-	public final static int     PatchLevel   = 0;
+	public final static int     PatchLevel   = 1;
 	public final static String  Version = "" + MajorVersion + "." + MinerVersion + "." + PatchLevel;
 	public final static String  Copyright = "Copyright (c) 2014, Nez project authors";
 	public final static String  License = "BSD-Style Open Source";
@@ -70,6 +67,9 @@ public class Main {
 
 	// -O
 	public static int OptimizationLevel = 2;
+
+	// --log
+	public static NezLogger  Logger = null;
 	public static String CSVFileName = "results.csv";
 	
 	private static String[] FileList = null;
@@ -150,6 +150,14 @@ public class Main {
 					}
 				}
 			}
+			else if(argument.startsWith("--log")) {
+				String logFile = "nezlog.csv";
+				if(argument.endsWith(".csv")) {
+					logFile = argument.substring(6);
+				}
+				System.out.println(logFile);
+				Logger = new NezLogger(logFile);
+			}
 			else if(argument.startsWith("--verbose")) {
 				if(argument.equals("--verbose:memo")) {
 					MemoizationManager.VerboseMemo = true;
@@ -226,58 +234,7 @@ public class Main {
 		}
 		return null;
 	}
-	
-//	private static GrammarFormatter loadGrammarFormatter(String driverName) {
-//		GrammarFormatter d = loadDriverImpl(driverName);
-//		if(d == null) {
-//			System.out.println("Supported formatter list:");
-//			UList<String> driverList = driverMap.keys();
-//			for(int i = 0; i < driverList.size(); i++) {
-//				String k = driverList.ArrayValues[i];
-//				d = loadDriverImpl(k);
-//				if(d != null) {
-//					System.out.println("\t" + k + " - " + d.getDesc());
-//				}
-//				else {
-//					System.out.println("\t" + k + " - " + d);
-//				}
-//			}
-//			Main._Exit(1, "undefined formatter: " + driverName);
-//		}
-//		return d;
-//	}
-	
-//	private synchronized static void loadStat(Grammar peg, String fileName) {
-//		String startPoint = StartingPoint;
-//		ParsingSource source = null;
-//		ParsingContext context = null;
-//		ParsingObject po = null;
-//		long bestTime = Long.MAX_VALUE;
-//		ParsingStatistics stat = null;
-//		for(int i = 0; i < 20; i++) {
-//			source = Main.loadSource(peg, fileName);
-//			context = new ParsingContext(Main.loadSource(peg, fileName));
-//			stat = new ParsingStatistics(peg, source);
-//			context.initStat(stat);
-//			if(Main.RecognitionOnlyMode) {
-//				context.match(peg, startPoint, new MemoizationManager());
-//			}
-//			else {
-//				po = context.parse(peg, startPoint, new MemoizationManager());
-//			}
-//			long t = stat.end();
-//			System.out.println("ErapsedTime: " + t);
-//			if(t < bestTime) {
-//				bestTime = t;
-//			}
-//			if(t > 60000 * 5) {
-//				break;
-//			}
-//		}
-//		stat.ErapsedTime = bestTime;
-//		stat.end(po, context);
-//	}
-	
+		
 	public final static String guessGrammarFile(String fileName) {
 		int loc = fileName.lastIndexOf('.');
 		if(loc > 0) {
@@ -293,7 +250,7 @@ public class Main {
 	}
 
 	static Grammar newGrammar() {
-		Grammar grammar = GrammarFile == null ? GrammarFactory.Grammar : new GrammarFactory().newGrammar("main", GrammarFile);
+		Grammar grammar = GrammarFile == null ? GrammarFactory.Grammar : new GrammarFactory().newGrammar("main", GrammarFile, Logger);
 		if(JavaByteCodeGeneration) {
 			JavaByteCodeGenerator g = new JavaByteCodeGenerator();
 			g.formatGrammar(grammar, null);
@@ -311,86 +268,113 @@ public class Main {
 		return new StringSource(InputString);
 	}
 	
+	private static int StatTimes = 10;
+	
 	public static void check() {
 		Grammar peg = newGrammar();
-		ParsingContext context = new ParsingContext(newParsingSource(peg));
-		boolean res = context.match(peg, StartingPoint, new MemoizationManager());
-		System.exit(res ? 0 : 1);
+		if(Logger == null) {
+			ParsingContext context = new ParsingContext(newParsingSource(peg));
+			boolean res = context.match(peg, StartingPoint, new MemoizationManager());
+			System.exit(res ? 0 : 1);
+		}
+		else {
+			ParsingContext context = null;
+			ParsingObject po = null;
+			long bestTime = Long.MAX_VALUE;
+			long t0 = System.currentTimeMillis();
+			for(int i = 0; i < StatTimes; i++) {
+				ParsingSource source = newParsingSource(peg);
+				context = new ParsingContext(source);
+				long t1 = System.currentTimeMillis();
+				context.setLogger(Logger);
+				context.match(peg, StartingPoint, new MemoizationManager());
+				long t2 = System.currentTimeMillis();
+				long t = t2 - t1;
+				Main.printVerbose("ErapsedTime", "" + t + "ms");
+				if(t < bestTime) {
+					bestTime = t;
+				}
+				if(t2 - t0 > 200000) {
+					break;
+				}
+			}
+			Logger.dump(bestTime, context, null);
+		}
 	}
 	
 	public static void parse() {
 		Grammar peg = newGrammar();
-		Main.printVerbose("Grammar", peg.getName());
-		Main.printVerbose("StartingPoint", StartingPoint);
-		ParsingContext context = new ParsingContext(newParsingSource(peg));
-		ParsingObject pego = context.parse(peg, StartingPoint, new MemoizationManager());
-		if(context.isFailure()) {
-			System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
-			System.out.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
-			if(Main.DebugLevel > 0) {
-				System.out.println(context.maximumFailureTrace);
+		if(Logger == null) {
+			ParsingContext context = new ParsingContext(newParsingSource(peg));
+			ParsingObject po = context.parse(peg, StartingPoint, new MemoizationManager());
+			if(context.isFailure()) {
+				System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
+				System.out.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
+				if(Main.DebugLevel > 0) {
+					System.out.println(context.maximumFailureTrace);
+				}
+				return;
 			}
-			return;
-		}
-		if(context.hasByteChar()) {
-			System.out.println(context.source.formatPositionLine("unconsumed", context.pos, ""));
-			System.out.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
-			if(Main.DebugLevel > 0) {
-				System.out.println(context.maximumFailureTrace);
+			if(context.hasByteChar()) {
+				System.out.println(context.source.formatPositionLine("unconsumed", context.pos, ""));
+				System.out.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
+				if(Main.DebugLevel > 0) {
+					System.out.println(context.maximumFailureTrace);
+				}
 			}
-		}
-		if (OutputType == null) {
-			OutputType = "";
-		}
-		if(OutputType.equals("sjs")){
-			KSourceGenerator generator = new SweetJSGenerator();
-			generator.visit(pego);
-			System.out.println(generator.toString());
-		}
-		else if(OutputType.equalsIgnoreCase("stat")) {
-			parse_stat();
-			return;
-		}
-		else if(OutputType.equalsIgnoreCase("tag")) {
-			outputMap(pego);
-			return;
-		}
-		else if(OutputType.equalsIgnoreCase("pego")) {
-			new Generator(OutputFileName).writePego(pego);
-		}
-		else if(OutputType.equalsIgnoreCase("json")) {
-			new Generator(OutputFileName).writeJSON(pego);
-		}
-		else if(OutputType.equalsIgnoreCase("csv")) {
-			new Generator(OutputFileName).writeCommaSeparateValue(pego, 0.9);
-		}
-		else{
-			outputMap(pego);
-			return;
-		}
-	}
-
-	private static void outputMap(ParsingObject po) {
-		TreeMap<String,Integer> m = new TreeMap<String,Integer>();
-		tagCount(po, m);
-		for(String k : m.keySet()) {
-			System.out.print("#" + k + ":" + m.get(k));
-		}
-		System.out.println("");
-	}
-
-	private static void tagCount(ParsingObject po, TreeMap<String,Integer> m) {
-		for(int i = 0; i < po.size(); i++) {
-			tagCount(po.get(i), m);
-		}
-		String key = po.getTag().toString();
-		Integer n = m.get(key);
-		if(n == null) {
-			m.put(key, 1);
+			new Generator(OutputFileName).writePego(po);
 		}
 		else {
-			m.put(key, n+1);
+			ParsingContext context = null;
+			ParsingObject po = null;
+			long bestTime = Long.MAX_VALUE;
+			long t0 = System.currentTimeMillis();
+			for(int i = 0; i < StatTimes; i++) {
+				ParsingSource source = newParsingSource(peg);
+				context = new ParsingContext(source);
+				long t1 = System.currentTimeMillis();
+				context.setLogger(Logger);
+				po = context.parse(peg, StartingPoint, new MemoizationManager());
+				long t2 = System.currentTimeMillis();
+				long t = t2 - t1;
+				Main.printVerbose("ErapsedTime", "" + t + "ms");
+				if(t < bestTime) {
+					bestTime = t;
+				}
+				if(t2 - t0 > 200000) {
+					break;
+				}
+			}
+			Logger.dump(bestTime, context, po);
 		}
+//		if (OutputType == null) {
+//			OutputType = "";
+//		}
+//		if(OutputType.equals("sjs")){
+//			KSourceGenerator generator = new SweetJSGenerator();
+//			generator.visit(pego);
+//			System.out.println(generator.toString());
+//		}
+//		else if(OutputType.equalsIgnoreCase("stat")) {
+//			parse_stat();
+//			return;
+//		}
+//		else if(OutputType.equalsIgnoreCase("tag")) {
+//			outputMap(pego);
+//			return;
+//		}
+//		else if(OutputType.equalsIgnoreCase("pego")) {
+//		}
+//		else if(OutputType.equalsIgnoreCase("json")) {
+//			new Generator(OutputFileName).writeJSON(pego);
+//		}
+//		else if(OutputType.equalsIgnoreCase("csv")) {
+//			new Generator(OutputFileName).writeCommaSeparateValue(pego, 0.9);
+//		}
+//		else{
+//			outputMap(pego);
+//			return;
+//		}
 	}
 
 	public static void rel() {
@@ -400,60 +384,6 @@ public class Main {
 		RelationBuilder RBuilder = new RelationBuilder(pego);
 		RBuilder.build(InferRelation);
 	}
-
-	private static int StatTimes = 10;
-	public static void parse_stat() {
-		Grammar peg = newGrammar();
-		ParsingContext context = null;
-		ParsingObject po = null;
-		long bestTime = Long.MAX_VALUE;
-		ParsingStatistics stat = null;
-		for(int i = 0; i < StatTimes; i++) {
-			ParsingSource source = newParsingSource(peg);
-			context = new ParsingContext(source);
-			stat = new ParsingStatistics(peg, source);
-			context.initStat(stat);
-			po = context.parse(peg, StartingPoint, new MemoizationManager());
-			long t = stat.end();
-			Main.printVerbose("ErapsedTime", "" + t + "ms");
-			if(t < bestTime) {
-				bestTime = t;
-			}
-			if(t > 200000) {
-				break;
-			}
-		}
-		stat.ErapsedTime = bestTime;
-		stat.end(po, context);
-		outputMap(po);
-	}
-
-	public static void check_stat() {
-		Grammar peg = newGrammar();
-		ParsingContext context = null;
-		ParsingObject po = null;
-		long bestTime = Long.MAX_VALUE;
-		ParsingStatistics stat = null;
-		for(int i = 0; i < StatTimes; i++) {
-			ParsingSource source = newParsingSource(peg);
-			context = new ParsingContext(source);
-			stat = new ParsingStatistics(peg, source);
-			context.initStat(stat);
-			context.match(peg, StartingPoint, new MemoizationManager());
-			long t = stat.end();
-			Main.printVerbose("ErapsedTime", "" + t + "ms");
-			if(t < bestTime) {
-				bestTime = t;
-			}
-			if(t > 200000) {
-				break;
-			}
-		}
-		stat.ErapsedTime = bestTime;
-		stat.end(po, context);
-	}
-
-	
 	
 	private final static void displayShellVersion(Grammar peg) {
 		Main._PrintLine(ProgName + "-" + Version + " (" + CodeName + ") on " + Main._GetPlatform());

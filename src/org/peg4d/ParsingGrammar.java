@@ -34,7 +34,7 @@ public class ParsingGrammar extends Grammar {
 				}
 			}
 		}
-		this.verifyRules();
+		this.verifyRules(null);
 	}
 
 	protected final ParsingExpression P(String ruleName) {

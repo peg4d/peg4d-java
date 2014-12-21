@@ -17,7 +17,7 @@ public abstract class ParsingSource {
 
 	private String     fileName;
 	protected long     startLineNum = 1;
-	ParsingStatistics  stat = null;
+	NezLogger  stat = null;
 	
 	public ParsingSource(String fileName, long linenum) {
 		this.fileName = fileName;
@@ -525,9 +525,9 @@ class FileSource extends ParsingSource {
 			for(int i = readsize; i < b.length; i++) {
 				b[i] = 0;
 			}
-			if(this.stat != null) {
-				stat.readFile(b.length);
-			}
+//			if(this.stat != null) {
+//				stat.readFile(b.length);
+//			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

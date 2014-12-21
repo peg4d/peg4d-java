@@ -5,16 +5,16 @@ import java.util.TreeMap;
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.Optimizer;
 import org.peg4d.expression.ParsingChoice;
+import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.model.ParsingModel;
 import org.peg4d.pegcode.GrammarFormatter;
 import org.peg4d.pegcode.PEG4dFormatter;
 
 public class Grammar {
-	
-	GrammarFactory      factory;
-	String              name;
-	public UList<String>       nameList;
+	GrammarFactory       factory;
+	String               name;
+	public UList<String> nameList;
 	UMap<ParsingRule>    ruleMap;
 
 	UList<ParsingRule>   exportedRuleList;
@@ -43,7 +43,7 @@ public class Grammar {
 		return new NonTerminal(this, symbol);
 	}
 	
-	final boolean loadGrammarFile(String fileName) {
+	final boolean loadGrammarFile(String fileName, NezLogger stats) {
 		Grammar peg4d = GrammarFactory.Grammar;
 		ParsingSource s = ParsingSource.loadSource(fileName);
 		ParsingContext context = new ParsingContext(s); //peg4d.newParserContext();
@@ -63,7 +63,7 @@ public class Grammar {
 				return false;
 			}
 		}
-		this.verifyRules();
+		this.verifyRules(stats);
 		return this.foundError;
 	}
 		
@@ -164,29 +164,38 @@ public class Grammar {
 		return pegList;
 	}
 
-	public final void verifyRules() {
+	public final void verifyRules(NezLogger stats) {
 		this.foundError = false;
 		this.exportedRuleList = null;
 		this.getExportRuleList();
+		if(stats != null) {
+			stats.setText("PEG", this.getName());
+			stats.setCount("PEG.NonTerminal", nameList.size());
+		}
 		UList<String> stack = new UList<String>(new String[64]);
-		UMap<String> flagMap = new UMap<String>();
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
 			String uName = rule.getUniqueName();
 			stack.clear(0);
 			stack.add(uName);
 			rule.minlen = rule.expr.checkLength(uName, 0, 0, stack);
-			//ParsingExpression.checkLeftRecursion(rule.expr, uName, 0, 0, stack);
 		}
 		if(this.foundError) {
 			Main._Exit(1, "PegError found");
 		}
+		if(stats != null) {
+			stats.setCount("PEG.Rules", nameList.size());
+		}
+
+		// type check
+		UMap<String> flagMap = new UMap<String>();
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
 			ParsingExpression.typeCheck(rule, flagMap);
 			rule.expr = rule.expr.uniquefy();
 			//ParsingExpression.dumpId(rule.ruleName+ " ", rule.expr);
 		}
+
 		int size = nameList.size();
 		TreeMap<String,String> withoutMap = new TreeMap<String,String>();
 		for(int i = 0; i < size; i++) {
@@ -203,6 +212,22 @@ public class Grammar {
 				rule.expr = e;
 			}
 		}
+		if(stats != null) {
+			stats.setCount("PEG.NormalizedRules", nameList.size());
+			int count = 0;
+			for(int i = 0; i < nameList.size(); i++) {
+				ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
+				flagMap.clear();
+				if(ParsingDef.checkContextSensitivity(rule.expr, flagMap)) {
+					count+=1;
+				}
+			}
+			stats.setCount("PEG.ContextSensitiveRules", count);
+			stats.setRatio("PEG.ContextSensitivity", count, nameList.size());
+		}
+
+
+		
 		new Optimizer().optimize(this);
 		ParsingContext context = new ParsingContext(null);
 		for(int i = 0; i < nameList.size(); i++) {

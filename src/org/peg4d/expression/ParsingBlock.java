@@ -21,10 +21,12 @@ public class ParsingBlock extends ParsingFunction {
 
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
+		int stateValue = context.stateValue;
 		String indent = context.source.getIndentText(context.pos);
 		int stackTop = context.pushSymbolTable(PEG4d.Indent, indent);
 		boolean b = this.inner.matcher.simpleMatch(context);
 		context.popSymbolTable(stackTop);
+		context.stateValue = stateValue;
 		return b;
 	}
 	@Override

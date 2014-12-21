@@ -9,13 +9,13 @@ import org.peg4d.expression.ParsingMatcher;
 
 public class ParsingContext {
 	public ParsingSource source;
-	ParsingStatistics    stat   = null;
+	NezLogger    stat   = null;
 	
 	public ParsingContext(ParsingSource s, long pos, int stacksize, MemoTable memo) {
 		this.left = null;
 		this.source = s;
 		this.resetSource(s, pos);
-		this.memoMap = memo != null ? memo : new NoMemoTable(0, 0);
+		this.memoTable = memo != null ? memo : new NoMemoTable(0, 0);
 	}
 
 	public ParsingContext(ParsingSource s) {
@@ -244,11 +244,15 @@ public class ParsingContext {
 		}
 	}
 	
+	public int stateValue = 0;
+	private int stateCount = 0;
 	private UList<SymbolTableEntry> stackedSymbolTable = new UList<SymbolTableEntry>(new SymbolTableEntry[4]);
 	
 	public final int pushSymbolTable(int tableType, String s) {
 		int stackTop = this.stackedSymbolTable.size();
 		this.stackedSymbolTable.add(new SymbolTableEntry(tableType, s));
+		this.stateCount += 1;
+		this.stateValue = stateCount;
 		return stackTop;
 	}
 
@@ -397,16 +401,10 @@ public class ParsingContext {
 		return res;
 	}
 	
-	public final void initStat(ParsingStatistics stat) {
+	public final void setLogger(NezLogger stat) {
 		this.stat = stat;
 		if(stat != null) {
-			this.stat.start();
-		}
-	}
-
-	public final void recordStat(ParsingObject pego) {
-		if(stat != null) {
-			stat.end(pego, this);
+			stat.init();
 		}
 	}
 
@@ -463,20 +461,28 @@ public class ParsingContext {
 		this.stackedNonTerminals.clear(stacktop);
 	}
  		
-	protected MemoTable memoMap = null;
+	protected MemoTable memoTable = null;
 
 	public void initMemo(MemoizationManager conf) {
-		this.memoMap = (conf == null) ? new NoMemoTable(0, 0) : conf.newTable(this.source.length());
+		this.memoTable = (conf == null) ? new NoMemoTable(0, 0) : conf.newTable(this.source.length());
 	}
 
 	final MemoEntry getMemo(long keypos, int memoPoint) {
-		return this.memoMap.getMemo(keypos, memoPoint);
+		return this.memoTable.getMemo(keypos, memoPoint);
 	}
 
 	final void setMemo(long keypos, int memoPoint, ParsingObject result, int length) {
-		this.memoMap.setMemo(keypos, memoPoint, result, length);
+		this.memoTable.setMemo(keypos, memoPoint, result, length);
 	}
 
+	final MemoEntry getMemo2(long keypos, int memoPoint, int stateValue) {
+		return this.memoTable.getMemo2(keypos, memoPoint, stateValue);
+	}
+
+	final void setMemo2(long keypos, int memoPoint, int stateValue, ParsingObject result, int length) {
+		this.memoTable.setMemo2(keypos, memoPoint, stateValue, result, length);
+	}
+	
 	private HashMap<String,Boolean> flagMap = new HashMap<String,Boolean>();
 	
 	public final void setFlag(String flagName, boolean flag) {
@@ -490,6 +496,7 @@ public class ParsingContext {
 	public final boolean isFlag(Boolean f) {
 		return f == null || f.booleanValue();
 	}
+
 		
 }
 

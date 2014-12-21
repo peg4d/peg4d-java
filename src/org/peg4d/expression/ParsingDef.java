@@ -19,7 +19,7 @@ public class ParsingDef extends ParsingFunction {
 		if(e == inner) {
 			return this;
 		}
-		return ParsingExpression.newName(tableId, e);
+		return ParsingExpression.newDef(tableId, e);
 	}
 
 	@Override

@@ -717,7 +717,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return new ParsingPermutation(l);
 	}
 
-	public static ParsingExpression newName(int tagId, ParsingExpression e) {
+	public static ParsingExpression newDef(int tagId, ParsingExpression e) {
 		return checkUnique(new ParsingDef(tagId, e), e.isUnique());
 	}
 

@@ -320,7 +320,12 @@ public class PEG4d extends ParsingBuilder {
 
 	public ParsingExpression toName(ParsingObject po) {
 		int tagId = ParsingTag.tagId(po.textAt(0, ""));
-		return ParsingExpression.newName(tagId, toParsingExpression(po.get(1)));
+		return ParsingExpression.newDef(tagId, toParsingExpression(po.get(1)));
+	}
+
+	public ParsingExpression toDef(ParsingObject po) {
+		int tagId = ParsingTag.tagId(po.textAt(0, ""));
+		return ParsingExpression.newDef(tagId, toParsingExpression(po.get(1)));
 	}
 
 	public ParsingExpression toIs(ParsingObject po) {
