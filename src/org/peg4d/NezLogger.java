@@ -500,6 +500,7 @@ class NezLogger {
 		this.CSV(sb, "MemoUsed");
 		this.CSV(sb, "MemoConflicted");
 		this.CSV(sb, "Used/Stored");
+		this.CSV(sb, "Conflicted/Stored");
 		this.CSV(sb, "UnusedNonTerminal");
 		this.CSV(sb, "DeactivatedNonTerminal");
 

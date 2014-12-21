@@ -590,6 +590,7 @@ abstract class MemoTable {
 		stat.setCount("MemoConflicted",  this.MemoStateConflicted);
 		stat.setCount("MemoStored",  this.MemoStored);
 		stat.setRatio("Used/Stored", this.MemoUsed, this.MemoStored);
+		stat.setRatio("Conflicted/Stored", this.MemoStateConflicted, this.MemoStored);
 		stat.setRatio("HitRatio",    this.MemoUsed, this.MemoMissed);
 	}
 }

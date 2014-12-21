@@ -155,7 +155,6 @@ public class Main {
 				if(argument.endsWith(".csv")) {
 					logFile = argument.substring(6);
 				}
-				System.out.println(logFile);
 				Logger = new NezLogger(logFile);
 			}
 			else if(argument.startsWith("--verbose")) {
