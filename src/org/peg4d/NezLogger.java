@@ -420,10 +420,15 @@ class NezLogger {
 		long total = Runtime.getRuntime().totalMemory();
 		long free =  Runtime.getRuntime().freeMemory();
 		long consumed = p.getPosition();
-		
 		this.setText("FileName", fileName);
+		if(p.source.length() == consumed) {
+			this.setText("Recognition", "(Success)");
+		}
+		else {
+			this.setText("Recognition", "(Failure)");
+		}
 		this.setCount1("FileSize", p.source.length());
-		this.setCount1("ConsumedSize", consumed);
+		this.setCount1("Consumed", consumed);
 		this.setCount("Latency", ErapsedTime);  // ms
 		this.setRatio("Throughput", consumed, ErapsedTime);
 
@@ -472,7 +477,9 @@ class NezLogger {
 		
 		/** **/
 		this.CSV(sb, "FileName");
+		this.CSV(sb, "Recognition");
 		this.CSV(sb, "FileSize");
+		this.CSV(sb, "Consumed");
 		this.CSV(sb, "Latency");
 		this.CSV(sb, "Throughput");
 		this.CSV(sb, "UsedHeap");
