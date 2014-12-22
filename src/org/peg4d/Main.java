@@ -7,6 +7,8 @@ import java.lang.reflect.Method;
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.ext.Generator;
 import org.peg4d.jvm.JavaByteCodeGenerator;
+import org.peg4d.konoha.KSourceGenerator;
+import org.peg4d.konoha.SweetJSGenerator;
 import org.peg4d.pegcode.GrammarFormatter;
 
 public class Main {
@@ -306,20 +308,9 @@ public class Main {
 		if(Logger == null) {
 			ParsingContext context = new ParsingContext(newParsingSource(peg));
 			ParsingObject po = context.parse(peg, StartingPoint, new MemoizationManager());
-			if(context.isFailure()) {
-				System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
-				System.out.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
-				if(Main.DebugLevel > 0) {
-					System.out.println(context.maximumFailureTrace);
-				}
+			printError(context);
+			if (context.isFailure()) {
 				return;
-			}
-			if(context.hasByteChar()) {
-				System.out.println(context.source.formatPositionLine("unconsumed", context.pos, ""));
-				System.out.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
-				if(Main.DebugLevel > 0) {
-					System.out.println(context.maximumFailureTrace);
-				}
 			}
 			new Generator(OutputFileName).writePego(po);
 		}
@@ -346,34 +337,39 @@ public class Main {
 			}
 			Logger.dump(bestTime, context, po);
 		}
-//		if (OutputType == null) {
-//			OutputType = "";
-//		}
-//		if(OutputType.equals("sjs")){
-//			KSourceGenerator generator = new SweetJSGenerator();
-//			generator.visit(pego);
-//			System.out.println(generator.toString());
-//		}
-//		else if(OutputType.equalsIgnoreCase("stat")) {
-//			parse_stat();
-//			return;
-//		}
-//		else if(OutputType.equalsIgnoreCase("tag")) {
-//			outputMap(pego);
-//			return;
-//		}
-//		else if(OutputType.equalsIgnoreCase("pego")) {
-//		}
-//		else if(OutputType.equalsIgnoreCase("json")) {
-//			new Generator(OutputFileName).writeJSON(pego);
-//		}
-//		else if(OutputType.equalsIgnoreCase("csv")) {
-//			new Generator(OutputFileName).writeCommaSeparateValue(pego, 0.9);
-//		}
-//		else{
-//			outputMap(pego);
-//			return;
-//		}
+	}
+	
+	private static void printError(ParsingContext context){
+		if (context.isFailure()) {
+			System.err.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
+			System.err.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
+			if (Main.DebugLevel > 0) {
+				System.err.println(context.maximumFailureTrace);
+			}
+			return;
+		}
+		if (context.hasByteChar()) {
+			System.err.println(context.source.formatPositionLine("unconsumed", context.pos, ""));
+			System.err.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
+			if (Main.DebugLevel > 0) {
+				System.err.println(context.maximumFailureTrace);
+			}
+		}	
+	}
+	
+	public static void transpile() {
+		Grammar peg = newGrammar();
+		ParsingContext context = new ParsingContext(newParsingSource(peg));
+		ParsingObject po = context.parse(peg, StartingPoint, new MemoizationManager());
+		printError(context);
+		if (context.isFailure()) {
+			return;
+		} 
+		if (OutputType.equals("sjs")) {
+			KSourceGenerator generator = new SweetJSGenerator();
+			generator.visit(po);
+			System.out.println(generator.toString());
+		}
 	}
 
 	public static void rel() {
