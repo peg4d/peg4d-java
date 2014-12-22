@@ -1,5 +1,8 @@
 package org.peg4d.konoha;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.swing.text.html.HTML.Tag;
 import javax.xml.soap.Node;
 
@@ -155,7 +158,7 @@ public class SweetJSGenerator extends KSourceGenerator {
 		generateExpression(node.get(2));
 	}
 	
-	protected void generateList(ParsingObject node, String delim){
+	protected void generateList(List<ParsingObject> node, String delim){
 		boolean isFirst = true;
 		for(ParsingObject element : node){
 			if(!isFirst){
@@ -167,7 +170,7 @@ public class SweetJSGenerator extends KSourceGenerator {
 		}
 	}
 	
-	protected void generateList(ParsingObject node, String begin, String delim, String end){
+	protected void generateList(List<ParsingObject> node, String begin, String delim, String end){
 		this.currentBuilder.append(begin);
 		this.generateList(node, delim);
 		this.currentBuilder.append(end);
@@ -926,7 +929,35 @@ public class SweetJSGenerator extends KSourceGenerator {
 			this.generateList(node, ", ");
 			this.currentBuilder.append(")");
 		}else{
-			
+			List<ParsingObject> arrayStyleMember = new ArrayList<ParsingObject>();
+			List<ParsingObject> setterStyleMember = new ArrayList<ParsingObject>();
+			List<ParsingObject> dictionaryStyleMember = new ArrayList<ParsingObject>();
+			for (ParsingObject subnode : node) {
+				if(subnode.is(MillionTag.TAG_TABLE_PROPERTY)){
+					dictionaryStyleMember.add(subnode);
+				}else if(subnode.is(MillionTag.TAG_TABLE_SETTER_APPLY)){
+					setterStyleMember.add(subnode);
+				}else{
+					arrayStyleMember.add(subnode);
+				}
+			}
+			this.currentBuilder.append("(function(){");
+			this.currentBuilder.indent();
+			this.currentBuilder.appendNewLine("var ret = __unpack(");
+			this.generateList(arrayStyleMember, ", ");
+			this.currentBuilder.append(");");
+			for (ParsingObject setter : setterStyleMember) {
+				this.currentBuilder.appendNewLine("ret[");
+				this.visit(setter.get(0));
+				this.visit(setter.get(1), "] = ", ";");
+			}
+			for (ParsingObject item : dictionaryStyleMember) {
+				this.currentBuilder.appendNewLine("ret['");
+				this.visit(item.get(0));
+				this.visit(item.get(1), "'] = ", ";");
+			}
+			this.currentBuilder.appendNewLine("return ret; })()");
+			this.currentBuilder.unIndent();
 		}
 	}
 	
