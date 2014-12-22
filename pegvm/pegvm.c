@@ -129,17 +129,9 @@ PegVMInstruction *loadByteCodeFile(ParsingContext context,
     code_length = (uint8_t)buf[info.pos++];
     code_length = (code_length) | ((uint8_t)buf[info.pos++] << 8);
     if (code_length != 0) {
-      inst[i].ndata = malloc(sizeof(int) * (code_length + 1));
-      inst[i].ndata[0] = code_length;
       if (code_length == 1) {
-        if (inst[i].opcode == PEGVM_OP_CALL) {
-          int ndata = buf[info.pos++];
-          inst[i].ndata = malloc(sizeof(int));
-          inst[i].ndata[0] = ndata;
-        } else {
-          inst[i].ndata = malloc(sizeof(int));
-          inst[i].ndata[0] = read32(buf, &info);
-        }
+        inst[i].ndata = malloc(sizeof(int));
+        inst[i].ndata[0] = read32(buf, &info);
       } else if (inst[i].opcode == PEGVM_OP_MAPPEDCHOICE) {
         inst[i].ndata = malloc(sizeof(int) * code_length);
         while (j < code_length) {
@@ -341,14 +333,42 @@ static uint64_t rule_count[100];
 
 static const char *get_json_rule(uint8_t json_rule) {
   switch (json_rule) {
-#define JSON_CASE(RULE)           \
+#define json_CASE(RULE)           \
   case PEGVM_PROFILE_json_##RULE: \
     return "" #RULE;
-    PEGVM_PROFILE_json_EACH(JSON_CASE);
+    PEGVM_PROFILE_json_EACH(json_CASE);
   default:
     assert(0 && "UNREACHABLE");
     break;
-#undef OP_DUMPCASE
+#undef json_CASE
+  }
+  return "";
+}
+
+static const char *get_xml_rule(uint8_t xml_rule) {
+  switch (xml_rule) {
+#define xml_CASE(RULE)           \
+  case PEGVM_PROFILE_xml_##RULE: \
+    return "" #RULE;
+    PEGVM_PROFILE_xml_EACH(xml_CASE);
+  default:
+    assert(0 && "UNREACHABLE");
+    break;
+#undef xml_CASE
+  }
+  return "";
+}
+
+static const char *get_c99_rule(uint8_t c99_rule) {
+  switch (c99_rule) {
+#define c99_CASE(RULE)           \
+  case PEGVM_PROFILE_c99_##RULE: \
+    return "" #RULE;
+    PEGVM_PROFILE_c99_EACH(c99_CASE);
+  default:
+    assert(0 && "UNREACHABLE");
+    break;
+#undef c99_CASE
   }
   return "";
 }
@@ -356,7 +376,7 @@ static const char *get_json_rule(uint8_t json_rule) {
 void PegVM_PrintProfile(const char *file_type) {
 #if PEGVM_PROFILE
   fprintf(stderr, "\ninstruction count \n");
-  for (int i = 0; i < PEGVM_OP_MAX; i++) {
+  for (int i = 0; i < PEGVM_PROFILE_MAX; i++) {
     fprintf(stderr, "%llu %s\n", count[i], get_opname(i));
     // fprintf(stderr, "%s: %llu (%0.2f%%)\n", get_opname(i), count[i],
     // (double)count[i]*100/(double)count_all);
@@ -367,36 +387,39 @@ void PegVM_PrintProfile(const char *file_type) {
     assert(0 && "can not open file");
   }
   fprintf(file, ",");
-  for (int i = 0; i < PEGVM_OP_MAX; i++) {
+  for (int i = 0; i < PEGVM_PROFILE_MAX; i++) {
     fprintf(file, "%s", get_opname(i));
-    if (i != PEGVM_OP_MAX - 1) {
+    if (i != PEGVM_PROFILE_MAX - 1) {
       fprintf(file, ",");
     }
   }
-  for (int i = 0; i < PEGVM_OP_MAX; i++) {
+  for (int i = 0; i < PEGVM_PROFILE_MAX; i++) {
     fprintf(file, "%s,", get_opname(i));
-    for (int j = 0; j < PEGVM_OP_MAX; j++) {
+    for (int j = 0; j < PEGVM_PROFILE_MAX; j++) {
       fprintf(file, "%llu", conbination_count[i][j]);
-      if (j != PEGVM_OP_MAX - 1) {
+      if (j != PEGVM_PROFILE_MAX - 1) {
         fprintf(file, ",");
       }
     }
     fprintf(file, "\n");
   }
-  fprintf(stderr, "\nrule_count\n");
-  for (int i = 0; i < 21; i++) {
+  fclose(file);
+  if (file_type) {
+    fprintf(stderr, "\nrule_count\n");
     if (!strcmp(file_type, "json")) {
-      fprintf(stderr, "%llu %s\n", rule_count[i], get_json_rule(i));
+      for (int i = 0; i < PEGVM_json_RULE_MAX; i++) {
+        fprintf(stderr, "%llu %s\n", rule_count[i], get_json_rule(i));
+      }
+    } else if (!strcmp(file_type, "xml")) {
+      for (int i = 0; i < PEGVM_xml_RULE_MAX; i++) {
+        fprintf(stderr, "%llu %s\n", rule_count[i], get_xml_rule(i));
+      }
+    } else if (!strcmp(file_type, "c99")) {
+      for (int i = 0; i < PEGVM_c99_RULE_MAX; i++) {
+        fprintf(stderr, "%llu %s\n", rule_count[i], get_c99_rule(i));
+      }
     }
   }
-  //  for (int i = 0; i < PEGVM_OP_MAX; i++) {
-  //    for (int j = 0; j < PEGVM_OP_MAX; j++) {
-  //      fprintf(stderr, "%llu %s_%s\n", conbination_count[i][j],
-  // get_opname(i),
-  //              get_opname(j));
-  //    }
-  //  }
-  fclose(file);
 #endif
 }
 

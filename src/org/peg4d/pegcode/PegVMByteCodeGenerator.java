@@ -119,7 +119,13 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 				byteCode[pos] = 0;
 				pos++;
 				int ndata = ruleMap.get(code.name);
-				byteCode[pos] = (byte) ndata;
+				byteCode[pos] = (byte) (0x000000ff & (ndata));
+				pos++;
+				byteCode[pos] = (byte) (0x000000ff & (ndata >> 8));
+				pos++;
+				byteCode[pos] = (byte) (0x000000ff & (ndata >> 16));
+				pos++;
+				byteCode[pos] = (byte) (0x000000ff & (ndata >> 24));
 				pos++;
 			}
 			else if (code.ndata != null) {
@@ -208,9 +214,11 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		grammerName = grammerName.substring(0, grammerName.length() - 4);
 		System.out.println("#define PEGVM_PROFILE_" + grammerName + "_EACH(RULE) \\");
 		for(ParsingRule r: peg.getRuleList()) {
-			ruleMap.put(r.ruleName, count);
-			System.out.println("  RULE("+ r.ruleName + ") \\");
-			count++;
+			if (!r.ruleName.startsWith("\"")) {
+				ruleMap.put(r.ruleName, count);
+				System.out.println("  RULE("+ r.ruleName + ") \\");
+				count++;
+			}
 		}
 		System.out.println("#define PEGVM_" + grammerName + "_RULE_MAX " + count);
 		System.out.println("enum pegvm_" + grammerName + "_rule {");
@@ -219,6 +227,21 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		System.out.println("#undef DEFINE_" + grammerName + "_ENUM");
 		System.out.println("  PROFILE_" + grammerName + "_ERROR = -1");
 		System.out.println("};");
+		System.out.println("\nif (!strcmp(file_type, \"" + grammerName + "\")) {");
+		System.out.println("  for (int i = 0; i < PEGVM_" + grammerName + "_RULE_MAX; i++) {");
+		System.out.println("    fprintf(stderr, \"%llu %s\\n\", rule_count[i], get_" + grammerName + "_rule(i));");
+		System.out.println("  }\n}");
+		System.out.println("\nstatic const char *get_" + grammerName + "_rule(uint8_t " + grammerName + "_rule) {");
+		System.out.println("  switch (" + grammerName + "_rule) {");
+		System.out.println("#define " + grammerName + "_CASE(RULE)           \\");
+		System.out.println("  case PEGVM_PROFILE_" + grammerName + "_##RULE: \\");
+		System.out.println("    return \"\" #RULE;");
+		System.out.println("    PEGVM_PROFILE_" + grammerName + "_EACH(" + grammerName + "_CASE);");
+		System.out.println("  default:");
+		System.out.println("    assert(0 && \"UNREACHABLE\");");
+		System.out.println("    break;");
+		System.out.println("#undef " + grammerName + "_CASE");
+		System.out.println("  }\n  return \"\";\n}");
 	}
 	
 	private Opcode newCode(Instruction inst) {
