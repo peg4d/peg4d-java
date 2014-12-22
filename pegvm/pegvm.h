@@ -49,6 +49,21 @@ enum pegvm_opcode {
   PEGVM_OP_ERROR = -1
 };
 
+#define PEGVM_PROFILE_json_EACH(RULE)                                        \
+  RULE(export) RULE(S) RULE(File) RULE(Chunk) RULE(JSONObject) RULE(String)  \
+      RULE(Member) RULE(Value) RULE(ObjectId) RULE(ID) RULE(Array) RULE(INT) \
+      RULE(Number) RULE(True) RULE(False) RULE(Null) RULE(NAMESEP)           \
+      RULE(VALUESEP) RULE(DIGIT) RULE(FRAC) RULE(EXP)
+
+#define PEGVM_json_RULE_MAX 21
+
+enum pegvm_json_rule {
+#define DEFINE_json_ENUM(NAME) PEGVM_PROFILE_json_##NAME,
+  PEGVM_PROFILE_json_EACH(DEFINE_json_ENUM)
+#undef DEFINE_json_ENUM
+  PROFILE_json_ERROR = -1
+};
+
 PegVMInstruction *loadByteCodeFile(ParsingContext context,
                                    PegVMInstruction *inst,
                                    const char *fileName);

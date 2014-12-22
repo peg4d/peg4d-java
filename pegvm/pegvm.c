@@ -133,7 +133,7 @@ PegVMInstruction *loadByteCodeFile(ParsingContext context,
       inst[i].ndata[0] = code_length;
       if (code_length == 1) {
         if (inst[i].opcode == PEGVM_OP_CALL) {
-          int ndata = read32(buf, &info);
+          int ndata = buf[info.pos++];
           inst[i].ndata = malloc(sizeof(int));
           inst[i].ndata[0] = ndata;
         } else {
@@ -339,8 +339,23 @@ static uint64_t rule_count[100];
   goto *(pc)->ptr;
 #endif
 
-void PegVM_PrintProfile() {
+static const char *get_json_rule(uint8_t json_rule) {
+  switch (json_rule) {
+#define JSON_CASE(RULE)           \
+  case PEGVM_PROFILE_json_##RULE: \
+    return "" #RULE;
+    PEGVM_PROFILE_json_EACH(JSON_CASE);
+  default:
+    assert(0 && "UNREACHABLE");
+    break;
+#undef OP_DUMPCASE
+  }
+  return "";
+}
+
+void PegVM_PrintProfile(const char *file_type) {
 #if PEGVM_PROFILE
+  fprintf(stderr, "\ninstruction count \n");
   for (int i = 0; i < PEGVM_OP_MAX; i++) {
     fprintf(stderr, "%llu %s\n", count[i], get_opname(i));
     // fprintf(stderr, "%s: %llu (%0.2f%%)\n", get_opname(i), count[i],
@@ -368,8 +383,11 @@ void PegVM_PrintProfile() {
     }
     fprintf(file, "\n");
   }
-  for (int i = 0; i < 100; i++) {
-    fprintf(stderr, "%llu %d\n", rule_count[i], i);
+  fprintf(stderr, "\nrule_count\n");
+  for (int i = 0; i < 21; i++) {
+    if (!strcmp(file_type, "json")) {
+      fprintf(stderr, "%llu %s\n", rule_count[i], get_json_rule(i));
+    }
   }
   //  for (int i = 0; i < PEGVM_OP_MAX; i++) {
   //    for (int j = 0; j < PEGVM_OP_MAX; j++) {

@@ -60,11 +60,10 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 	UList<Opcode> optimizedCodeList = new UList<Opcode>(new Opcode[256]);
 	HashMap<Integer,Integer> labelMap = new HashMap<Integer,Integer>();
 	HashMap<String, Integer> callMap = new HashMap<String, Integer>();
+	HashMap<String, Integer> ruleMap = new HashMap<String, Integer>();
 	
 	public void writeByteCode(String grammerfileName, String outputFileName, Grammar peg) {
-		for(ParsingRule r: peg.getRuleList()) {
-			System.out.println(r.ruleName + ": " + peg.nameList.indexOf(r.ruleName));
-		}
+		generateProfileCode(peg);
 		//System.out.println("choiceCase: " + choiceCaseCount + "\nconstructor: " + constructorCount);
 		byte[] byteCode = new byte[codeList.size() * 64];
 		int pos = 0;
@@ -115,17 +114,12 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 			byteCode[pos] = (byte) code.inst.ordinal();
 			pos++;
 			if (code.inst == Instruction.CALL) {
-				System.out.println("true");
 				byteCode[pos] = 1;
 				pos++;
-				int ndata = peg.nameList.indexOf(code.name);
-				byteCode[pos] = (byte) (0x000000ff & (ndata));
+				byteCode[pos] = 0;
 				pos++;
-				byteCode[pos] = (byte) (0x000000ff & (ndata >> 8));
-				pos++;
-				byteCode[pos] = (byte) (0x000000ff & (ndata >> 16));
-				pos++;
-				byteCode[pos] = (byte) (0x000000ff & (ndata >> 24));
+				int ndata = ruleMap.get(code.name);
+				byteCode[pos] = (byte) ndata;
 				pos++;
 			}
 			else if (code.ndata != null) {
@@ -206,6 +200,25 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} 
+	}
+	
+	private void generateProfileCode(Grammar peg) {
+		int count = 0;
+		String grammerName = peg.getName();
+		grammerName = grammerName.substring(0, grammerName.length() - 4);
+		System.out.println("#define PEGVM_PROFILE_" + grammerName + "_EACH(RULE) \\");
+		for(ParsingRule r: peg.getRuleList()) {
+			ruleMap.put(r.ruleName, count);
+			System.out.println("  RULE("+ r.ruleName + ") \\");
+			count++;
+		}
+		System.out.println("#define PEGVM_" + grammerName + "_RULE_MAX " + count);
+		System.out.println("enum pegvm_" + grammerName + "_rule {");
+		System.out.println("#define DEFINE_" + grammerName + "_ENUM(NAME) PEGVM_PROFILE_" + grammerName + "_##NAME,");
+		System.out.println("  PEGVM_PROFILE_" + grammerName + "_EACH(DEFINE_" + grammerName + "_ENUM)");
+		System.out.println("#undef DEFINE_" + grammerName + "_ENUM");
+		System.out.println("  PROFILE_" + grammerName + "_ERROR = -1");
+		System.out.println("};");
 	}
 	
 	private Opcode newCode(Instruction inst) {
@@ -771,7 +784,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 				switch (code.inst) {
 				case CALL:
 					code.jump = this.callMap.get(code.name);
-					code.name = null;
+					//code.name = null;
 					System.out.println("[" + i + "] " + code + " " + code.jump);
 					break;
 				case RET:
