@@ -129,8 +129,6 @@ PegVMInstruction *loadByteCodeFile(ParsingContext context,
     code_length = (uint8_t)buf[info.pos++];
     code_length = (code_length) | ((uint8_t)buf[info.pos++] << 8);
     if (code_length != 0) {
-      inst[i].ndata = malloc(sizeof(int) * (code_length + 1));
-      inst[i].ndata[0] = code_length;
       if (code_length == 1) {
         inst[i].ndata = malloc(sizeof(int));
         inst[i].ndata[0] = read32(buf, &info);
@@ -315,20 +313,112 @@ static inline Instruction **POP_IP(ParsingContext context) {
 
 #if PEGVM_PROFILE
 static uint64_t count[PEGVM_OP_MAX];
+static uint64_t conbination_count[PEGVM_OP_MAX][PEGVM_OP_MAX];
 static uint64_t count_all;
+static uint64_t rule_count[100];
+#define DISPATCH_NEXT                          \
+  int first = (int)pc->opcode;                 \
+  ++pc;                                        \
+  conbination_count[first][(int)pc->opcode]++; \
+  goto *(pc)->ptr;
 #define OP(OP)                            \
   PEGVM_OP_##OP : count[PEGVM_OP_##OP]++; \
   count_all++;
 #else
 #define OP(OP) PEGVM_OP_##OP:
+#define DISPATCH_NEXT \
+  ++pc;               \
+  goto *(pc)->ptr;
 #endif
 
-void PegVM_PrintProfile() {
+static const char *get_json_rule(uint8_t json_rule) {
+  switch (json_rule) {
+#define json_CASE(RULE)           \
+  case PEGVM_PROFILE_json_##RULE: \
+    return "" #RULE;
+    PEGVM_PROFILE_json_EACH(json_CASE);
+  default:
+    assert(0 && "UNREACHABLE");
+    break;
+#undef json_CASE
+  }
+  return "";
+}
+
+static const char *get_xml_rule(uint8_t xml_rule) {
+  switch (xml_rule) {
+#define xml_CASE(RULE)           \
+  case PEGVM_PROFILE_xml_##RULE: \
+    return "" #RULE;
+    PEGVM_PROFILE_xml_EACH(xml_CASE);
+  default:
+    assert(0 && "UNREACHABLE");
+    break;
+#undef xml_CASE
+  }
+  return "";
+}
+
+static const char *get_c99_rule(uint8_t c99_rule) {
+  switch (c99_rule) {
+#define c99_CASE(RULE)           \
+  case PEGVM_PROFILE_c99_##RULE: \
+    return "" #RULE;
+    PEGVM_PROFILE_c99_EACH(c99_CASE);
+  default:
+    assert(0 && "UNREACHABLE");
+    break;
+#undef c99_CASE
+  }
+  return "";
+}
+
+void PegVM_PrintProfile(const char *file_type) {
 #if PEGVM_PROFILE
-  for (int i = 0; i < PEGVM_OP_MAX; i++) {
+  fprintf(stderr, "\ninstruction count \n");
+  for (int i = 0; i < PEGVM_PROFILE_MAX; i++) {
     fprintf(stderr, "%llu %s\n", count[i], get_opname(i));
     // fprintf(stderr, "%s: %llu (%0.2f%%)\n", get_opname(i), count[i],
     // (double)count[i]*100/(double)count_all);
+  }
+  FILE *file;
+  file = fopen("pegvm_profile.csv", "w");
+  if (file == NULL) {
+    assert(0 && "can not open file");
+  }
+  fprintf(file, ",");
+  for (int i = 0; i < PEGVM_PROFILE_MAX; i++) {
+    fprintf(file, "%s", get_opname(i));
+    if (i != PEGVM_PROFILE_MAX - 1) {
+      fprintf(file, ",");
+    }
+  }
+  for (int i = 0; i < PEGVM_PROFILE_MAX; i++) {
+    fprintf(file, "%s,", get_opname(i));
+    for (int j = 0; j < PEGVM_PROFILE_MAX; j++) {
+      fprintf(file, "%llu", conbination_count[i][j]);
+      if (j != PEGVM_PROFILE_MAX - 1) {
+        fprintf(file, ",");
+      }
+    }
+    fprintf(file, "\n");
+  }
+  fclose(file);
+  if (file_type) {
+    fprintf(stderr, "\nrule_count\n");
+    if (!strcmp(file_type, "json")) {
+      for (int i = 0; i < PEGVM_json_RULE_MAX; i++) {
+        fprintf(stderr, "%llu %s\n", rule_count[i], get_json_rule(i));
+      }
+    } else if (!strcmp(file_type, "xml")) {
+      for (int i = 0; i < PEGVM_xml_RULE_MAX; i++) {
+        fprintf(stderr, "%llu %s\n", rule_count[i], get_xml_rule(i));
+      }
+    } else if (!strcmp(file_type, "c99")) {
+      for (int i = 0; i < PEGVM_c99_RULE_MAX; i++) {
+        fprintf(stderr, "%llu %s\n", rule_count[i], get_c99_rule(i));
+      }
+    }
   }
 #endif
 }
@@ -365,9 +455,6 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
 
   goto *(pc)->ptr;
 
-#define DISPATCH_NEXT \
-  ++pc;               \
-  goto *(pc)->ptr;
   OP(EXIT) {
     P4D_commitLog(context, 0, left, pool);
     context->left = left;
@@ -377,6 +464,9 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
   OP(JUMP) { JUMP; }
   OP(CALL) {
     PUSH_IP(context, pc + 1);
+#if PEGVM_PROFILE
+    rule_count[pc->ndata[0]]++;
+#endif
     JUMP;
     // pc = inst[pc].jump;
     // goto *inst[pc].ptr;

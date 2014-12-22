@@ -382,7 +382,7 @@ public class Main {
 		if (PegVMByteCodeGeneration) {
 			PegVMByteCodeGenerator g = new PegVMByteCodeGenerator();
 			g.formatGrammar(peg, null);
-			g.writeByteCode(GrammarFile, OutputFileName);
+			g.writeByteCode(GrammarFile, OutputFileName, peg);
 		}
 	}
 
