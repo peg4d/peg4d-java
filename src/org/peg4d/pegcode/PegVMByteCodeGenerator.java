@@ -61,7 +61,10 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 	HashMap<Integer,Integer> labelMap = new HashMap<Integer,Integer>();
 	HashMap<String, Integer> callMap = new HashMap<String, Integer>();
 	
-	public void writeByteCode(String grammerfileName, String outputFileName) {
+	public void writeByteCode(String grammerfileName, String outputFileName, Grammar peg) {
+		for(ParsingRule r: peg.getRuleList()) {
+			System.out.println(r.ruleName + ": " + peg.nameList.indexOf(r.ruleName));
+		}
 		//System.out.println("choiceCase: " + choiceCaseCount + "\nconstructor: " + constructorCount);
 		byte[] byteCode = new byte[codeList.size() * 64];
 		int pos = 0;
@@ -111,7 +114,21 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 			Opcode code = codeList.ArrayValues[i];
 			byteCode[pos] = (byte) code.inst.ordinal();
 			pos++;
-			if (code.ndata != null) {
+			if (code.inst == Instruction.CALL) {
+				System.out.println("true");
+				byteCode[pos] = 1;
+				pos++;
+				int ndata = peg.nameList.indexOf(code.name);
+				byteCode[pos] = (byte) (0x000000ff & (ndata));
+				pos++;
+				byteCode[pos] = (byte) (0x000000ff & (ndata >> 8));
+				pos++;
+				byteCode[pos] = (byte) (0x000000ff & (ndata >> 16));
+				pos++;
+				byteCode[pos] = (byte) (0x000000ff & (ndata >> 24));
+				pos++;
+			}
+			else if (code.ndata != null) {
 				byteCode[pos] = (byte) (0x000000ff & (code.ndata.size()));
 				pos++;
 				byteCode[pos] = (byte) (0x000000ff & (code.ndata.size() >> 8));
@@ -792,7 +809,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitNonTerminal(NonTerminal ne) {
-		if (optimizationLevel > 0 && optNonTerminalMode) {
+		if (optimizationLevel > 1 && optNonTerminalMode) {
 			optNonTerminalMode = false;
 			ParsingExpression e = getNonTerminalRule(ne);
 			e.visit(this);

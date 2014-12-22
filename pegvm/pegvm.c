@@ -132,8 +132,14 @@ PegVMInstruction *loadByteCodeFile(ParsingContext context,
       inst[i].ndata = malloc(sizeof(int) * (code_length + 1));
       inst[i].ndata[0] = code_length;
       if (code_length == 1) {
-        inst[i].ndata = malloc(sizeof(int));
-        inst[i].ndata[0] = read32(buf, &info);
+        if (inst[i].opcode == PEGVM_OP_CALL) {
+          int ndata = read32(buf, &info);
+          inst[i].ndata = malloc(sizeof(int));
+          inst[i].ndata[0] = ndata;
+        } else {
+          inst[i].ndata = malloc(sizeof(int));
+          inst[i].ndata[0] = read32(buf, &info);
+        }
       } else if (inst[i].opcode == PEGVM_OP_MAPPEDCHOICE) {
         inst[i].ndata = malloc(sizeof(int) * code_length);
         while (j < code_length) {
@@ -317,6 +323,7 @@ static inline Instruction **POP_IP(ParsingContext context) {
 static uint64_t count[PEGVM_OP_MAX];
 static uint64_t conbination_count[PEGVM_OP_MAX][PEGVM_OP_MAX];
 static uint64_t count_all;
+static uint64_t rule_count[100];
 #define DISPATCH_NEXT                          \
   int first = (int)pc->opcode;                 \
   ++pc;                                        \
@@ -361,12 +368,16 @@ void PegVM_PrintProfile() {
     }
     fprintf(file, "\n");
   }
-  for (int i = 0; i < PEGVM_OP_MAX; i++) {
-    for (int j = 0; j < PEGVM_OP_MAX; j++) {
-      fprintf(stderr, "%llu %s_%s\n", conbination_count[i][j], get_opname(i),
-              get_opname(j));
-    }
+  for (int i = 0; i < 100; i++) {
+    fprintf(stderr, "%llu %d\n", rule_count[i], i);
   }
+  //  for (int i = 0; i < PEGVM_OP_MAX; i++) {
+  //    for (int j = 0; j < PEGVM_OP_MAX; j++) {
+  //      fprintf(stderr, "%llu %s_%s\n", conbination_count[i][j],
+  // get_opname(i),
+  //              get_opname(j));
+  //    }
+  //  }
   fclose(file);
 #endif
 }
@@ -412,6 +423,9 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
   OP(JUMP) { JUMP; }
   OP(CALL) {
     PUSH_IP(context, pc + 1);
+#if PEGVM_PROFILE
+    rule_count[pc->ndata[0]]++;
+#endif
     JUMP;
     // pc = inst[pc].jump;
     // goto *inst[pc].ptr;
