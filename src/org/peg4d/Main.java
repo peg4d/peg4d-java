@@ -574,6 +574,7 @@ public class Main {
 
 	public final static void reportException(Exception e) {
 		e.printStackTrace();
+		Main._Exit(1, e.getMessage());
 	}
 	
 }

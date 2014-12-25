@@ -17,11 +17,13 @@ public abstract class ParsingWriter {
 		if(fileName != null) {
 			this.out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(fileName),"UTF-8"));
 			this.write(po);
+			this.out.flush();
 			this.out.close();
 		}
 		else {
 			this.out = new PrintWriter(System.out);
 			this.write(po);
+			this.out.flush();
 		}
 		this.out = null;
 	}
@@ -35,21 +37,23 @@ public abstract class ParsingWriter {
 	}
 	
 	public final static ParsingWriter newInstance(String fileName, Class<?> defClass) {
-		int loc = fileName.lastIndexOf(".");
-		if(loc != -1) {
-			String ext = fileName.substring(loc+1);
-			Class<?> c = extClassMap.get(ext);
-			if(c == null) {
-				c = defClass;
-			}
-			if(c != null) {
-				try {
-					return (ParsingWriter)c.newInstance();
-				} catch (InstantiationException e) {
-					Main.reportException(e);
-				} catch (IllegalAccessException e) {
-					Main.reportException(e);
+		if(fileName != null) {
+			int loc = fileName.lastIndexOf(".");
+			if(loc != -1) {
+				String ext = fileName.substring(loc+1);
+				Class<?> c = extClassMap.get(ext);
+				if(c != null) {
+					defClass = c;
 				}
+			}
+		}
+		if(defClass != null) {
+			try {
+				return (ParsingWriter)defClass.newInstance();
+			} catch (InstantiationException e) {
+				Main.reportException(e);
+			} catch (IllegalAccessException e) {
+				Main.reportException(e);
 			}
 		}
 		return null; // default 
