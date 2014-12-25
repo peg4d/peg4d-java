@@ -22,7 +22,7 @@ public class Main {
 	public final static void main(String[] args) {
 		parseCommandOption(args);
 		if(Command == null) {
-			showUsage("unspecfied command");
+			showUsage("unspecified command");
 		}
 		try {
 			Method m = Main.class.getMethod(Command);
@@ -183,6 +183,10 @@ public class Main {
 			if(InputFileName != null) {
 				GrammarFile = guessGrammarFile(InputFileName);
 			}
+		}
+		if(InputFileName == null && InputString == null) {
+			System.out.println("unspecified inputs: invoking interactive shell");
+			Command = "shell";
 		}
 	}
 
