@@ -50,6 +50,7 @@ test_failure test/indirectleftrecursion.p4d
 test_match test/peg.p4d
 test_match test/rule.p4d
 test_match test/aaa.p4d
+test_match test/charclass.p4d
 test_match test/object.p4d
 test_match test/not.p4d
 test_match test/choice.p4d

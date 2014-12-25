@@ -1,0 +1,9 @@
+// PEG4d Testing Not unification
+
+File
+	= {#Text} // dummy for empty file 
+
+A
+	[example: a]
+	[bad-example: g]
+	= [0-9a-fA-F]
