@@ -3,9 +3,9 @@
 #ifndef PEGVM_H
 #define PEGVM_H
 #define PEGVM_DEBUG 0
-#define PEGVM_PROFILE 1
-#define PEGVM_OP_MAX 74
-#define PEGVM_PROFILE_MAX 49
+#define PEGVM_PROFILE 0
+#define PEGVM_OP_MAX 44
+#define PEGVM_PROFILE_MAX 44
 
 typedef struct byteCodeInfo {
   int pos;
@@ -18,29 +18,27 @@ typedef struct byteCodeInfo {
 } byteCodeInfo;
 
 typedef struct Instruction {
-  long opcode;
+  union {
+    long opcode;
+    const void *ptr;
+  };
+  //  union {
   int *ndata;
   char *chardata;
-  const void *ptr;
   struct Instruction *jump;
+  //  };
 } PegVMInstruction, Instruction;
 
-#define PEGVM_OP_EACH(OP)                                                      \
-  OP(EXIT) OP(JUMP) OP(CALL) OP(RET) OP(IFSUCC) OP(IFFAIL) OP(REPCOND)         \
-      OP(BYTE) OP(STRING) OP(CHAR) OP(CHARSET) OP(ANY) OP(NOTBYTE) OP(NOTANY)  \
-      OP(NOTCHARSET) OP(NOTBYTERANGE) OP(NOTSTRING) OP(ANDBYTE) OP(ANDCHARSET) \
-      OP(ANDBYTERANGE) OP(ANDSTRING) OP(OPTIONALBYTE) OP(OPTIONALCHARSET)      \
-      OP(OPTIONALBYTERANGE) OP(OPTIONALSTRING) OP(ZEROMOREBYTERANGE)           \
-      OP(ZEROMORECHARSET) OP(PUSHo) OP(PUSHconnect) OP(PUSHp) OP(PUSHf)        \
-      OP(PUSHm) OP(POP) OP(POPo) OP(STOREo) OP(STOREp) OP(STOREf) OP(STOREm)   \
-      OP(FAIL) OP(SUCC) OP(NEW) OP(NEWJOIN) OP(COMMIT) OP(ABORT) OP(LINK)      \
-      OP(SETendp) OP(TAG) OP(VALUE) OP(MAPPEDCHOICE) OP(PUSHconnect_CALL)      \
-      OP(PUSHp_CALL) OP(PUSHp_STRING) OP(PUSHp_CHAR) OP(PUSHp_ZEROMORECHARSET) \
-      OP(PUSHp_PUSHp) OP(POP_JUMP) OP(POP_REPCOND) OP(STOREo_JUMP)             \
-      OP(STOREp_JUMP) OP(STOREp_ZEROMORECHARSET) OP(STOREp_PUSHp)              \
-      OP(STOREp_POP) OP(STOREp_TAG) OP(FAIL_JUMP) OP(SUCC_STOREp) OP(NEW_BYTE) \
-      OP(NEW_STRING) OP(NEW_PUSHp) OP(COMMIT_JUMP) OP(ABORT_JUMP)              \
-      OP(ABORT_STOREo) OP(SETendp_POP) OP(TAG_JUMP) OP(TAG_SETendp)
+#define PEGVM_OP_EACH(OP)                                                     \
+  OP(EXIT) OP(JUMP) OP(CALL) OP(RET) OP(CONDBRANCH) OP(REPCOND) OP(CHARRANGE) \
+      OP(CHARSET) OP(STRING) OP(ANY) OP(PUSHo) OP(PUSHconnect) OP(PUSHp1)     \
+      OP(PUSHp2) OP(POPp) OP(POPo) OP(STOREo) OP(STOREp) OP(FAIL) OP(SUCC)    \
+      OP(NEW) OP(NEWJOIN) OP(COMMIT) OP(ABORT) OP(LINK) OP(SETendp) OP(TAG)   \
+      OP(VALUE) OP(MAPPEDCHOICE) OP(NOTBYTE) OP(NOTANY) OP(NOTCHARSET)        \
+      OP(NOTBYTERANGE) OP(NOTSTRING) OP(ANDBYTE) OP(ANDCHARSET)               \
+      OP(ANDBYTERANGE) OP(ANDSTRING) OP(OPTIONALBYTE) OP(OPTIONALCHARSET)     \
+      OP(OPTIONALBYTERANGE) OP(OPTIONALSTRING) OP(ZEROMOREBYTERANGE)          \
+      OP(ZEROMORECHARSET)
 // OP(DTABLE)
 
 enum pegvm_opcode {
@@ -50,7 +48,6 @@ enum pegvm_opcode {
   PEGVM_OP_ERROR = -1
 };
 
-#if PEGVM_PROFILE
 #define PEGVM_PROFILE_json_EACH(RULE)                                        \
   RULE(export) RULE(S) RULE(File) RULE(Chunk) RULE(JSONObject) RULE(String)  \
       RULE(Member) RULE(Value) RULE(ObjectId) RULE(ID) RULE(Array) RULE(INT) \
@@ -120,7 +117,6 @@ enum pegvm_c99_rule {
 #undef DEFINE_c99_ENUM
   PROFILE_c99_ERROR = -1
 };
-#endif
 
 PegVMInstruction *loadByteCodeFile(ParsingContext context,
                                    PegVMInstruction *inst,

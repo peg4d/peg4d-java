@@ -289,6 +289,15 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		return code;
 	}
 	
+	private Opcode newJumpCode(Instruction inst, int ndata, int jump) {
+		Opcode code = new Opcode(inst);
+		code.append(ndata);
+		code.jump = jump;
+		System.out.println("\t" + code.toString());
+		this.codeIndex++;
+		return code;
+	}
+	
 	private final void writeCode(Instruction inst) {
 		codeList.add(newCode(inst));
 	}
@@ -364,6 +373,10 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		codeList.add(newJumpCode(inst, labelId));
 	}
 	
+	private final void writeJumpCode(Instruction inst, int ndata, int labelId) {
+		codeList.add(newJumpCode(inst, ndata, labelId));
+	}
+	
 	private final int writeSequenceCode(ParsingExpression e, int index, int size) {
 		int count = 0;
 		for (int i = index; i < size; i++) {
@@ -402,7 +415,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		}
 		if (charCount <= 1) {
 			this.pushFailureJumpPoint();
-			writeCode(Instruction.PUSHp);
+			writeCode(Instruction.PUSHp1);
 			e.get(index).visit(this);
 			this.backTrackFlag = true;
 			return index++;
@@ -410,7 +423,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		if (charCount != size) {
 			backTrackFlag = true;
 			this.pushFailureJumpPoint();
-			writeCode(Instruction.PUSHp);
+			writeCode(Instruction.PUSHp1);
 		}
 		writeCharsetCode(e, index, charCount);
 		//writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
@@ -430,7 +443,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 	
 	private void writeNotCode(ParsingNot e) {
 		this.pushFailureJumpPoint();
-		writeCode(Instruction.PUSHp);
+		writeCode(Instruction.PUSHp1);
 		e.inner.visit(this);
 		writeCode(Instruction.STOREp);
 		writeCode(Instruction.FAIL);
@@ -464,11 +477,11 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 	
 	private void writeAndCode(ParsingAnd e) {
 		this.pushFailureJumpPoint();
-		writeCode(Instruction.PUSHp);
+		writeCode(Instruction.PUSHp1);
 		e.inner.visit(this);
 		this.popFailureJumpPoint(e);
 		writeCode(Instruction.STOREp);
-		writeJumpCode(Instruction.IFFAIL, jumpFailureJump());
+		writeJumpCode(Instruction.CONDBRANCH, 1, jumpFailureJump());
 	}
 	
 	private void writeAndCharsetCode(ParsingChoice e) {
@@ -496,9 +509,9 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 	private void writeOptionalCode(ParsingOption e) {
 		int label = newLabel();
 		this.pushFailureJumpPoint();
-		writeCode(Instruction.PUSHp);
+		writeCode(Instruction.PUSHp1);
 		e.inner.visit(this);
-		writeCode(Instruction.POP);
+		writeCode(Instruction.POPp);
 		writeJumpCode(Instruction.JUMP, label);
 		this.popFailureJumpPoint(e);
 		writeCode(Instruction.SUCC);
@@ -540,7 +553,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		int end = newLabel();
 		this.pushFailureJumpPoint();
 		writeLabel(label);
-		writeCode(Instruction.PUSHp);
+		writeCode(Instruction.PUSHp1);
 		e.inner.visit(this);
 		writeJumpCode(Instruction.REPCOND, end);
 		writeJumpCode(Instruction.JUMP, label);
@@ -853,7 +866,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		}
 		else {
 			writeCode(Instruction.CALL, ne.ruleName);
-			writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
+			writeJumpCode(Instruction.CONDBRANCH, 1, this.jumpFailureJump());
 		}
 	}
 
@@ -868,13 +881,13 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitByte(ParsingByte e) {
-		writeCode(Instruction.BYTE, e.byteChar, this.jumpFailureJump());
+		writeCode(Instruction.CHARRANGE, e.byteChar, e.byteChar, this.jumpFailureJump());
 		//writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
 	}
 
 	@Override
 	public void visitByteRange(ParsingByteRange e) {
-			writeCode(Instruction.CHAR, e.startByteChar, e.endByteChar, this.jumpFailureJump());
+			writeCode(Instruction.CHARRANGE, e.startByteChar, e.endByteChar, this.jumpFailureJump());
 			//writeJumpCode(Instruction.IFFAIL, this.jumpFailureJump());
 	}
 
@@ -973,14 +986,14 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 			if (backTrackFlag) {
 				writeJumpCode(Instruction.JUMP, jumpFailureJump());
 				writeLabel(label);
-				writeCode(Instruction.POP);
+				writeCode(Instruction.POPp);
 			}
 			this.backTrackFlag = false;
 		}
 		else {
 			for(int i = 0; i < e.size(); i++) {
 				this.pushFailureJumpPoint();
-				writeCode(Instruction.PUSHp);
+				writeCode(Instruction.PUSHp1);
 				e.get(i).visit(this);
 				writeJumpCode(Instruction.JUMP, label);
 				this.popFailureJumpPoint(e.get(i));
@@ -991,7 +1004,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 			}
 			writeJumpCode(Instruction.JUMP, jumpFailureJump());
 			writeLabel(label);
-			writeCode(Instruction.POP);
+			writeCode(Instruction.POPp);
 		}
 	}
 
@@ -1021,7 +1034,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 			}
 		}
 		writeCode(Instruction.SETendp);
-		writeCode(Instruction.POP);
+		writeCode(Instruction.POPp);
 		if (e.leftJoin) {
 			writeCode(Instruction.POPo);
 		}
