@@ -7,8 +7,6 @@ import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.peg4d.writer.TagWriter;
-
 class NezLogger {
 	final String logFile;
 	NezLogger(String logFile) {
@@ -532,7 +530,6 @@ class NezLogger {
 				System.out.println(String.format("%d\t%d\t%2.3f\t%2.3f", n, this.backtrackCount[i], f, (cf / this.BacktrackCount)));
 				if(n > this.WorstBacktrackSize) break;
 			}
-			new TagWriter().writeTo(null, po);
 		}
 		catch (IOException e) {
 			Main._Exit(1, "Can't write csv log: " + this.logFile);

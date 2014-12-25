@@ -30,15 +30,18 @@ public abstract class ParsingWriter {
 	// data
 	private final static UMap<Class<?>> extClassMap = new UMap<Class<?>>();
 	public final static void registerExtension(String ext, Class<?> c) {
-		assert(c.isAssignableFrom(ParsingWriter.class));
+		if(ParsingWriter.class.isAssignableFrom(c));
 		extClassMap.put(ext, c);
 	}
 	
-	public final static ParsingWriter newInstance(String fileName, ParsingWriter defValue) {
+	public final static ParsingWriter newInstance(String fileName, Class<?> defClass) {
 		int loc = fileName.lastIndexOf(".");
 		if(loc != -1) {
 			String ext = fileName.substring(loc+1);
 			Class<?> c = extClassMap.get(ext);
+			if(c == null) {
+				c = defClass;
+			}
 			if(c != null) {
 				try {
 					return (ParsingWriter)c.newInstance();
@@ -49,7 +52,18 @@ public abstract class ParsingWriter {
 				}
 			}
 		}
-		return defValue; 
+		return null; // default 
 	}
-	
+
+	public final static void writeAs( Class<?> defClass, String fileName, ParsingObject po) {
+		ParsingWriter w = newInstance(fileName, defClass);
+		if(w != null) {
+			try {
+				w.writeTo(fileName, po);
+			} catch (IOException e) {
+				Main.reportException(e);
+			}
+		}
+	}
+
 }
