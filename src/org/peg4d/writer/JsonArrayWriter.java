@@ -6,7 +6,7 @@ import org.peg4d.Utils;
 public class JsonArrayWriter extends ParsingWriter {
 	
 	static {
-		ParsingWriter.registerExtension("js", JsonArrayWriter.class);
+		ParsingWriter.registerExtension("json", JsonArrayWriter.class);
 	}
 
 	@Override

@@ -31,7 +31,7 @@ function test_match {
 }
 
 function test_tag {
-	RESULT=$(java -ea -jar $NEZ parse -p $1 -t tag $OPTION -i $2)
+	RESULT=$(java -ea -jar $NEZ parse -p $1 -X org.peg4d.writer.TagWriter $OPTION -i $2)
 	if [ $? -eq 0 -a {$RESULT} = {$3} ]; then
 		echo -e "$PASS $1 $NL"
 	else
