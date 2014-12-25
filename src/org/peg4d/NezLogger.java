@@ -6,7 +6,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.TreeMap;
+
+import org.peg4d.writer.TagWriter;
 
 class NezLogger {
 	final String logFile;
@@ -531,34 +532,11 @@ class NezLogger {
 				System.out.println(String.format("%d\t%d\t%2.3f\t%2.3f", n, this.backtrackCount[i], f, (cf / this.BacktrackCount)));
 				if(n > this.WorstBacktrackSize) break;
 			}
-			outputObjectTag(po);
+			new TagWriter().writeTo(null, po);
 		}
 		catch (IOException e) {
 			Main._Exit(1, "Can't write csv log: " + this.logFile);
 		}
 	}
 	
-	public static void outputObjectTag(ParsingObject po) {
-		TreeMap<String,Integer> m = new TreeMap<String,Integer>();
-		tagCount(po, m);
-		for(String k : m.keySet()) {
-			System.out.print("#" + k + ":" + m.get(k));
-		}
-		System.out.println("");
-	}
-
-	private static void tagCount(ParsingObject po, TreeMap<String,Integer> m) {
-		for(int i = 0; i < po.size(); i++) {
-			tagCount(po.get(i), m);
-		}
-		String key = po.getTag().toString();
-		Integer n = m.get(key);
-		if(n == null) {
-			m.put(key, 1);
-		}
-		else {
-			m.put(key, n+1);
-		}
-	}
-
 }

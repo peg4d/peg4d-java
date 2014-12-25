@@ -5,9 +5,9 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 
 import org.peg4d.data.RelationBuilder;
-import org.peg4d.ext.Generator;
 import org.peg4d.jvm.JavaByteCodeGenerator;
 import org.peg4d.pegcode.GrammarFormatter;
+import org.peg4d.writer.Generator;
 
 public class Main {
 	public final static String  ProgName  = "Nez";
@@ -639,6 +639,10 @@ public class Main {
 
 	public final static String _CharToString(int ch) {
 		return String.format("%c", ch);
+	}
+
+	public final static void reportException(Exception e) {
+		e.printStackTrace();
 	}
 	
 }

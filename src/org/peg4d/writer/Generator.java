@@ -1,4 +1,4 @@
-package org.peg4d.ext;
+package org.peg4d.writer;
 
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
