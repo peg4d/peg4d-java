@@ -1,4 +1,4 @@
-package org.peg4d.konoha;
+package org.peg4d.million;
 
 import org.peg4d.ParsingTag;
 
@@ -28,6 +28,7 @@ public class MillionTag {
 	public static final int TAG_KEY_VALUE = ParsingTag.tagId("KeyValue");
 	public static final int TAG_TYPE = ParsingTag.tagId("Type");
 	public static final int TAG_LIST = ParsingTag.tagId("List");
+	public static final int TAG_UNPACK_LIST = ParsingTag.tagId("UnpackList");
 	public static final int TAG_SUFFIX_INC = ParsingTag.tagId("SuffixInc");
 	public static final int TAG_SUFFIX_DEC = ParsingTag.tagId("SuffixDec");
 	public static final int TAG_PREFIX_INC = ParsingTag.tagId("PrefixInc");
@@ -89,6 +90,8 @@ public class MillionTag {
 	public static final int TAG_MULTI_INDEX = ParsingTag.tagId("MultiIndex");
 	public static final int TAG_APPLY = ParsingTag.tagId("Apply");
 	public static final int TAG_METHOD = ParsingTag.tagId("Method");
+	public static final int TAG_MULTIPLE_RETURN_APPLY = ParsingTag.tagId("MulipleReturnApply");
+	public static final int TAG_MULTIPLE_RETURN_METHOD = ParsingTag.tagId("MulipleReturnMethod");
 	public static final int TAG_NEW = ParsingTag.tagId("New");
 	public static final int TAG_SIZE_OF = ParsingTag.tagId("SizeOf");
 	public static final int TAG_TYPE_OF = ParsingTag.tagId("TypeOf");
@@ -113,4 +116,9 @@ public class MillionTag {
 	public static final int TAG_FUNC_DECL = ParsingTag.tagId("FuncDecl");
 	public static final int TAG_CLASS = ParsingTag.tagId("Class");
 	public static final int TAG_ANNOTATION = ParsingTag.tagId("Annotation");
+	public static final int TAG_TABLE = ParsingTag.tagId("Table");
+	public static final int TAG_TABLE_PROPERTY = ParsingTag.tagId("TableProperty");
+	public static final int TAG_TABLE_SETTER_APPLY = ParsingTag.tagId("TableSetterApply");
+	public static final int TAG_VARIADIC_PARAMETER = ParsingTag.tagId("VariadicParameter");
+	
 }

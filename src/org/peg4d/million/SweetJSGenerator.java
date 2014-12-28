@@ -1,9 +1,15 @@
-package org.peg4d.konoha;
+package org.peg4d.million;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.text.html.HTML.Tag;
+import javax.xml.soap.Node;
 
 import org.peg4d.ParsingObject;
 import org.peg4d.ParsingTag;
 
-public class SweetJSGenerator extends KSourceGenerator {
+public class SweetJSGenerator extends SourceGenerator {
 	private static boolean UseExtend;
 
 	public SweetJSGenerator() {
@@ -77,7 +83,7 @@ public class SweetJSGenerator extends KSourceGenerator {
 		if(tagId == MillionTag.TAG_LOGICAL_OR) return 14;
 		if(tagId == MillionTag.TAG_LOGICAL_NOT) return 4;
 		//if(tagId == MillionTag.TAG_LOGICAL_XOR) return 14;
-		//if(tagId == MillionTag.TAG_CONDITIONAL) return 0;
+		if(tagId == MillionTag.TAG_CONDITIONAL) return 16;
 		if(tagId == MillionTag.TAG_ASSIGN) return 17;
 		if(tagId == MillionTag.TAG_ASSIGN_ADD) return 17;
 		if(tagId == MillionTag.TAG_ASSIGN_SUB) return 17;
@@ -145,12 +151,14 @@ public class SweetJSGenerator extends KSourceGenerator {
 	}
 	
 	protected void generateTrinary(ParsingObject node, String operator1, String operator2){
-		this.visit(node.get(0), "(", operator1);
-		this.visit(node.get(1));
-		this.visit(node.get(2), operator2, ")");
+		generateExpression(node.get(0));
+		this.currentBuilder.append(operator1);
+		generateExpression(node.get(1));
+		this.currentBuilder.append(operator2);
+		generateExpression(node.get(2));
 	}
 	
-	protected void generateList(ParsingObject node, String delim){
+	protected void generateList(List<ParsingObject> node, String delim){
 		boolean isFirst = true;
 		for(ParsingObject element : node){
 			if(!isFirst){
@@ -160,6 +168,12 @@ public class SweetJSGenerator extends KSourceGenerator {
 			}
 			this.visit(element);
 		}
+	}
+	
+	protected void generateList(List<ParsingObject> node, String begin, String delim, String end){
+		this.currentBuilder.append(begin);
+		this.generateList(node, delim);
+		this.currentBuilder.append(end);
 	}
 	
 	public void visitSource(ParsingObject node) {
@@ -199,11 +213,6 @@ public class SweetJSGenerator extends KSourceGenerator {
 	}
 	
 	public void visitHexLong(ParsingObject node) {
-		this.currentBuilder.append(node.getText());
-	}
-	
-	@Deprecated
-	public void visitFloatingPointNumber(ParsingObject node) {
 		this.currentBuilder.append(node.getText());
 	}
 	
@@ -460,6 +469,22 @@ public class SweetJSGenerator extends KSourceGenerator {
 		this.generateBinary(node, "=");
 	}
 
+	public void visitMultiAssign(ParsingObject node) {
+		ParsingObject lhs = node.get(0);
+		ParsingObject rhs = node.get(1);
+		if(lhs.size() == 1 && rhs.size() == 1 && !rhs.get(0).is(MillionTag.TAG_APPLY) && !rhs.get(0).is(MillionTag.TAG_APPLY)){
+			this.visit(lhs.get(0));
+			this.currentBuilder.append(" = ");
+			this.visit(rhs.get(0));
+		}else{
+			this.currentBuilder.append("multiAssign (");
+			generateList(lhs, ", ");
+			this.currentBuilder.append(") = (");
+			generateList(rhs, ", ");
+			this.currentBuilder.appendChar(')');
+		}
+	}
+	
 	public void visitAssignAdd(ParsingObject node) {
 		this.generateBinary(node, "+=");
 	}
@@ -525,7 +550,13 @@ public class SweetJSGenerator extends KSourceGenerator {
 //	}
 
 	public void visitComma(ParsingObject node) {
-		this.generateList(node, ", ");
+		if(node.size() > 2){
+			this.currentBuilder.appendChar('(');
+			this.generateList(node, ", ");
+			this.currentBuilder.appendChar(')');	
+		}else{
+			this.generateBinary(node, ", ");
+		}
 	}
 	
 	public void visitConcat(ParsingObject node) {
@@ -547,12 +578,47 @@ public class SweetJSGenerator extends KSourceGenerator {
 			this.visit(indexNode, '[', ']');
 		}
 	}
+	
+	private boolean containsVariadicValue(ParsingObject list){
+		for(ParsingObject item : list){
+			if(item.is(MillionTag.TAG_VARIADIC_PARAMETER)
+					|| item.is(MillionTag.TAG_APPLY)
+					|| item.is(MillionTag.TAG_MULTIPLE_RETURN_APPLY)
+					|| item.is(MillionTag.TAG_METHOD)
+					|| item.is(MillionTag.TAG_MULTIPLE_RETURN_METHOD)){
+				return true;
+			}
+		}
+		return false;
+	}
 
 	public void visitApply(ParsingObject node) {
-		this.visit(node.get(0));
-		this.currentBuilder.appendChar('(');
-		this.generateList(node.get(1), ", ");
-		this.currentBuilder.appendChar(')');
+		ParsingObject arguments = node.get(1);
+		if(arguments.is(MillionTag.TAG_UNPACK_LIST) && arguments.size() > 0 && containsVariadicValue(arguments)){
+			ParsingObject functionExpr = node.get(0);
+			if(functionExpr.is(MillionTag.TAG_FIELD)){
+				this.visit(node.get(0));
+				this.currentBuilder.append(".apply(");
+				this.visit(functionExpr.get(0));
+				if(arguments.size() == 1 && arguments.get(0).is(MillionTag.TAG_VARIADIC_PARAMETER)){
+					this.currentBuilder.append(", __variadicParams)");
+				}else{
+					this.generateList(arguments, ", __unpack(", ", ", "))");
+				}
+			}else{
+				this.visit(node.get(0));
+				if(arguments.size() == 1 && arguments.get(0).is(MillionTag.TAG_VARIADIC_PARAMETER)){
+					this.currentBuilder.append(".apply(null, __variadicParams)");
+				}else{
+					this.generateList(arguments, ".apply(null, __unpack(", ", ", "))");
+				}
+			}
+		}else{
+			this.visit(node.get(0));
+			this.currentBuilder.appendChar('(');
+			this.generateList(arguments, ", ");
+			this.currentBuilder.appendChar(')');
+		}
 	}
 
 	public void visitMethod(ParsingObject node) {
@@ -563,14 +629,14 @@ public class SweetJSGenerator extends KSourceGenerator {
 	}
 	
 	public void visitTypeOf(ParsingObject node) {
-		this.currentBuilder.append("typeof");
+		this.currentBuilder.append("typeof ");
 		generateExpression(node.get(0));
 	}
 
 	public void visitIf(ParsingObject node) {
 		this.visit(node.get(0), "if (", ")");
 		this.generateBlock(node.get(1));
-		if(node.size() > 4){
+		if(!isNullOrEmpty(node, 2)){
 			this.currentBuilder.append("else");
 			this.generateBlock(node.get(2));
 		}
@@ -592,6 +658,31 @@ public class SweetJSGenerator extends KSourceGenerator {
 		}
 	}
 
+	public void visitForInRange(ParsingObject node) {
+		ParsingObject i = node.get(0);
+		ParsingObject begin = node.get(1);
+		ParsingObject end = node.get(2);
+		
+		this.visit(i, "for (var ", " = ");
+		this.visit(begin);
+		this.visit(end, ", __end = ", ";");
+		this.visit(i);
+		this.currentBuilder.append(" < __end;");
+		if(!isNullOrEmpty(node, 3)){
+			ParsingObject step = node.get(3);
+			this.visit(i);
+			this.currentBuilder.append(" += ");
+			this.visit(step, " += ", ")");
+		}else{
+			this.visit(i, "", "++)");
+		}
+		this.generateBlock(node.get(4));
+		if(!isNullOrEmpty(node, 5)){
+			this.currentBuilder.appendNewLine();
+			this.visit(node.get(5));
+		}
+	}
+	
 	public void visitForeach(ParsingObject node) {
 		this.visit(node.get(1));
 		this.visit(node.get(0), ".forEach(function(", ")");
@@ -621,10 +712,17 @@ public class SweetJSGenerator extends KSourceGenerator {
 	}
 	
 	protected void generateJump(ParsingObject node, String keyword){
-		this.currentBuilder.append(keyword);
-		if(node.size() > 0){
+		if(!isNullOrEmpty(node, 0)){
 			this.currentBuilder.appendSpace();
-			this.visit(node.get(0));
+			ParsingObject returnValue = node.get(0);
+			if(returnValue.is(MillionTag.TAG_LIST)){
+				this.currentBuilder.append("multiple m");
+				this.currentBuilder.append(keyword);
+				this.generateList(returnValue, " (", ", ", ")");
+			}else{
+				this.currentBuilder.append(keyword);
+				this.visit(returnValue);
+			}
 		}
 	}
 
@@ -665,9 +763,11 @@ public class SweetJSGenerator extends KSourceGenerator {
 
 	public void visitCase(ParsingObject node) {
 		this.visit(node.get(0), "case ", ":");
-		this.currentBuilder.indent();
-		this.visit(node.get(1));
-		this.currentBuilder.unIndent();
+		if(!isNullOrEmpty(node, 1)){
+			this.currentBuilder.indent();
+			this.visit(node.get(1));
+			this.currentBuilder.unIndent();
+		}
 	}
 
 	public void visitDefault(ParsingObject node) {
@@ -710,22 +810,77 @@ public class SweetJSGenerator extends KSourceGenerator {
 		}
 	}
 	
-	@Deprecated
-	public void visitFunction(ParsingObject node) {
-		this.currentBuilder.append("function ");
-		this.visit(node.get(0));
-		this.visit(node.get(1), '(', ')');
-		this.generateBlock(node.get(2));
+	public void visitMultiVarDecl(ParsingObject node) {
+		ParsingObject lhs = node.get(0);
+		ParsingObject rhs = node.get(1);
+		if(lhs.size() == 1 && rhs.size() == 1 && !rhs.get(0).is(MillionTag.TAG_APPLY) && !rhs.get(0).is(MillionTag.TAG_APPLY)){
+			this.visit(lhs.get(0));
+			this.currentBuilder.append(" = ");
+			this.visit(rhs.get(0));
+		}else{
+			this.currentBuilder.append("multiAssign var (");
+			generateList(lhs, ", ");
+			this.currentBuilder.append(") = (");
+			generateList(rhs, ", ");
+			this.currentBuilder.appendChar(')');
+		}
 	}
 	
 	public void visitFuncDecl(ParsingObject node) {
+		boolean mustWrap = this.currentBuilder.isStartOfLine();
+		if(mustWrap){
+			this.currentBuilder.appendChar('(');
+		}
 		this.currentBuilder.append("function");
 		if(!isNullOrEmpty(node, 2)){
 			this.currentBuilder.appendSpace();
 			this.visit(node.get(2));
 		}
-		this.visit(node.get(4), '(', ')');
-		this.generateBlock(node.get(6));
+		ParsingObject parameters = node.get(4);
+		boolean containsVariadicParameter = false;
+		boolean isFirst = true;
+		int sizeOfParametersBeforeValiadic = 0;
+		int sizeOfParametersAfterValiadic = 0;
+		
+		this.currentBuilder.appendChar('(');
+		for(ParsingObject param : parameters){
+			if(param.is(MillionTag.TAG_VARIADIC_PARAMETER)){
+				containsVariadicParameter = true;
+				sizeOfParametersAfterValiadic = 0;
+				continue;
+			}
+			if(containsVariadicParameter){
+				sizeOfParametersAfterValiadic++;
+			}else{
+				sizeOfParametersBeforeValiadic++;
+			}
+			if(!isFirst){
+				this.currentBuilder.append(", ");
+			}
+			this.visit(param);
+			isFirst = false;
+		}
+		this.currentBuilder.appendChar(')');
+		
+		this.currentBuilder.appendChar('{');
+		this.currentBuilder.indent();
+		
+		if(containsVariadicParameter){
+			this.currentBuilder.appendNewLine("var __variadicParams = __markAsVariadic([]);");
+			this.currentBuilder.appendNewLine("for (var _i = ");
+			this.currentBuilder.appendNumber(sizeOfParametersBeforeValiadic);
+			this.currentBuilder.append(", _n = arguments.length - ");
+			this.currentBuilder.appendNumber(sizeOfParametersAfterValiadic);
+			this.currentBuilder.append("; _i < _n; ++_i){ __variadicParams.push(arguments[_i]); }");
+		}
+		
+		this.visit(node.get(6));
+		this.currentBuilder.unIndent();
+		this.currentBuilder.appendNewLine("}");
+		
+		if(mustWrap){
+			this.currentBuilder.appendChar(')');
+		}
 	}
 	
 	public void visitDeleteProperty(ParsingObject node) {
@@ -748,8 +903,71 @@ public class SweetJSGenerator extends KSourceGenerator {
 		this.currentBuilder.append("new ");
 		this.visit(node.get(0));
 		this.currentBuilder.appendChar('(');
-		this.generateList(node.get(1), ", ");
+		if(!isNullOrEmpty(node, 1)){
+			this.generateList(node.get(1), ", ");
+		}
 		this.currentBuilder.appendChar(')');
+	}
+
+	public void visitEmpty(ParsingObject node) {
+		this.currentBuilder.appendChar(';');
+	}
+	
+	public void visitTable(ParsingObject node) {
+		boolean isAllMemberIsArrayStyle = true;
+		for (ParsingObject subnode : node) {
+			boolean isArrayStyleMember =
+					!subnode.is(MillionTag.TAG_TABLE_PROPERTY) &&
+					!subnode.is(MillionTag.TAG_TABLE_SETTER_APPLY);
+			if(!isArrayStyleMember){
+				isAllMemberIsArrayStyle = false;
+				break;
+			}
+		}
+		if(isAllMemberIsArrayStyle){
+			this.currentBuilder.append("__unpack(");
+			this.generateList(node, ", ");
+			this.currentBuilder.append(")");
+		}else{
+			List<ParsingObject> arrayStyleMember = new ArrayList<ParsingObject>();
+			List<ParsingObject> setterStyleMember = new ArrayList<ParsingObject>();
+			List<ParsingObject> dictionaryStyleMember = new ArrayList<ParsingObject>();
+			for (ParsingObject subnode : node) {
+				if(subnode.is(MillionTag.TAG_TABLE_PROPERTY)){
+					dictionaryStyleMember.add(subnode);
+				}else if(subnode.is(MillionTag.TAG_TABLE_SETTER_APPLY)){
+					setterStyleMember.add(subnode);
+				}else{
+					arrayStyleMember.add(subnode);
+				}
+			}
+			this.currentBuilder.append("(function(){");
+			this.currentBuilder.indent();
+			this.currentBuilder.appendNewLine("var ret = __unpack(");
+			this.generateList(arrayStyleMember, ", ");
+			this.currentBuilder.append(");");
+			for (ParsingObject setter : setterStyleMember) {
+				this.currentBuilder.appendNewLine("ret[");
+				this.visit(setter.get(0));
+				this.visit(setter.get(1), "] = ", ";");
+			}
+			for (ParsingObject item : dictionaryStyleMember) {
+				this.currentBuilder.appendNewLine("ret['");
+				this.visit(item.get(0));
+				this.visit(item.get(1), "'] = ", ";");
+			}
+			this.currentBuilder.appendNewLine("return ret; })()");
+			this.currentBuilder.unIndent();
+		}
+	}
+	
+	public void visitVariadicParameter(ParsingObject node){
+		this.currentBuilder.append("__variadicParams");
+	}
+	
+	public void visitCount(ParsingObject node){
+		this.visit(node.get(0));
+		this.currentBuilder.append(".length");
 	}
 	
 //

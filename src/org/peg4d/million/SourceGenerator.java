@@ -1,4 +1,4 @@
-package org.peg4d.konoha;
+package org.peg4d.million;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,7 +7,7 @@ import org.peg4d.ParsingObject;
 import org.peg4d.ParsingObjectVisitor;
 import org.peg4d.ParsingTag;
 
-public class KSourceGenerator extends ParsingObjectVisitor{
+public class SourceGenerator extends ParsingObjectVisitor{
 	public String tab = "  ";
 	public String newLine = "\n";
 	public String lineComment = "//";
@@ -21,13 +21,13 @@ public class KSourceGenerator extends ParsingObjectVisitor{
 
 	public boolean readableCode = true;
 	
-	public KSourceGenerator(){
+	public SourceGenerator(){
 		this.initBuilderList();
 	}
 	
-	private List<KSourceBuilder> builderList = new ArrayList<KSourceBuilder>();
-	protected KSourceBuilder headerBuilder;
-	protected KSourceBuilder currentBuilder;
+	private List<SourceBuilder> builderList = new ArrayList<SourceBuilder>();
+	protected SourceBuilder headerBuilder;
+	protected SourceBuilder currentBuilder;
 	
 	protected final void visit(ParsingObject node, String prefix, String suffix){
 		this.currentBuilder.append(prefix);
@@ -47,14 +47,14 @@ public class KSourceGenerator extends ParsingObjectVisitor{
 		this.currentBuilder = this.appendNewSourceBuilder();
 	}
 
-	protected final KSourceBuilder appendNewSourceBuilder() {
-		KSourceBuilder builder = new KSourceBuilder();
+	protected final SourceBuilder appendNewSourceBuilder() {
+		SourceBuilder builder = new SourceBuilder();
 		this.builderList.add(builder);
 		return builder;
 	}
 
-	protected final KSourceBuilder insertNewSourceBuilder() {
-		KSourceBuilder builder = new KSourceBuilder();
+	protected final SourceBuilder insertNewSourceBuilder() {
+		SourceBuilder builder = new SourceBuilder();
 		this.builderList.add(this.builderList.indexOf(this.currentBuilder), builder);
 		return builder;
 	}
@@ -74,7 +74,7 @@ public class KSourceGenerator extends ParsingObjectVisitor{
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		for(KSourceBuilder sourceElement : builderList){
+		for(SourceBuilder sourceElement : builderList){
 			builder.append(sourceElement.toString());
 		}
 		return builder.toString();
