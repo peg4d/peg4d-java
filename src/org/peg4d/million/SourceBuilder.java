@@ -1,8 +1,9 @@
-package org.peg4d.konoha;
+package org.peg4d.million;
 
-public class KSourceBuilder {
+public class SourceBuilder {
 	private StringBuilder builder;
 	private StringBuilder commentOfThisLine;
+	private boolean startOfLine = true;
 	
 	public String newLineString = "\n";
 	public String quoteString = "\"";
@@ -11,11 +12,11 @@ public class KSourceBuilder {
 	public String commentBeginString = "/* ";
 	public String commentEndString = " */";
 
-	public KSourceBuilder(){
+	public SourceBuilder(){
 		this(4096);
 	}
 	
-	public KSourceBuilder(int capacity){
+	public SourceBuilder(int capacity){
 		this.builder = new StringBuilder(capacity);
 	}
 	
@@ -23,8 +24,12 @@ public class KSourceBuilder {
 	String currentIndentString = "";
 	String BufferedLineComment = "";
 
-	public final int GetPosition() {
+	public final int getPosition() {
 		return this.builder.length();
+	}
+	
+	public final boolean isStartOfLine(){
+		return this.startOfLine;
 	}
 
 	public final String substring(int startIndex, int endIndex) {
@@ -32,11 +37,15 @@ public class KSourceBuilder {
 	}
 
 	public final void append(String text) {
-		this.builder.append(text);
+		if(text.length() > 0){
+			this.builder.append(text);
+			startOfLine = false;
+		}
 	}
 
 	public final void appendNumber(int value) {
 		this.builder.append(value);
+		startOfLine = false;
 	}
 
 	public final void append(String... texts) {
@@ -47,6 +56,7 @@ public class KSourceBuilder {
 	
 	public final void appendChar(char c){
 		this.builder.appendCodePoint(c);
+		startOfLine = false;
 	}
 	
 	public final void appendSpace(){
@@ -57,10 +67,12 @@ public class KSourceBuilder {
 		this.builder.append(this.quoteString);
 		this.builder.append(text);
 		this.builder.append(this.quoteString);
+		startOfLine = false;
 	}
 
 	public final void appendLineFeed() {
 		this.appendLineFeed(true);
+		startOfLine = true;
 	}
 
 	public final void appendLineFeed(boolean appendIndent) {
@@ -70,8 +82,9 @@ public class KSourceBuilder {
 		}
 		this.builder.append(this.newLineString);
 		if(appendIndent) {
-			this.AppendIndent();
+			this.appendIndent();
 		}
+		startOfLine = true;
 	}
 
 	public final boolean endsWith(String str) {
@@ -87,7 +100,7 @@ public class KSourceBuilder {
 		if(this.builder.length() == 0) return;
 		char last = this.builder.charAt(this.builder.length() - 1);
 		if(last == ' ' || last == '\n' || last == '\r' || last == '\t') return;
-		this.builder.appendCodePoint(' ');
+		this.appendSpace();
 	}
 
 	public final void appendToken(String str) {
@@ -108,10 +121,9 @@ public class KSourceBuilder {
 			this.commentOfThisLine.append(str);
 			this.commentOfThisLine.append(this.commentEndString);
 		} else {
-			this.builder.append(this.singleLineCommentString);
-			this.builder.append(str);
+			this.commentOfThisLine.append(this.singleLineCommentString);
+			this.commentOfThisLine.append(str);
 		}
-		this.builder.append(this.newLineString);
 	}
 
 	public final void indent() {
@@ -138,7 +150,7 @@ public class KSourceBuilder {
 		return this.currentIndentString;
 	}
 
-	public final void AppendIndent() {
+	public final void appendIndent() {
 		this.builder.append(this.getIndentString());
 	}
 
