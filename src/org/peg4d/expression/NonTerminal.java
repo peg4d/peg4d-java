@@ -123,10 +123,7 @@ public class NonTerminal extends ParsingExpression {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		int stackTop = context.pushCallStack(this);
-		boolean b = this.deReference().matcher.simpleMatch(context);
-		context.popCallStack(stackTop);
-		return b;
+		return context.matchNonTerminal(this);
 	}
 }
 

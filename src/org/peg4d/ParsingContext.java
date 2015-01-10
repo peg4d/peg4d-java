@@ -449,18 +449,19 @@ public class ParsingContext {
 			this.stackedPositions = new int[4096];
 		}
 	}
+		
+	public final boolean matchNonTerminal(NonTerminal e) {
+		if(this.stackedNonTerminals != null) {
+			int pos = this.stackedNonTerminals.size();
+			this.stackedNonTerminals.add(e);
+			stackedPositions[pos] = (int)this.pos;
+			boolean b = e.deReference().matcher.simpleMatch(this);
+			this.stackedNonTerminals.clear(pos);
+			return b;
+		}
+		return e.deReference().matcher.simpleMatch(this);
+	}
 	
-	public int pushCallStack(NonTerminal e) {
-		int pos = this.stackedNonTerminals.size();
-		this.stackedNonTerminals.add(e);
-		stackedPositions[pos] = (int)this.pos;
-		return pos;
-	}
-
-	public void popCallStack(int stacktop) {
-		this.stackedNonTerminals.clear(stacktop);
-	}
- 		
 	protected MemoTable memoTable = null;
 
 	public void initMemo(MemoizationManager conf) {
