@@ -333,22 +333,24 @@ public class Optimizer {
 	}
 
 	final void optimizeConstructor(ParsingConstructor holder) {
-		int prefetchIndex = 0;
-		for(int i = 0; i < holder.size(); i++) {
-			ParsingExpression sub = holder.get(i);
-			if(sub.hasObjectOperation()) {
-				break;
+		if(is(O_LazyObject)) {
+			int prefetchIndex = 0;
+			for(int i = 0; i < holder.size(); i++) {
+				ParsingExpression sub = holder.get(i);
+				if(sub.hasObjectOperation()) {
+					break;
+				}
+				prefetchIndex = i + 1;
 			}
-			prefetchIndex = i + 1;
-		}
-		if(prefetchIndex > 0 && Main._IsFlag(this.OptimizedMask, Optimizer.O_LazyObject)) {
-			CountLazyObject += 1;
-			holder.prefetchIndex = prefetchIndex;
+			if(prefetchIndex > 0) {
+				CountLazyObject += 1;
+				holder.prefetchIndex = prefetchIndex;
+			}
 		}
 	}
 
 	final void optimizeSequence(ParsingSequence holder) {
-		if(Main._IsFlag(this.OptimizedMask, Optimizer.O_SpecLexer) && holder.size() == 2 && holder.get(0) instanceof ParsingNot && holder.get(1) instanceof ParsingAny) {
+		if(is(O_SpecLexer) && holder.size() == 2 && holder.get(0) instanceof ParsingNot && holder.get(1) instanceof ParsingAny) {
 			ParsingExpression inner = ((ParsingNot)holder.get(0)).inner;
 			if(this.is(O_Inline) && inner instanceof NonTerminal) {
 				inner = resolveNonTerminal(inner);
@@ -366,7 +368,7 @@ public class Optimizer {
 			}
 			//System.out.println("not any " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
 		}
-		if(Main._IsFlag(this.OptimizedMask, Optimizer.O_SpecString)) {
+		if(is(O_SpecString)) {
 			byte[] u = new byte[holder.size()];
 			for(int i = 0; i < holder.size(); i++) {
 				ParsingExpression inner = resolveNonTerminal(holder.get(i));				
@@ -398,52 +400,50 @@ public class Optimizer {
 		for(int i = 0; i < c.length; i++) { 
 			c[i] = 0; 
 		}
-		if(Main._IsFlag(this.OptimizedMask, Optimizer.O_Prediction) && checkStringChoice(choice, c)) {
-			ParsingExpression[] matchCase = new ParsingExpression[257];
-			ParsingExpression empty = ParsingExpression.newEmpty();
-			makeStringChoice(choice, matchCase, empty, empty);
-			ParsingExpression f = new ParsingFailure(choice).uniquefy();
-//			System.out.println("StringChoice: " + choice);
-			for(int ch = 0; ch < matchCase.length; ch++) {
-				if(matchCase[ch] == null) {
-					matchCase[ch] = f;
-				}
-				else {
-					matchCase[ch] = matchCase[ch].uniquefy();
-//					System.out.println("|2 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
-					if(matchCase[ch] instanceof ParsingChoice) {
-						optimizeChoice((ParsingChoice)matchCase[ch]);
+		if(is(O_Prediction)) {
+			if(checkStringChoice(choice, c)) {
+				ParsingExpression[] matchCase = new ParsingExpression[257];
+				ParsingExpression empty = ParsingExpression.newEmpty();
+				makeStringChoice(choice, matchCase, empty, empty);
+				ParsingExpression f = new ParsingFailure(choice).uniquefy();
+	//			System.out.println("StringChoice: " + choice);
+				for(int ch = 0; ch < matchCase.length; ch++) {
+					if(matchCase[ch] == null) {
+						matchCase[ch] = f;
+					}
+					else {
+						matchCase[ch] = matchCase[ch].uniquefy();
+	//					System.out.println("|2 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
+						if(matchCase[ch] instanceof ParsingChoice) {
+							optimizeChoice((ParsingChoice)matchCase[ch]);
+						}
 					}
 				}
+				choice.matcher = new StringChoiceMatcher(matchCase);
+				return;
 			}
-			choice.matcher = new StringChoiceMatcher(matchCase);
+			else {
+				boolean selfChoice = false;
+				ParsingExpression[] matchCase = new ParsingExpression[257];
+				ParsingExpression fails = new ParsingFailure(choice);
+				//System.out.println("Optimized3: " + choice);
+				for(int ch = 0; ch <= 256; ch++) {
+					matchCase[ch] = selectChoice(choice, ch, fails);
+					if(matchCase[ch] == choice) {
+						/* this is a rare case where the selected choice is the parent choice */
+						/* this cause the repeated calls of the same matchers */
+						//System.out.println("SELF CHOICE: " + choice + " at " + GrammarFormatter.stringfyByte(ch) );
+						selfChoice = true;
+						//return; 
+					}
+					if(matchCase[ch] != fails) {
+						//System.out.println("|3 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
+					}
+				}
+				choice.matcher = selfChoice ? new MappedSelfChoiceMatcher(choice, matchCase) : new MappedChoiceMatcher(choice, matchCase);
+			}
 			CountPrediction += 1;
-			return;
-		}
-		if(Main._IsFlag(this.OptimizedMask, Optimizer.O_Prediction)) {
-			boolean selfChoice = false;
-			ParsingExpression[] matchCase = new ParsingExpression[257];
-			ParsingExpression fails = new ParsingFailure(choice);
-			//System.out.println("Optimized3: " + choice);
-			for(int ch = 0; ch <= 256; ch++) {
-				matchCase[ch] = selectChoice(choice, ch, fails);
-				if(matchCase[ch] == choice) {
-					/* this is a rare case where the selected choice is the parent choice */
-					/* this cause the repeated calls of the same matchers */
-					//System.out.println("SELF CHOICE: " + choice + " at " + GrammarFormatter.stringfyByte(ch) );
-					selfChoice = true;
-					//return; 
-				}
-				if(matchCase[ch] != fails) {
-					//System.out.println("|3 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
-				}
-				CountPrediction += 1;
-			}
-//			if(selfChoice) {
-//				System.out.println("SELF CHOICE: " + choice);
-//			}
-			choice.matcher = selfChoice ? new MappedSelfChoiceMatcher(choice, matchCase) : new MappedChoiceMatcher(choice, matchCase);
-		}
+		}			
 	}
 	
 	final static boolean checkCharacterChoice(ParsingChoice choice, int[] c) {
