@@ -180,9 +180,9 @@ public class Optimizer {
 		}
 		ParsingMatcher m = inner.matcher;
 		if(m instanceof ByteMapMatcher) {
-			class NotByteChoiceMatcher extends ParsingMatcher {
+			class NotByteMapMatcher extends ParsingMatcher {
 				boolean bitMap[];
-				NotByteChoiceMatcher(boolean bitMap[]) {
+				NotByteMapMatcher(boolean bitMap[]) {
 					this.bitMap = bitMap;
 				}
 				@Override
@@ -195,7 +195,7 @@ public class Optimizer {
 					return true;
 				}
 			}
-			holder.matcher = new NotByteChoiceMatcher(((ByteMapMatcher) m).bitMap);
+			holder.matcher = new NotByteMapMatcher(((ByteMapMatcher) m).bitMap);
 			CountSpecLexer += 1;
 			return;
 		}
@@ -226,22 +226,63 @@ public class Optimizer {
 		if(this.is(O_Inline) && inner instanceof NonTerminal) {
 			inner = resolveNonTerminal(inner);
 		}
-//		if(inner instanceof ParsingByte) {
-//			holder.matcher = new NotByteMatcher(((ParsingByte) inner).byteChar);
-//			countSpecializedNot += 1;
-//			return;
-//		}
-//		if(inner instanceof ParsingAny) {
-//			holder.matcher = new NotAnyMatcher();
-//			countSpecializedNot += 1;
-//			return;
-//		}
-//		ParsingMatcher m = inner.matcher;
-//		if(m instanceof ByteChoiceMatcher) {
-//			holder.matcher = new NotByteChoiceMatcher(((ByteChoiceMatcher) m).bitMap);
-//			countSpecializedNot += 1;
-//			return;
-//		}
+		if(inner instanceof ParsingByte) {
+			class OptionByteMatcher extends ParsingMatcher {
+				int byteChar;
+				OptionByteMatcher(int byteChar) {
+					this.byteChar = byteChar;
+				}
+				@Override
+				public boolean simpleMatch(ParsingContext context) {
+					int c = context.source.byteAt(context.pos);
+					if(c == byteChar) {
+						context.consume(1);
+					}
+					return true;
+				}
+			}
+			holder.matcher = new OptionByteMatcher(((ParsingByte) inner).byteChar);
+			CountSpecLexer += 1;
+			return;
+		}
+		ParsingMatcher m = inner.matcher;
+		if(m instanceof ByteMapMatcher) {
+			class OptionByteMapMatcher extends ParsingMatcher {
+				boolean bitMap[];
+				OptionByteMapMatcher(boolean bitMap[]) {
+					this.bitMap = bitMap;
+				}
+				@Override
+				public boolean simpleMatch(ParsingContext context) {
+					int c = context.source.byteAt(context.pos);
+					if(this.bitMap[c]) {
+						context.consume(1);
+					}
+					return true;
+				}
+			}
+			holder.matcher = new OptionByteMapMatcher(((ByteMapMatcher) m).bitMap);
+			CountSpecLexer += 1;
+			return;
+		}
+		if(m instanceof StringMatcher) {
+			class OptionStringMatcher extends ParsingMatcher {
+				byte[] utf8;
+				OptionStringMatcher(byte[] utf8) {
+					this.utf8 = utf8;
+				}
+				@Override
+				public boolean simpleMatch(ParsingContext context) {
+					if(context.source.match(context.pos, this.utf8)) {
+						context.consume(this.utf8.length);
+					}
+					return true;
+				}
+			}
+			holder.matcher = new OptionStringMatcher(((StringMatcher) m).utf8);
+			CountSpecLexer += 1;
+			return;
+		}
 		//System.out.println("option " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
 	}
 
@@ -260,14 +301,31 @@ public class Optimizer {
 //			countSpecializedNot += 1;
 //			return;
 //		}
-		if(inner instanceof ParsingByteRange) {
-			holder.matcher = new ZeroMoreByteRangeMatcher(((ParsingByteRange) inner).startByteChar, ((ParsingByteRange) inner).endByteChar);
-			CountSpecLexer += 1;
-			return;
-		}
+//		if(inner instanceof ParsingByteRange) {
+//			holder.matcher = new ZeroMoreByteRangeMatcher(((ParsingByteRange) inner).startByteChar, ((ParsingByteRange) inner).endByteChar);
+//			CountSpecLexer += 1;
+//			return;
+//		}
 		ParsingMatcher m = inner.matcher;
 		if(m instanceof ByteMapMatcher) {
-			holder.matcher = new ZeroMoreByteChoiceMatcher(((ByteMapMatcher) m).bitMap);
+			class ZeroMoreByteMapMatcher extends ParsingMatcher {
+				boolean bitMap[];
+				ZeroMoreByteMapMatcher(boolean bitMap[]) {
+					this.bitMap = bitMap;
+				}
+				@Override
+				public boolean simpleMatch(ParsingContext context) {
+					while(true) {
+						int c = context.source.byteAt(context.pos);
+						if(!this.bitMap[c]) {
+							break;
+						}
+						context.pos += 1;
+					}
+					return true;
+				}
+			}
+			holder.matcher = new ZeroMoreByteMapMatcher(((ByteMapMatcher) m).bitMap);
 			CountSpecLexer += 1;
 			return;
 		}
@@ -534,46 +592,27 @@ class NonZeroByteMatcher extends ParsingMatcher {
 	}
 }
 
+//class ZeroMoreByteRangeMatcher extends ParsingMatcher {
+//	int startChar;
+//	int endChar;
+//	ZeroMoreByteRangeMatcher(int startChar, int endChar) {
+//		this.startChar = startChar;
+//		this.endChar = endChar;
+//	}
+//	
+//	@Override
+//	public boolean simpleMatch(ParsingContext context) {
+//		while(true) {
+//			int c = context.source.byteAt(context.pos);
+//			if(c < startChar || endChar < c) {
+//				break;
+//			}
+//			context.pos += 1;
+//		}
+//		return true;
+//	}
+//}
 
-class ZeroMoreByteRangeMatcher extends ParsingMatcher {
-	int startChar;
-	int endChar;
-	ZeroMoreByteRangeMatcher(int startChar, int endChar) {
-		this.startChar = startChar;
-		this.endChar = endChar;
-	}
-	
-	@Override
-	public boolean simpleMatch(ParsingContext context) {
-		while(true) {
-			int c = context.source.byteAt(context.pos);
-			if(c < startChar || endChar < c) {
-				break;
-			}
-			context.pos += 1;
-		}
-		return true;
-	}
-}
-
-class ZeroMoreByteChoiceMatcher extends ParsingMatcher {
-	boolean bitMap[];
-	ZeroMoreByteChoiceMatcher(boolean bitMap[]) {
-		this.bitMap = bitMap;
-	}
-	
-	@Override
-	public boolean simpleMatch(ParsingContext context) {
-		while(true) {
-			int c = context.source.byteAt(context.pos);
-			if(!this.bitMap[c]) {
-				break;
-			}
-			context.pos += 1;
-		}
-		return true;
-	}
-}
 
 class StringMatcher extends ParsingMatcher {
 	byte[] utf8;
