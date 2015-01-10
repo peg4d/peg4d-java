@@ -228,7 +228,7 @@ public class Grammar {
 
 
 		
-		new Optimizer().optimize(this);
+		new Optimizer().optimize(this, stats);
 		ParsingContext context = new ParsingContext(null);
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);

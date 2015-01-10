@@ -7,195 +7,11 @@ import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-class NezLogger {
+public class NezLogger {
 	final String logFile;
 	NezLogger(String logFile) {
 		this.logFile = logFile;
 	}
-		
-//	int PegSize;
-//	int statOptimizedPeg = 0;
-//
-//	long statFileLength = 0;  /* [bytes] */
-//	long statIOCount    = 0;
-//	long statReadLength = 0;  /* [bytes] */
-//	
-//	final void readFile(int length) {
-//		this.statIOCount += 1;
-//		this.statReadLength += length;
-//	}
-//
-//	long UnconsumedLength = 0; /* [chars] */
-//	long ConsumedLength = 0;   /* [chars] */
-
-	
-//	int  NewObjectCount = 0;
-//	int  ObjectCount    = 0;
-//	int  UsedObjectCount = 0;
-//	int  DisposalObjectCount = 0;
-//	int  NodeCount = 0;
-//	int  EdgeCount = 0;
-//	int  ObjectMaxDepth = 0;
-//	long HeapSize = 0;
-//	long UsedHeapSize = 0;
-//	
-//	final void countObjectCreation() {
-//		this.ObjectCount += 1;
-//	}
-//	
-//	final void statObject(ParsingObject pego) {
-//		UMap<ObjectCounter> m = new UMap<ObjectCounter>();
-//		this.UsedObjectCount = 0;
-//		this.EdgeCount = 0;
-//		this.NodeCount = 0;
-//		this.ObjectMaxDepth = 0;
-//		
-//		this.statObjectStructure(pego, 1, m);
-//		
-//		this.setCount("CreatedObject", this.ObjectCount);
-//		this.setCount("UsedObject", this.UsedObjectCount);
-////		this.setCount("DisposedObject", this.ObjectCount - this.UsedObjectCount);
-////		this.setRatio("Disposal/Used", this.ObjectCount - this.UsedObjectCount, this.UsedObjectCount);
-////		this.setCount("NewObject", this.NewObjectCount);
-////		this.setRatio("New/Creation", this.NewObjectCount - this.ObjectCount, this.ObjectCount);
-//		this.setCount("ObjectEdge", this.EdgeCount);
-//		this.setCount("ObjectNode", this.NodeCount);
-//		this.setCount("ObjectDepth", this.ObjectMaxDepth);
-//	}
-//
-//	private void statObjectStructure(ParsingObject pego, int depth, UMap<ObjectCounter> m) {
-//		if(depth > this.ObjectMaxDepth) {
-//			this.ObjectMaxDepth = depth;
-//		}
-//		this.UsedObjectCount += 1;
-//		if(pego.size() == 0) {
-//			this.EdgeCount += 1;
-//		}
-//		else {
-//			this.NodeCount += 1;
-//			for(int i = 0; i < pego.size(); i++) {
-//				this.statObjectStructure(pego.get(i), depth+1, m);
-//			}
-//		}
-//		String tag = pego.getTag().toString();
-//		ObjectCounter c = m.get(tag);
-//		if(c == null) {
-//			c = new ObjectCounter();
-//			c.tag = tag;
-//			m.put(tag, c);
-//		}
-//		c.count += 1;
-//		c.length += pego.getLength();
-//		c.size += pego.size();
-//	}
-//	
-//	class ObjectCounter {
-//		String tag;
-//		int count = 0;
-//		long length = 0;
-//		int size = 0;
-//	}
-//	
-//	long InitTotalHeap = 0;
-//	long StartTime = 0;
-//	long ErapsedTime = 0;
-//	
-//	double Latency  = 0;
-//
-//	
-//	public long end() {
-//		this.ErapsedTime = (System.currentTimeMillis() - StartTime);
-//		return this.ErapsedTime;
-//	}
-//	
-//	public void end(ParsingObject pego, ParsingContext p) {
-//		if(this.ErapsedTime == 0) {
-//			this.ErapsedTime = (System.currentTimeMillis() - StartTime);
-//		}
-//
-//		System.gc(); // meaningless ?
-//		this.ConsumedLength = p.getPosition();
-//		this.UnconsumedLength = p.source.length() - p.getPosition();
-//		this.statFileLength = p.source.length();
-//
-//		long total = Runtime.getRuntime().totalMemory();
-//		long free =  Runtime.getRuntime().freeMemory();
-//		this.HeapSize = total - free;
-//		this.UsedHeapSize =  this.HeapSize - this.UsedHeapSize;
-//
-//		
-//		this.set(new vText("Parser", p.getName()));
-//		this.setCount("Optimization", Main.OptimizationLevel);
-//		this.setCount("BacktrackBufferSize", MemoizationManager.BacktrackBufferSize);
-//
-//		String fileName = p.source.getResourceName();
-//		if(fileName.lastIndexOf('/') > 0) {
-//			fileName = fileName.substring(fileName.lastIndexOf('/')+1);
-//		}
-//		String id = fileName;
-//		if(fileName.lastIndexOf('.') > 0) {
-//			id = fileName.substring(0, fileName.lastIndexOf('.'));
-//		}
-//		id += "#" ;//+ p.peg.DefinedExpressionSize;
-//
-//		this.set(new vText("FileName", fileName));
-//		this.setCount1("FileSize", this.statFileLength);
-//		this.setCount1("DiskIO", this.statIOCount);
-//		this.setCount1("ReadFileSize", this.statReadLength);
-//		this.setRatio1("IO Ratio", this.statReadLength, this.statFileLength);
-//
-//		this.setCount("Memory", this.InitTotalHeap);
-////		id = id + ((Main.RecognitionOnlyMode) ? 'C' : 'O');
-//		id = id + Main.OptimizationLevel + "." + MemoizationManager.BacktrackBufferSize + "."  + (this.InitTotalHeap / (1024*1024)) +"M";
-//		this.setCount("HeapSize", this.HeapSize);
-//		this.setRatio1("Heap/File", this.HeapSize, this.statFileLength);		
-//		this.setCount("UsedHeapSize", this.UsedHeapSize);
-//		
-//		this.setCount("ConsumedLength", this.ConsumedLength);
-//		this.setCount1("UnconsumedLength", this.UnconsumedLength);
-//		
-//		this.setCount("ParsingLength", this.ConsumedLength + this.BacktrackLength);
-//		this.setRatio("Parsing/Consumed", this.ConsumedLength + this.BacktrackLength, this.ConsumedLength);
-//		
-//		this.setCount("Backtrack", this.BacktrackCount);
-//		this.setCount("WorstBacktrack", this.WorstBacktrackSize);
-//		
-//		this.setRatio("BacktrackAverage", this.BacktrackLength, this.BacktrackCount);
-////		this.setRatio("Backtrack1", this.backtrackCount[0], this.BacktrackCount);
-////		this.setRatio("Backtrack2", this.backtrackCount[1], this.BacktrackCount);
-////		this.setRatio("Backtrack4", this.backtrackCount[2], this.BacktrackCount);
-////		this.setRatio("Backtrack8", this.backtrackCount[3], this.BacktrackCount);
-////		this.setRatio("Backtrack16", this.backtrackCount[4], this.BacktrackCount);
-////		this.setRatio("Backtrack32", this.backtrackCount[5], this.BacktrackCount);
-////		this.setRatio("Backtrack64", this.backtrackCount[6], this.BacktrackCount);
-////		this.setRatio("Backtrack128", this.backtrackCount[7], this.BacktrackCount);
-////		this.setRatio1("Backtrack256", this.backtrackCount[8], this.BacktrackCount);
-////		this.setRatio1("Backtrack512", this.backtrackCount[9], this.BacktrackCount);
-////		this.setRatio1("Backtrack1024", this.backtrackCount[10], this.BacktrackCount);
-//		
-//		p.memoMap.stat(this);
-////		ckeckRepeatCounter();
-//
-//		if(pego != null) {
-//			this.statObject(pego);
-//		}
-//		//p.peg.updateStat(this);
-//		this.setText("StatId", id);
-//		this.setCount("Latency", this.ErapsedTime);  // ms
-//		this.setRatio("Throughput", this.ConsumedLength, this.ErapsedTime);
-//		
-//		this.writeCSV();
-//		//System.out.println("WorstBacktrack: " + p.source.substring(this.WorstBacktrackPosition, this.WorstBacktrackPosition + this.WorstBacktrackSize));
-//		double cf = 0;
-//		for(int i = 0; i < 16; i++) {
-//			int n = 1 << i;
-//			double f = (double)this.backtrackCount[i] / this.BacktrackCount;
-//			cf += this.backtrackCount[i];
-//			System.out.println(String.format("%d\t%d\t%2.3f\t%2.3f", n, this.backtrackCount[i], f, (cf / this.BacktrackCount)));
-//			if(n > this.WorstBacktrackSize) break;
-//		}
-//	}
-	
 	
 	private UMap<vData> csvMap = new UMap<vData>();
 	
@@ -491,6 +307,14 @@ class NezLogger {
 		this.CSV(sb, "PEG.NormalizedRules");		
 		this.CSV(sb, "PEG.ContextSensitiveRules");		
 		this.CSV(sb, "PEG.ContextSensitivity");		
+
+		/** **/
+		this.CSV(sb, "O.Inline");
+		this.CSV(sb, "O.Lexer");
+		this.CSV(sb, "O.String");		
+		this.CSV(sb, "O.ByteMap");
+		this.CSV(sb, "O.Prediction");		
+		this.CSV(sb, "O.LazyObject");
 
 		/** **/
 		this.CSV(sb, "Backtrack/Consumed");

@@ -2,6 +2,7 @@ package org.peg4d.expression;
 
 import org.peg4d.Grammar;
 import org.peg4d.Main;
+import org.peg4d.NezLogger;
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingRule;
 import org.peg4d.ParsingSource;
@@ -11,76 +12,47 @@ public class Optimizer {
 	public int OptimizeLevel = 2;
 	public int OptimizedMask  = 1;
 
-	public static int NullTerminatedInput       = 1 << 8;
-	
-	public static int InlineNonTerminalFlag     = 1;
-	
-	public static int SpecializationFlag        = 1 << 1;
-	public static int StringSpecializationFlag  = 1 << 2;
-	public static int NotAnyFlag                = 1 << 3;
-	
-	public static int LazyConstructorFlag       = 1 << 4;
-	public static int CharacterChoiceFlag       = 1 << 5;
-	public static int StringChoiceFlag          = 1 << 6;
-	public static int PredictedChoiceFlag       = 1 << 7;
+	public static int O_Inline           = 1 << 0;	
+	public static int O_SpecLexer        = 1 << 1;
+	public static int O_SpecString       = 1 << 2;
+	public static int O_ByteMap          = 1 << 3;
+	public static int O_Prediction       = 1 << 4;
+	public static int O_LazyObject       = 1 << 5;
 
-	public static void enableOptimizer() {
-//		if(Main.DebugLevel > 0) {
-//			InlineNonTerminal    = false;
-//		}
-//		if(Main.OptimizationLevel > 1) {
-//			Specialization       = true;
-//			StringSpecialization = true;
-//			CharacterChoice      = true;
-//		}
-//		if(Main.OptimizationLevel > 1) {
-//			LazyConstructor   = true;
-//			StringChoice      = true;
-//			NotCharacter      = true;
-//		}
-//		if(Main.OptimizationLevel > 2) {
-//			PredictedChoice   = true;
-//		}
-//		if(Main.OptimizationLevel > 3) {
-//			NonZeroByte  = true;
-//		}
-	}
+	//	public static int NotAnyFlag                = 1 << 1;
 	
+//	public static int PredictedChoiceFlag       = 1 << 7;
+	
+	private int CountInline = 0;
+	private int CountSpecString  = 0;
+	private int CountLazyObject      = 0;
+	private int CountSpecLexer       = 0;
+	
+	private int CountByteMap    = 0;
+	private int CountPrediction = 0;
+//	public static int countOptimizedChoice       = 0;
+
 	private ParsingMatcher newByteChoiceMatcher(int[] c) {
 		return new ByteMapMatcher(c);
 	}
 
-	public static int countOptimizedNonTerminal = 0;
-
-	public static int countSpecializedSequence  = 0;
-	public static int countLazyConstructor      = 0;
-	public static int countSpecializedNot       = 0;
-	
-	public static int countOptimizedCharacterChoice = 0;
-	public static int countOptimizedStringChoice = 0;
-	public static int countOptimizedChoice       = 0;
-
-	
-
-	public final void optimize(Grammar peg) {
+	public final void optimize(Grammar peg, NezLogger stats) {
 		int OptimizationLevel = Main.OptimizationLevel;
 		this.OptimizedMask = 0;
 		if(Main.DebugLevel > 0) {
 			OptimizationLevel = 0;
 		}
-		if(OptimizationLevel > 0) {
-			this.OptimizedMask |= Optimizer.InlineNonTerminalFlag;
-			this.OptimizedMask |= Optimizer.CharacterChoiceFlag;
-			this.OptimizedMask |= Optimizer.SpecializationFlag;
+		if(OptimizationLevel >= 1) {
+			this.OptimizedMask |= Optimizer.O_Inline;
 		}
-		if(OptimizationLevel > 1) {
-			this.OptimizedMask |= Optimizer.StringChoiceFlag;
-			this.OptimizedMask |= Optimizer.NotAnyFlag;
-			this.OptimizedMask |= Optimizer.PredictedChoiceFlag;
+		if(OptimizationLevel >= 2) {
+			this.OptimizedMask |= Optimizer.O_SpecLexer;
+			this.OptimizedMask |= Optimizer.O_SpecString;
+			this.OptimizedMask |= Optimizer.O_ByteMap;
 		}
-		if(Main.OptimizationLevel > 2) {
-			this.OptimizedMask |= Optimizer.StringSpecializationFlag;
-			this.OptimizedMask |= Optimizer.LazyConstructorFlag;
+		if(OptimizationLevel >= 3) {
+			this.OptimizedMask |= Optimizer.O_Prediction;
+//			this.OptimizedMask |= Optimizer.O_LazyObject;
 		}
 		for(int i = 0; i < peg.nameList.size(); i++) {
 			ParsingRule rule = peg.getRule(peg.nameList.ArrayValues[i]);
@@ -91,6 +63,14 @@ public class Optimizer {
 				ParsingRule rule = peg.getRule(peg.nameList.ArrayValues[i]);
 				this.optimizeInline(rule.expr);
 			}
+		}
+		if(stats != null) {
+			stats.setCount("O.Inline", this.CountInline);
+			stats.setCount("O.Lexer",  this.CountSpecLexer);
+			stats.setCount("O.String", this.CountSpecString);
+			stats.setCount("O.ByteMap", this.CountByteMap);
+			stats.setCount("O.Prediction", this.CountPrediction);
+			stats.setCount("O.LazyObject", this.CountLazyObject);
 		}
 	}
 	
@@ -111,13 +91,13 @@ public class Optimizer {
 				optimizeConstructor((ParsingConstructor)e);
 				return;
 			}
-			if(Main._IsFlag(this.OptimizedMask, Optimizer.NullTerminatedInput)) {
-				if(e instanceof ParsingByte && ((ParsingByte) e).byteChar != 0) {
-					e.matcher = new NonZeroByteMatcher(((ParsingByte) e).byteChar);
-					return;
-				}
-			}
-			if(Main._IsFlag(this.OptimizedMask, Optimizer.SpecializationFlag)) {
+//			if(Main._IsFlag(this.OptimizedMask, Optimizer.NullTerminatedInput)) {
+//				if(e instanceof ParsingByte && ((ParsingByte) e).byteChar != 0) {
+//					e.matcher = new NonZeroByteMatcher(((ParsingByte) e).byteChar);
+//					return;
+//				}
+//			}
+			if(Main._IsFlag(this.OptimizedMask, Optimizer.O_SpecLexer)) {
 				if(e instanceof ParsingNot) {
 					optimizeNot((ParsingNot)e);
 					return;
@@ -143,7 +123,7 @@ public class Optimizer {
 	}
 
 	private final boolean isInlineNonTerminal() {
-		return Main._IsFlag(this.OptimizedMask, Optimizer.InlineNonTerminalFlag);
+		return Main._IsFlag(this.OptimizedMask, Optimizer.O_Inline);
 	}
 	
 	public final void optimizeInline(ParsingExpression e) {
@@ -160,7 +140,7 @@ public class Optimizer {
 	final void optimizeNonTerminal(NonTerminal ne) {
 		ParsingExpression e = resolveNonTerminal(ne);
 		ne.matcher = e.matcher;
-		countOptimizedNonTerminal += 1;
+		CountInline += 1;
 	}
 
 	final void optimizeNot(ParsingNot holder) {
@@ -169,24 +149,39 @@ public class Optimizer {
 			inner = resolveNonTerminal(inner);
 		}
 		if(inner instanceof ParsingByte) {
+			class NotByteMatcher extends ParsingMatcher {
+				int byteChar;
+				NotByteMatcher(int byteChar) {
+					this.byteChar = byteChar;
+				}
+				@Override
+				public boolean simpleMatch(ParsingContext context) {
+					int c = context.source.byteAt(context.pos);
+					if(c == byteChar) {
+						context.failure(this);
+						return false;
+					}
+					return true;
+				}
+			}
 			holder.matcher = new NotByteMatcher(((ParsingByte) inner).byteChar);
-			countSpecializedNot += 1;
+			CountSpecLexer += 1;
 			return;
 		}
 		if(inner instanceof ParsingAny) {
 			holder.matcher = new NotAnyMatcher();
-			countSpecializedNot += 1;
+			CountSpecLexer += 1;
 			return;
 		}
 		ParsingMatcher m = inner.matcher;
 		if(m instanceof ByteMapMatcher) {
 			holder.matcher = new NotByteChoiceMatcher(((ByteMapMatcher) m).bitMap);
-			countSpecializedNot += 1;
+			CountSpecLexer += 1;
 			return;
 		}
 		if(m instanceof StringSequenceMatcher) {
 			holder.matcher = new NotStringSequenceMatcher(((StringSequenceMatcher) m).utf8);
-			countSpecializedNot += 1;
+			CountSpecLexer += 1;
 			return;
 		}
 		//System.out.println("not " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
@@ -233,13 +228,13 @@ public class Optimizer {
 //		}
 		if(inner instanceof ParsingByteRange) {
 			holder.matcher = new ZeroMoreByteRangeMatcher(((ParsingByteRange) inner).startByteChar, ((ParsingByteRange) inner).endByteChar);
-			countSpecializedNot += 1;
+			CountSpecLexer += 1;
 			return;
 		}
 		ParsingMatcher m = inner.matcher;
 		if(m instanceof ByteMapMatcher) {
 			holder.matcher = new ZeroMoreByteChoiceMatcher(((ByteMapMatcher) m).bitMap);
-			countSpecializedNot += 1;
+			CountSpecLexer += 1;
 			return;
 		}
 		//System.out.println("Unoptimized repetition " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
@@ -254,32 +249,32 @@ public class Optimizer {
 			}
 			prefetchIndex = i + 1;
 		}
-		if(prefetchIndex > 0 && Main._IsFlag(this.OptimizedMask, Optimizer.LazyConstructorFlag)) {
-			countLazyConstructor += 1;
+		if(prefetchIndex > 0 && Main._IsFlag(this.OptimizedMask, Optimizer.O_LazyObject)) {
+			CountLazyObject += 1;
 			holder.prefetchIndex = prefetchIndex;
 		}
 	}
 
 	final void optimizeSequence(ParsingSequence holder) {
-		if(Main._IsFlag(this.OptimizedMask, Optimizer.NotAnyFlag) && holder.size() == 2 && holder.get(0) instanceof ParsingNot && holder.get(1) instanceof ParsingAny) {
+		if(Main._IsFlag(this.OptimizedMask, Optimizer.O_SpecLexer) && holder.size() == 2 && holder.get(0) instanceof ParsingNot && holder.get(1) instanceof ParsingAny) {
 			ParsingExpression inner = ((ParsingNot)holder.get(0)).inner;
 			if(this.isInlineNonTerminal() && inner instanceof NonTerminal) {
 				inner = resolveNonTerminal(inner);
 			}
 			if(inner instanceof ParsingByte) {
 				holder.matcher = new ByteMapMatcher(((ParsingByte) inner).byteChar);
-				countSpecializedNot += 1;
+				CountSpecLexer += 1;
 				return;
 			}
 			ParsingMatcher m = inner.matcher;
 			if(m instanceof ByteMapMatcher) {
 				holder.matcher = new ByteMapMatcher(((ByteMapMatcher) m), false);
-				countSpecializedNot += 1;
+				CountSpecLexer += 1;
 				return;
 			}
 			//System.out.println("not any " + holder + " " + inner.getClass().getSimpleName() + "/" + inner.matcher.getClass().getSimpleName());
 		}
-		if(Main._IsFlag(this.OptimizedMask, Optimizer.StringSpecializationFlag)) {
+		if(Main._IsFlag(this.OptimizedMask, Optimizer.O_SpecString)) {
 			byte[] u = new byte[holder.size()];
 			for(int i = 0; i < holder.size(); i++) {
 				ParsingExpression inner = resolveNonTerminal(holder.get(i));				
@@ -290,14 +285,14 @@ public class Optimizer {
 				return;
 			}
 			holder.matcher = new StringSequenceMatcher(u);
-			countSpecializedSequence += 1;
+			CountSpecString += 1;
 			return;
 		}
 	}
 	
 	final void optimizeChoice(ParsingChoice choice) {
 		int[] c = new int[256];
-		if(Main._IsFlag(this.OptimizedMask, Optimizer.CharacterChoiceFlag) && checkCharacterChoice(choice, c)) {
+		if(Main._IsFlag(this.OptimizedMask, Optimizer.O_ByteMap) && checkCharacterChoice(choice, c)) {
 //			System.out.println("Optimized1: " + choice);
 			for(int ch = 0; ch < 256; ch++) {
 //				if(c[ch] > 0) {
@@ -305,14 +300,13 @@ public class Optimizer {
 //				}
 			}
 			choice.matcher = this.newByteChoiceMatcher(c);
-			countOptimizedCharacterChoice += 1;
-			countOptimizedChoice += 1;
+			CountByteMap += 1;
 			return;
 		}
 		for(int i = 0; i < c.length; i++) { 
 			c[i] = 0; 
 		}
-		if(Main._IsFlag(this.OptimizedMask, Optimizer.StringChoiceFlag) && checkStringChoice(choice, c)) {
+		if(Main._IsFlag(this.OptimizedMask, Optimizer.O_Prediction) && checkStringChoice(choice, c)) {
 			ParsingExpression[] matchCase = new ParsingExpression[257];
 			ParsingExpression empty = ParsingExpression.newEmpty();
 			makeStringChoice(choice, matchCase, empty, empty);
@@ -331,11 +325,10 @@ public class Optimizer {
 				}
 			}
 			choice.matcher = new StringChoiceMatcher(matchCase);
-			countOptimizedChoice += 1;
-			countOptimizedStringChoice += 1;
+			CountPrediction += 1;
 			return;
 		}
-		if(Main._IsFlag(this.OptimizedMask, Optimizer.PredictedChoiceFlag)) {
+		if(Main._IsFlag(this.OptimizedMask, Optimizer.O_Prediction)) {
 			boolean selfChoice = false;
 			ParsingExpression[] matchCase = new ParsingExpression[257];
 			ParsingExpression fails = new ParsingFailure(choice);
@@ -352,7 +345,7 @@ public class Optimizer {
 				if(matchCase[ch] != fails) {
 					//System.out.println("|3 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
 				}
-				countOptimizedChoice += 1;
+				CountPrediction += 1;
 			}
 //			if(selfChoice) {
 //				System.out.println("SELF CHOICE: " + choice);
@@ -508,23 +501,6 @@ class NonZeroByteMatcher extends ParsingMatcher {
 }
 
 
-class NotByteMatcher extends ParsingMatcher {
-	int byteChar;
-
-	NotByteMatcher(int byteChar) {
-		this.byteChar = byteChar;
-	}
-	
-	@Override
-	public boolean simpleMatch(ParsingContext context) {
-		int c = context.source.byteAt(context.pos);
-		if(c == byteChar) {
-			context.failure(this);
-			return false;
-		}
-		return true;
-	}
-}
 
 class NotAnyMatcher extends ParsingMatcher {
 	NotAnyMatcher() {
