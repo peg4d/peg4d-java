@@ -17,6 +17,7 @@ public class Optimizer {
 	public static int O_ByteMap          = 1 << 3;
 	public static int O_Prediction       = 1 << 4;
 	public static int O_LazyObject       = 1 << 5;
+	public static int O_Ext              = 1 << 30;
 
 	//	public static int NotAnyFlag                = 1 << 1;
 	
@@ -41,52 +42,60 @@ public class Optimizer {
 		if(Main.DebugLevel > 0) {
 			OptimizationLevel = 0;
 		}
-//		if(OptimizationLevel >= 1) {
-//			this.OptimizedMask |= Optimizer.O_Inline;
-//		}
-//		if(OptimizationLevel >= 2) {
-//			this.OptimizedMask |= Optimizer.O_SpecLexer;
-//			this.OptimizedMask |= Optimizer.O_SpecString;
-//			this.OptimizedMask |= Optimizer.O_ByteMap;
-//		}
-//		if(OptimizationLevel >= 3) {
-//			this.OptimizedMask |= Optimizer.O_Prediction;
-//			this.OptimizedMask |= Optimizer.O_LazyObject;
-//		}
 		if(OptimizationLevel < 10) {
 			if(OptimizationLevel >= 1) {
-				this.OptimizedMask |= Optimizer.O_Inline;
+				this.OptimizedMask |= O_Inline;
+				this.OptimizedMask |= O_SpecLexer;
+				this.OptimizedMask |= O_SpecString;
 			}
 			if(OptimizationLevel >= 2) {
-				this.OptimizedMask |= Optimizer.O_SpecLexer;
-			}
-			if(OptimizationLevel >= 3) {
-				this.OptimizedMask |= Optimizer.O_SpecString;
-			}
-			if(OptimizationLevel >= 4) {
-				this.OptimizedMask |= Optimizer.O_ByteMap;
-			}
-			if(OptimizationLevel >= 5) {
-				this.OptimizedMask |= Optimizer.O_Prediction;
-				//		this.OptimizedMask |= Optimizer.O_LazyObject;
+				this.OptimizedMask |= O_ByteMap;
+				this.OptimizedMask |= O_Prediction;
+				this.OptimizedMask |= O_LazyObject;
 			}
 		}
-		if(OptimizationLevel == 11) {
-			this.OptimizedMask = /*Optimizer.O_Inline |*/ Optimizer.O_SpecLexer | Optimizer.O_SpecString | Optimizer.O_ByteMap | Optimizer.O_Prediction;
+		else {
+			switch(OptimizationLevel) {
+				case 11: OptimizedMask = O_Inline; break;
+				case 12: OptimizedMask = O_SpecLexer; break;
+				case 13: OptimizedMask = O_SpecString; break;
+				case 14: OptimizedMask = O_ByteMap; break;
+				case 15: OptimizedMask = O_Prediction; break;
+	
+				case 22:
+					this.OptimizedMask = O_Inline | O_SpecLexer ;
+					break;
+				case 33:
+					this.OptimizedMask = O_Inline | O_SpecLexer | O_SpecString;
+					break;
+				case 44:
+					this.OptimizedMask = O_Inline | O_SpecLexer | O_SpecString | O_ByteMap ;
+					break;
+				case 55:
+					this.OptimizedMask = O_Inline | O_SpecLexer | O_SpecString | O_ByteMap | O_Prediction;
+					break;
+	
+				case 91:
+					this.OptimizedMask = /*O_Inline |*/ O_SpecLexer | O_SpecString | O_ByteMap | O_Prediction;
+					break;
+				case 92:
+					this.OptimizedMask = O_Inline /*| O_SpecLexer*/ | O_SpecString | O_ByteMap | O_Prediction;
+					break;
+				case 93:
+					this.OptimizedMask = O_Inline | O_SpecLexer /*| O_SpecString*/ | O_ByteMap | O_Prediction;
+					break;
+				case 94:
+					this.OptimizedMask = O_Inline | O_SpecLexer | O_SpecString /*| O_ByteMap*/ | O_Prediction;
+					break;
+				case 95:
+					this.OptimizedMask = O_Inline | O_SpecLexer | O_SpecString | O_ByteMap /*| O_Prediction*/;
+					break;
+				case 99:
+					this.OptimizedMask = O_Inline | O_SpecLexer | O_SpecString | O_ByteMap | O_Prediction | O_Ext;
+					break;
+					
+			}
 		}
-		if(OptimizationLevel == 12) {
-			this.OptimizedMask = Optimizer.O_Inline /*| Optimizer.O_SpecLexer*/ | Optimizer.O_SpecString | Optimizer.O_ByteMap | Optimizer.O_Prediction;
-		}
-		if(OptimizationLevel == 13) {
-			this.OptimizedMask = Optimizer.O_Inline | Optimizer.O_SpecLexer /*| Optimizer.O_SpecString*/ | Optimizer.O_ByteMap | Optimizer.O_Prediction;
-		}
-		if(OptimizationLevel == 14) {
-			this.OptimizedMask = Optimizer.O_Inline | Optimizer.O_SpecLexer | Optimizer.O_SpecString /*| Optimizer.O_ByteMap*/ | Optimizer.O_Prediction;
-		}
-		if(OptimizationLevel == 15) {
-			this.OptimizedMask = Optimizer.O_Inline | Optimizer.O_SpecLexer | Optimizer.O_SpecString | Optimizer.O_ByteMap /*| Optimizer.O_Prediction*/;
-		}
-
 		for(int i = 0; i < peg.nameList.size(); i++) {
 			ParsingRule rule = peg.getRule(peg.nameList.ArrayValues[i]);
 			this.optimize(rule.expr);
@@ -127,7 +136,6 @@ public class Optimizer {
 			if(is(O_ByteMap) && e instanceof ParsingByteRange) {
 				e.matcher = new ByteMapMatcher(((ParsingByteRange) e).startByteChar, ((ParsingByteRange) e).endByteChar);
 				this.CountByteMap += 1;
-//				optimizeConstructor((ParsingConstructor)e);
 				return;
 			}
 			if(is(O_SpecLexer)) {
@@ -409,7 +417,7 @@ public class Optimizer {
 	
 	final void optimizeChoice(ParsingChoice choice) {
 		int[] c = new int[256];
-		if(Main._IsFlag(this.OptimizedMask, Optimizer.O_ByteMap) && checkCharacterChoice(choice, c)) {
+		if(is(O_ByteMap) && checkCharacterChoice(choice, c)) {
 //			System.out.println("Optimized1: " + choice);
 			for(int ch = 0; ch < 256; ch++) {
 //				if(c[ch] > 0) {
@@ -424,7 +432,7 @@ public class Optimizer {
 			c[i] = 0; 
 		}
 		if(is(O_Prediction)) {
-			if(checkStringChoice(choice, c)) {
+			if(is(O_Ext) && checkStringChoice(choice, c)) {
 				ParsingExpression[] matchCase = new ParsingExpression[257];
 				ParsingExpression empty = ParsingExpression.newEmpty();
 				makeStringChoice(choice, matchCase, empty, empty);
@@ -437,7 +445,7 @@ public class Optimizer {
 					else {
 						matchCase[ch] = matchCase[ch].uniquefy();
 	//					System.out.println("|2 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
-						if(matchCase[ch] instanceof ParsingChoice) {
+						if(matchCase[ch] instanceof ParsingChoice && !matchCase[ch].isOptimized()) {
 							optimizeChoice((ParsingChoice)matchCase[ch]);
 						}
 					}
@@ -457,6 +465,11 @@ public class Optimizer {
 						//System.out.println("SELF CHOICE: " + choice + " at " + GrammarFormatter.stringfyByte(ch) );
 						selfChoice = true;
 						//return; 
+					}
+					else {
+						if(matchCase[ch] instanceof ParsingChoice && !matchCase[ch].isOptimized()) {
+							optimizeChoice((ParsingChoice)matchCase[ch]);
+						}
 					}
 					if(matchCase[ch] != fails) {
 						//System.out.println("|3 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);

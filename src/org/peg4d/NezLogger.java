@@ -166,60 +166,6 @@ public class NezLogger {
 	}
 
 
-//	public final void writeCSV() {
-//		StringBuilder sb = new StringBuilder();
-//		sb.append("v5,");
-//		this.CSV(sb, "Id");
-//		this.CSV(sb, "Memory");
-//		this.CSV(sb, "Optimization");
-//		this.CSV(sb, "BacktrackBufferSize");
-//		/** **/
-//		this.CSV(sb, "Peg");
-//		this.CSV(sb, "PegSize");		
-//		/** **/
-//		this.CSV(sb, "FileName");
-//		this.CSV(sb, "FileSize");
-//		this.CSV(sb, "Latency");
-//		this.CSV(sb, "Throughput");
-//		this.CSV(sb, "HeapSize");
-//		this.CSV(sb, "Heap/File");
-////		this.CSV(sb, "UsedObject");
-//
-//		/** **/
-//		this.CSV(sb, "Backtrack");
-//		this.CSV(sb, "WorstBacktrack");
-//		this.CSV(sb, "ParsingLength");
-//		this.CSV(sb, "Parsing/Consumed");
-//		
-//		/** **/
-//		this.CSV(sb, "Memo");
-//		this.CSV(sb, "MemoStored");
-//		this.CSV(sb, "MemoUsed");
-//		this.CSV(sb, "Used/Stored");
-//		this.CSV(sb, "UnusedNonTerminal");
-//		this.CSV(sb, "DeactivatedNonTerminal");
-//
-//		
-////		/** **/
-////		this.CSV(sb, "ObjectEdge");
-////		this.CSV(sb, "ObjectNode");
-////		this.CSV(sb, "ObjectDepth");
-//
-//		/** **/
-//		SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy/MM/dd");
-//		sb.append("" + sdf1.format(new Date()));
-//		String csv = sb.toString();
-//		System.out.println(csv);
-//		
-//		try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(Main.CSVFileName, true)))) {
-//		    out.println(csv);
-//		}catch (IOException e) {
-//			Main._Exit(1, "Can't write csv log: " + Main.CSVFileName);
-//		}
-//	}
-	
-	
-
 	public void statParsingContext(ParsingContext p, long ErapsedTime) {
 		System.gc(); // meaningless ?
 
@@ -285,7 +231,7 @@ public class NezLogger {
 	
 	public final String formatCSV() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("v6,");
+		sb.append("v7,");
 		this.CSV(sb, "Parser");
 		this.CSV(sb, "Memory");
 		this.CSV(sb, "Optimization");
@@ -330,9 +276,10 @@ public class NezLogger {
 		this.CSV(sb, "MemoUsed");
 		this.CSV(sb, "MemoConflicted");
 		this.CSV(sb, "Used/Stored");
-		this.CSV(sb, "Conflicted/Stored");
-		this.CSV(sb, "UnusedNonTerminal");
-		this.CSV(sb, "DeactivatedNonTerminal");
+		this.CSV(sb, "MemoPoint");
+		this.CSV(sb, "UnusedMemoPoint");
+		this.CSV(sb, "DeactivatedMemoPoint");
+		this.CSV(sb, "MemoPointActivity");
 
 		SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy/MM/dd");
 		sb.append("" + sdf1.format(new Date()));

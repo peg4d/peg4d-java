@@ -64,7 +64,7 @@ public class MemoizationManager {
 			return this.memoMiss + this.memoHit;
 		}
 
-		protected boolean checkUseless() {
+		protected final boolean checkUseless() {
 			if(this.memoMiss == 32) {
 				if(this.memoHit < 2) {          
 					return true;
@@ -195,8 +195,10 @@ public class MemoizationManager {
 			if(VerboseMemo) {
 				System.out.println("Total: " + ((double)hit / miss) + " WorstCaseBackTrack=" + stat.WorstBacktrackSize);
 			}
-			stat.setCount("UnusedNonTerminal", unused);
-			stat.setCount("DeactivatedNonTerminal", deactivated);
+			stat.setCount("MemoPoint", memoList.size());
+			stat.setCount("UnusedMemoPoint", unused);
+			stat.setCount("DeactivatedMemoPoint", deactivated);
+			stat.setRatio("MemoPointActivity", deactivated, memoList.size() - unused);
 		}
 	}
 	
@@ -296,7 +298,7 @@ public class MemoizationManager {
 				
 		@Override
 		public String toString() {
-			return String.format("MEMO[%d,%s] r=%2.5f #%d len=%.2f %d %s", 
+			return String.format("MEMO[#%d,%s] r=%2.5f c=%d len=%.2f %d %s", 
                     this.memo.memoPoint, this.enableMemo,this.memo.ratio(), 
                     this.memo.count(), this.memo.length(), this.memo.maxLength, holder);
 		}
