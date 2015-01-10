@@ -15,12 +15,7 @@ public class ByteMapMatcher extends ParsingMatcher {
 	ByteMapMatcher(int beginChar, int endChar) {
 		this.bitMap = new boolean[257];
 		for(int i = 0; i < 256; i++) {
-			if(beginChar <= i && i <= endChar) {
-				this.bitMap[i] = true;
-			}
-			else {
-				this.bitMap[i] = false;
-			}
+			this.bitMap[i] = (beginChar <= i && i <= endChar);
 		}
 	}
 	ByteMapMatcher(int NotChar) {

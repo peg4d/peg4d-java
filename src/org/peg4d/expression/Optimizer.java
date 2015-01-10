@@ -53,21 +53,38 @@ public class Optimizer {
 //			this.OptimizedMask |= Optimizer.O_Prediction;
 //			this.OptimizedMask |= Optimizer.O_LazyObject;
 //		}
-		if(OptimizationLevel >= 1) {
-			this.OptimizedMask |= Optimizer.O_Inline;
+		if(OptimizationLevel < 10) {
+			if(OptimizationLevel >= 1) {
+				this.OptimizedMask |= Optimizer.O_Inline;
+			}
+			if(OptimizationLevel >= 2) {
+				this.OptimizedMask |= Optimizer.O_SpecLexer;
+			}
+			if(OptimizationLevel >= 3) {
+				this.OptimizedMask |= Optimizer.O_SpecString;
+			}
+			if(OptimizationLevel >= 4) {
+				this.OptimizedMask |= Optimizer.O_ByteMap;
+			}
+			if(OptimizationLevel >= 5) {
+				this.OptimizedMask |= Optimizer.O_Prediction;
+				//		this.OptimizedMask |= Optimizer.O_LazyObject;
+			}
 		}
-		if(OptimizationLevel >= 2) {
-			this.OptimizedMask |= Optimizer.O_SpecLexer;
+		if(OptimizationLevel == 11) {
+			this.OptimizedMask = /*Optimizer.O_Inline |*/ Optimizer.O_SpecLexer | Optimizer.O_SpecString | Optimizer.O_ByteMap | Optimizer.O_Prediction;
 		}
-		if(OptimizationLevel >= 3) {
-			this.OptimizedMask |= Optimizer.O_SpecString;
+		if(OptimizationLevel == 12) {
+			this.OptimizedMask = Optimizer.O_Inline /*| Optimizer.O_SpecLexer*/ | Optimizer.O_SpecString | Optimizer.O_ByteMap | Optimizer.O_Prediction;
 		}
-		if(OptimizationLevel >= 4) {
-			this.OptimizedMask |= Optimizer.O_ByteMap;
+		if(OptimizationLevel == 13) {
+			this.OptimizedMask = Optimizer.O_Inline | Optimizer.O_SpecLexer /*| Optimizer.O_SpecString*/ | Optimizer.O_ByteMap | Optimizer.O_Prediction;
 		}
-		if(OptimizationLevel >= 5) {
-			this.OptimizedMask |= Optimizer.O_Prediction;
-			//		this.OptimizedMask |= Optimizer.O_LazyObject;
+		if(OptimizationLevel == 14) {
+			this.OptimizedMask = Optimizer.O_Inline | Optimizer.O_SpecLexer | Optimizer.O_SpecString /*| Optimizer.O_ByteMap*/ | Optimizer.O_Prediction;
+		}
+		if(OptimizationLevel == 15) {
+			this.OptimizedMask = Optimizer.O_Inline | Optimizer.O_SpecLexer | Optimizer.O_SpecString | Optimizer.O_ByteMap /*| Optimizer.O_Prediction*/;
 		}
 
 		for(int i = 0; i < peg.nameList.size(); i++) {
@@ -107,7 +124,13 @@ public class Optimizer {
 				optimizeConstructor((ParsingConstructor)e);
 				return;
 			}
-			if(Main._IsFlag(this.OptimizedMask, Optimizer.O_SpecLexer)) {
+			if(is(O_ByteMap) && e instanceof ParsingByteRange) {
+				e.matcher = new ByteMapMatcher(((ParsingByteRange) e).startByteChar, ((ParsingByteRange) e).endByteChar);
+				this.CountByteMap += 1;
+//				optimizeConstructor((ParsingConstructor)e);
+				return;
+			}
+			if(is(O_SpecLexer)) {
 				if(e instanceof ParsingNot) {
 					optimizeNot((ParsingNot)e);
 					return;
@@ -420,7 +443,6 @@ public class Optimizer {
 					}
 				}
 				choice.matcher = new StringChoiceMatcher(matchCase);
-				return;
 			}
 			else {
 				boolean selfChoice = false;
@@ -451,6 +473,15 @@ public class Optimizer {
 			ParsingExpression e = resolveNonTerminal(choice.get(i));
 			if(e instanceof ParsingByte) {
 				c[((ParsingByte) e).byteChar]++;
+				continue;
+			}
+			if(e.matcher instanceof ByteMapMatcher) {
+				boolean[] bitMap = ((ByteMapMatcher)e.matcher).bitMap;
+				for(int c1 = 0; c1 < c.length; c1++) {
+					if(bitMap[c1]) {
+						c[c1]++;
+					}
+				}
 				continue;
 			}
 			if(e instanceof ParsingByteRange) {
@@ -487,6 +518,15 @@ public class Optimizer {
 			ParsingExpression e = resolveSequence(choice.get(i));
 			if(e instanceof ParsingByte) {
 				c[((ParsingByte) e).byteChar]++;
+				continue;
+			}
+			if(e.matcher instanceof ByteMapMatcher) {
+				boolean[] bitMap = ((ByteMapMatcher)e.matcher).bitMap;
+				for(int c1 = 0; c1 < c.length; c1++) {
+					if(bitMap[c1]) {
+						c[c1]++;
+					}
+				}
 				continue;
 			}
 			if(e instanceof ParsingByteRange) {
