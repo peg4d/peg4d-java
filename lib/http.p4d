@@ -1,0 +1,1177 @@
+
+File
+	= { @HTTPMessage #file }
+
+Chunk
+	= HTTPVersion
+	/ HTTPDate
+	/ GeneralHeader
+	/ RequestHeader
+	/ ResponseHeader
+	/ EntityHeader
+
+OCTET
+	= .
+	
+CHAR
+	= [\u0000-\u007f]
+	
+UPALPHA
+	= [A-Z]
+	
+LOALPHA
+	= [a-z]
+	
+ALPHA
+	= UPALPHA / LOALPHA
+	
+ALPHA1_8
+	= ALPHA (ALPHA (ALPHA (ALPHA (ALPHA (ALPHA (ALPHA ALPHA?)?)?)?)?)?)?
+	
+DIGIT
+	= [0-9]
+	
+DIGIT2
+	= DIGIT DIGIT
+	
+DIGIT3
+	= DIGIT DIGIT DIGIT
+	
+DIGIT4
+	= DIGIT DIGIT DIGIT DIGIT
+	
+CTL
+	= [\u0000-\u001f]
+	
+CR
+	= '\r'
+	
+LF
+	= '\n'
+	
+SP
+	= ' '
+	
+HTAB
+	= '\t'
+	
+CRLF
+	= CR LF
+	
+EOL
+	= (CR / LF)*
+
+LWS
+	= CRLF? ( SP / HTAB )
+	
+_
+	= LWS*
+	
+word
+	= token / quotedstring
+	
+token
+	= (!CTL !separators CHAR)+
+	
+separators
+	= '(' / ')' / '<' / '>' / '@'
+	/ ',' / ';' / ':' / '\\' / '"'
+	/ '/' / '[' / ']' / '?' / '='
+	/ '{' / '}' / SP / HTAB
+	
+quotedstring
+	= '"' qdtext* '"'
+	/ '<' qatext* '>'
+	
+qdtext
+	= !'"' text
+	
+qatext
+	= !'<' !'>' text
+	
+text
+	= !CTL OCTET
+	/ LWS
+	
+HEX
+	= 'A' / 'B' / 'C' / 'D' / 'E' / 'F'
+	/ 'a' / 'b' / 'c' / 'd' / 'e' / 'f' / DIGIT
+
+// ===========================================
+// Http
+// ===========================================
+	
+HTTPVersion
+	= 'HTTP' '/' { DIGIT+ '.' DIGIT+ #HTTPVersion }
+	
+HTTPUrl
+	= 'http:' { '//' @Host  (':' @Port)? (@AbsPath ('?' @Query)? )? #URL }
+	
+comment
+	= '('( ctext / comment )* ')'
+	
+ctext
+	= !'(' !')' text
+	
+//ObjectBody
+//	= OCTET*
+
+URIReference
+	= { ( @AbsoluteURI / @RelativeURI )? ( '#' @Fragment )? #URIReference }
+
+AbsoluteURI
+	= Scheme ':' ( HierPart / OpaquePart )
+
+RelativeURI
+	= ( NetPath / AbsPath / RelPath ) ( '?' Query )?
+
+HierPart
+	= ( NetPath / AbsPath ) ( '?' Query )?
+
+OpaquePart
+	= uric_no_slash (uric)*
+
+uric_no_slash
+	= unreserved / escaped / ';' / '?' / ':' / '@' /
+		'&' / '=' / '+' / '$' / ','
+
+NetPath
+	= '//' Authority ( AbsPath )?
+	
+AbsPath
+	= '/' PathSegments
+
+RelPath
+	= RelSegment (AbsPath)?
+
+RelSegment   =  ( unreserved / escaped /
+				';' / '@' / '&' / '=' / '+' / '$' / ',' )+
+
+Scheme
+	=  ALPHA ( ALPHA / DIGIT / '+' / '-' / '.' )* 
+
+Authority
+	= ( Server / reg_name ) 
+
+reg_name
+	= ( unreserved / escaped / '$' / ',' /
+		';' / ':' / '@' / '&' / '=' / '+' )+
+
+Server
+	= ( ( UserInfo '@' )? HostPort )? 
+
+UserInfo
+	= ( unreserved / escaped / ';' / ':' / '&' / '=' / '+' / '$' / ',' )*
+
+HostPort
+	= Host ( ':' Port )? 
+
+Host
+	= ( hostname / ipv4address ) 
+
+hostname
+	= ( domainlabel '.' )* toplabel '.'?
+
+domainlabel
+	= alphanum ( alphanum / '-' )*
+
+toplabel
+	= ALPHA ( alphanum / '-' )*
+
+ipv4address
+	= DIGIT+ '.' DIGIT+ '.' DIGIT+ '.' DIGIT+
+
+Port
+	= DIGIT*
+
+Path
+	= (AbsPath / OpaquePart)?
+
+PathSegments
+	= segment ( '/' segment )*
+
+segment = pchar* ( ';' param )*
+
+param   = pchar*
+
+pchar
+	= unreserved / escaped /
+	':' / '@' / '&' / '=' / '+' / '$' / ','
+
+Query
+	= uric
+
+Fragment
+	= uric*
+
+uric
+	= reserved / unreserved / escaped
+
+reserved
+	= ';' / '/' / '?' / ':' / '@' / '&' / '=' / '+' / '$' / ','
+
+unreserved
+	= alphanum / mark
+
+mark
+	= '-' / '_' / '.' / '!' / '~' / '*' / "'" / '(' / ')'
+
+escaped
+	= '%' HEX HEX
+
+alphanum
+	= ALPHA / DIGIT
+
+// ===========================================
+// Date
+// ===========================================
+	
+HTTPDate
+	= { (rfc1123date / rfc850date / asctimedate) #HTTPDate }
+
+rfc1123date
+	= @Wkday ',' SP @Date1 SP @Time SP 'GMT'
+	
+rfc850date
+	= @Weekday ',' SP @Date2 SP @Time SP 'GMT'
+	
+asctimedate
+	= @Wkday SP @Date3 SP @Time SP @Year4
+
+Date1
+	= { @Day2 SP @Month SP @Year4 #Date }
+	// day month year (e.g. 02 Jun 1982)
+	
+Date2
+	= { @Day2 '-' @Month '-' @Year2 #Date }
+	//day-month-year (e.g. 02-Jun-82)
+	
+Date3
+	= { @Month SP ( @Day2 / ( SP @Day1 )) #Date }
+	// month day (e.g. Jun  2)
+	
+Year2
+	= { DIGIT2 #Year }
+	
+Year4
+	= { DIGIT4 #Year }
+	
+Day1
+	= { DIGIT #Day }
+	
+Day2
+	= { DIGIT2 #Day }
+
+Time
+	= { DIGIT2 ':' DIGIT2 ':' DIGIT2 #Time }
+	// 00:00:00 - 23:59:59
+
+Wkday
+	= { ('Mon' / 'Tue' / 'Wed'
+	/ 'Thu' / 'Fri' / 'Sat' / 'Sun') #Wkday}
+
+Weekday
+	= { ('Monday' / 'Tuesday' / 'Wednesday'
+	/ 'Thursday' / 'Friday' / 'Saturday' / 'Sunday') #Weekday }
+
+Month
+	= { ('Jan' / 'Feb' / 'Mar' / 'Apr'
+	/ 'May' / 'Jun' / 'Jul' / 'Aug'
+	/ 'Sep' / 'Oct' / 'Nov' / 'Dec') #Month}
+	 
+deltaseconds
+	= DIGIT+
+	
+// ===========================================
+// CharSet
+// ===========================================
+	 
+charset
+	= token
+
+// ===========================================
+// Content-Coding
+// ===========================================
+
+ContentCoding
+	= token
+
+// ===========================================
+// transfer-coding 
+// ===========================================
+
+TransferCoding
+	= ('chunked' / TransferExtension)
+
+TransferExtension
+	= token ( ';' _ Parameter )*
+
+Parameter
+	= Attribute '=' Value
+	
+Attribute
+	= token
+	
+Value
+	= (token / quotedstring)
+	
+// ===========================================
+// Chuncked-Transfer-Encoding
+// ===========================================
+	
+ChunkedBody
+	= { (@ChunkContent)* @LastChunk @Trailer CRLF @ChunkedBody}
+
+ChunkContent
+	= { @ChunkSize (@ChunkExtension)? CRLF @ChunkData CRLF #Chunk }
+	
+ChunkSize
+	= { HEX+ #ChunkSize }
+	
+LastChunk
+	= { '0'+ (@ChunkExtension)? CRLF #LastChunck }
+
+ChunkExtension 
+	= { ( ';' @ChunkExtName ('=' @ChunkExtVal)? )* #ChunkExtension}
+	
+ChunkExtName
+	= { token #Name }
+	
+ChunkExtVal
+	= { (token / quotedstring) #Value }
+
+ChunkData
+	= { @ChunkSize (OCTET) #ChunkData } //<scan ChunkSize Data> <repeat Data> Data = OCTET
+	
+Trailer
+	= { (@EntityHeader CRLF)* #Trailer }
+	
+// ===========================================
+// MediaType
+// ===========================================
+
+MediaType
+	= Type '/' SubType ( ';' _ Parameter )*
+	
+Type
+	= token
+	
+SubType
+	= token
+	
+// ===========================================
+// Product-Token
+// ===========================================
+
+Product
+	= token ('/' ProductVersion)?
+	
+ProductVersion
+	= token
+	
+// ===========================================
+// Quality-Value
+// ===========================================
+
+QualityValue
+	= ( ( '0' ('.' float)? )
+	/ ( '1' ('.' ('0'))? ) ) 
+	
+float
+	= ( DIGIT ( DIGIT DIGIT? )? )?
+	
+zerofloat
+	= ( '0' ( '0' '0'? )? )?
+	
+// ===========================================
+// Language-Tag
+// ===========================================
+
+LanguageTag
+	= { @PrimaryTag ( '-' @SubTag )* #LanguageTag }
+	
+PrimaryTag
+	= { ALPHA1_8 #PrimaryTag }
+	
+SubTag
+	= { ALPHA1_8 #SubTag }
+	
+// ===========================================
+// Entity-Tag
+// ===========================================
+
+entity_tag
+ 	= (@Weak)? @OpaqueTag
+ 	
+Weak
+	= { 'W/' #Weak }
+ 	
+OpaqueTag
+	= { quotedstring #ETag }
+	
+// ===========================================
+// Range-Unit
+// ===========================================
+
+RangeUnit
+	= { (bytesunit / otherrangeunit) #RangeUnit }
+	
+bytesunit
+	= 'bytes'
+	
+otherrangeunit
+	= token
+	
+// ===========================================
+// HTTP-Message
+// ===========================================
+
+HTTPMessage
+	= { (@Request / @Response) #HTTP }
+	
+GenericMessage 
+	= { @StartLine (MessageHeader CRLF)* CRLF (@MessageBody)? #GenericMessage }
+	
+StartLine
+	= { (@RequestLine / @StatusLine) #StartLine}
+
+MessageHeader
+	= !'Content-Length' !'Transfer-Encoding' FieldName ':' (FieldValue)?
+	
+FieldName
+	= token
+	
+FieldValue
+	= ( FieldContent / LWS )*
+	
+FieldContent
+	= text*
+	
+MessageBody
+	= { OCTET* #MessageBody } // / transfer-encoding-entitiy-body
+
+GeneralHeader
+	= (CacheControl
+	/ Connection
+	/ Date
+	/ Pragma
+	/ Trailer_Header
+	/ Upgrade
+	/ Via
+	/ Warning)
+	
+// ===========================================
+// HTTP-Request
+// ===========================================
+
+
+Request
+	= { @RequestLine (( RequestHeaders ) EOL)* body_type_request_header #Request}
+	
+RequestHeaders
+	= ( GeneralHeader
+		/ RequestHeader
+		/ EntityHeader )
+		
+body_type_request_header
+	= @ContentLength EOL (( RequestHeaders ) EOL)* EOL (@{ <repeat content_length_body> #MessageBody })?
+	/ @TransferEncoding EOL (( RequestHeaders ) EOL)* EOL (<scan 16, HEX+, chunked_request_body> EOL @{ <repeat chunked_request_body> #MessageBody } EOL )*
+	
+content_length_body
+	= OCTET
+	
+chunked_request_body
+	= OCTET
+	
+RequestLine
+	= { @Method SP  RequestURI SP @HTTPVersion EOL #RequestLine }
+	
+Method
+	= { ('OPTIONS'
+	/ 'GET'
+	/ 'HEAD'
+	/ 'POST'
+	/ 'PUT'
+	/ 'DELETE'
+	/ 'TRACE'
+	/ 'CONNECT'
+	/ extensionmethod) #Method}
+	
+extensionmethod
+	= token
+	
+RequestURI
+	= ('*' / AbsoluteURI / AbsPath / Authority)
+	
+RequestHeader
+	= (Accept
+	/ 'Accept-' accept_header
+	/ Authorization
+	/ Expect
+	/ From
+	/ Host_Header
+	/ IfMatch
+	/ IfModifiedSince
+	/ IfNoneMatch
+	/ IfRange
+	/ IfUnmodifiedSince
+	/ MaxForwards
+	/ ProxyAuthorization
+	/ Range
+	/ Referer
+	/ Te
+	/ UserAgent)
+
+accept_header
+	= AcceptCharset
+	/ AcceptEncoding
+	/ AcceptLanguage
+	
+// ===========================================
+// HTTP-Response
+// ===========================================	
+
+Response
+	= { @StatusLine (ResponseHeaders EOL )* EOL body_type_response_header #Response }
+
+StatusLine
+	= { @HTTPVersion SP @StatusCode SP ReasonPhrase EOL #StatusLine }
+	
+StatusCode
+	= { ('100' / '101' / '200' / '201' / '202'
+	/ '203' / '204' / '205' / '206' / '300'
+	/ '301' / '302' / '303' / '304' / '305'
+	/ '307' / '400' / '401' / '402' / '403'
+	/ '404' / '405' / '406' / '407' / '408'
+	/ '409' / '410' / '411' / '412' / '413'
+	/ '414' / '415' / '416' / '417' / '500'
+	/ '501' / '502' / '503' / '504' / '505'
+	/ extensioncode) #StatusCode }
+
+extensioncode
+	= DIGIT3
+
+ReasonPhrase
+	= (!CRLF text)*
+	
+ResponseHeaders
+	= ( GeneralHeader
+		/ ResponseHeader
+		/ EntityHeader )
+		
+body_type_response_header
+	= @ContentLength EOL (( ResponseHeaders ) EOL)* EOL (@{ <repeat content_length_body> #MessageBody })?
+	/ @TransferEncoding EOL (( ResponseHeaders ) EOL)* EOL (<scan 16, res_hex, res_body> EOL @{ <repeat res_body> #MessageBody } EOL )*
+
+res_body
+	= OCTET
+	
+res_hex
+	= HEX+
+
+ResponseHeader
+	= (AcceptRanges
+	/ Age
+	/ ETAG
+	/ Location
+	/ ProxyAuthenticate
+	/ RetryAfter
+	/ Server_Header
+	/ Vary
+	/ WWWAuthenticate)
+	
+EntityHeader
+	= (Allow
+	/ ContentEncoding
+	/ ContentLanguage
+	/ ContentLocation
+	/ ContentMD5
+	/ ContentRange
+	/ ContentType
+	/ Expires
+	/ LastModified
+	/ extensionheader)
+
+extensionheader
+	= MessageHeader
+
+//EntityBody
+//	= <repeat OCTET>
+//entity-body := Content-Encoding( Content-Type( data ) )
+
+// ===========================================
+// Access-Authentication
+// ===========================================
+
+Credentials
+	= AuthScheme ( _ AuthParam ( _ ',' _ AuthParam )*)?
+
+AuthScheme
+	= token
+
+AuthParam
+	= token '=' ( token / quotedstring )
+
+Challenge
+	= AuthScheme SP+ ( _ AuthParam ( _ ',' _ AuthParam )*)
+	
+// ===========================================
+// Header-Field
+// ===========================================
+
+// ===========================================
+// Accept
+// ===========================================
+
+Accept
+	[example: Accept: text/*, text/html, text/html;level=1, */*]
+	= 'Accept' ':' (_ MediaRange (AcceptParams)? ( _ ',' _ MediaRange (AcceptParams)?)*)
+//	( *LWS element *( *LWS ',' *LWS element ))
+
+MediaRange
+	= ( '*/*'
+		/ ( Type '/' '*' )
+		/ ( Type '/' SubType )
+		) ( ';' _ Parameter )*
+		
+AcceptParams
+	= ';' _ 'q' '=' QualityValue ( AcceptExtension )*
+	
+AcceptExtension
+	= ';' token  ( '=' ( token / quotedstring ) )?
+	
+// ===========================================
+// Accept-Charset
+// ===========================================
+
+AcceptCharset
+	//[example: Accept-Charset: iso-8859-5, unicode-1-1;q=0.8]
+	= 'Charset' ':' 
+	_ (( charset / '*' ) (';' _ 'q' '=' QualityValue)? )
+	  ( _ ',' _ (( charset / '*' ) (';' _ 'q' '=' QualityValue )?) )*
+
+// ===========================================
+// Accept-Encoding
+// ===========================================
+
+AcceptEncoding
+	//[example: Accept-Encoding: gzip;q=1.0, identity; q=0.5, *;q=0]
+	//[example: Accept-Encoding: *]
+	= 'Encoding' ':'
+	_ (Codings ( ';' _ 'q' '=' QualityValue )?)
+	  ( _ ',' _ (Codings ( ';' _ 'q' '=' QualityValue )?) )*
+	
+Codings
+	=  ( ContentCoding / '*' )
+	
+// ===========================================
+// Accept-Language
+// ===========================================
+
+AcceptLanguage
+	//[example: Accept-Language: da, en-gb;q=0.8, en;q=0.7]
+	= 'Language' ':' _
+	(LanguageRange ( ';' _ 'q' '=' QualityValue )?)
+	  ( _ ',' _ (LanguageRange ( ';' _ 'q' '=' QualityValue )?) )*
+	
+LanguageRange
+	= ( ALPHA1_8 ( '-' ALPHA1_8 )* )
+	/ '*'
+	
+// ===========================================
+// Accept-Ranges
+// ===========================================
+
+AcceptRanges
+	[example: Accept-Ranges: bytes]
+	[example: Accept-Ranges: none]
+	= 'Accept-Ranges' ':' _ acceptableranges
+
+acceptableranges
+	= ( RangeUnit ( _ ',' _ RangeUnit )*)
+
+// ===========================================
+// Accept-Ranges
+// ===========================================
+
+Age
+	= 'Age' ':' agevalue
+
+agevalue
+	= deltaseconds
+
+// ===========================================
+// Allow
+// ===========================================
+
+Allow
+	[example: Allow: GET, HEAD, PUT]
+	= 'Allow' ':' _ Method ( _ ',' _ Method )*
+
+// ===========================================
+// Authorization
+// ===========================================
+
+Authorization
+	= 'Authorization' ':' _ Credentials
+
+// ===========================================
+// Cache-Control
+// ===========================================
+
+CacheControl
+	[example: Cache-Control: private]
+	= 'Cache-Control' ':' _ CacheDirective ( _ ',' _ CacheDirective )*
+
+CacheDirective
+	= CacheRequestDirective
+	/ CacheResponseDirective
+
+CacheRequestDirective =
+	( 'no-cache'
+	/ 'no-store'
+	/ 'max-age' '=' deltaseconds
+	/ 'max-stale' ( '=' deltaseconds )?
+	/ 'min-fresh' '=' deltaseconds
+	/ 'no-transform'
+	/ 'only-if-cached'
+	/ cache_extension )
+
+CacheResponseDirective =
+	('public'
+	/ 'private' ( '=' '"' _ FieldName ( _ ',' _ FieldName )* '"' )?
+	/ 'no-cache' ( '=' '"' _ FieldName ( _ ',' _ FieldName )* '"' )?
+	/ 'no-store'
+	/ 'no-transform'
+	/ 'must-revalidate'
+	/ 'proxy-revalidate'
+	/ 'max-age' '=' deltaseconds
+	/ 's-maxage' '=' deltaseconds
+	/ cache_extension)
+
+cache_extension
+	= token ( '=' ( token / quotedstring ) )?
+	
+// ===========================================
+// Connection
+// ===========================================
+
+Connection
+	[example: Connection: close]
+	= 'Connection' ':' _ ConnectionToken ( _ ',' _ ConnectionToken )*
+
+ConnectionToken
+	= token
+
+// ===========================================
+// Content-Encoding
+// ===========================================
+
+ContentEncoding
+	[example: Content-Encoding: gzip]
+	= 'Content-Encoding' ':' _ ContentCoding ( _ ',' _ ContentCoding )*
+
+// ===========================================
+// Content-Language
+// ===========================================
+
+ContentLanguage
+	[example: Content-Language: mi, en]
+	= 'Content-Language' ':' _ LanguageTag ( _ ',' _ LanguageTag )* 
+
+// ===========================================
+// Content-Length
+// ===========================================
+
+ContentLength
+	[example: Content-Length: 3495]
+	= 'Content-Length' ':' _ { <scan 10, (DIGIT+), content_length_body> #ContentLength }
+
+// ===========================================
+// Content-Length
+// ===========================================
+
+ContentLocation
+	= 'Content-Location' ':' _ ( AbsoluteURI / RelativeURI )
+
+// ===========================================
+// Content-MD5
+// ===========================================
+
+ContentMD5
+	= 'Content-MD5' ':' _ md5digest
+
+md5digest
+	= (![\n\r]) . //<RFC 1864 に従った 128 bit MD5 ダイジェストの base64>
+
+// ===========================================
+// Content-Range
+// ===========================================
+
+ContentRange
+	//[example:Content-Range: bytes 21010-47021/47022]
+	= 'Content-Range' ':' _ content_range_spec
+
+content_range_spec
+	= byte_content_range_spec
+
+byte_content_range_spec
+	= (bytesunit SP
+		ByteRangeRespSpec '/'
+		( instance_length / '*' ))
+
+ByteRangeRespSpec
+	= ((first_byte_pos '-' last_byte_pos) / '*')
+
+instance_length
+	= DIGIT+
+
+// ===========================================
+// Content-Type
+// ===========================================
+
+ContentType
+	[example: Content-Type: text/html; charset=ISO-8859-4]
+	= 'Content-Type' ':' _ MediaType
+
+// ===========================================
+// Date
+// ===========================================
+
+Date
+	[example: Date: Tue, 15 Nov 1994 08:12:31 GMT]
+	= 'Date' ':' _ HTTPDate
+
+// ===========================================
+// ETag
+// ===========================================
+
+ETAG
+	[example: ETag: W/"xyzzy"]
+	= 'ETag' ':' _ entity_tag
+
+// ===========================================
+// Expect
+// ===========================================
+
+Expect
+	=  'Expect' ':' _ Expectation ( _ ',' _ Expectation )*
+
+Expectation
+	= ('100-continue' / ExpectationExtension)
+
+ExpectationExtension
+	= token ( '=' ( token / quotedstring ) (ExpectParams)* )?
+
+ExpectParams
+	=  ';' _ token ( '=' ( token / quotedstring ) )?
+
+// ===========================================
+// Expires
+// ===========================================
+
+Expires
+	[example: Expires: Thu, 01 Dec 1994 16:00:00 GMT]
+	= 'Expires' ':' _ HTTPDate
+
+// ===========================================
+// From
+// ===========================================
+
+From
+	[example: From: webmaster@w3.org]
+	= 'From' ':' _ MailBox
+	
+MailBox
+	= ( AddrSpec / (Phrase)? RouteAddr )
+
+AddrSpec
+	= LocalPart '@' Domain
+	
+LocalPart
+	= word ('.' word)*
+
+RouteAddr
+	= '<' (Route)? AddrSpec '>'
+
+Route
+	= _ ('@' Domain) ( _ ',' _ ('@' Domain) )* ':'
+
+Domain
+	= SubDomain ('.' SubDomain)*
+     
+SubDomain
+	= ( domain_ref / domain_literal )
+     
+domain_ref
+	= token
+
+domain_literal
+	= '[' (dtext / quoted_pair)* ']'
+
+quoted_pair
+	= '\\' CHAR
+
+dtext
+	= !'[' !']' !'\\' !CR ( OCTET / (CRLF? ( SP / HTAB )) )
+
+Phrase
+	= word+
+
+// ===========================================
+// Host
+// ===========================================
+
+Host_Header
+	[example: Host: www.w3.org]
+	= 'Host' ':' _ Host (':' Port)?
+
+// ===========================================
+// If-Match
+// ===========================================
+
+IfMatch
+	[example: If-Match: "xyzzy", "r2d2xxxx", "c3piozzzz"]
+	[example: If-Match: *]
+	= 'If-Match' ':' _ ( '*' / (entity_tag ( _ ',' _ entity_tag )*) )
+
+// ===========================================
+// If-Modified-Since
+// ===========================================
+
+IfModifiedSince
+	[example: If-Modified-Since: Sat, 29 Oct 1994 19:43:31 GMT]
+	= 'If-Modified-Since' ':' _ HTTPDate
+
+// ===========================================
+// If-None-Match
+// ===========================================
+
+IfNoneMatch
+	[example: If-None-Match: W/"xyzzy", W/"r2d2xxxx", W/"c3piozzzz"]
+	= 'If-None-Match' ':' _ ( '*' / ( entity_tag ( _ ',' _ entity_tag )*) )
+
+// ===========================================
+// If-Range
+// ===========================================
+
+IfRange
+	= 'If-Range' ':' _ ( entity_tag / HTTPDate )
+
+// ===========================================
+// If-Unmodified-Since
+// ===========================================
+
+IfUnmodifiedSince
+	[example: If-Unmodified-Since: Sat, 29 Oct 1994 19:43:31 GMT]
+	= 'If-Unmodified-Since' ':' _ HTTPDate
+
+// ===========================================
+// Last-Modified
+// ===========================================
+
+LastModified
+	[example: Last-Modified: Tue, 15 Nov 1994 12:45:26 GMT]
+	= 'Last-Modified' ':' _ HTTPDate
+
+// ===========================================
+// Location
+// ===========================================
+
+Location
+	[example: Location: http://www.w3.org/pub/WWW/People.html]
+	= 'Location' ':' _ AbsoluteURI
+
+// ===========================================
+// Max-Forwards
+// ===========================================
+
+MaxForwards
+	= 'Max-Forwards' ':' _ DIGIT+
+
+// ===========================================
+// Pragma
+// ===========================================
+
+Pragma
+	= 'Pragma' ':' _ PragmaDirective ( _ ',' _ PragmaDirective )*
+
+PragmaDirective
+	= ('no-cache' / ExtensionPragma)
+	
+ExtensionPragma
+	= token ( '=' ( token / quotedstring ) )?
+
+// ===========================================
+// Proxy-Authenticate
+// ===========================================
+
+ProxyAuthenticate
+	= 'Proxy-Authenticate' ':' _ Challenge ( _ ',' _ Challenge )*
+
+// ===========================================
+// Proxy-Authorization
+// ===========================================
+
+ProxyAuthorization
+	= 'Proxy-Authorization' ':' Credentials
+
+// ===========================================
+// Range
+// ===========================================
+
+ranges_specifier
+	= ByteRangesSpecifier
+
+ByteRangesSpecifier
+	= bytesunit '=' ByteRangeSet
+
+ByteRangeSet
+	= _ ( ByteRangeSpec / SuffixByteRangeSpec ) ( _ ',' _ ( ByteRangeSpec / SuffixByteRangeSpec ) )*
+
+ByteRangeSpec
+	= first_byte_pos '-' (last_byte_pos)?
+
+first_byte_pos
+	= DIGIT+
+
+last_byte_pos
+	= DIGIT+
+
+SuffixByteRangeSpec
+	= { '-' suffix_length #SuffixByteRangeSpec }
+
+suffix_length
+	= DIGIT+
+
+Range
+	= 'Range' ':' _ ranges_specifier
+
+// ===========================================
+// Referer
+// ===========================================
+
+Referer
+	[example: Referer: http://www.w3.org/hypertext/DataSources/Overview.html]
+	= 'Referer' ':' _ ( AbsoluteURI / RelativeURI )
+
+// ===========================================
+// Retry-After
+// ===========================================
+
+RetryAfter
+	[example: Retry-After: Fri, 31 Dec 1999 23:59:59 GMT]
+	[example: Retry-After: 120]
+	= 'Retry-After' ':' _ ( HTTPDate / deltaseconds )
+
+// ===========================================
+// Server
+// ===========================================
+
+Server_Header
+	[example: Server: CERN/3.0 libwww/2.17]
+	= 'Server' ':' _ (( Product / comment ) _ )+
+
+// ===========================================
+// TE
+// ===========================================
+
+Te
+	[example: TE: deflate]
+	[example: TE:]
+	[example: TE: trailers, deflate;q=0.5]
+	= 'TE' ':' (_ TCodings ( _ ',' _ TCodings )*)?
+
+TCodings
+	= 'trailers' / ( TransferExtension (AcceptParams)? )
+
+// ===========================================
+// Trailer
+// ===========================================
+
+Trailer_Header
+	= 'Trailer' ':' _ FieldName ( _ ',' _ FieldName )*
+
+// ===========================================
+// Transfer-Encoding
+// ===========================================
+
+TransferEncoding
+	[example: Transfer-Encoding: chunked]
+	= 'Transfer-Encoding' ':' _ { TransferCoding ( _ ',' _ TransferCoding )* #TransferEncoding }
+
+// ===========================================
+// Upgrade
+// ===========================================
+
+Upgrade
+	[example: Upgrade: HTTP/2.0, SHTTP/1.3, IRC/6.9, RTA/x11]
+	= 'Upgrade' ':' _ Product ( _ ',' _ Product )*
+
+// ===========================================
+// User-Agent
+// ===========================================
+
+UserAgent
+	[example: User-Agent: CERN-LineMode/2.15 libwww/2.17b3]
+	= 'User-Agent' ':' _ ( (Product / comment) _ )+
+
+// ===========================================
+// Vary
+// ===========================================
+
+Vary
+	= 'Vary' ':' _ ( '*' / (_ FieldName ( _ ',' _ FieldName )*) )
+
+// ===========================================
+// Via
+// ===========================================
+
+Via
+	[example: Via: 1.0 fred, 1.1 nowhere.com]
+	[example: Via: 1.0 ricky, 1.1 ethel, 1.1 fred, 1.0 lucy]
+	=  'Via' ':' ( '*' / (_ ( ReceivedProtocol _ ReceivedBy comment? ) ( _ ',' _ ( ReceivedProtocol _ ReceivedBy comment? ) )*) )
+	
+ReceivedProtocol
+	= (ProtocolName '/')? ProtocolVersion
+
+ProtocolName
+	= token
+
+ProtocolVersion
+	= token
+
+ReceivedBy
+	= (( Host ( ':' Port )? ) / pseudonym)
+
+pseudonym
+	= token
+
+// ===========================================
+// Via
+// ===========================================
+
+Warning
+	= 'Warning' ':' _ WarningValue ( _ ',' _ WarningValue )*
+
+WarningValue
+	= WarnCode SP WarnAgent SP WarnText (SP WarnDate)?
+
+WarnCode
+	= DIGIT3
+
+WarnAgent
+	= ( Host ( ':' Port ) ) / pseudonym
+
+WarnText
+	= quotedstring
+
+WarnDate
+	= '"' HTTPDate '"'
+
+// ===========================================
+// WWW-Authenticate
+// ===========================================
+
+WWWAuthenticate
+	= 'WWW-Authenticate' ':' _ Challenge ( _ ',' _ Challenge )*
