@@ -138,6 +138,10 @@ PegVMInstruction *loadByteCodeFile(ParsingContext context,
           inst[i].ndata[j] = read32(buf, &info);
           j++;
         }
+      } else if (inst[i].opcode == PEGVM_OP_SCAN) {
+        inst[i].ndata = malloc(sizeof(int) * 2);
+        inst[i].ndata[0] = read32(buf, &info);
+        inst[i].ndata[1] = read32(buf, &info);
       } else {
         //              inst[i].ndata = malloc(sizeof(int) * (code_length + 1));
         //              inst[i].ndata.len = code_length;
@@ -373,6 +377,20 @@ static const char *get_c99_rule(uint8_t c99_rule) {
   return "";
 }
 
+static const char *get_http_rule(uint8_t http_rule) {
+  switch (http_rule) {
+#define http_CASE(RULE)           \
+  case PEGVM_PROFILE_http_##RULE: \
+    return "" #RULE;
+    PEGVM_PROFILE_http_EACH(http_CASE);
+  default:
+    assert(0 && "UNREACHABLE");
+    break;
+#undef http_CASE
+  }
+  return "";
+}
+
 void PegVM_PrintProfile(const char *file_type) {
 #if PEGVM_PROFILE
   fprintf(stderr, "\ninstruction count \n");
@@ -417,6 +435,10 @@ void PegVM_PrintProfile(const char *file_type) {
     } else if (!strcmp(file_type, "c99")) {
       for (int i = 0; i < PEGVM_c99_RULE_MAX; i++) {
         fprintf(stderr, "%llu %s\n", rule_count[i], get_c99_rule(i));
+      }
+    } else if (!strcmp(file_type, "http")) {
+      for (int i = 0; i < PEGVM_http_RULE_MAX; i++) {
+        fprintf(stderr, "%llu %s\n", rule_count[i], get_http_rule(i));
       }
     }
   }
@@ -567,12 +589,8 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     pos = POP_SP();
     DISPATCH_NEXT;
   }
-  OP(FAIL) {
-    failflag = 1;
-    DISPATCH_NEXT;
-  }
-  OP(SUCC) {
-    failflag = 0;
+  OP(STOREflag) {
+    failflag = pc->ndata[0];
     DISPATCH_NEXT;
   }
   OP(NEW) {
@@ -623,6 +641,29 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
   OP(MAPPEDCHOICE) {
     pc = inst + (pc)->ndata[(int)inputs[pos]];
     goto *(pc)->ptr;
+  }
+  OP(SCAN) {
+    long start = POP_SP();
+    long len = pos - start;
+    char *value = malloc(len);
+    int j = 0;
+    for (long i = start; i < pos; i++) {
+      value[j] = inputs[i];
+      j++;
+    }
+    if (pc->ndata[0] == 16) {
+      long num = strtol(value, NULL, 16);
+      context->repeat_table[pc->ndata[1]] = (int)num;
+      DISPATCH_NEXT;
+    }
+    context->repeat_table[pc->ndata[1]] = atoi(value);
+    DISPATCH_NEXT;
+  }
+  OP(CHECKEND) {
+    if (context->repeat_table[pc->ndata[0]] == 0) {
+      DISPATCH_NEXT;
+    }
+    JUMP;
   }
   OP(NOTBYTE) {
     if (inputs[pos] != *(pc)->ndata) {
@@ -775,6 +816,14 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
         goto ZEROMORECHARSET_LABEL;
       }
       j++;
+    }
+    DISPATCH_NEXT;
+  }
+  OP(REPEATANY) {
+    long back = pos;
+    pos = pos + context->repeat_table[pc->ndata[0]];
+    if (pos - 1 > (long)context->input_size) {
+      pos = back;
     }
     DISPATCH_NEXT;
   }

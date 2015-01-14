@@ -4,8 +4,8 @@
 #define PEGVM_H
 #define PEGVM_DEBUG 0
 #define PEGVM_PROFILE 0
-#define PEGVM_OP_MAX 44
-#define PEGVM_PROFILE_MAX 44
+#define PEGVM_OP_MAX 46
+#define PEGVM_PROFILE_MAX 46
 
 typedef struct byteCodeInfo {
   int pos;
@@ -29,16 +29,16 @@ typedef struct Instruction {
   //  };
 } PegVMInstruction, Instruction;
 
-#define PEGVM_OP_EACH(OP)                                                     \
-  OP(EXIT) OP(JUMP) OP(CALL) OP(RET) OP(CONDBRANCH) OP(REPCOND) OP(CHARRANGE) \
-      OP(CHARSET) OP(STRING) OP(ANY) OP(PUSHo) OP(PUSHconnect) OP(PUSHp1)     \
-      OP(PUSHp2) OP(POPp) OP(POPo) OP(STOREo) OP(STOREp) OP(FAIL) OP(SUCC)    \
-      OP(NEW) OP(NEWJOIN) OP(COMMIT) OP(ABORT) OP(LINK) OP(SETendp) OP(TAG)   \
-      OP(VALUE) OP(MAPPEDCHOICE) OP(NOTBYTE) OP(NOTANY) OP(NOTCHARSET)        \
-      OP(NOTBYTERANGE) OP(NOTSTRING) OP(ANDBYTE) OP(ANDCHARSET)               \
-      OP(ANDBYTERANGE) OP(ANDSTRING) OP(OPTIONALBYTE) OP(OPTIONALCHARSET)     \
-      OP(OPTIONALBYTERANGE) OP(OPTIONALSTRING) OP(ZEROMOREBYTERANGE)          \
-      OP(ZEROMORECHARSET)
+#define PEGVM_OP_EACH(OP)                                                      \
+  OP(EXIT) OP(JUMP) OP(CALL) OP(RET) OP(CONDBRANCH) OP(REPCOND) OP(CHARRANGE)  \
+      OP(CHARSET) OP(STRING) OP(ANY) OP(PUSHo) OP(PUSHconnect) OP(PUSHp1)      \
+      OP(PUSHp2) OP(POPp) OP(POPo) OP(STOREo) OP(STOREp) OP(STOREflag) OP(NEW) \
+      OP(NEWJOIN) OP(COMMIT) OP(ABORT) OP(LINK) OP(SETendp) OP(TAG) OP(VALUE)  \
+      OP(MAPPEDCHOICE) OP(SCAN) OP(CHECKEND) OP(NOTBYTE) OP(NOTANY)            \
+      OP(NOTCHARSET) OP(NOTBYTERANGE) OP(NOTSTRING) OP(ANDBYTE) OP(ANDCHARSET) \
+      OP(ANDBYTERANGE) OP(ANDSTRING) OP(OPTIONALBYTE) OP(OPTIONALCHARSET)      \
+      OP(OPTIONALBYTERANGE) OP(OPTIONALSTRING) OP(ZEROMOREBYTERANGE)           \
+      OP(ZEROMORECHARSET) OP(REPEATANY)
 // OP(DTABLE)
 
 enum pegvm_opcode {
@@ -116,6 +116,83 @@ enum pegvm_c99_rule {
   PEGVM_PROFILE_c99_EACH(DEFINE_c99_ENUM)
 #undef DEFINE_c99_ENUM
   PROFILE_c99_ERROR = -1
+};
+
+#define PEGVM_PROFILE_http_EACH(RULE)                                          \
+  RULE(File) RULE(Chunk) RULE(OCTET) RULE(CHAR) RULE(UPALPHA) RULE(LOALPHA)    \
+      RULE(ALPHA) RULE(ALPHA1_8) RULE(DIGIT) RULE(DIGIT2) RULE(DIGIT3)         \
+      RULE(DIGIT4) RULE(CTL) RULE(CR) RULE(LF) RULE(SP) RULE(HTAB) RULE(CRLF)  \
+      RULE(EOL) RULE(LWS) RULE(_) RULE(word) RULE(token) RULE(separators)      \
+      RULE(quotedstring) RULE(qdtext) RULE(qatext) RULE(text) RULE(HEX)        \
+      RULE(HTTPVersion) RULE(HTTPUrl) RULE(comment) RULE(ctext)                \
+      RULE(URIReference) RULE(AbsoluteURI) RULE(RelativeURI) RULE(HierPart)    \
+      RULE(OpaquePart) RULE(uric_no_slash) RULE(NetPath) RULE(AbsPath)         \
+      RULE(RelPath) RULE(RelSegment) RULE(Scheme) RULE(Authority)              \
+      RULE(reg_name) RULE(Server) RULE(UserInfo) RULE(HostPort) RULE(Host)     \
+      RULE(hostname) RULE(domainlabel) RULE(toplabel) RULE(ipv4address)        \
+      RULE(Port) RULE(Path) RULE(PathSegments) RULE(segment) RULE(param)       \
+      RULE(pchar) RULE(Query) RULE(Fragment) RULE(uric) RULE(reserved)         \
+      RULE(unreserved) RULE(mark) RULE(escaped) RULE(alphanum) RULE(HTTPDate)  \
+      RULE(rfc1123date) RULE(rfc850date) RULE(asctimedate) RULE(Date1)         \
+      RULE(Date2) RULE(Date3) RULE(Year2) RULE(Year4) RULE(Day1) RULE(Day2)    \
+      RULE(Time) RULE(Wkday) RULE(Weekday) RULE(Month) RULE(deltaseconds)      \
+      RULE(charset) RULE(ContentCoding) RULE(TransferCoding)                   \
+      RULE(TransferExtension) RULE(Parameter) RULE(Attribute) RULE(Value)      \
+      RULE(ChunkedBody) RULE(ChunkContent) RULE(ChunkSize) RULE(LastChunk)     \
+      RULE(ChunkExtension) RULE(ChunkExtName) RULE(ChunkExtVal)                \
+      RULE(ChunkData) RULE(Trailer) RULE(MediaType) RULE(Type) RULE(SubType)   \
+      RULE(Product) RULE(ProductVersion) RULE(QualityValue) RULE(float)        \
+      RULE(zerofloat) RULE(LanguageTag) RULE(PrimaryTag) RULE(SubTag)          \
+      RULE(entity_tag) RULE(Weak) RULE(OpaqueTag) RULE(RangeUnit)              \
+      RULE(bytesunit) RULE(otherrangeunit) RULE(HTTPMessage)                   \
+      RULE(GenericMessage) RULE(StartLine) RULE(MessageHeader) RULE(FieldName) \
+      RULE(FieldValue) RULE(FieldContent) RULE(MessageBody)                    \
+      RULE(GeneralHeader) RULE(Request) RULE(RequestHeaders)                   \
+      RULE(body_type_request_header) RULE(content_length_body)                 \
+      RULE(chunked_request_body) RULE(RequestLine) RULE(Method)                \
+      RULE(extensionmethod) RULE(RequestURI) RULE(RequestHeader)               \
+      RULE(accept_header) RULE(Response) RULE(StatusLine) RULE(StatusCode)     \
+      RULE(extensioncode) RULE(ReasonPhrase) RULE(ResponseHeaders)             \
+      RULE(body_type_response_header) RULE(res_body) RULE(res_hex)             \
+      RULE(ResponseHeader) RULE(EntityHeader) RULE(extensionheader)            \
+      RULE(Credentials) RULE(AuthScheme) RULE(AuthParam) RULE(Challenge)       \
+      RULE(Accept) RULE(MediaRange) RULE(AcceptParams) RULE(AcceptExtension)   \
+      RULE(AcceptCharset) RULE(AcceptEncoding) RULE(Codings)                   \
+      RULE(AcceptLanguage) RULE(LanguageRange) RULE(AcceptRanges)              \
+      RULE(acceptableranges) RULE(Age) RULE(agevalue) RULE(Allow)              \
+      RULE(Authorization) RULE(CacheControl) RULE(CacheDirective)              \
+      RULE(CacheRequestDirective) RULE(CacheResponseDirective)                 \
+      RULE(cache_extension) RULE(Connection) RULE(ConnectionToken)             \
+      RULE(ContentEncoding) RULE(ContentLanguage) RULE(ContentLength)          \
+      RULE(ContentLocation) RULE(ContentMD5) RULE(md5digest)                   \
+      RULE(ContentRange) RULE(content_range_spec)                              \
+      RULE(byte_content_range_spec) RULE(ByteRangeRespSpec)                    \
+      RULE(instance_length) RULE(ContentType) RULE(Date) RULE(ETAG)            \
+      RULE(Expect) RULE(Expectation) RULE(ExpectationExtension)                \
+      RULE(ExpectParams) RULE(Expires) RULE(From) RULE(MailBox) RULE(AddrSpec) \
+      RULE(LocalPart) RULE(RouteAddr) RULE(Route) RULE(Domain) RULE(SubDomain) \
+      RULE(domain_ref) RULE(domain_literal) RULE(quoted_pair) RULE(dtext)      \
+      RULE(Phrase) RULE(Host_Header) RULE(IfMatch) RULE(IfModifiedSince)       \
+      RULE(IfNoneMatch) RULE(IfRange) RULE(IfUnmodifiedSince)                  \
+      RULE(LastModified) RULE(Location) RULE(MaxForwards) RULE(Pragma)         \
+      RULE(PragmaDirective) RULE(ExtensionPragma) RULE(ProxyAuthenticate)      \
+      RULE(ProxyAuthorization) RULE(ranges_specifier)                          \
+      RULE(ByteRangesSpecifier) RULE(ByteRangeSet) RULE(ByteRangeSpec)         \
+      RULE(first_byte_pos) RULE(last_byte_pos) RULE(SuffixByteRangeSpec)       \
+      RULE(suffix_length) RULE(Range) RULE(Referer) RULE(RetryAfter)           \
+      RULE(Server_Header) RULE(Te) RULE(TCodings) RULE(Trailer_Header)         \
+      RULE(TransferEncoding) RULE(Upgrade) RULE(UserAgent) RULE(Vary)          \
+      RULE(Via) RULE(ReceivedProtocol) RULE(ProtocolName)                      \
+      RULE(ProtocolVersion) RULE(ReceivedBy) RULE(pseudonym) RULE(Warning)     \
+      RULE(WarningValue) RULE(WarnCode) RULE(WarnAgent) RULE(WarnText)         \
+      RULE(WarnDate) RULE(WWWAuthenticate) RULE(__SEPARATORS)
+
+#define PEGVM_http_RULE_MAX 254
+enum pegvm_http_rule {
+#define DEFINE_http_ENUM(NAME) PEGVM_PROFILE_http_##NAME,
+  PEGVM_PROFILE_http_EACH(DEFINE_http_ENUM)
+#undef DEFINE_http_ENUM
+  PROFILE_http_ERROR = -1
 };
 
 PegVMInstruction *loadByteCodeFile(ParsingContext context,

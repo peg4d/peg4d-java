@@ -51,6 +51,9 @@ public class PEG4d extends ParsingBuilder {
 	static final int PowerSet     = ParsingTag.tagId("PowerSet");
 	static final int Permutation     = ParsingTag.tagId("Permutation");
 	static final int PermutationExpr = ParsingTag.tagId("PermutationExpr");
+	
+	static final int Scan = ParsingTag.tagId("Scan");
+	static final int Repeat = ParsingTag.tagId("Repeat");
 
 	Grammar peg;
 	
@@ -393,5 +396,13 @@ public class PEG4d extends ParsingBuilder {
 		}
 		// not Sequence
 		return toParsingExpression(po.get(0));
+	}
+	
+	public ParsingExpression toScan(ParsingObject po) {
+		return ParsingExpression.newScan(Integer.parseInt(po.get(0).getText()), toParsingExpression(po.get(1)), toParsingExpression(po.get(2)));
+	}
+	
+	public ParsingExpression toRepeat(ParsingObject po) {
+		return ParsingExpression.newRepeat(toParsingExpression(po.get(0)));
 	}
 }

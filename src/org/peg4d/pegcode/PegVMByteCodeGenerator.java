@@ -34,7 +34,9 @@ import org.peg4d.expression.ParsingName;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
 import org.peg4d.expression.ParsingPermutation;
+import org.peg4d.expression.ParsingRepeat;
 import org.peg4d.expression.ParsingRepetition;
+import org.peg4d.expression.ParsingScan;
 import org.peg4d.expression.ParsingSequence;
 import org.peg4d.expression.ParsingString;
 import org.peg4d.expression.ParsingTagging;
@@ -54,6 +56,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 	int optimizationCount = 0;
 	int choiceCaseCount = 0;
 	int constructorCount = 0;
+	int scanCount = 0;
 	Grammar peg;
 	
 	UList<Opcode> codeList = new UList<Opcode>(new Opcode[256]);
@@ -61,6 +64,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 	HashMap<Integer,Integer> labelMap = new HashMap<Integer,Integer>();
 	HashMap<String, Integer> callMap = new HashMap<String, Integer>();
 	HashMap<String, Integer> ruleMap = new HashMap<String, Integer>();
+	HashMap<String, Integer> repeatMap = new HashMap<String, Integer>();
 	
 	public void writeByteCode(String grammerfileName, String outputFileName, Grammar peg) {
 		generateProfileCode(peg);
@@ -111,6 +115,10 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		// byte code (m byte)
 		for(int i = 0; i < codeList.size(); i++) {
 			Opcode code = codeList.ArrayValues[i];
+			if (code.inst.equals(Instruction.SCAN)) {
+				int a;
+				a = 1;
+			}
 			byteCode[pos] = (byte) code.inst.ordinal();
 			pos++;
 			if (code.inst == Instruction.CALL) {
@@ -446,10 +454,10 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		writeCode(Instruction.PUSHp1);
 		e.inner.visit(this);
 		writeCode(Instruction.STOREp);
-		writeCode(Instruction.FAIL);
+		writeCode(Instruction.STOREflag, 1);
 		writeJumpCode(Instruction.JUMP, this.jumpPrevFailureJump());
 		this.popFailureJumpPoint(e);
-		writeCode(Instruction.SUCC);
+		writeCode(Instruction.STOREflag, 0);
 		writeCode(Instruction.STOREp);
 	}
 	
@@ -514,7 +522,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		writeCode(Instruction.POPp);
 		writeJumpCode(Instruction.JUMP, label);
 		this.popFailureJumpPoint(e);
-		writeCode(Instruction.SUCC);
+		writeCode(Instruction.STOREflag, 0);
 		writeCode(Instruction.STOREp);
 		writeLabel(label);
 	}
@@ -558,7 +566,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		writeJumpCode(Instruction.REPCOND, end);
 		writeJumpCode(Instruction.JUMP, label);
 		this.popFailureJumpPoint(e);
-		writeCode(Instruction.SUCC);
+		writeCode(Instruction.STOREflag, 0);
 		writeCode(Instruction.STOREp);
 		writeLabel(end);
 	}
@@ -579,6 +587,12 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		}
 		System.out.println("\t" + code.toString());
 		this.codeIndex++;
+		codeList.add(code);
+	}
+	
+	private void writeScanCode(Instruction inst, int num, int index) {
+		Opcode code = newCode(inst);
+		code.append(num).append(index);
 		codeList.add(code);
 	}
 	
@@ -784,6 +798,18 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 		return false;
 	}
 	
+	private boolean optimizeRepeat(ParsingRepeat e) {
+		ParsingExpression inner = e.inner;
+		if (inner instanceof NonTerminal) {
+			inner = getNonTerminalRule(inner);
+		}
+		if (inner instanceof ParsingAny) {
+			writeCode(Instruction.REPEATANY, e.inner.toString());
+			return true;
+		}
+		return false;
+	}
+	
 	@Override
 	public void formatGrammar(Grammar peg, StringBuilder sb) {
 		this.optimizationLevel = Main.OptimizationLevel;
@@ -835,6 +861,10 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 					break;
 				}
 			}
+			else if (code.inst.equals(Instruction.REPEATANY) || code.inst.equals(Instruction.CHECKEND) ) {
+				code.ndata.add(repeatMap.get(code.name));
+				code.name = null;
+			}
 			else {
 				System.out.println("[" + i + "] " + code);
 			}
@@ -858,16 +888,16 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitNonTerminal(NonTerminal ne) {
-		if (optimizationLevel > 1 && optNonTerminalMode) {
+		/*if (optimizationLevel > 1 && optNonTerminalMode) {
 			optNonTerminalMode = false;
 			ParsingExpression e = getNonTerminalRule(ne);
 			e.visit(this);
 			optNonTerminalMode = true;
 		}
-		else {
+		else {*/
 			writeCode(Instruction.CALL, ne.ruleName);
 			writeJumpCode(Instruction.CONDBRANCH, 1, this.jumpFailureJump());
-		}
+		//}
 	}
 
 	@Override
@@ -876,7 +906,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitFailure(ParsingFailure e) {
-		writeCode(Instruction.FAIL);
+		writeCode(Instruction.STOREflag, 1);
 	}
 
 	@Override
@@ -978,7 +1008,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 					writeJumpCode(Instruction.JUMP, label);
 					this.popFailureJumpPoint(e.get(i));
 					if (i != e.size() - 1) {
-						writeCode(Instruction.SUCC);
+						writeCode(Instruction.STOREflag, 0);
 					}
 					writeCode(Instruction.STOREp);
 				}
@@ -998,7 +1028,7 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 				writeJumpCode(Instruction.JUMP, label);
 				this.popFailureJumpPoint(e.get(i));
 				if (i != e.size() - 1) {
-					writeCode(Instruction.SUCC);
+					writeCode(Instruction.STOREflag, 0);
 				}
 				writeCode(Instruction.STOREp);
 			}
@@ -1142,6 +1172,49 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 	@Override
 	public void visitPermutation(ParsingPermutation e) {
 		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+	}
+
+	@Override
+	public void visitScan(ParsingScan e) {
+		writeCode(Instruction.PUSHp1);
+		e.inner.visit(this);
+		writeScanCode(Instruction.SCAN, e.number, this.scanCount);
+		this.repeatMap.put(e.repeatExpression.toString(), this.scanCount);
+		this.scanCount++;
+	}
+
+	@Override
+	public void visitRepeat(ParsingRepeat e) {
+		if (optimizationLevel > 0) {
+			if (!optimizeRepeat(e)) {
+				int label = newLabel();
+				int end = newLabel();
+				this.pushFailureJumpPoint();
+				writeLabel(label);
+				writeCode(Instruction.PUSHp1);
+				e.inner.visit(this);
+				writeJumpCode(Instruction.CHECKEND, this.repeatMap.get(e.inner.toString()));
+				writeJumpCode(Instruction.JUMP, label);
+				this.popFailureJumpPoint(e);
+				writeCode(Instruction.STOREflag, 0);
+				writeCode(Instruction.STOREp);
+				writeLabel(end);
+			}
+		}
+		else {
+			int label = newLabel();
+			int end = newLabel();
+			this.pushFailureJumpPoint();
+			writeLabel(label);
+			writeCode(Instruction.PUSHp1);
+			e.inner.visit(this);
+			writeJumpCode(Instruction.CHECKEND, this.repeatMap.get(e.inner.toString()));
+			writeJumpCode(Instruction.JUMP, label);
+			this.popFailureJumpPoint(e);
+			writeCode(Instruction.STOREflag, 0);
+			writeCode(Instruction.STOREp);
+			writeLabel(end);
+		}
 	}
 
 }

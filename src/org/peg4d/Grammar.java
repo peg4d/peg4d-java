@@ -2,6 +2,8 @@ package org.peg4d;
 
 import java.util.TreeMap;
 
+import javax.swing.text.Position;
+
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.Optimizer;
 import org.peg4d.expression.ParsingChoice;
@@ -53,6 +55,9 @@ public class Grammar {
 		}
 		PEG4d builder = new PEG4d(this);
 		while(context.hasByteChar()) {
+			if (context.pos == 14381) {
+				context.pos = context.pos;
+			}
 			ParsingObject po = context.parse(peg4d, "Chunk");
 			if(context.isFailure()) {
 				String msg = context.source.formatPositionLine("error", context.fpos, context.getErrorMessage());

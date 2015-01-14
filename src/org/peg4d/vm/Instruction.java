@@ -19,8 +19,7 @@ public enum Instruction {
 	POPo,
 	STOREo,
 	STOREp,
-	FAIL,
-	SUCC,
+	STOREflag,
 	NEW,
 	NEWJOIN,
 	COMMIT,
@@ -30,6 +29,8 @@ public enum Instruction {
 	TAG,
 	VALUE,
 	MAPPEDCHOICE,
+	SCAN,
+	CHECKEND,
 	NOTBYTE,
 	NOTANY,
 	NOTCHARSET,
@@ -45,4 +46,5 @@ public enum Instruction {
 	OPTIONALSTRING,
 	ZEROMOREBYTERANGE,
 	ZEROMORECHARSET,
+	REPEATANY
 }
