@@ -57,19 +57,19 @@ public class Optimizer {
 		else {
 			switch(OptimizationLevel) {
 				case 11: OptimizedMask = O_Inline; break;
-				case 12: OptimizedMask = O_SpecLexer; break;
-				case 13: OptimizedMask = O_SpecString; break;
-				case 14: OptimizedMask = O_ByteMap; break;
+				case 12: OptimizedMask = O_ByteMap; break;
+				case 13: OptimizedMask = O_SpecLexer; break;
+				case 14: OptimizedMask = O_SpecString; break;
 				case 15: OptimizedMask = O_Prediction; break;
 	
 				case 22:
-					this.OptimizedMask = O_Inline | O_SpecLexer ;
+					this.OptimizedMask = O_Inline | O_ByteMap ;
 					break;
 				case 33:
-					this.OptimizedMask = O_Inline | O_SpecLexer | O_SpecString;
+					this.OptimizedMask = O_Inline | O_ByteMap | O_SpecLexer ;
 					break;
 				case 44:
-					this.OptimizedMask = O_Inline | O_SpecLexer | O_SpecString | O_ByteMap ;
+					this.OptimizedMask = O_Inline | O_ByteMap | O_SpecLexer | O_SpecString ;
 					break;
 				case 55:
 					this.OptimizedMask = O_Inline | O_SpecLexer | O_SpecString | O_ByteMap | O_Prediction;
@@ -79,13 +79,13 @@ public class Optimizer {
 					this.OptimizedMask = /*O_Inline |*/ O_SpecLexer | O_SpecString | O_ByteMap | O_Prediction;
 					break;
 				case 92:
-					this.OptimizedMask = O_Inline /*| O_SpecLexer*/ | O_SpecString | O_ByteMap | O_Prediction;
+					this.OptimizedMask = O_Inline | O_SpecLexer | O_SpecString /*| O_ByteMap*/ | O_Prediction;
 					break;
 				case 93:
-					this.OptimizedMask = O_Inline | O_SpecLexer /*| O_SpecString*/ | O_ByteMap | O_Prediction;
+					this.OptimizedMask = O_Inline /*| O_SpecLexer*/ | O_SpecString | O_ByteMap | O_Prediction;
 					break;
 				case 94:
-					this.OptimizedMask = O_Inline | O_SpecLexer | O_SpecString /*| O_ByteMap*/ | O_Prediction;
+					this.OptimizedMask = O_Inline | O_SpecLexer /*| O_SpecString*/ | O_ByteMap | O_Prediction;
 					break;
 				case 95:
 					this.OptimizedMask = O_Inline | O_SpecLexer | O_SpecString | O_ByteMap /*| O_Prediction*/;

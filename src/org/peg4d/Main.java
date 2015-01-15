@@ -328,7 +328,7 @@ public class Main {
 				}
 			}
 			Logger.dump(bestTime, context, null);
-			ParsingWriter.writeAs(OutputWriterClass, OutputFileName, po);
+			//ParsingWriter.writeAs(OutputWriterClass, OutputFileName, po);
 		}
 	}
 	
