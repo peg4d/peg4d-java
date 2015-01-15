@@ -53,7 +53,7 @@ static void dump_PegVMInstructions(Instruction *inst, uint64_t size) {
     if (inst[i].ndata) {
       switch (inst->opcode) {
 #define OP_DUMPCASE(OP) case PEGVM_OP_##OP:
-        OP_DUMPCASE(CHAR) {
+        OP_DUMPCASE(CHARRANGE) {
           fprintf(stderr, "[%d-", inst[i].ndata[1]);
           fprintf(stderr, "%d] ", inst[i].ndata[2]);
           // fprintf(stderr, "%d ", inst[i].jump);
@@ -138,6 +138,10 @@ PegVMInstruction *loadByteCodeFile(ParsingContext context,
           inst[i].ndata[j] = read32(buf, &info);
           j++;
         }
+      } else if (inst[i].opcode == PEGVM_OP_SCAN) {
+        inst[i].ndata = malloc(sizeof(int) * 2);
+        inst[i].ndata[0] = read32(buf, &info);
+        inst[i].ndata[1] = read32(buf, &info);
       } else {
         //              inst[i].ndata = malloc(sizeof(int) * (code_length + 1));
         //              inst[i].ndata.len = code_length;
@@ -373,6 +377,20 @@ static const char *get_c99_rule(uint8_t c99_rule) {
   return "";
 }
 
+static const char *get_http_rule(uint8_t http_rule) {
+  switch (http_rule) {
+#define http_CASE(RULE)           \
+  case PEGVM_PROFILE_http_##RULE: \
+    return "" #RULE;
+    PEGVM_PROFILE_http_EACH(http_CASE);
+  default:
+    assert(0 && "UNREACHABLE");
+    break;
+#undef http_CASE
+  }
+  return "";
+}
+
 void PegVM_PrintProfile(const char *file_type) {
 #if PEGVM_PROFILE
   fprintf(stderr, "\ninstruction count \n");
@@ -417,6 +435,10 @@ void PegVM_PrintProfile(const char *file_type) {
     } else if (!strcmp(file_type, "c99")) {
       for (int i = 0; i < PEGVM_c99_RULE_MAX; i++) {
         fprintf(stderr, "%llu %s\n", rule_count[i], get_c99_rule(i));
+      }
+    } else if (!strcmp(file_type, "http")) {
+      for (int i = 0; i < PEGVM_http_RULE_MAX; i++) {
+        fprintf(stderr, "%llu %s\n", rule_count[i], get_http_rule(i));
       }
     }
   }
@@ -472,14 +494,8 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     // goto *inst[pc].ptr;
   }
   OP(RET) { RET; }
-  OP(IFSUCC) {
-    if (!failflag) {
-      JUMP;
-    }
-    DISPATCH_NEXT;
-  }
-  OP(IFFAIL) {
-    if (failflag) {
+  OP(CONDBRANCH) {
+    if (failflag == *pc->ndata) {
       JUMP;
     }
     DISPATCH_NEXT;
@@ -489,6 +505,49 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
       DISPATCH_NEXT;
     }
     JUMP;
+  }
+  OP(CHARRANGE) {
+    if ((pc)->chardata[0] <= inputs[pos] && inputs[pos] <= (pc)->chardata[1]) {
+      pos++;
+      DISPATCH_NEXT;
+    } else {
+      failflag = 1;
+      JUMP;
+    }
+  }
+  OP(CHARSET) {
+    int j = 0;
+    int len = *(pc)->ndata;
+    while (j < len) {
+      if (inputs[pos] == (pc)->chardata[j]) {
+        pos++;
+        DISPATCH_NEXT;
+      }
+      j++;
+    }
+    failflag = 1;
+    JUMP;
+  }
+  OP(STRING) {
+    char *p = pc->chardata;
+    int len = *pc->ndata;
+    char *pend = pc->chardata + len;
+    while (p < pend) {
+      if (inputs[pos] != *p++) {
+        failflag = 1;
+        JUMP;
+      }
+      pos++;
+    }
+    DISPATCH_NEXT;
+  }
+  OP(ANY) {
+    if (inputs[pos++] == 0) {
+      pos--;
+      failflag = 1;
+      JUMP;
+    }
+    DISPATCH_NEXT;
   }
   OP(PUSHo) {
     ParsingObject po = P4D_newObject(context, pos, pool);
@@ -504,16 +563,15 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     PUSH_SP(P4D_markLogStack(context));
     DISPATCH_NEXT;
   }
-  OP(PUSHp) {
+  OP(PUSHp1) {
     PUSH_SP(pos);
     DISPATCH_NEXT;
   }
-  OP(PUSHf) { assert(0 && "Not implemented"); }
-  OP(PUSHm) {
+  OP(PUSHp2) {
     PUSH_SP(P4D_markLogStack(context));
     DISPATCH_NEXT;
   }
-  OP(POP) {
+  OP(POPp) {
     POP_SP();
     DISPATCH_NEXT;
   }
@@ -531,65 +589,80 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     pos = POP_SP();
     DISPATCH_NEXT;
   }
-  OP(STOREf) { assert(0 && "Not implemented"); }
-  OP(STOREm) { DISPATCH_NEXT; }
-  OP(FAIL) {
-    failflag = 1;
+  OP(STOREflag) {
+    failflag = pc->ndata[0];
     DISPATCH_NEXT;
   }
-  OP(SUCC) {
-    failflag = 0;
+  OP(NEW) {
+    PUSH_SP(P4D_markLogStack(context));
+    P4D_setObject(context, &left, P4D_newObject(context, pos, pool));
+    // PUSH_SP(P4D_markLogStack(context));
     DISPATCH_NEXT;
   }
-  OP(BYTE) {
-    if (inputs[pos] != *(pc)->ndata) {
-      failflag = 1;
-      JUMP;
-    }
-    pos++;
+  OP(NEWJOIN) {
+    ParsingObject po = NULL;
+    P4D_setObject(context, &po, left);
+    P4D_setObject(context, &left, P4D_newObject(context, pos, pool));
+    // PUSH_SP(P4D_markLogStack(context));
+    P4D_lazyJoin(context, po, pool);
+    P4D_lazyLink(context, left, *(pc)->ndata, po, pool);
     DISPATCH_NEXT;
   }
-  OP(STRING) {
+  OP(COMMIT) {
+    P4D_commitLog(context, (int)POP_SP(), left, pool);
+    ParsingObject parent = (ParsingObject)POP_OSP();
+    P4D_lazyLink(context, parent, *(pc)->ndata, left, pool);
+    P4D_setObject(context, &left, parent);
+    DISPATCH_NEXT;
+  }
+  OP(ABORT) {
+    P4D_abortLog(context, (int)POP_SP());
+    DISPATCH_NEXT;
+  }
+  OP(LINK) {
+    ParsingObject parent = (ParsingObject)POP_OSP();
+    P4D_lazyLink(context, parent, *(pc)->ndata, left, pool);
+    // P4D_setObject(context, &left, parent);
+    PUSH_OSP(parent);
+    DISPATCH_NEXT;
+  }
+  OP(SETendp) {
+    left->end_pos = pos;
+    DISPATCH_NEXT;
+  }
+  OP(TAG) {
+    left->tag = (pc)->chardata;
+    DISPATCH_NEXT;
+  }
+  OP(VALUE) {
+    left->value = (pc)->chardata;
+    DISPATCH_NEXT;
+  }
+  OP(MAPPEDCHOICE) {
+    pc = inst + (pc)->ndata[(int)inputs[pos]];
+    goto *(pc)->ptr;
+  }
+  OP(SCAN) {
+    long start = POP_SP();
+    long len = pos - start;
+    char *value = malloc(len);
     int j = 0;
-    int len = *(pc)->ndata;
-    while (j < len) {
-      if (inputs[pos] != (pc)->chardata[j]) {
-        failflag = 1;
-        JUMP;
-      }
-      pos++;
+    for (long i = start; i < pos; i++) {
+      value[j] = inputs[i];
       j++;
     }
-    DISPATCH_NEXT;
-  }
-  OP(CHAR) {
-    if (!(inputs[pos] >= (pc)->chardata[0] &&
-          inputs[pos] <= (pc)->chardata[1])) {
-      failflag = 1;
-      JUMP;
-    }
-    pos++;
-    DISPATCH_NEXT;
-  }
-  OP(CHARSET) {
-    int j = 0;
-    int len = *(pc)->ndata;
-    while (j < len) {
-      if (inputs[pos] == (pc)->chardata[j]) {
-        pos++;
-        DISPATCH_NEXT;
-      }
-      j++;
-    }
-    failflag = 1;
-    JUMP;
-  }
-  OP(ANY) {
-    if (inputs[pos] != 0) {
-      pos++;
+    if (pc->ndata[0] == 16) {
+      long num = strtol(value, NULL, 16);
+      context->repeat_table[pc->ndata[1]] = (int)num;
       DISPATCH_NEXT;
     }
-    failflag = 1;
+    context->repeat_table[pc->ndata[1]] = atoi(value);
+    DISPATCH_NEXT;
+  }
+  OP(CHECKEND) {
+    if (context->repeat_table[pc->ndata[0]] == 0) {
+      DISPATCH_NEXT;
+    }
     JUMP;
   }
   OP(NOTBYTE) {
@@ -627,16 +700,16 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     JUMP;
   }
   OP(NOTSTRING) {
-    int j = 0;
-    int len = *(pc)->ndata;
+    char *p = pc->chardata;
+    int len = *pc->ndata;
     long backtrack_pos = pos;
-    while (j < len) {
-      if (inputs[pos] != (pc)->chardata[j]) {
+    char *pend = pc->chardata + len;
+    while (p < pend) {
+      if (inputs[pos] != *p++) {
         pos = backtrack_pos;
         DISPATCH_NEXT;
       }
       pos++;
-      j++;
     }
     pos = backtrack_pos;
     failflag = 1;
@@ -710,16 +783,16 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     DISPATCH_NEXT;
   }
   OP(OPTIONALSTRING) {
-    int j = 0;
-    int len = *(pc)->ndata;
+    char *p = pc->chardata;
+    int len = *pc->ndata;
     long backtrack_pos = pos;
-    while (j < len) {
-      if (inputs[pos] != (pc)->chardata[j]) {
+    char *pend = pc->chardata + len;
+    while (p < pend) {
+      if (inputs[pos] != *p++) {
         pos = backtrack_pos;
         DISPATCH_NEXT;
       }
       pos++;
-      j++;
     }
     DISPATCH_NEXT;
   }
@@ -746,236 +819,14 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     }
     DISPATCH_NEXT;
   }
-  OP(NEW) {
-    PUSH_SP(P4D_markLogStack(context));
-    P4D_setObject(context, &left, P4D_newObject(context, pos, pool));
-    // PUSH_SP(P4D_markLogStack(context));
-    DISPATCH_NEXT;
-  }
-  OP(NEWJOIN) {
-    ParsingObject po = NULL;
-    P4D_setObject(context, &po, left);
-    P4D_setObject(context, &left, P4D_newObject(context, pos, pool));
-    // PUSH_SP(P4D_markLogStack(context));
-    P4D_lazyJoin(context, po, pool);
-    P4D_lazyLink(context, left, *(pc)->ndata, po, pool);
-    DISPATCH_NEXT;
-  }
-  OP(COMMIT) {
-    P4D_commitLog(context, (int)POP_SP(), left, pool);
-    ParsingObject parent = (ParsingObject)POP_OSP();
-    P4D_lazyLink(context, parent, *(pc)->ndata, left, pool);
-    P4D_setObject(context, &left, parent);
-    DISPATCH_NEXT;
-  }
-  OP(ABORT) {
-    P4D_abortLog(context, (int)POP_SP());
-    DISPATCH_NEXT;
-  }
-  OP(LINK) {
-    ParsingObject parent = (ParsingObject)POP_OSP();
-    P4D_lazyLink(context, parent, *(pc)->ndata, left, pool);
-    // P4D_setObject(context, &left, parent);
-    PUSH_OSP(parent);
-    DISPATCH_NEXT;
-  }
-  OP(SETendp) {
-    left->end_pos = pos;
-    DISPATCH_NEXT;
-  }
-  OP(TAG) {
-    left->tag = (pc)->chardata;
-    DISPATCH_NEXT;
-  }
-  OP(VALUE) {
-    left->value = (pc)->chardata;
-    DISPATCH_NEXT;
-  }
-  OP(MAPPEDCHOICE) {
-    pc = inst + (pc)->ndata[(int)inputs[pos]];
-    goto *(pc)->ptr;
-  }
-  OP(PUSHconnect_CALL) {
-    ParsingObject po = left;
-    left->refc++;
-    PUSH_OSP(po);
-    PUSH_SP(P4D_markLogStack(context));
-    PUSH_IP(context, pc + 1);
-    JUMP;
-  }
-  OP(PUSHp_CALL) {
-    PUSH_SP(pos);
-    PUSH_IP(context, pc + 1);
-    JUMP;
-  }
-  OP(PUSHp_STRING) {
-    PUSH_SP(pos);
-    int j = 0;
-    int len = *(pc)->ndata;
-    while (j < len) {
-      if (inputs[pos] != (pc)->chardata[j]) {
-        failflag = 1;
-        JUMP;
-      }
-      pos++;
-      j++;
+  OP(REPEATANY) {
+    long back = pos;
+    pos = pos + context->repeat_table[pc->ndata[0]];
+    if (pos - 1 > (long)context->input_size) {
+      pos = back;
     }
     DISPATCH_NEXT;
   }
-  OP(PUSHp_CHAR) {
-    PUSH_SP(pos);
-    if (!(inputs[pos] >= (pc)->chardata[0] &&
-          inputs[pos] <= (pc)->chardata[1])) {
-      failflag = 1;
-      JUMP;
-    }
-    pos++;
-    DISPATCH_NEXT;
-  }
-  OP(PUSHp_ZEROMORECHARSET) {
-    PUSH_SP(pos);
-    int j;
-    int len = *(pc)->ndata;
-  PUSHp_ZEROMORECHARSET_LABEL:
-    j = 0;
-    while (j < len) {
-      if (inputs[pos] == (pc)->chardata[j]) {
-        pos++;
-        goto PUSHp_ZEROMORECHARSET_LABEL;
-      }
-      j++;
-    }
-    DISPATCH_NEXT;
-  }
-  OP(PUSHp_PUSHp) {
-    PUSH_SP(pos);
-    PUSH_SP(pos);
-    DISPATCH_NEXT;
-  }
-  OP(POP_JUMP) {
-    POP_SP();
-    JUMP;
-  }
-  OP(POP_REPCOND) {
-    POP_SP();
-    if (pos != POP_SP()) {
-      DISPATCH_NEXT;
-    }
-    JUMP;
-  }
-  OP(STOREo_JUMP) {
-    ParsingObject left = POP_OSP();
-    P4D_setObject(context, &left, left);
-    JUMP;
-  }
-  OP(STOREp_JUMP) {
-    pos = POP_SP();
-    JUMP;
-  }
-  OP(STOREp_ZEROMORECHARSET) {
-    pos = POP_SP();
-    int j;
-    int len = *(pc)->ndata;
-  STOREp_ZEROMORECHARSET_LABEL:
-    j = 0;
-    while (j < len) {
-      if (inputs[pos] == (pc)->chardata[j]) {
-        pos++;
-        goto STOREp_ZEROMORECHARSET_LABEL;
-      }
-      j++;
-    }
-    DISPATCH_NEXT;
-  }
-  OP(STOREp_PUSHp) {
-    pos = POP_SP();
-    PUSH_SP(pos);
-    DISPATCH_NEXT;
-  }
-  OP(STOREp_POP) {
-    pos = POP_SP();
-    POP_SP();
-    DISPATCH_NEXT;
-  }
-  OP(STOREp_TAG) {
-    pos = POP_SP();
-    left->tag = (pc)->chardata;
-    DISPATCH_NEXT;
-  }
-  OP(FAIL_JUMP) {
-    failflag = 1;
-    JUMP;
-  }
-  OP(SUCC_STOREp) {
-    failflag = 0;
-    pos = POP_SP();
-    DISPATCH_NEXT;
-  }
-  OP(NEW_BYTE) {
-    PUSH_SP(P4D_markLogStack(context));
-    P4D_setObject(context, &left, P4D_newObject(context, pos, pool));
-    if (inputs[pos] != *(pc)->ndata) {
-      failflag = 1;
-      JUMP;
-    }
-    pos++;
-    DISPATCH_NEXT;
-  }
-  OP(NEW_STRING) {
-    PUSH_SP(P4D_markLogStack(context));
-    P4D_setObject(context, &left, P4D_newObject(context, pos, pool));
-    int j = 0;
-    int len = *(pc)->ndata;
-    while (j < len) {
-      if (inputs[pos] != (pc)->chardata[j]) {
-        failflag = 1;
-        JUMP;
-      }
-      pos++;
-      j++;
-    }
-    DISPATCH_NEXT;
-  }
-  OP(NEW_PUSHp) {
-    PUSH_SP(P4D_markLogStack(context));
-    P4D_setObject(context, &left, P4D_newObject(context, pos, pool));
-    PUSH_SP(pos);
-    DISPATCH_NEXT;
-  }
-  OP(COMMIT_JUMP) {
-    P4D_commitLog(context, (int)POP_SP(), left, pool);
-    ParsingObject parent = (ParsingObject)POP_OSP();
-    P4D_lazyLink(context, parent, *(pc)->ndata, left, pool);
-    P4D_setObject(context, &left, parent);
-    JUMP;
-  }
-  OP(ABORT_JUMP) {
-    P4D_abortLog(context, (int)POP_SP());
-    JUMP;
-  }
-  OP(ABORT_STOREo) {
-    P4D_abortLog(context, (int)POP_SP());
-    ParsingObject po = POP_OSP();
-    P4D_setObject(context, &left, po);
-    DISPATCH_NEXT;
-  }
-  OP(SETendp_POP) {
-    left->end_pos = pos;
-    POP_SP();
-    DISPATCH_NEXT;
-  }
-  OP(TAG_JUMP) {
-    left->tag = (pc)->chardata;
-    JUMP;
-  }
-  OP(TAG_SETendp) {
-    left->tag = (pc)->chardata;
-    left->end_pos = pos;
-    DISPATCH_NEXT;
-  }
-  //    OP(DTHREAD) {
-  //        return (long)table;
-  //    }
 
   return failflag;
 }

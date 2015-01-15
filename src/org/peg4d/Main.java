@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import java.util.TreeMap;
 
 import org.peg4d.data.RelationBuilder;
+import org.peg4d.ext.Generator;
 import org.peg4d.jvm.JavaByteCodeGenerator;
 import org.peg4d.konoha.KSourceGenerator;
 import org.peg4d.konoha.SweetJSGenerator;
@@ -354,6 +355,9 @@ public class Main {
 			KSourceGenerator generator = new SweetJSGenerator();
 			generator.visit(pego);
 			System.out.println(generator.toString());
+		}
+		else if(OutputType != null && OutputType.equalsIgnoreCase("pego")) {
+			new Generator(OutputFileName).writePego(pego);
 		}else{
 			outputMap(pego);
 			return;
@@ -366,9 +370,7 @@ public class Main {
 //		if(OutputType.equalsIgnoreCase("tag")) {
 
 //		}
-//		if(OutputType.equalsIgnoreCase("pego")) {
-//			new Generator(OutputFileName).writePego(pego);
-//		}
+		
 //		else if(OutputType.equalsIgnoreCase("json")) {
 //			new Generator(OutputFileName).writeJSON(pego);
 //		}
@@ -424,21 +426,25 @@ public class Main {
 		ParsingObject po = null;
 		long bestTime = Long.MAX_VALUE;
 		ParsingStatistics stat = null;
-		for(int i = 0; i < StatTimes; i++) {
-			ParsingSource source = newParsingSource(peg);
+		ParsingSource source = newParsingSource(peg);
+		stat = new ParsingStatistics(peg, source);
+		context = new ParsingContext(source);
+		context.initStat(stat);
+		for(int i = 0; i < 5000; i++) {
+			source = newParsingSource(peg);
 			context = new ParsingContext(source);
-			stat = new ParsingStatistics(peg, source);
-			context.initStat(stat);
+			
 			po = context.parse(peg, StartingPoint, new MemoizationManager());
-			long t = stat.end();
-			Main.printVerbose("ErapsedTime", "" + t + "ms");
-			if(t < bestTime) {
-				bestTime = t;
-			}
-			if(t > 200000) {
-				break;
-			}
+			
+//			if(t < bestTime) {
+//				bestTime = t;
+//			}
+//			if(t > 200000) {
+//				break;
+//			}
 		}
+		long t = stat.end();
+		System.out.println("ErapsedTime: " + t + "ms");
 		stat.ErapsedTime = bestTime;
 		stat.end(po, context);
 		outputMap(po);

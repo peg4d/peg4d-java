@@ -64,6 +64,6 @@ public class Opcode {
 	}
 	
 	public final boolean isJumpCode() {
-    	return this.inst.compareTo(Instruction.ANDSTRING) <= 0;
+    	return this.inst.compareTo(Instruction.ANY) <= 0 || (this.inst.compareTo(Instruction.NOTBYTE) >= 0 && this.inst.compareTo(Instruction.ANDSTRING) <= 0);
     }
 }

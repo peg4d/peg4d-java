@@ -29,7 +29,9 @@ import org.peg4d.expression.ParsingName;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
 import org.peg4d.expression.ParsingPermutation;
+import org.peg4d.expression.ParsingRepeat;
 import org.peg4d.expression.ParsingRepetition;
+import org.peg4d.expression.ParsingScan;
 import org.peg4d.expression.ParsingSequence;
 import org.peg4d.expression.ParsingString;
 import org.peg4d.expression.ParsingTagging;
@@ -337,6 +339,20 @@ public class PEG4dFormatter extends GrammarFormatter {
 		this.formatSequence( e);
 		this.formatString(">");
 		
+	}
+
+	@Override
+	public void visitScan(ParsingScan e) {
+		this.formatString("<scan ");
+		e.inner.visit(this);
+		this.formatString(" ");
+		e.repeatExpression.visit(this);
+		this.formatString(">");
+	}
+
+	@Override
+	public void visitRepeat(ParsingRepeat e) {
+		this.formatParsingFunction(e);
 	}	
 
 
