@@ -498,6 +498,19 @@ public class ParsingContext {
 		return f == null || f.booleanValue();
 	}
 
-		
+	HashMap<String, Integer> repeatMap = new HashMap<String, Integer>();
+	
+	public final void setRepeatExpression(String rule, int value) {
+		this.repeatMap.put(rule, value);
+	}
+	
+	public final int getRepeatValue(String rule) {
+		return this.repeatMap.get(rule);
+	}
+	
+	public final String getRepeatByteString(long startIndex) {
+		return this.source.substring(startIndex, this.pos);
+	}
+
 }
 

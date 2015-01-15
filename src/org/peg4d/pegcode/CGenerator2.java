@@ -27,7 +27,9 @@ import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
 import org.peg4d.expression.ParsingPermutation;
+import org.peg4d.expression.ParsingRepeat;
 import org.peg4d.expression.ParsingRepetition;
+import org.peg4d.expression.ParsingScan;
 import org.peg4d.expression.ParsingSequence;
 import org.peg4d.expression.ParsingString;
 import org.peg4d.expression.ParsingTagging;
@@ -154,6 +156,7 @@ public class CGenerator2 extends GrammarFormatter {
 		writeLine("        }");
 		writeLine("        P4D_commitLog(&context, 0, context.left);");
 		writeLine("        dump_pego(context.left, context.inputs, 0);");
+		writeLine("        ParsingContext_Dispose(&context);");
 		writeLine("    }");
 		writeLine("    else if(!strcmp(output_type, \"stat\")) {");
 		writeLine("        for (int i = 0; i < 20; i++) {");
@@ -364,6 +367,7 @@ public class CGenerator2 extends GrammarFormatter {
 		if(e.leftJoin) {
 			//context.lazyJoin(context.left);
 			//context.lazyLink(newnode, 0, context.left);
+			//writeLine("ParsingObject", leftName, "P4D_setObject(c, &c->left, P4D_newObject(c, c->pos))");
 			writeLine("P4D_lazyJoin(c, "+ leftName +");");
 			writeLine("P4D_lazyLink(c, c->left, 0, " + leftName + ");");
 		}
@@ -500,6 +504,18 @@ public class CGenerator2 extends GrammarFormatter {
 	@Override
 	public void visitIs(ParsingIs e) {
 		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visitScan(ParsingScan e) {
+		// TODO 自動生成されたメソッド・スタブ
+		
+	}
+
+	@Override
+	public void visitRepeat(ParsingRepeat e) {
+		// TODO 自動生成されたメソッド・スタブ
 		
 	}
 
