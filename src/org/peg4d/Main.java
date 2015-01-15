@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.jvm.JavaByteCodeGenerator;
+import org.peg4d.pegcode.PegVMByteCodeGenerator;
 import org.peg4d.pegcode.GrammarFormatter;
 import org.peg4d.writer.ParsingObjectWriter;
 import org.peg4d.writer.ParsingWriter;
@@ -72,6 +73,9 @@ public class Main {
 
 	// --jvm
 	public static boolean JavaByteCodeGeneration = false;
+	
+	// --pegvm
+	public static boolean PegVMByteCodeGeneration = false;
 
 	// -O
 	public static int OptimizationLevel = 2;
@@ -193,6 +197,9 @@ public class Main {
 			else if(argument.equals("--jvm")) {
 				JavaByteCodeGeneration = true;
 			}
+			else if(argument.equals("--pegvm")) {
+				PegVMByteCodeGeneration = true;
+			}
 			else {
 				showUsage("unknown option: " + argument);
 			}
@@ -206,7 +213,7 @@ public class Main {
 				GrammarFile = guessGrammarFile(InputFileName);
 			}
 		}
-		if(InputFileName == null && InputString == null) {
+		if(InputFileName == null && InputString == null && !PegVMByteCodeGeneration) {
 			System.out.println("unspecified inputs: invoking interactive shell");
 			Command = "shell";
 		}
@@ -252,6 +259,7 @@ public class Main {
 		driverMap.put("c2", org.peg4d.pegcode.CGenerator2.class);
 		driverMap.put("pegjs", org.peg4d.pegcode.PEGjsFormatter.class);
 		driverMap.put("py", org.peg4d.pegcode.PythonGenerator.class);
+		driverMap.put("vm", org.peg4d.pegcode.PegVMByteCodeGenerator.class);
 	}
 
 	private static GrammarFormatter loadDriverImpl(String driverName) {
@@ -376,6 +384,15 @@ public class Main {
 			}
 			Logger.dump(bestTime, context, po);
 			ParsingWriter.writeAs(OutputWriterClass, OutputFileName, po);
+		}
+	}
+	
+	public static void conv() {
+		Grammar peg = newGrammar();
+		if (PegVMByteCodeGeneration) {
+			PegVMByteCodeGenerator g = new PegVMByteCodeGenerator();
+			g.formatGrammar(peg, null);
+			g.writeByteCode(GrammarFile, OutputFileName, peg);
 		}
 	}
 

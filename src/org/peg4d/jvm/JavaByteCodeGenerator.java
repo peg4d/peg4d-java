@@ -42,7 +42,9 @@ import org.peg4d.expression.ParsingMatcher;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
 import org.peg4d.expression.ParsingPermutation;
+import org.peg4d.expression.ParsingRepeat;
 import org.peg4d.expression.ParsingRepetition;
+import org.peg4d.expression.ParsingScan;
 import org.peg4d.expression.ParsingSequence;
 import org.peg4d.expression.ParsingString;
 import org.peg4d.expression.ParsingTagging;
@@ -1123,5 +1125,17 @@ public class JavaByteCodeGenerator extends GrammarFormatter implements Opcodes {
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.push(ParsingTag.tagId(e.getParameters().substring(1)));
 		this.mBuilder.callInstanceMethod(ParsingContext.class, boolean.class, "matchSymbolTableTop", int.class);
+	}
+
+	@Override
+	public void visitScan(ParsingScan e) {
+		// TODO 自動生成されたメソッド・スタブ
+		
+	}
+
+	@Override
+	public void visitRepeat(ParsingRepeat e) {
+		// TODO 自動生成されたメソッド・スタブ
+		
 	}
 }

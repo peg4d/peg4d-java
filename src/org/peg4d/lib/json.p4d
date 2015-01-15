@@ -55,4 +55,3 @@ FRAC
 	= '.' DIGIT+
 EXP
 	= [Ee] ('-' / '+')? DIGIT+
-

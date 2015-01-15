@@ -716,6 +716,14 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		}
 		return new ParsingPermutation(l);
 	}
+	
+	public final static ParsingExpression newScan(int number, ParsingExpression scan, ParsingExpression repeat) {
+		return new ParsingScan(number, scan, repeat);
+	}
+	
+	public final static ParsingExpression newRepeat(ParsingExpression e) {
+		return new ParsingRepeat(e);
+	}
 
 	public static ParsingExpression newDef(int tagId, ParsingExpression e) {
 		return checkUnique(new ParsingDef(tagId, e), e.isUnique());

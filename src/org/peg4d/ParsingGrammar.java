@@ -264,6 +264,8 @@ class PEG4dGrammar2 extends ParsingGrammar {
 			Sequence(t("powerset"), P("S"), Link(P("Expr")), Tag(PEG4d.PowerSet)),
 			Sequence(t("permutation"), P("S"), Link(P("Expr")), Tag(PEG4d.Permutation)),
 			Sequence(t("perm"), P("S"), Link(P("Expr")), Tag(PEG4d.PermutationExpr)),
+			Sequence(t("scan"), P("S"), Link(Constructor(DIGIT(), ZeroMore(DIGIT()))), t(","), P("S"), Link(P("Expr")), t(","), P("S"), Link(P("Expr")), Tag(PEG4d.Scan)),
+			Sequence(t("repeat"), P("S"), Link(P("Expr")), Tag(PEG4d.Repeat)),
 			Sequence(t("is"), P("S"), Link(P("Name")), Tag(PEG4d.Is)),
 			Sequence(t("isa"), P("S"), Link(P("Name")), Tag(PEG4d.Isa)),
 			Sequence(t("def"),  P("S"), Link(P("Name")), P("S"), Link(P("Expr")), Tag(PEG4d.Def)),
