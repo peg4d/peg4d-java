@@ -213,7 +213,7 @@ public class Main {
 				GrammarFile = guessGrammarFile(InputFileName);
 			}
 		}
-		if(InputFileName == null && InputString == null) {
+		if(InputFileName == null && InputString == null && !PegVMByteCodeGeneration) {
 			System.out.println("unspecified inputs: invoking interactive shell");
 			Command = "shell";
 		}

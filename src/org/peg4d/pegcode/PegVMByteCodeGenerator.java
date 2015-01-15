@@ -22,15 +22,16 @@ import org.peg4d.expression.ParsingCatch;
 import org.peg4d.expression.ParsingChoice;
 import org.peg4d.expression.ParsingConnector;
 import org.peg4d.expression.ParsingConstructor;
+import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingEmpty;
 import org.peg4d.expression.ParsingExport;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingIf;
 import org.peg4d.expression.ParsingIndent;
+import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingMatch;
-import org.peg4d.expression.ParsingName;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
 import org.peg4d.expression.ParsingPermutation;
@@ -1155,11 +1156,6 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 	}
 
 	@Override
-	public void visitName(ParsingName e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
-	}
-
-	@Override
 	public void visitIsa(ParsingIsa e) {
 		throw new RuntimeException("unimplemented visit method: " + e.getClass());
 	}
@@ -1215,6 +1211,18 @@ public class PegVMByteCodeGenerator extends GrammarFormatter {
 			writeCode(Instruction.STOREp);
 			writeLabel(end);
 		}
+	}
+
+	@Override
+	public void visitDef(ParsingDef e) {
+		// TODO 自動生成されたメソッド・スタブ
+		
+	}
+
+	@Override
+	public void visitIs(ParsingIs e) {
+		// TODO 自動生成されたメソッド・スタブ
+		
 	}
 
 }
