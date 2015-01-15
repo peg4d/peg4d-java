@@ -3,7 +3,7 @@
 #ifndef PEGVM_H
 #define PEGVM_H
 #define PEGVM_DEBUG 0
-#define PEGVM_PROFILE 1
+#define PEGVM_PROFILE 0
 #define PEGVM_OP_MAX 74
 #define PEGVM_PROFILE_MAX 49
 
@@ -50,7 +50,6 @@ enum pegvm_opcode {
   PEGVM_OP_ERROR = -1
 };
 
-#if PEGVM_PROFILE
 #define PEGVM_PROFILE_json_EACH(RULE)                                        \
   RULE(export) RULE(S) RULE(File) RULE(Chunk) RULE(JSONObject) RULE(String)  \
       RULE(Member) RULE(Value) RULE(ObjectId) RULE(ID) RULE(Array) RULE(INT) \
@@ -120,7 +119,6 @@ enum pegvm_c99_rule {
 #undef DEFINE_c99_ENUM
   PROFILE_c99_ERROR = -1
 };
-#endif
 
 PegVMInstruction *loadByteCodeFile(ParsingContext context,
                                    PegVMInstruction *inst,
