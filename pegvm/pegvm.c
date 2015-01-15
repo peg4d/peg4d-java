@@ -377,20 +377,6 @@ static const char *get_c99_rule(uint8_t c99_rule) {
   return "";
 }
 
-static const char *get_http_rule(uint8_t http_rule) {
-  switch (http_rule) {
-#define http_CASE(RULE)           \
-  case PEGVM_PROFILE_http_##RULE: \
-    return "" #RULE;
-    PEGVM_PROFILE_http_EACH(http_CASE);
-  default:
-    assert(0 && "UNREACHABLE");
-    break;
-#undef http_CASE
-  }
-  return "";
-}
-
 void PegVM_PrintProfile(const char *file_type) {
 #if PEGVM_PROFILE
   fprintf(stderr, "\ninstruction count \n");
@@ -435,10 +421,6 @@ void PegVM_PrintProfile(const char *file_type) {
     } else if (!strcmp(file_type, "c99")) {
       for (int i = 0; i < PEGVM_c99_RULE_MAX; i++) {
         fprintf(stderr, "%llu %s\n", rule_count[i], get_c99_rule(i));
-      }
-    } else if (!strcmp(file_type, "http")) {
-      for (int i = 0; i < PEGVM_http_RULE_MAX; i++) {
-        fprintf(stderr, "%llu %s\n", rule_count[i], get_http_rule(i));
       }
     }
   }
