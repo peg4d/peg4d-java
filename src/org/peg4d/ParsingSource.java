@@ -17,7 +17,7 @@ public abstract class ParsingSource {
 
 	private String     fileName;
 	protected long     startLineNum = 1;
-	ParsingStatistics  stat = null;
+	NezLogger  stat = null;
 	
 	public ParsingSource(String fileName, long linenum) {
 		this.fileName = fileName;
@@ -125,13 +125,19 @@ public abstract class ParsingSource {
 	public final String getIndentText(long fromPosition) {
 		long startPosition = this.getLineStartPosition(fromPosition);
 		long i = startPosition;
+		String indent = "";
 		for(; i < fromPosition; i++) {
 			int ch = this.byteAt(i);
 			if(ch != ' ' && ch != '\t') {
+				if(i + 1 != fromPosition) {
+					for(long j = i;j < fromPosition; j++) {
+						indent = indent + " ";
+					}
+				}
 				break;
 			}
 		}
-		String indent = this.substring(startPosition, i);
+		indent = this.substring(startPosition, i) + indent;
 		return indent;
 	}
 
@@ -519,9 +525,9 @@ class FileSource extends ParsingSource {
 			for(int i = readsize; i < b.length; i++) {
 				b[i] = 0;
 			}
-			if(this.stat != null) {
-				stat.readFile(b.length);
-			}
+//			if(this.stat != null) {
+//				stat.readFile(b.length);
+//			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

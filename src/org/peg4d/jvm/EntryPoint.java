@@ -35,9 +35,11 @@ public class EntryPoint extends ParsingExpression {
 			java.lang.reflect.Method method = parserClass.getMethod(this.methodName, ParsingContext.class);
 			Object status = method.invoke(null, context);
 			return ((Boolean) status).booleanValue();
-		} catch(NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException e) {
+		}
+		catch(NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException e) {
 			throw new RuntimeException(e);
-		} catch (InvocationTargetException e) {
+		}
+		catch (InvocationTargetException e) {
 			e.getCause().printStackTrace();
 		}
 		return false;

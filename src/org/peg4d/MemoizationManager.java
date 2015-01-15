@@ -6,6 +6,7 @@ import java.util.Map;
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.Optimizer;
 import org.peg4d.expression.ParsingConnector;
+import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingMatcher;
 
@@ -20,11 +21,7 @@ public class MemoizationManager {
 	public static boolean VerboseMemo = false;
 	
 	UList<MemoMatcher> memoList = new UList<MemoMatcher>(new MemoMatcher[16]);
-	
-	MemoizationManager() {
 		
-	}
-	
 	HashMap<Integer, MemoPoint> memoMap = new HashMap<Integer, MemoPoint>();
     
 	MemoPoint getMemoPoint(ParsingExpression e) {
@@ -98,15 +95,22 @@ public class MemoizationManager {
 		}
 	}
 	
-	void exploitMemo(ParsingExpression e) {
+	void exploitMemo(ParsingExpression e, UMap<String> visitedMap) {
 		for(int i = 0; i < e.size(); i++) {
-			exploitMemo(e.get(i));
+			exploitMemo(e.get(i), visitedMap);
 		}
 		if(!(e.matcher instanceof MemoMatcher)) {
 			if(e instanceof ParsingConnector) {
 				ParsingConnector ne = (ParsingConnector)e;
 				MemoPoint mp = getMemoPoint(ne.inner);
-				MemoMatcher m = new ConnectorMemoMatcher(ne, mp);
+				MemoMatcher m = null;
+				visitedMap.clear();
+				if(ParsingDef.checkContextSensitivity(e, visitedMap)) {;
+					m = new ConnectorMemoMatcher2(ne, mp);
+				}
+				else {
+					m = new ConnectorMemoMatcher0(ne, mp);					
+				}
 				memoList.add(m);
 				ne.matcher = m;
 			}
@@ -115,7 +119,14 @@ public class MemoizationManager {
 				if(ne.getRule().type == ParsingRule.LexicalRule) {
 					ParsingExpression deref = Optimizer.resolveNonTerminal(ne);
 					MemoPoint mp = getMemoPoint(deref);
-					MemoMatcher m = new NonTerminalMemoMatcher(ne, mp);
+					MemoMatcher m = null;
+					visitedMap.clear();
+					if(ParsingDef.checkContextSensitivity(e, visitedMap)) {;
+						m = new NonTerminalMemoMatcher(ne, mp);
+					}
+					else {
+						m = new NonTerminalMemoMatcher(ne, mp);					
+					}
 					memoList.add(m);
 					ne.matcher = m;
 				}
@@ -128,8 +139,9 @@ public class MemoizationManager {
 //			System.out.println("skip memoiztion");
 //			return;
 //		}
+		UMap<String> visitedMap = new UMap<String>();
 		for(ParsingRule r : rule.subRule()) {
-			exploitMemo(r.expr);
+			exploitMemo(r.expr, visitedMap);
 		}
 	}
 
@@ -152,7 +164,7 @@ public class MemoizationManager {
 		}
 	}
 	
-	void show2(ParsingStatistics stat) {
+	void show2(NezLogger stat) {
 		for(int i = 0; i < memoList.size() - 1; i++) {
 			for(int j = i + 1; j < memoList.size(); j++) {
 				if(memoList.ArrayValues[i].compareTo(memoList.ArrayValues[j]) > 0) {
@@ -203,7 +215,7 @@ public class MemoizationManager {
 		if(MemoizationManager.SlidingLinkedParsing) {
 			return new SlidingLinkedListTable(size, rules);
 		}
-		return new TracingPackratTable(size, rules);
+		return new ElasticTable(size, rules);
 	}
 	
 	abstract class MemoMatcher extends ParsingMatcher {
@@ -219,7 +231,6 @@ public class MemoizationManager {
 
 		private int memoPoint() {
 			return memo.memoPoint;
-			//return key.uniqueId;
 		}
 		
 		final boolean memoMatch(ParsingContext context, ParsingMatcher ma) {
@@ -245,6 +256,32 @@ public class MemoizationManager {
 			left = null;
 			return b;
 		}
+
+		final boolean memoMatch2(ParsingContext context, int stateValue, ParsingMatcher ma) {
+			long pos = context.getPosition();
+			MemoEntry m = context.getMemo2(pos, memoPoint(), stateValue);
+			if(m != null) {
+				this.memo.hit(m.consumed);
+				context.setPosition(pos + m.consumed);
+				if(m.result != MemoizationManager.NonTransition) {
+					context.left = m.result;
+				}
+				return !(context.isFailure());
+			}
+			ParsingObject left = context.left;
+			boolean b = ma.simpleMatch(context);
+			int length = (int)(context.getPosition() - pos);
+			context.setMemo2(pos, memoPoint(), stateValue, (context.left == left) ? MemoizationManager.NonTransition : context.left, length);
+			this.memo.memoMiss += 1;
+			if(Tracing && memo.checkUseless()) {
+				enableMemo = false;
+				disabledMemo();
+			}
+			left = null;
+			return b;
+		}
+
+		
 		
 		public int compareTo(MemoMatcher m) {
 			if(this.memo.ratio() == m.memo.ratio()) {
@@ -304,6 +341,85 @@ public class MemoizationManager {
 		}
 	}
 
+	class ConnectorMemoMatcher0 extends MemoMatcher {
+		int index;
+		ConnectorMemoMatcher0(ParsingConnector holder, MemoPoint memo) {
+			super(memo);
+			this.holder = holder;
+			this.key = holder.inner;
+			this.matchRef = holder.inner.matcher;
+			this.index = holder.index;
+		}
+		
+		@Override
+		void disabledMemo() {
+			this.holder.matcher = holder;
+		}
+		
+		@Override
+		public boolean simpleMatch(ParsingContext context) {
+			ParsingObject left = context.left;
+			int mark = context.markLogStack();
+			if(this.memoMatch2(context, 0, this.matchRef)) {
+				if(context.left != left) {
+					//System.out.println("Linked: " + this.holder + " " + left.oid + " => " + context.left.oid);
+					context.commitLog(mark, context.left);
+					context.lazyLink(left, this.index, context.left);
+				}
+				else {
+//					System.out.println("FIXME nothing linked: " + this.holder + " " + left.oid + " => " + context.left.oid);
+					context.abortLog(mark);					
+				}
+				context.left = left;
+				left = null;
+				return true;
+			}
+			context.abortLog(mark);
+			left = null;
+			return false;
+		}
+	}
+
+	class ConnectorMemoMatcher2 extends MemoMatcher {
+		int index;
+		ConnectorMemoMatcher2(ParsingConnector holder, MemoPoint memo) {
+			super(memo);
+			this.holder = holder;
+			this.key = holder.inner;
+			this.matchRef = holder.inner.matcher;
+			this.index = holder.index;
+		}
+		
+		@Override
+		void disabledMemo() {
+			this.holder.matcher = holder;
+		}
+		
+		@Override
+		public boolean simpleMatch(ParsingContext context) {
+			ParsingObject left = context.left;
+			int mark = context.markLogStack();
+			if(this.memoMatch2(context, context.stateValue, this.matchRef)) {
+				if(context.left != left) {
+					//System.out.println("Linked: " + this.holder + " " + left.oid + " => " + context.left.oid);
+					context.commitLog(mark, context.left);
+					context.lazyLink(left, this.index, context.left);
+				}
+				else {
+//					System.out.println("FIXME nothing linked: " + this.holder + " " + left.oid + " => " + context.left.oid);
+					context.abortLog(mark);					
+				}
+				context.left = left;
+				left = null;
+				return true;
+			}
+			context.abortLog(mark);
+			left = null;
+			return false;
+		}
+	}
+
+	
 	class NonTerminalMemoMatcher extends MemoMatcher {
 		NonTerminalMemoMatcher(NonTerminal inner, MemoPoint memo) {
 			super(memo);
@@ -315,6 +431,34 @@ public class MemoizationManager {
 		@Override
 		public boolean simpleMatch(ParsingContext context) {
 			return memoMatch(context, this.matchRef);
+		}
+	}
+
+	class NonTerminalMemoMatcher0 extends MemoMatcher {
+		NonTerminalMemoMatcher0(NonTerminal inner, MemoPoint memo) {
+			super(memo);
+			this.holder = inner;
+			this.key = Optimizer.resolveNonTerminal(inner);
+			this.matchRef = key.matcher;
+		}
+		
+		@Override
+		public boolean simpleMatch(ParsingContext context) {
+			return memoMatch2(context, 0, this.matchRef);
+		}
+	}
+
+	class NonTerminalMemoMatcher2 extends MemoMatcher {
+		NonTerminalMemoMatcher2(NonTerminal inner, MemoPoint memo) {
+			super(memo);
+			this.holder = inner;
+			this.key = Optimizer.resolveNonTerminal(inner);
+			this.matchRef = key.matcher;
+		}
+		
+		@Override
+		public boolean simpleMatch(ParsingContext context) {
+			return memoMatch2(context, context.stateValue, this.matchRef);
 		}
 	}
 
@@ -334,12 +478,13 @@ public class MemoizationManager {
 
 }
 
-final class MemoEntry {
+class MemoEntry {
 	long key = -1;
 	ParsingObject result;
 	int  consumed;
 	int  memoPoint;
 	MemoEntry next;
+	int stateValue = 0;
 }
 
 abstract class MemoTable {
@@ -354,8 +499,8 @@ abstract class MemoTable {
 	
 	int MemoStored = 0;
 	int MemoUsed   = 0;
+	int MemoStateConflicted = 0;
 	int MemoMissed = 0;
-	
 	
 	protected final MemoEntry newMemo() {
 		if(UnusedMemo != null) {
@@ -374,13 +519,6 @@ abstract class MemoTable {
 		this.appendMemo2(m, UnusedMemo);
 		UnusedMemo = m;
 	}
-
-//	protected final MemoEntry findTail(MemoEntry m) {
-//		while(m.next != null) {
-//			m = m.next;
-//		}
-//		return m;
-//	}			
 
 	private void appendMemo2(MemoEntry m, MemoEntry n) {
 		while(m.next != null) {
@@ -419,11 +557,40 @@ abstract class MemoTable {
 		return m;
 	}
 
-	protected void stat(ParsingStatistics stat) {
+	protected void setMemo2(long pos, int memoPoint, int stateValue, ParsingObject result, int consumed) {
+		MemoEntry m = newMemo();
+		m.memoPoint = memoPoint;
+		m.stateValue = stateValue;
+		m.result = result;
+		m.consumed = consumed;
+		m.next = this.get(pos, memoPoint);
+		this.put(pos, memoPoint, m);
+		this.MemoStored += 1;
+	}
+
+	protected MemoEntry getMemo2(long pos, int memoPoint, int stateValue) {
+		MemoEntry m = this.get(pos, memoPoint);
+		while(m != null) {
+			if(m.memoPoint == memoPoint) {
+				if(m.stateValue == stateValue) {
+					this.MemoUsed += 1;
+					return m;					
+				}
+				this.MemoStateConflicted += 1;
+			}
+			m = m.next;
+		}
+		this.MemoMissed += 1;
+		return m;
+	}
+
+	protected void stat(NezLogger stat) {
 		stat.setText("Memo", this.getClass().getSimpleName());
 		stat.setCount("MemoUsed",    this.MemoUsed);
+		stat.setCount("MemoConflicted",  this.MemoStateConflicted);
 		stat.setCount("MemoStored",  this.MemoStored);
 		stat.setRatio("Used/Stored", this.MemoUsed, this.MemoStored);
+		stat.setRatio("Conflicted/Stored", this.MemoStateConflicted, this.MemoStored);
 		stat.setRatio("HitRatio",    this.MemoUsed, this.MemoMissed);
 	}
 }
@@ -491,7 +658,7 @@ class SlidingWindowTable extends MemoTable {
 	}
 
 	@Override
-	protected final void stat(ParsingStatistics stat) {
+	protected final void stat(NezLogger stat) {
 		super.stat(stat);
 	}
 }
@@ -535,15 +702,15 @@ class SlidingLinkedListTable extends MemoTable {
 	}
 
 	@Override
-	protected final void stat(ParsingStatistics stat) {
+	protected final void stat(NezLogger stat) {
 		super.stat(stat);
 	}
 }
 
-class TracingPackratTable extends MemoTable {
+class ElasticTable extends MemoTable {
 	private MemoEntry[] memoArray;
 
-	TracingPackratTable(int size, int rules) {
+	ElasticTable(int size, int rules) {
 		super(size, rules);
 		this.memoArray = new MemoEntry[size * rules + 1];
 		for(int i = 0; i < this.memoArray.length; i++) {
@@ -578,7 +745,36 @@ class TracingPackratTable extends MemoTable {
 	}
 
 	@Override
-	protected final void stat(ParsingStatistics stat) {
+	protected final void setMemo2(long pos, int memoPoint, int stateValue, ParsingObject result, int consumed) {
+		long key = longkey(pos, memoPoint, shift);
+		int hash =  (int)(key % memoArray.length);
+		MemoEntry m = this.memoArray[hash];
+		m.key = key;
+		m.memoPoint = memoPoint;
+		m.stateValue = stateValue;
+		m.result = result;
+		m.consumed = consumed;
+		this.MemoStored += 1;
+	}
+
+	@Override
+	protected final MemoEntry getMemo2(long pos, int memoPoint, int stateValue) {
+		long key = longkey(pos, memoPoint, shift);
+		int hash =  (int)(key % memoArray.length);
+		MemoEntry m = this.memoArray[hash];
+		if(m.key == key) {
+			if(m.stateValue == stateValue) {
+				this.MemoUsed += 1;
+				return m;
+			}
+			this.MemoStateConflicted += 1;
+		}
+		this.MemoMissed += 1;
+		return null;
+	}
+	
+	@Override
+	protected final void stat(NezLogger stat) {
 		super.stat(stat);
 		stat.setCount("MemoSize", this.memoArray.length);
 	}

@@ -1,0 +1,212 @@
+// 
+// MinCaml peg for peg4d
+// 
+
+
+// 1. elements
+
+_
+	= ( comment / ws )+
+
+ws
+	= [ \t\n\r]
+
+comment
+	= '(*' commentBody* '*)'
+
+commentBody
+	= comment / ( !'(*' !'*)' . )
+
+EOS
+	= ';;' / ';' / BREAK
+
+BREAK
+	= 'n' / '\r\n' / '\r'
+
+NONZERODIGIT
+	= [1-9]
+
+DIGIT
+	= [0-9]
+
+LOWER
+	= [a-z]
+
+UPPER
+	= [A-Z]
+
+Number
+	= { operatorPM @FloatNum }
+	/ { operatorPM @IntNum }
+	/ FloatNum
+	/ IntNum
+	/ { '0' #int }
+
+IntNum
+	= { NONZERODIGIT DIGIT* #int }
+
+FloatNum
+	= { DIGIT* '.' DIGIT+ #float }
+
+operatorPM
+	= '+' !'.' #plus
+	/ '-' !'.' #minus
+
+Identifier
+	= { !KEYWORDS LOWER IDPART* #identifier }
+
+IDPART
+	= LOWER / UPPER / DIGIT / '_' 
+
+KEYWORDS
+	= TRUE / FALSE / NOT / BOOL / INT / FLOAT 
+	/ IF / THEN / ELSE / LET / REC / IN / END 
+
+
+// 2. keywords
+
+TRUE   = ( 'true'  / 'True'  / 'TRUE'  )	!IDPART
+FALSE  = ( 'false' / 'False' / 'FALSE' )	!IDPART
+NOT    = ( 'not'   / 'Not'   / 'NOT'   )	!IDPART
+BOOL   = ( 'bool'  / 'Bool'  / 'BOOL'  )	!IDPART
+INT    = ( 'int'   / 'Int'   / 'INT'   )	!IDPART
+FLOAT  = ( 'float' / 'Float' / 'FLOAT' )	!IDPART
+IF     = ( 'if'    / 'If'    / 'IF'    )	!IDPART
+THEN   = ( 'then'  / 'Then'  / 'THEN'  )	!IDPART
+ELSE   = ( 'else'  / 'Else'  / 'ELSE'  )	!IDPART
+LET    = ( 'let'   / 'Let'   / 'LET'   )	!IDPART
+REC    = ( 'rec'   / 'Rec'   / 'REC'   )	!IDPART
+IN     = ( 'in'    / 'In'    / 'IN'    )	!IDPART
+END    = ( 'end'   / 'End'   / 'END'   )	!IDPART
+
+
+// 3. statements
+
+ParenExp
+	= { '(' !'*' _? @ExpStmt _? ')' #block }
+
+SimpleExpStmt
+	= ParenExp / Number / Identifier / TypeStmt
+
+TypeStmt
+	= { BOOL / INT / FLOAT #type }
+
+Exp
+	= ExpStmt _? EOS?
+
+ExpStmt
+	= IfStmt / LetStmt / TupleStmt / !Number SimpleExpStmts / ArrayCreate / Elems / SimpleExpStmt
+
+SimpleExpStmts
+	= { @SimpleExpStmt (_ @SimpleExpStmt)+ #funccall }
+
+Term
+	= ArrayStmt / ParenExp !(_ SimpleExpStmt) / Number !(_ SimpleExpStmt) / Identifier !(_ SimpleExpStmt)
+
+NotExp
+	= { NOT _? @Term #not }
+	/ Term
+
+MulDiv
+	= NotExp {@ _? operatorMulDiv _? @NotExp }*
+
+operatorMulDiv
+	= '*.' #mul 
+	/ '/.' #div
+
+AddSub
+	= MulDiv {@ _? operatorAddSub _? @MulDiv }*
+
+operatorAddSub
+	= '+' '.'? #add 
+	/ '-' '.'? #sub
+
+Relation
+	= AddSub {@ _? operatorRelation _? @AddSub }*
+
+operatorRelation
+	= '<>' #noteq 
+	/ '=' #eq 
+	/ '<=' #lte 
+	/ '<' #lt 
+	/ '>=' #gte 
+	/ '>' #gt 
+
+Elems
+	= Relation {@ _? ',' _? @Relation #elems }*
+
+TupleStmt
+	= { '(' _? @Relation ( _? ',' _? @Relation )+ _? ')' #tuple }
+
+IfStmt
+	= { IF _ @ExpStmt _ @ThenStmt _ @ElseStmt #if }
+	/ { IF _ @ExpStmt _ @ThenStmt #if }
+	/ { IF _ @ExpStmt _ @ElseStmt #if }
+
+ThenStmt
+	= { THEN _ @ExpStmt #thenblock }
+
+ElseStmt
+	= { ELSE _ @ExpStmt #elseblock }
+
+LetStmt
+	= { LET _ @TupleStmt _? '=' _? @ExpStmt ( _ @InStmt)? #lettuple }
+	/ { LET _ @Identifier _? '=' _? @ExpStmt ( _ @InStmt)? #let }
+	/ { LET _ (REC _)? @FunDef _? '=' _? @ExpStmt ( _ @InStmt)? #function }
+	/ { LET _ @ExpStmt _? ( _? ';' _? @ExpStmt )+ #array }
+
+// For supplementary function / local variable
+InStmt
+	= { IN _ @ExpStmt _ END #inblock }
+
+FunDef
+	= { @FunName _ @TupleStmt #funcdef }
+	/ { @FunName (_ @FunParam)? #funcdef }
+
+FunName
+	= { @Identifier #funcname }
+
+FunParam
+	= { @Identifier (_ @Identifier)* #params }
+
+// 'Array.create' array_size initializer ;;  
+ArrayCreate
+	= { 'Array.create' _ @SimpleExpStmt _ @SimpleExpStmt #arraycreate }
+
+ArrayStmt
+	= PutStmt / ReadStmt 
+
+// array_name.(index) <- element ;;  
+PutStmt
+	= { @ArrayName '.' @ArrayIndex _? '<-' _? @{ @ExpStmt #value } #arrayput }
+
+ReadStmt
+	= { @ArrayName '.' @ArrayIndex #arrayread }
+
+ArrayName
+	= { @SimpleExpStmt #arrayname }
+
+ArrayIndex
+	= { '(' _? @ExpStmt _? ')' #arrayindex }
+
+
+// 0. parents
+
+SourceElements
+	= Exp ( _? @Exp )*
+
+Program
+	= { @SourceElements #toplevel }
+
+TopLevel
+	= _? Program _? 
+
+File
+	= TopLevel
+
+Chunk
+	= TopLevel
+
+// 
+// Eijiro, Sumii. "速攻MinCamlコンパイラ概説" http://esumii.github.io/min-caml/ (Dec. 2014)
+// 

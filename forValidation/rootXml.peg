@@ -1,0 +1,82 @@
+TopLevel
+    = Document
+
+Chunk 
+	= Document
+
+File
+	= Document
+    
+
+Document
+    = { (@Prolog)? MISC* @Content MISC* #xmlDoc}
+    
+
+Prolog
+    = { '<?xml' _* (@Attribute)* _* '?>' #prolog }
+    
+
+Content
+    = _* { ((@Element0 / COMMENT) _*)* #content } _*
+    
+
+Name
+    = { [A-Za-z:] ( '-' / [A-Za-z0-9:._])*  #name }
+    
+
+String
+    = { '"' ( !'"' . )* '"' #string }
+    
+
+CHARDATA
+    = TEXT  
+    
+    
+TEXT
+    = (![<&] .)+
+    
+
+
+//Reference //TODO
+
+Attribute
+    = _* { @Name '=' @String #keyvalue }
+    
+
+Cdata
+    = '<![CDATA['  { (!']]>' .)* #cdata } ']]>'
+    
+
+
+MISC
+    = COMMENT / _+
+    
+
+COMMENT
+    = '<!--' (!'-->' . )* '-->'
+    
+    
+QM
+		= '"'
+
+
+VS
+	= _* ',' _*
+	
+	
+EMPTY
+	= _*
+
+Empty
+	= {EMPTY #empty}
+
+Any
+	= {ANY #any}
+
+ANY
+	= _* CHARDATA _*
+		
+
+_ = [ \t\r\n];
+
+//Generated Part

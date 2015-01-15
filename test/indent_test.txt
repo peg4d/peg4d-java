@@ -1,12 +1,18 @@
+a
+block:
+  b
+  block:
+    c
+  d
+e
+block:
+  f
+    
+  block:
+  g
 
-label:
-	if:
-		some
-		thing
-	else:
-		wrong
-	or
+  block:
 
-label2:
-	show
-
+    h
+  block: i
+  j

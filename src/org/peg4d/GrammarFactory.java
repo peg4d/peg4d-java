@@ -10,8 +10,12 @@ public class GrammarFactory {
 	}
 
 	public Grammar newGrammar(String name, String fileName) {
+		return new Grammar(this, name);
+	}
+
+	public Grammar newGrammar(String name, String fileName, NezLogger stats) {
 		Grammar peg = new Grammar(this, name);
-		peg.loadGrammarFile(fileName);
+		peg.loadGrammarFile(fileName, stats);
 		return peg;
 	}
 

@@ -50,7 +50,6 @@ public class Optimizer {
 		return new ByteMapMatcher(c);
 	}
 
-
 	public static int countOptimizedNonTerminal = 0;
 
 	public static int countSpecializedSequence  = 0;

@@ -5,15 +5,15 @@ import org.peg4d.ParsingTag;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingIsa extends ParsingCommand {
-	int tagId;
-	ParsingIsa(int tagId) {
+	int tableType;
+	ParsingIsa(int tableType) {
 		super("isa");
-		this.tagId = tagId;
+		this.tableType = tableType;
 		this.minlen = 1;
 	}
 	@Override
 	public String getParameters() {
-		return " " + ParsingTag.tagName(this.tagId);
+		return " " + ParsingTag.tagName(this.tableType);
 	}
 	@Override
 	public short acceptByte(int ch) {
@@ -21,7 +21,7 @@ public class ParsingIsa extends ParsingCommand {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		return context.matchTokenStack(tagId);
+		return context.matchSymbolTable(tableType);
 	}
 	@Override
 	public void visit(GrammarVisitor visitor) {

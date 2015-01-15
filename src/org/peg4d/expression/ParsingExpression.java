@@ -125,10 +125,6 @@ public abstract class ParsingExpression extends ParsingMatcher {
 	
 	public abstract short acceptByte(int ch);
 	
-//	public ParsingExpression getExpression() {
-//		return this;
-//	}
-
 	public final boolean is(int uflag) {
 		return ((this.flag & uflag) == uflag);
 	}
@@ -729,10 +725,14 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return new ParsingRepeat(e);
 	}
 
-	public static ParsingExpression newName(int tagId, ParsingExpression e) {
-		return checkUnique(new ParsingName(tagId, e), e.isUnique());
+	public static ParsingExpression newDef(int tagId, ParsingExpression e) {
+		return checkUnique(new ParsingDef(tagId, e), e.isUnique());
 	}
 
+	public static ParsingExpression newIs(int tagId) {
+		return new ParsingIs(tagId);
+	}
+	
 	public static ParsingExpression newIsa(int tagId) {
 		return new ParsingIsa(tagId);
 	}

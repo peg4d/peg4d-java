@@ -19,9 +19,10 @@ import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingIf;
 import org.peg4d.expression.ParsingIndent;
+import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingMatch;
-import org.peg4d.expression.ParsingName;
+import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
 import org.peg4d.expression.ParsingPermutation;
@@ -374,7 +375,7 @@ public class PythonGenerator extends GrammarFormatter {
 	}
 
 	@Override
-	public void visitName(ParsingName e) {
+	public void visitDef(ParsingDef e) {
 		// TODO Auto-generated method stub
 		
 	}
@@ -393,6 +394,12 @@ public class PythonGenerator extends GrammarFormatter {
 
 	@Override
 	public void visitPermutation(ParsingPermutation e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visitIs(ParsingIs e) {
 		// TODO Auto-generated method stub
 		
 	}

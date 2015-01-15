@@ -22,10 +22,11 @@ import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingFunction;
 import org.peg4d.expression.ParsingIf;
 import org.peg4d.expression.ParsingIndent;
+import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
-import org.peg4d.expression.ParsingName;
+import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
 import org.peg4d.expression.ParsingPermutation;
@@ -316,7 +317,7 @@ public class PEG4dFormatter extends GrammarFormatter {
 	}
 
 	@Override
-	public void visitName(ParsingName e) {
+	public void visitDef(ParsingDef e) {
 		this.formatParsingFunction(e);
 	}
 
@@ -325,6 +326,10 @@ public class PEG4dFormatter extends GrammarFormatter {
 		// TODO Auto-generated method stub
 		this.formatParsingCommand(e);
 	}
+	
+	public void visitIs(ParsingIs e) {
+		// TODO Auto-generated method stub
+	}	
 
 	@Override
 	public void visitApply(ParsingApply e) {
@@ -353,9 +358,7 @@ public class PEG4dFormatter extends GrammarFormatter {
 	@Override
 	public void visitRepeat(ParsingRepeat e) {
 		this.formatParsingFunction(e);
-	}	
-
-
+	}
 
 }
 
