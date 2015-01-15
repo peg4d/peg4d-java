@@ -53,9 +53,9 @@ import org.peg4d.expression.ParsingWithFlag;
 import org.peg4d.expression.ParsingWithoutFlag;
 import org.peg4d.jvm.ClassBuilder.MethodBuilder;
 import org.peg4d.jvm.ClassBuilder.VarEntry;
-import org.peg4d.pegcode.GrammarFormatter;
+import org.peg4d.pegcode.GrammarGenerator;
 
-public class JavaByteCodeGenerator extends GrammarFormatter implements Opcodes {
+public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 	private final static String packagePrefix = "org/peg4d/generated/";
 
 	private static int nameSuffix = -1;

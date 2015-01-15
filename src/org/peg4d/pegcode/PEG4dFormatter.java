@@ -41,7 +41,7 @@ import org.peg4d.expression.ParsingValue;
 import org.peg4d.expression.ParsingWithFlag;
 import org.peg4d.expression.ParsingWithoutFlag;
 
-public class PEG4dFormatter extends GrammarFormatter {
+public class PEG4dFormatter extends GrammarGenerator {
 	protected StringBuilder sb = null;
 	
 	public PEG4dFormatter() {
@@ -103,7 +103,7 @@ public class PEG4dFormatter extends GrammarFormatter {
 
 	@Override
 	public void visitByte(ParsingByte e) {
-		this.formatString(GrammarFormatter.stringfyByte(e.byteChar));
+		this.formatString(GrammarGenerator.stringfyByte(e.byteChar));
 	}
 
 	@Override
@@ -115,9 +115,9 @@ public class PEG4dFormatter extends GrammarFormatter {
 	@Override
 	public void visitByteRange(ParsingByteRange e) {
 		this.formatString("[");
-		this.formatString(GrammarFormatter.stringfyByte2(e.startByteChar));
+		this.formatString(GrammarGenerator.stringfyByte2(e.startByteChar));
 		this.formatString("-");
-		this.formatString(GrammarFormatter.stringfyByte2(e.endByteChar));
+		this.formatString(GrammarGenerator.stringfyByte2(e.endByteChar));
 		this.formatString("]");
 	}
 	

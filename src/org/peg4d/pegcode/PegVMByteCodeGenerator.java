@@ -47,7 +47,7 @@ import org.peg4d.expression.ParsingWithoutFlag;
 import org.peg4d.vm.Opcode;
 import org.peg4d.vm.Instruction;
 
-public class PegVMByteCodeGenerator extends GrammarFormatter {
+public class PegVMByteCodeGenerator extends GrammarGenerator {
 	
 	int codeIndex = 0;
 	boolean backTrackFlag = false;

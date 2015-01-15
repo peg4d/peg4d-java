@@ -13,7 +13,7 @@ import org.peg4d.ParsingTag;
 import org.peg4d.ReportLevel;
 import org.peg4d.UList;
 import org.peg4d.UMap;
-import org.peg4d.pegcode.GrammarFormatter;
+import org.peg4d.pegcode.GrammarGenerator;
 import org.peg4d.pegcode.GrammarVisitor;
 import org.peg4d.pegcode.PEG4dFormatter;
 
@@ -141,7 +141,7 @@ public abstract class ParsingExpression extends ParsingMatcher {
 		return null;
 	}
 
-	private final static GrammarFormatter DefaultFormatter = new PEG4dFormatter();
+	private final static GrammarGenerator DefaultFormatter = new PEG4dFormatter();
 	
 	@Override public String toString() {
 		StringBuilder sb = new StringBuilder();

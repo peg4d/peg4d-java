@@ -37,7 +37,7 @@ import org.peg4d.expression.ParsingValue;
 import org.peg4d.expression.ParsingWithFlag;
 import org.peg4d.expression.ParsingWithoutFlag;
 
-public class CGenerator2 extends GrammarFormatter {
+public class CGenerator2 extends GrammarGenerator {
 
 	@Override
 	public String getDesc() {

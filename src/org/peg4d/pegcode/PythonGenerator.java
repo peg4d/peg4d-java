@@ -36,7 +36,7 @@ import org.peg4d.expression.ParsingValue;
 import org.peg4d.expression.ParsingWithFlag;
 import org.peg4d.expression.ParsingWithoutFlag;
 
-public class PythonGenerator extends GrammarFormatter {
+public class PythonGenerator extends GrammarGenerator {
 
 	@Override
 	public String getDesc() {

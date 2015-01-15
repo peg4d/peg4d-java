@@ -4,10 +4,10 @@ import org.peg4d.Grammar;
 import org.peg4d.ParsingRule;
 import org.peg4d.expression.ParsingExpression;
 
-public abstract class GrammarFormatter extends GrammarVisitor {
+public abstract class GrammarGenerator extends GrammarVisitor {
 	protected StringBuilder sb = null;
 	
-	public GrammarFormatter() {
+	public GrammarGenerator() {
 		this.sb = null;
 	}
 	

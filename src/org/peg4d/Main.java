@@ -7,7 +7,7 @@ import java.lang.reflect.Method;
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.jvm.JavaByteCodeGenerator;
 import org.peg4d.pegcode.PegVMByteCodeGenerator;
-import org.peg4d.pegcode.GrammarFormatter;
+import org.peg4d.pegcode.GrammarGenerator;
 import org.peg4d.writer.ParsingObjectWriter;
 import org.peg4d.writer.ParsingWriter;
 import org.peg4d.writer.TagWriter;
@@ -262,9 +262,9 @@ public class Main {
 		driverMap.put("vm", org.peg4d.pegcode.PegVMByteCodeGenerator.class);
 	}
 
-	private static GrammarFormatter loadDriverImpl(String driverName) {
+	private static GrammarGenerator loadDriverImpl(String driverName) {
 		try {
-			return (GrammarFormatter) driverMap.get(driverName).newInstance();
+			return (GrammarGenerator) driverMap.get(driverName).newInstance();
 		}
 		catch(Exception e) {
 			e.printStackTrace();
