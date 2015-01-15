@@ -437,7 +437,9 @@ Instruction *PegVM_Prepare(ParsingContext context, Instruction *inst,
   return inst;
 }
 
-long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
+long
+PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool)
+{
   static const void *table[] = {
 #define DEFINE_TABLE(NAME) &&PEGVM_OP_##NAME,
     PEGVM_OP_EACH(DEFINE_TABLE)
