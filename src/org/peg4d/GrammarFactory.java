@@ -1,7 +1,7 @@
 package org.peg4d;
 
 public class GrammarFactory {
-	
+
 	public GrammarFactory() {
 	}
 
@@ -10,7 +10,9 @@ public class GrammarFactory {
 	}
 
 	public Grammar newGrammar(String name, String fileName) {
-		return new Grammar(this, name);
+		Grammar peg = new Grammar(this, name);
+		peg.loadGrammarFile(fileName, null);
+		return peg;
 	}
 
 	public Grammar newGrammar(String name, String fileName, NezLogger stats) {
@@ -21,7 +23,7 @@ public class GrammarFactory {
 
 	UMap<Grammar> grammarMap = new UMap<Grammar>();
 	public final static Grammar Grammar = new PEG4dGrammar2();
-	
+
 	Grammar getGrammar(String filePath) {
 		Grammar peg = grammarMap.get(filePath);
 		if(peg != null) {
@@ -33,13 +35,13 @@ public class GrammarFactory {
 		}
 		return peg;
 	}
-	
+
 	void setGrammar(String path, Grammar peg) {
 		this.grammarMap.put(path, peg);
 	}
-	
+
 	private final static String LibraryPath = "org/peg4d/lib/";
-	
+
 	private Grammar loadLibraryGrammar(String filePath) {
 		if(!filePath.endsWith(".p4d")) {
 			filePath = filePath + ".p4d";

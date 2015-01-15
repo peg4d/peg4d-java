@@ -3,7 +3,24 @@
 <plist version="1.0">
 <dict>
 	<key>charactersArray</key>
-	<array/>
+	<array>
+		<dict>
+			<key>beginString</key>
+			<string>&lt;[a-zA-Z]+</string>
+			<key>endString</key>
+			<string>&gt;</string>
+			<key>regularExpression</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>beginString</key>
+			<string>\[[a-zA-Z]+:</string>
+			<key>endString</key>
+			<string>\]</string>
+			<key>regularExpression</key>
+			<true/>
+		</dict>
+	</array>
 	<key>commandsArray</key>
 	<array>
 		<dict>
@@ -37,7 +54,64 @@
 		</dict>
 	</array>
 	<key>completionsArray</key>
-	<array/>
+	<array>
+		<dict>
+			<key>keyString</key>
+			<string>&lt;block &gt;</string>
+		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>&lt;def &gt;</string>
+		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>&lt;defindent&gt;</string>
+		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>&lt;if &gt;</string>
+		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>&lt;indent&gt;</string>
+		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>&lt;is &gt;</string>
+		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>&lt;isa &gt;</string>
+		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>&lt;perm &gt;</string>
+		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>&lt;permutation &gt;</string>
+		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>&lt;powerset &gt;</string>
+		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>&lt;with &gt;</string>
+		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>&lt;without &gt;</string>
+		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>[badexample: ]</string>
+		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>[example: ]</string>
+		</dict>
+	</array>
 	<key>extensions</key>
 	<array>
 		<dict>
@@ -48,18 +122,22 @@
 			<key>keyString</key>
 			<string>p4d</string>
 		</dict>
+		<dict>
+			<key>keyString</key>
+			<string>nez</string>
+		</dict>
 	</array>
 	<key>keywordsArray</key>
 	<array>
 		<dict>
 			<key>beginString</key>
-			<string>^[A-Za-z0-9_]+</string>
+			<string>^[ \t]*[A-Za-z0-9_]+</string>
 			<key>regularExpression</key>
 			<true/>
 		</dict>
 	</array>
 	<key>numOfObjInArray</key>
-	<integer>9</integer>
+	<integer>11</integer>
 	<key>numbersArray</key>
 	<array/>
 	<key>outlineMenuArray</key>
@@ -68,21 +146,21 @@
 	<array>
 		<dict>
 			<key>beginString</key>
-			<string>"</string>
-			<key>endString</key>
-			<string>"</string>
+			<string>"[^"\r\n]*?"</string>
+			<key>regularExpression</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>beginString</key>
-			<string>'</string>
-			<key>endString</key>
-			<string>'</string>
+			<string>'[^'\r\n]*?"</string>
+			<key>regularExpression</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>beginString</key>
-			<string>`</string>
-			<key>endString</key>
-			<string>`</string>
+			<string>`[^`\r\n]*?`</string>
+			<key>regularExpression</key>
+			<true/>
 		</dict>
 	</array>
 	<key>styleName</key>
