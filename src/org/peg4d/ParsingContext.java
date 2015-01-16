@@ -5,7 +5,7 @@ import java.util.HashMap;
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.ParsingConstructor;
 import org.peg4d.expression.ParsingExpression;
-import org.peg4d.expression.ParsingMatcher;
+import org.peg4d.expression.Recognizer;
 
 public class ParsingContext {
 	public ParsingSource source;
@@ -62,14 +62,14 @@ public class ParsingContext {
 	public long fpos;
 	StackTrace maximumFailureTrace = null;
 	String failureInfo  = null;	
-	ParsingMatcher[] errorbuf = new ParsingMatcher[512];
+	Recognizer[] errorbuf = new Recognizer[512];
 	long[] posbuf = new long[errorbuf.length];
 
 	public final boolean isFailure() {
 		return this.left == null;
 	}
 	
-	public final void failure(ParsingMatcher errorInfo) {
+	public final void failure(Recognizer errorInfo) {
 		if(this.pos > fpos) {  // adding error location
 			this.fpos = this.pos;
 		}
@@ -87,7 +87,7 @@ public class ParsingContext {
 //		this.fpos = fpos;
 	}
 	
-	private ParsingMatcher getErrorInfo(long fpos) {
+	private Recognizer getErrorInfo(long fpos) {
 		int index = (int)this.pos % errorbuf.length;
 		if(posbuf[index] == fpos) {
 			return errorbuf[index];
@@ -111,7 +111,7 @@ public class ParsingContext {
 //	}
 
 	public String getErrorMessage() {
-		ParsingMatcher errorInfo = this.getErrorInfo(this.fpos);
+		Recognizer errorInfo = this.getErrorInfo(this.fpos);
 		if(errorInfo == null) {
 			return "syntax error";
 		}

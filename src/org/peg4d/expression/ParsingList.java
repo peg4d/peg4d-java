@@ -20,8 +20,11 @@ public abstract class ParsingList extends ParsingExpression {
 	public final ParsingExpression get(int index) {
 		return this.inners[index];
 	}
-	final void set(int index, ParsingExpression e) {
+	@Override
+	public ParsingExpression set(int index, ParsingExpression e) {
+		ParsingExpression oldExpresion = this.inners[index];
 		this.inners[index] = e;
+		return oldExpresion;
 	}
 	protected final String uniqueKey() {
 		StringBuilder sb = new StringBuilder();

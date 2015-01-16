@@ -38,7 +38,7 @@ import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
-import org.peg4d.expression.ParsingMatcher;
+import org.peg4d.expression.Recognizer;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
 import org.peg4d.expression.ParsingPermutation;
@@ -201,7 +201,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 	private void generateFailure() {
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.pushNull();
-		this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "failure", ParsingMatcher.class);
+		this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "failure", Recognizer.class);
 	}
 
 	/**

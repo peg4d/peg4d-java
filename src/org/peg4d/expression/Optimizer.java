@@ -32,7 +32,7 @@ public class Optimizer {
 	private int CountPrediction = 0;
 //	public static int countOptimizedChoice       = 0;
 
-	private ParsingMatcher newByteChoiceMatcher(int[] c) {
+	private Recognizer newByteChoiceMatcher(int[] c) {
 		return new ByteMapMatcher(c);
 	}
 
@@ -190,7 +190,7 @@ public class Optimizer {
 			inner = resolveNonTerminal(inner);
 		}
 		if(inner instanceof ParsingByte) {
-			class NotByteMatcher implements ParsingMatcher {
+			class NotByteMatcher implements Recognizer {
 				int byteChar;
 				NotByteMatcher(int byteChar) {
 					this.byteChar = byteChar;
@@ -209,9 +209,9 @@ public class Optimizer {
 			CountSpecLexer += 1;
 			return;
 		}
-		ParsingMatcher m = inner.matcher;
+		Recognizer m = inner.matcher;
 		if(m instanceof ByteMapMatcher) {
-			class NotByteMapMatcher implements ParsingMatcher {
+			class NotByteMapMatcher implements Recognizer {
 				boolean bitMap[];
 				NotByteMapMatcher(boolean bitMap[]) {
 					this.bitMap = bitMap;
@@ -231,7 +231,7 @@ public class Optimizer {
 			return;
 		}
 		if(m instanceof StringMatcher) {
-			class NotStringMatcher implements ParsingMatcher {
+			class NotStringMatcher implements Recognizer {
 				byte[] utf8;
 				NotStringMatcher(byte[] utf8) {
 					this.utf8 = utf8;
@@ -258,7 +258,7 @@ public class Optimizer {
 			inner = resolveNonTerminal(inner);
 		}
 		if(inner instanceof ParsingByte) {
-			class OptionByteMatcher implements ParsingMatcher {
+			class OptionByteMatcher implements Recognizer {
 				int byteChar;
 				OptionByteMatcher(int byteChar) {
 					this.byteChar = byteChar;
@@ -276,9 +276,9 @@ public class Optimizer {
 			CountSpecLexer += 1;
 			return;
 		}
-		ParsingMatcher m = inner.matcher;
+		Recognizer m = inner.matcher;
 		if(m instanceof ByteMapMatcher) {
-			class OptionByteMapMatcher implements ParsingMatcher {
+			class OptionByteMapMatcher implements Recognizer {
 				boolean bitMap[];
 				OptionByteMapMatcher(boolean bitMap[]) {
 					this.bitMap = bitMap;
@@ -297,7 +297,7 @@ public class Optimizer {
 			return;
 		}
 		if(m instanceof StringMatcher) {
-			class OptionStringMatcher implements ParsingMatcher {
+			class OptionStringMatcher implements Recognizer {
 				byte[] utf8;
 				OptionStringMatcher(byte[] utf8) {
 					this.utf8 = utf8;
@@ -337,9 +337,9 @@ public class Optimizer {
 //			CountSpecLexer += 1;
 //			return;
 //		}
-		ParsingMatcher m = inner.matcher;
+		Recognizer m = inner.matcher;
 		if(m instanceof ByteMapMatcher) {
-			class ZeroMoreByteMapMatcher implements ParsingMatcher {
+			class ZeroMoreByteMapMatcher implements Recognizer {
 				boolean bitMap[];
 				ZeroMoreByteMapMatcher(boolean bitMap[]) {
 					this.bitMap = bitMap;
@@ -391,7 +391,7 @@ public class Optimizer {
 				CountSpecLexer += 1;
 				return;
 			}
-			ParsingMatcher m = inner.matcher;
+			Recognizer m = inner.matcher;
 			if(m instanceof ByteMapMatcher) {
 				holder.matcher = new ByteMapMatcher(((ByteMapMatcher) m), false);
 				CountSpecLexer += 1;
@@ -628,7 +628,7 @@ public class Optimizer {
 	}
 }
 
-class NonZeroByteMatcher implements ParsingMatcher {
+class NonZeroByteMatcher implements Recognizer {
 	int byteChar;
 	NonZeroByteMatcher(int byteChar) {
 		this.byteChar = byteChar;
@@ -667,7 +667,7 @@ class NonZeroByteMatcher implements ParsingMatcher {
 //}
 
 
-class StringMatcher implements ParsingMatcher {
+class StringMatcher implements Recognizer {
 	byte[] utf8;
 	StringMatcher(byte[] utf8) {
 		this.utf8 = utf8;
@@ -684,7 +684,7 @@ class StringMatcher implements ParsingMatcher {
 }
 
 
-class OptionalStringSequenceMatcher implements ParsingMatcher {
+class OptionalStringSequenceMatcher implements Recognizer {
 	byte[] utf8;
 	OptionalStringSequenceMatcher(byte[] utf8) {
 		this.utf8 = utf8;
@@ -698,7 +698,7 @@ class OptionalStringSequenceMatcher implements ParsingMatcher {
 	}
 }
 
-class StringChoiceMatcher implements ParsingMatcher {
+class StringChoiceMatcher implements Recognizer {
 	ParsingExpression[] matchCase;
 
 	StringChoiceMatcher(ParsingExpression[] matchCase) {
@@ -719,7 +719,7 @@ class StringChoiceMatcher implements ParsingMatcher {
 	
 }
 
-class MappedChoiceMatcher implements ParsingMatcher {
+class MappedChoiceMatcher implements Recognizer {
 	ParsingChoice choice;
 	ParsingExpression[] matchCase;
 
@@ -736,7 +736,7 @@ class MappedChoiceMatcher implements ParsingMatcher {
 	}
 }
 
-class MappedSelfChoiceMatcher implements ParsingMatcher {
+class MappedSelfChoiceMatcher implements Recognizer {
 	ParsingChoice choice;
 	ParsingExpression[] matchCase;
 

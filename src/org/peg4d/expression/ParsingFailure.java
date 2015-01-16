@@ -12,7 +12,7 @@ public class ParsingFailure extends ParsingExpression {
 		this.message = message;
 		this.minlen = 0;
 	}
-	public ParsingFailure(ParsingMatcher m) {
+	public ParsingFailure(Recognizer m) {
 		super();
 		this.message = "expecting " + m;
 	}

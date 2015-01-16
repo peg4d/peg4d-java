@@ -8,7 +8,7 @@ import org.peg4d.expression.Optimizer;
 import org.peg4d.expression.ParsingConnector;
 import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingExpression;
-import org.peg4d.expression.ParsingMatcher;
+import org.peg4d.expression.Recognizer;
 
 public class MemoizationManager {
 	public final static ParsingTree NonTransition = new ParsingObject();
@@ -220,11 +220,11 @@ public class MemoizationManager {
 		return new ElasticTable(size, rules);
 	}
 	
-	abstract class MemoMatcher implements ParsingMatcher {
+	abstract class MemoMatcher implements Recognizer {
         final MemoPoint memo;
 		ParsingExpression holder = null;
 		ParsingExpression key = null;
-		ParsingMatcher matchRef = null;
+		Recognizer matchRef = null;
 		boolean enableMemo = true;
 
 		MemoMatcher(MemoPoint memo) {
@@ -235,7 +235,7 @@ public class MemoizationManager {
 			return memo.memoPoint;
 		}
 		
-		final boolean memoMatch(ParsingContext context, ParsingMatcher ma) {
+		final boolean memoMatch(ParsingContext context, Recognizer ma) {
 			long pos = context.getPosition();
 			MemoEntry m = context.getMemo(pos, memoPoint());
 			if(m != null) {
@@ -259,7 +259,7 @@ public class MemoizationManager {
 			return b;
 		}
 
-		final boolean memoMatch2(ParsingContext context, int stateValue, ParsingMatcher ma) {
+		final boolean memoMatch2(ParsingContext context, int stateValue, Recognizer ma) {
 			long pos = context.getPosition();
 			MemoEntry m = context.getMemo2(pos, memoPoint(), stateValue);
 			if(m != null) {

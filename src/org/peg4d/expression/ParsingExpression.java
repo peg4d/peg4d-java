@@ -1,5 +1,6 @@
 package org.peg4d.expression;
 
+import java.util.AbstractList;
 import java.util.TreeMap;
 
 import org.peg4d.CharacterReader;
@@ -17,7 +18,7 @@ import org.peg4d.pegcode.GrammarGenerator;
 import org.peg4d.pegcode.GrammarVisitor;
 import org.peg4d.pegcode.PEG4dFormatter;
 
-public abstract class ParsingExpression implements ParsingMatcher {
+public abstract class ParsingExpression extends AbstractList<ParsingExpression> implements Recognizer {
 //	public  static boolean  VerboseStack = false;
 //
 	public final static int LeftRecursion     = 1 << 10;
@@ -33,7 +34,7 @@ public abstract class ParsingExpression implements ParsingMatcher {
 	public int    uniqueId   = 0;
 	public ParsingObject po      = null;
 	int           minlen = -1;
-	public ParsingMatcher  matcher;
+	public Recognizer  matcher;
 		
 	protected ParsingExpression() {
 		this.matcher = this;
@@ -406,7 +407,7 @@ public abstract class ParsingExpression implements ParsingMatcher {
 		return new ParsingEmpty();
 	}
 
-	public final static ParsingFailure newFailure(ParsingMatcher e) {
+	public final static ParsingFailure newFailure(Recognizer e) {
 		return new ParsingFailure(e);
 	}
 
