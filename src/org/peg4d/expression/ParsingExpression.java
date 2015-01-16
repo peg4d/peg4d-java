@@ -17,7 +17,7 @@ import org.peg4d.pegcode.GrammarGenerator;
 import org.peg4d.pegcode.GrammarVisitor;
 import org.peg4d.pegcode.PEG4dFormatter;
 
-public abstract class ParsingExpression extends ParsingMatcher {
+public abstract class ParsingExpression implements ParsingMatcher {
 //	public  static boolean  VerboseStack = false;
 //
 	public final static int LeftRecursion     = 1 << 10;

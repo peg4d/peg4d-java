@@ -220,7 +220,7 @@ public class MemoizationManager {
 		return new ElasticTable(size, rules);
 	}
 	
-	abstract class MemoMatcher extends ParsingMatcher {
+	abstract class MemoMatcher implements ParsingMatcher {
         final MemoPoint memo;
 		ParsingExpression holder = null;
 		ParsingExpression key = null;

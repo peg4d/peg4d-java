@@ -2,7 +2,7 @@ package org.peg4d.expression;
 
 import org.peg4d.ParsingContext;
 
-public class ByteMapMatcher extends ParsingMatcher {
+public class ByteMapMatcher implements ParsingMatcher {
 	public boolean bitMap[];
 	ByteMapMatcher(int[] c) {
 		this.bitMap = new boolean[257];

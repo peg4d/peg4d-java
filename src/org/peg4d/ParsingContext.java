@@ -115,7 +115,7 @@ public class ParsingContext {
 		if(errorInfo == null) {
 			return "syntax error";
 		}
-		return "syntax error: expecting " + errorInfo.expectedToken() + " <- Never believe this";
+		return "syntax error: expecting " + errorInfo.toString() + " <- Never believe this";
 	}
 	
 	

@@ -190,7 +190,7 @@ public class Optimizer {
 			inner = resolveNonTerminal(inner);
 		}
 		if(inner instanceof ParsingByte) {
-			class NotByteMatcher extends ParsingMatcher {
+			class NotByteMatcher implements ParsingMatcher {
 				int byteChar;
 				NotByteMatcher(int byteChar) {
 					this.byteChar = byteChar;
@@ -211,7 +211,7 @@ public class Optimizer {
 		}
 		ParsingMatcher m = inner.matcher;
 		if(m instanceof ByteMapMatcher) {
-			class NotByteMapMatcher extends ParsingMatcher {
+			class NotByteMapMatcher implements ParsingMatcher {
 				boolean bitMap[];
 				NotByteMapMatcher(boolean bitMap[]) {
 					this.bitMap = bitMap;
@@ -231,7 +231,7 @@ public class Optimizer {
 			return;
 		}
 		if(m instanceof StringMatcher) {
-			class NotStringMatcher extends ParsingMatcher {
+			class NotStringMatcher implements ParsingMatcher {
 				byte[] utf8;
 				NotStringMatcher(byte[] utf8) {
 					this.utf8 = utf8;
@@ -258,7 +258,7 @@ public class Optimizer {
 			inner = resolveNonTerminal(inner);
 		}
 		if(inner instanceof ParsingByte) {
-			class OptionByteMatcher extends ParsingMatcher {
+			class OptionByteMatcher implements ParsingMatcher {
 				int byteChar;
 				OptionByteMatcher(int byteChar) {
 					this.byteChar = byteChar;
@@ -278,7 +278,7 @@ public class Optimizer {
 		}
 		ParsingMatcher m = inner.matcher;
 		if(m instanceof ByteMapMatcher) {
-			class OptionByteMapMatcher extends ParsingMatcher {
+			class OptionByteMapMatcher implements ParsingMatcher {
 				boolean bitMap[];
 				OptionByteMapMatcher(boolean bitMap[]) {
 					this.bitMap = bitMap;
@@ -297,7 +297,7 @@ public class Optimizer {
 			return;
 		}
 		if(m instanceof StringMatcher) {
-			class OptionStringMatcher extends ParsingMatcher {
+			class OptionStringMatcher implements ParsingMatcher {
 				byte[] utf8;
 				OptionStringMatcher(byte[] utf8) {
 					this.utf8 = utf8;
@@ -339,7 +339,7 @@ public class Optimizer {
 //		}
 		ParsingMatcher m = inner.matcher;
 		if(m instanceof ByteMapMatcher) {
-			class ZeroMoreByteMapMatcher extends ParsingMatcher {
+			class ZeroMoreByteMapMatcher implements ParsingMatcher {
 				boolean bitMap[];
 				ZeroMoreByteMapMatcher(boolean bitMap[]) {
 					this.bitMap = bitMap;
@@ -628,7 +628,7 @@ public class Optimizer {
 	}
 }
 
-class NonZeroByteMatcher extends ParsingMatcher {
+class NonZeroByteMatcher implements ParsingMatcher {
 	int byteChar;
 	NonZeroByteMatcher(int byteChar) {
 		this.byteChar = byteChar;
@@ -645,7 +645,7 @@ class NonZeroByteMatcher extends ParsingMatcher {
 	}
 }
 
-//class ZeroMoreByteRangeMatcher extends ParsingMatcher {
+//class ZeroMoreByteRangeMatcher implements ParsingMatcher {
 //	int startChar;
 //	int endChar;
 //	ZeroMoreByteRangeMatcher(int startChar, int endChar) {
@@ -667,7 +667,7 @@ class NonZeroByteMatcher extends ParsingMatcher {
 //}
 
 
-class StringMatcher extends ParsingMatcher {
+class StringMatcher implements ParsingMatcher {
 	byte[] utf8;
 	StringMatcher(byte[] utf8) {
 		this.utf8 = utf8;
@@ -684,7 +684,7 @@ class StringMatcher extends ParsingMatcher {
 }
 
 
-class OptionalStringSequenceMatcher extends ParsingMatcher {
+class OptionalStringSequenceMatcher implements ParsingMatcher {
 	byte[] utf8;
 	OptionalStringSequenceMatcher(byte[] utf8) {
 		this.utf8 = utf8;
@@ -698,7 +698,7 @@ class OptionalStringSequenceMatcher extends ParsingMatcher {
 	}
 }
 
-class StringChoiceMatcher extends ParsingMatcher {
+class StringChoiceMatcher implements ParsingMatcher {
 	ParsingExpression[] matchCase;
 
 	StringChoiceMatcher(ParsingExpression[] matchCase) {
@@ -719,7 +719,7 @@ class StringChoiceMatcher extends ParsingMatcher {
 	
 }
 
-class MappedChoiceMatcher extends ParsingMatcher {
+class MappedChoiceMatcher implements ParsingMatcher {
 	ParsingChoice choice;
 	ParsingExpression[] matchCase;
 
@@ -736,7 +736,7 @@ class MappedChoiceMatcher extends ParsingMatcher {
 	}
 }
 
-class MappedSelfChoiceMatcher extends ParsingMatcher {
+class MappedSelfChoiceMatcher implements ParsingMatcher {
 	ParsingChoice choice;
 	ParsingExpression[] matchCase;
 

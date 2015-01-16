@@ -23,13 +23,12 @@ public class ParsingByte extends ParsingExpression {
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
 		return this;
 	}
-	@Override
-	public String expectedToken() {
-		if(this.errorToken != null) {
-			return this.errorToken;
-		}
-		return this.toString();
-	}
+//	public String expectedToken() {
+//		if(this.errorToken != null) {
+//			return this.errorToken;
+//		}
+//		return this.toString();
+//	}
 	@Override
 	public void visit(GrammarVisitor visitor) {
 		visitor.visitByte(this);
