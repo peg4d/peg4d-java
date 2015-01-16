@@ -19,7 +19,7 @@ public class NonTerminal extends ParsingExpression {
 		this.ruleName = ruleName;
 		this.uniqueName = this.peg.uniqueRuleName(this.ruleName);
 	}
-
+	
 	@Override
 	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
 		NonTerminal ne = this;
@@ -79,8 +79,9 @@ public class NonTerminal extends ParsingExpression {
 	}
 
 	@Override
-	ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniqueExpression(getUniqueName(), this);
+	public
+	String getInternKey() {
+		return getUniqueName();
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
@@ -125,6 +126,7 @@ public class NonTerminal extends ParsingExpression {
 	public boolean simpleMatch(ParsingContext context) {
 		return context.matchNonTerminal(this);
 	}
+
 }
 
 // Name[Old->New]

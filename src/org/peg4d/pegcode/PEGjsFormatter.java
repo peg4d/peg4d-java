@@ -20,8 +20,8 @@ import org.peg4d.expression.ParsingChoice;
 import org.peg4d.expression.ParsingCommand;
 import org.peg4d.expression.ParsingConnector;
 import org.peg4d.expression.ParsingConstructor;
+import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingEmpty;
-import org.peg4d.expression.ParsingExport;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingFunction;
@@ -31,10 +31,8 @@ import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
-import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
-import org.peg4d.expression.ParsingPermutation;
 import org.peg4d.expression.ParsingRepeat;
 import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingScan;
@@ -292,13 +290,6 @@ public class PEGjsFormatter extends GrammarGenerator {
 		this.formatString(">");
 	}
 
-
-	@Override
-	public void visitExport(ParsingExport e) {
-		// TODO Auto-generated method stub
-		
-	}
-
 	@Override
 	public void visitMatch(ParsingMatch e) {
 		this.formatParsingFunction(e);
@@ -358,11 +349,11 @@ public class PEGjsFormatter extends GrammarGenerator {
 		this.formatParsingFunction(e);
 	}
 
-	@Override
-	public void visitPermutation(ParsingPermutation e) {
-		// TODO Auto-generated method stub
-		
-	}
+//	@Override
+//	public void visitPermutation(ParsingPermutation e) {
+//		// TODO Auto-generated method stub
+//		
+//	}
 
 	@Override
 	public void visitIs(ParsingIs e) {

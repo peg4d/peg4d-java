@@ -17,8 +17,9 @@ public class ParsingFailure extends ParsingExpression {
 		this.message = "expecting " + m;
 	}
 	@Override
-	ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniqueExpression("!!\b"+message, this);
+	public
+	String getInternKey() {
+		return "!!";
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {

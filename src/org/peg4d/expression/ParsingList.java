@@ -29,9 +29,9 @@ public abstract class ParsingList extends ParsingExpression {
 	protected final String uniqueKey() {
 		StringBuilder sb = new StringBuilder();
 		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = this.get(i).uniquefy();
+			ParsingExpression e = this.get(i).intern();
 			set(i, e);
-			sb.append(e.uniqueId);
+			sb.append(e.internId);
 			sb.append(":");
 		}
 		return sb.toString();

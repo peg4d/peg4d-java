@@ -165,7 +165,7 @@ public class ParsingRule {
 		}
 		if(e instanceof NonTerminal) {
 			NonTerminal ne = (NonTerminal)e;
-			assert(e.isUnique());
+			assert(e.isInterned());
 			String un = ne.getUniqueName();
 			ParsingRule memoed = visited.get(un);
 			if(memoed == null) {

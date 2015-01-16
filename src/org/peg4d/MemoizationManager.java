@@ -25,8 +25,8 @@ public class MemoizationManager {
 	HashMap<Integer, MemoPoint> memoMap = new HashMap<Integer, MemoPoint>();
     
 	MemoPoint getMemoPoint(ParsingExpression e) {
-		Integer key = e.uniqueId;
-		assert(e.uniqueId != 0);
+		Integer key = e.internId;
+		assert(e.internId != 0);
 		MemoPoint m = this.memoMap.get(key);
 		if(m == null) {
 			m = new MemoPoint(e);

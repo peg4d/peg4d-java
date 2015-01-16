@@ -9,7 +9,7 @@ public class ParsingUtils {
 	}
 	
 	public final static long objectId(long pos, ParsingExpression e) {
-		return (pos << 16) | (short)e.uniqueId;
+		return (pos << 16) | (short)e.internId;
 	}
 	
 	public final static long objectIdNull(long pos, ParsingExpression e) {
@@ -22,7 +22,7 @@ public class ParsingUtils {
 	}
 	
 	public final static long memoKey(long pos, ParsingExpression e) {
-		return (pos << 16) | (short)e.uniqueId;
+		return (pos << 16) | (short)e.internId;
 	}
 //	public final static long failure(long pos, ParsingExpression e) {
 //		return (pos << 16) | e.uniqueId;

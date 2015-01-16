@@ -48,4 +48,10 @@ public class EntryPoint extends ParsingExpression {
 	public void setParserClass(Class<?> parserClass) {
 		this.parserClass = parserClass;
 	}
+
+	@Override
+	public String getInternKey() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

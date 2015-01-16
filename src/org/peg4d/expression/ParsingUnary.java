@@ -16,11 +16,17 @@ public abstract class ParsingUnary extends ParsingExpression {
 	public final ParsingExpression get(int index) {
 		return this.inner;
 	}
-	protected final int uniqueKey() {
-		this.inner = inner.uniquefy();
-		assert(this.inner.uniqueId != 0);
-		return this.inner.uniqueId;
+	@Override
+	public final ParsingExpression set(int index, ParsingExpression e) {
+		ParsingExpression old = this.inner;
+		this.inner = e;
+		return old;
 	}
+//	protected final int uniqueKey() {
+//		this.inner = inner.intern();
+//		assert(this.inner.internId != 0);
+//		return this.inner.internId;
+//	}
 	@Override
 	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
 		int lmin = this.inner.checkLength(ruleName, start, minlen, stack);

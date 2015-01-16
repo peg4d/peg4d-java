@@ -13,11 +13,9 @@ public class ParsingByte extends ParsingExpression {
 		this.byteChar = ch;
 		this.minlen = 1;
 	}
-	@Override ParsingExpression uniquefyImpl() { 
-		if(this.errorToken == null) {
-			return ParsingExpression.uniqueExpression("'\b" + byteChar, this);
-		}
-		return ParsingExpression.uniqueExpression("'\b" + this.errorToken + "\b" + byteChar, this);
+	@Override
+	public String getInternKey() { 
+		return "'" + byteChar;
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {

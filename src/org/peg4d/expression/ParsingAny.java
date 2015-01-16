@@ -11,8 +11,9 @@ public class ParsingAny extends ParsingExpression {
 		super();
 		this.minlen = 1;
 	}
-	@Override ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniqueExpression(".\b", this);
+	@Override
+	public String getInternKey() { 
+		return ".";
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {

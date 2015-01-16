@@ -29,7 +29,6 @@ import org.peg4d.expression.ParsingConnector;
 import org.peg4d.expression.ParsingConstructor;
 import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingEmpty;
-import org.peg4d.expression.ParsingExport;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingIf;
@@ -38,10 +37,8 @@ import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
-import org.peg4d.expression.Recognizer;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
-import org.peg4d.expression.ParsingPermutation;
 import org.peg4d.expression.ParsingRepeat;
 import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingScan;
@@ -51,6 +48,7 @@ import org.peg4d.expression.ParsingTagging;
 import org.peg4d.expression.ParsingValue;
 import org.peg4d.expression.ParsingWithFlag;
 import org.peg4d.expression.ParsingWithoutFlag;
+import org.peg4d.expression.Recognizer;
 import org.peg4d.jvm.ClassBuilder.MethodBuilder;
 import org.peg4d.jvm.ClassBuilder.VarEntry;
 import org.peg4d.pegcode.GrammarGenerator;
@@ -690,10 +688,10 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		this.mBuilder.exitScope();
 	}
 
-	@Override
-	public void visitExport(ParsingExport e) {	//TODO:
-		this.mBuilder.push(true);
-	}
+//	@Override
+//	public void visitExport(ParsingExport e) {	//TODO:
+//		this.mBuilder.push(true);
+//	}
 
 	@Override
 	public void visitSequence(ParsingSequence e) {
@@ -826,7 +824,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		
 		// call objectId
 		this.mBuilder.loadFromVar(entry_startIndex);
-		this.mBuilder.push(e.uniqueId);
+		this.mBuilder.push(e.internId);
 		this.mBuilder.callStaticMethod(ParsingUtils.class, 
 				long.class, "objectId", long.class, short.class);
 
@@ -1114,11 +1112,11 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		throw new RuntimeException("unimplemented visit method: " + e.getClass());
 	}
 
-	@Override
-	public void visitPermutation(ParsingPermutation e) {
-		// TODO Auto-generated method stub
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
-	}
+//	@Override
+//	public void visitPermutation(ParsingPermutation e) {
+//		// TODO Auto-generated method stub
+//		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+//	}
 
 	@Override
 	public void visitIs(ParsingIs e) {

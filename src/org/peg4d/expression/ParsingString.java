@@ -15,8 +15,9 @@ public class ParsingString extends ParsingExpression {
 		this.minlen = utf8.length;
 	}
 	@Override
-	ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniqueExpression("''\b" + text, this);
+	public
+	String getInternKey() { 
+		return "''" + text;
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {

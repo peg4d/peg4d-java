@@ -378,13 +378,13 @@ public class PEG4d extends ParsingBuilder {
 		return ret;
 	}
 
-	public ParsingExpression toPermutationExpr(ParsingObject po) {
-		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[po.size()]);
-		for(int i = 0; i < po.size(); i++) {
-			ParsingExpression.addSequence(l, toParsingExpression(po.get(i)));
-		}
-		return ParsingExpression.newPermutation(l);
-	}
+//	public ParsingExpression toPermutationExpr(ParsingObject po) {
+//		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[po.size()]);
+//		for(int i = 0; i < po.size(); i++) {
+//			ParsingExpression.addSequence(l, toParsingExpression(po.get(i)));
+//		}
+//		return ParsingExpression.newPermutation(l);
+//	}
 
 	public ParsingExpression toPermutation(ParsingObject po) {
 		ParsingObject seq = po.get(0);

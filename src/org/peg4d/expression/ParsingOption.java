@@ -10,8 +10,9 @@ public class ParsingOption extends ParsingUnary {
 	ParsingOption(ParsingExpression e) {
 		super(e);
 	}
-	@Override ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniqueExpression("?\b" + this.uniqueKey(), this);
+	@Override
+	public String getInternKey() { 
+		return "?";
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {

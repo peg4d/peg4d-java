@@ -21,6 +21,41 @@ import org.peg4d.pegcode.PEG4dFormatter;
 public abstract class ParsingExpression extends AbstractList<ParsingExpression> implements Recognizer {
 //	public  static boolean  VerboseStack = false;
 //
+	public ParsingObject po      = null;
+	int           minlen = -1;
+		
+	protected ParsingExpression() {
+		this.matcher = this;
+	}
+	
+	public int    internId   = 0;
+	//public abstract String getInternKey();
+
+	public final boolean isInterned() {
+		return (this.internId > 0);
+	}
+
+	public abstract String getInternKey();
+
+	public Recognizer  matcher;
+	public final boolean isOptimized() {
+		return (this.matcher != this);
+	}
+
+	public final ParsingExpression intern() {
+		return ParsingExpression.intern(this);
+	}
+
+//
+//	final boolean isAllUnique() {
+//		for(int i = 0; i < this.size(); i++) {
+//			if(!this.get(i).isInterned()) {
+//				return false;
+//			}
+//		}
+//		return true;
+//	}
+	
 	public final static int LeftRecursion     = 1 << 10;
 	public final static int HasSyntaxError    = 1 << 16;
 	public final static int HasTypeError      = 1 << 17;
@@ -31,60 +66,25 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	public final static int RedundantUnary    = 1 << 21;
 
 	int           flag       = 0;
-	public int    uniqueId   = 0;
-	public ParsingObject po      = null;
-	int           minlen = -1;
-	public Recognizer  matcher;
-		
-	protected ParsingExpression() {
-		this.matcher = this;
-	}
-	
-	public final boolean isOptimized() {
-		return (this.matcher != this);
-	}
 
-	public final boolean isUnique() {
-		return (this.uniqueId > 0);
-	}
-
-	final boolean isAllUnique() {
-		for(int i = 0; i < this.size(); i++) {
-			if(!this.get(i).isUnique()) {
-				return false;
-			}
-		}
-		return true;
-	}
-	
 	final boolean isExpectedConnector() {
-		return (this.uniqueId == 0 && this.is(ExpectedConnector));
+		return (this.internId == 0 && this.is(ExpectedConnector));
 	}
 
 	final boolean isNothingConnected() {
-		return (this.uniqueId == 0 && this.is(NothingConnected));
+		return (this.internId == 0 && this.is(NothingConnected));
 	}
 
 	final boolean isRemovedOperation() {
-		return (this.uniqueId == 0 && this.is(DisabledOperation));
+		return (this.internId == 0 && this.is(DisabledOperation));
 	}
 	
 	public boolean hasObjectOperation() {
 		return false;
 	}
-	
-	public ParsingExpression uniquefy() {
-		ParsingExpression e = this.uniquefyImpl();
-		assert(e.getClass() == this.getClass());
-//		if(e.getClass() != this.getClass()) {
-//			System.out.println("@@@@ " + this.getClass() + " " + this);
-//		}
-		return e;
-	}
-	ParsingExpression uniquefyImpl() { return null; }
-	
+		
 	static void dumpId(String indent, ParsingExpression e) {
-		System.out.println(indent + e.uniqueId + " " + e);
+		System.out.println(indent + e.internId + " " + e);
 		for(int i = 0; i < e.size(); i++) {
 			dumpId(indent + " ", e.get(i));
 		}
@@ -134,10 +134,12 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 		this.flag = this.flag | uflag;
 	}
 	
+	@Override
 	public int size() {
 		return 0;
 	}
 	
+	@Override
 	public ParsingExpression get(int index) {
 		return null;
 	}
@@ -584,23 +586,23 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 	
 	public final static ParsingExpression newOption(ParsingExpression p) {
-		return checkUnique(new ParsingOption(p), p.isUnique());
+		return checkUnique(new ParsingOption(p), p.isInterned());
 	}
 	
 	public final static ParsingExpression newMatch(ParsingExpression p) {
-		return checkUnique(new ParsingMatch(p), p.isUnique());
+		return checkUnique(new ParsingMatch(p), p.isInterned());
 	}
 		
 	public final static ParsingExpression newRepetition(ParsingExpression p) {
-		return checkUnique(new ParsingRepetition(p), p.isUnique());
+		return checkUnique(new ParsingRepetition(p), p.isInterned());
 	}
 
 	public final static ParsingExpression newAnd(ParsingExpression p) {
-		return checkUnique(new ParsingAnd(p), p.isUnique());
+		return checkUnique(new ParsingAnd(p), p.isInterned());
 	}
 	
 	public final static ParsingExpression newNot(ParsingExpression p) {
-		return checkUnique(new ParsingNot(p), p.isUnique());
+		return checkUnique(new ParsingNot(p), p.isInterned());
 	}
 		
 	public final static ParsingExpression newChoice(UList<ParsingExpression> l) {
@@ -626,7 +628,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 
 	final static boolean isUnique(UList<ParsingExpression> l) {
 		for(int i = 0; i < l.size(); i++) {
-			if(!l.ArrayValues[i].isUnique()) {
+			if(!l.ArrayValues[i].isInterned()) {
 				return false;
 			}
 		}
@@ -665,7 +667,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 		
 	public final static ParsingExpression newConnector(ParsingExpression p, int index) {
-		return checkUnique(new ParsingConnector(p, index), p.isUnique());
+		return checkUnique(new ParsingConnector(p, index), p.isInterned());
 	}
 
 	public final static ParsingExpression newTagging(ParsingTag tag) {
@@ -677,7 +679,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 	
 	public final static ParsingExpression newDebug(ParsingExpression e) {
-		return checkUnique(new ParsingAssert(e), e.isUnique());
+		return checkUnique(new ParsingAssert(e), e.isInterned());
 	}
 
 	public final static ParsingExpression newFail(String message) {
@@ -693,30 +695,30 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 
 	public final static ParsingExpression newWithFlag(String flagName, ParsingExpression e) {
-		return checkUnique(new ParsingWithFlag(flagName, e), e.isUnique());
+		return checkUnique(new ParsingWithFlag(flagName, e), e.isInterned());
 	}
 
 	public final static ParsingExpression newWithoutFlag(String flagName, ParsingExpression e) {
-		return checkUnique(new ParsingWithoutFlag(flagName, e), e.isUnique());
+		return checkUnique(new ParsingWithoutFlag(flagName, e), e.isInterned());
 	}
 
 	public final static ParsingExpression newBlock(ParsingExpression e) {
-		return checkUnique(new ParsingBlock(e), e.isUnique());
+		return checkUnique(new ParsingBlock(e), e.isInterned());
 	}
 
 	public final static ParsingExpression newIndent() {
 		return new ParsingIndent();
 	}
 
-	public final static ParsingExpression newPermutation(UList<ParsingExpression> l) {
-		if(l.size() == 0) {
-			return newEmpty();
-		}
-		if(l.size() == 1) {
-			return l.ArrayValues[0];
-		}
-		return new ParsingPermutation(l);
-	}
+//	public final static ParsingExpression newPermutation(UList<ParsingExpression> l) {
+//		if(l.size() == 0) {
+//			return newEmpty();
+//		}
+//		if(l.size() == 1) {
+//			return l.ArrayValues[0];
+//		}
+//		return new ParsingPermutation(l);
+//	}
 	
 	public final static ParsingExpression newScan(int number, ParsingExpression scan, ParsingExpression repeat) {
 		return new ParsingScan(number, scan, repeat);
@@ -727,7 +729,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 
 	public static ParsingExpression newDef(int tagId, ParsingExpression e) {
-		return checkUnique(new ParsingDef(tagId, e), e.isUnique());
+		return checkUnique(new ParsingDef(tagId, e), e.isInterned());
 	}
 
 	public static ParsingExpression newIs(int tagId) {
@@ -740,17 +742,43 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 
 	public final static UMap<ParsingExpression> uniqueMap = new UMap<ParsingExpression>();
 	
-	static ParsingExpression uniqueExpression(String key, ParsingExpression e) {
-		if(e.uniqueId == 0) {
-			if(!e.isAllUnique()) {
-				dumpId("debug ", e);
+//	static ParsingExpression intern(String key, ParsingExpression e) {
+//		if(e.internId == 0) {
+//			if(!e.isAllUnique()) {
+//				dumpId("debug ", e);
+//			}
+//			assert(e.isAllUnique());
+//			ParsingExpression u = uniqueMap.get(key);
+//			if(u == null) {
+//				u = e;
+//				e.po = null;
+//				e.internId = uniqueMap.size() + 1;
+//				uniqueMap.put(key, e);
+//			}
+//			assert(u.getClass() == e.getClass());
+//			return u;
+//		}
+//		return e;
+//	}
+
+	static ParsingExpression intern(ParsingExpression e) {
+		if(e.internId == 0) {
+			StringBuilder sb = new StringBuilder();
+			sb.append(e.getInternKey());
+			for(int i = 0; i < e.size(); i++) {
+				ParsingExpression sube = e.get(i);
+				if(!sube.isInterned()) {
+					sube = ParsingExpression.intern(sube);
+					e.set(i, sube);
+				}
+				sb.append("#" + sube.internId);
 			}
-			assert(e.isAllUnique());
+			String key = sb.toString();
 			ParsingExpression u = uniqueMap.get(key);
 			if(u == null) {
 				u = e;
 				e.po = null;
-				e.uniqueId = uniqueMap.size() + 1;
+				e.internId = uniqueMap.size() + 1;
 				uniqueMap.put(key, e);
 			}
 			assert(u.getClass() == e.getClass());
@@ -761,7 +789,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 
 	private static ParsingExpression checkUnique(ParsingExpression e, boolean unique) {
 		if(unique) {
-			e = e.uniquefy();
+			e = e.intern();
 		}
 		return e;
 	}

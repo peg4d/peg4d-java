@@ -8,8 +8,9 @@ public abstract class ParsingFunction extends ParsingUnary {
 		this.funcName = funcName;
 		this.inner = inner;
 	}
-	@Override final ParsingExpression uniquefyImpl() {
-		return 	ParsingExpression.uniqueExpression("<"+this.funcName+this.getParameters()+"+"+this.uniqueKey(), this);
+	@Override
+	public final String getInternKey() {
+		return "<"+this.funcName+this.getParameters();
 	}
 	public String getParameters() {
 		return "";

@@ -14,9 +14,10 @@ public class ParsingByteRange extends ParsingExpression {
 		this.endByteChar = endByteChar;
 		this.minlen = 1;
 	}
-	@Override 
-	ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniqueExpression("[\b" + startByteChar + "-" + endByteChar, this);
+	@Override
+	public 
+	String getInternKey() { 
+		return "[" + startByteChar + "-" + endByteChar;
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {

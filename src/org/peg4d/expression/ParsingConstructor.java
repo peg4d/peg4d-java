@@ -20,11 +20,9 @@ public class ParsingConstructor extends ParsingList {
 		return true;
 	}
 	@Override
-	ParsingExpression uniquefyImpl() {
-		if(leftJoin) {
-			return ParsingExpression.uniqueExpression("{@}\b" + this.uniqueKey(), this);
-		}
-		return ParsingExpression.uniqueExpression("{}\b" + this.uniqueKey(), this);
+	public
+	String getInternKey() {
+		return (leftJoin) ? "{@}" : "{}";
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {

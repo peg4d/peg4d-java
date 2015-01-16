@@ -15,7 +15,8 @@ public abstract class ParsingCommand extends ParsingExpression {
 	public String getParameters() {
 		return "";
 	}
-	@Override final ParsingExpression uniquefyImpl() {
-		return 	ParsingExpression.uniqueExpression("<"+this.funcName+this.getParameters(), this);
+	@Override
+	public final String getInternKey() {
+		return "<"+this.funcName+this.getParameters();
 	}
 }

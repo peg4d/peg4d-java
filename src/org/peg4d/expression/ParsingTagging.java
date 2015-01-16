@@ -19,8 +19,9 @@ public class ParsingTagging extends ParsingExpression {
 		return true;
 	}
 	@Override
-	ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniqueExpression("#\b" + this.tag.key(), this);
+	public
+	String getInternKey() {
+		return "#" + this.tag.toString();
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {

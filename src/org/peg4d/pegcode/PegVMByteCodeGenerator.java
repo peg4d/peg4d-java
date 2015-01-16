@@ -24,7 +24,6 @@ import org.peg4d.expression.ParsingConnector;
 import org.peg4d.expression.ParsingConstructor;
 import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingEmpty;
-import org.peg4d.expression.ParsingExport;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingIf;
@@ -34,7 +33,6 @@ import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingMatch;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
-import org.peg4d.expression.ParsingPermutation;
 import org.peg4d.expression.ParsingRepeat;
 import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingScan;
@@ -44,8 +42,8 @@ import org.peg4d.expression.ParsingTagging;
 import org.peg4d.expression.ParsingValue;
 import org.peg4d.expression.ParsingWithFlag;
 import org.peg4d.expression.ParsingWithoutFlag;
-import org.peg4d.vm.Opcode;
 import org.peg4d.vm.Instruction;
+import org.peg4d.vm.Opcode;
 
 public class PegVMByteCodeGenerator extends GrammarGenerator {
 	
@@ -621,7 +619,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		if(l.size() == 0) {
 			l.add(failed);
 		}
-		return ParsingExpression.newChoice(l).uniquefy();
+		return ParsingExpression.newChoice(l).intern();
 	}
 	
 	private void checkChoice(ParsingChoice choice, int c, UList<ParsingExpression> l) {
@@ -1111,11 +1109,6 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	}
 
 	@Override
-	public void visitExport(ParsingExport e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
-	}
-
-	@Override
 	public void visitMatch(ParsingMatch e) {
 		throw new RuntimeException("unimplemented visit method: " + e.getClass());
 	}
@@ -1165,11 +1158,11 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		throw new RuntimeException("unimplemented visit method: " + e.getClass());
 	}
 
-	@Override
-	public void visitPermutation(ParsingPermutation e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
-	}
-
+//	@Override
+//	public void visitPermutation(ParsingPermutation e) {
+//		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+//	}
+//
 	@Override
 	public void visitScan(ParsingScan e) {
 		writeCode(Instruction.PUSHp1);

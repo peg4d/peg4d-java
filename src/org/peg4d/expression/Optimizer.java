@@ -436,14 +436,14 @@ public class Optimizer {
 				ParsingExpression[] matchCase = new ParsingExpression[257];
 				ParsingExpression empty = ParsingExpression.newEmpty();
 				makeStringChoice(choice, matchCase, empty, empty);
-				ParsingExpression f = new ParsingFailure(choice).uniquefy();
+				ParsingExpression f = new ParsingFailure(choice).intern();
 	//			System.out.println("StringChoice: " + choice);
 				for(int ch = 0; ch < matchCase.length; ch++) {
 					if(matchCase[ch] == null) {
 						matchCase[ch] = f;
 					}
 					else {
-						matchCase[ch] = matchCase[ch].uniquefy();
+						matchCase[ch] = matchCase[ch].intern();
 	//					System.out.println("|2 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
 						if(matchCase[ch] instanceof ParsingChoice && !matchCase[ch].isOptimized()) {
 							optimizeChoice((ParsingChoice)matchCase[ch]);
@@ -608,7 +608,7 @@ public class Optimizer {
 		if(l.size() == 0) {
 			l.add(failed);
 		}
-		return ParsingExpression.newChoice(l).uniquefy();
+		return ParsingExpression.newChoice(l).intern();
 	}
 
 	private static void selectChoice(ParsingChoice choice, int ch, ParsingExpression failed, UList<ParsingExpression> l) {

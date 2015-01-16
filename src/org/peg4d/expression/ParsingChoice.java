@@ -25,8 +25,9 @@ public class ParsingChoice extends ParsingList {
 	}
 
 	@Override
-	ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniqueExpression("|\b" + this.uniqueKey(), this);
+	public
+	String getInternKey() {
+		return "|";
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {

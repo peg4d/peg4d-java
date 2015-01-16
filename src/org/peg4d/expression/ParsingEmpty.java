@@ -10,8 +10,9 @@ public class ParsingEmpty extends ParsingExpression {
 		super();
 		this.minlen = 0;
 	}
-	@Override ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniqueExpression("\b", this);
+	@Override
+	public String getInternKey() {
+		return "";
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {

@@ -18,8 +18,9 @@ public class ParsingValue extends ParsingExpression {
 		return true;
 	}
 	@Override
-	ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniqueExpression("`\b" + this.value, this);
+	public
+	String getInternKey() {
+		return "`" + this.value;
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {

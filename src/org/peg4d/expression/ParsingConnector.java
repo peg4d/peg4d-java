@@ -18,11 +18,9 @@ public class ParsingConnector extends ParsingUnary {
 		return true;
 	}
 	@Override
-	ParsingExpression uniquefyImpl() {
-		if(index != -1) {
-			return ParsingExpression.uniqueExpression("@" + index + "\b" + this.uniqueKey(), this);
-		}
-		return ParsingExpression.uniqueExpression("@\b" + this.uniqueKey(), this);
+	public
+	String getInternKey() {
+		return (index != -1) ? "@" + index : "@";
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {

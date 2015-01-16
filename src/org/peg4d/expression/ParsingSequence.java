@@ -11,8 +11,9 @@ public class ParsingSequence extends ParsingList {
 		super(l);
 	}
 	@Override
-	ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniqueExpression(" \b" + this.uniqueKey(), this);
+	public
+	String getInternKey() {
+		return " ";
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
