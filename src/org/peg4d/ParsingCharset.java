@@ -1,6 +1,7 @@
 package org.peg4d;
 
 
+
 public abstract class ParsingCharset {
 	public final static int MAX = 256;
 

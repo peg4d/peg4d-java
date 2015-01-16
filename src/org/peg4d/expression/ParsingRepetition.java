@@ -3,7 +3,7 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
-import org.peg4d.ParsingObject;
+import org.peg4d.ParsingTree;
 import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
@@ -45,7 +45,7 @@ public class ParsingRepetition extends ParsingUnary {
 		long pos = context.getPosition();
 //		long f = context.rememberFailure();
 		while(ppos < pos) {
-			ParsingObject left = context.left;
+			ParsingTree left = context.left;
 			if(!this.inner.matcher.simpleMatch(context)) {
 				context.left = left;
 				left = null;

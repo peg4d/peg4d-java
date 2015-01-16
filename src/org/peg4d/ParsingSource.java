@@ -219,6 +219,11 @@ public abstract class ParsingSource {
 		return fileName;
 	}
 
+	public final static ParsingSource newStringSource(ParsingObject po) {
+		ParsingSource s = po.getSource();
+		return new StringSource(s.getResourceName(), s.linenum(po.getSourcePosition()), po.getText());
+	}
+
 	public final static ParsingSource loadSource(String fileName) {
 		InputStream Stream = Main.class.getResourceAsStream("/" + fileName);
 		if (Stream == null) {

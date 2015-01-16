@@ -3,7 +3,7 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
-import org.peg4d.ParsingObject;
+import org.peg4d.ParsingTree;
 import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
@@ -60,7 +60,7 @@ public class ParsingConstructor extends ParsingList {
 			}
 		}
 		int mark = context.markLogStack();
-		ParsingObject newnode = context.newParsingObject(startIndex, this);
+		ParsingTree newnode = context.newParsingTree(startIndex, this);
 		if(this.leftJoin) {
 			context.lazyJoin(context.left);
 			context.lazyLink(newnode, 0, context.left);
@@ -74,7 +74,7 @@ public class ParsingConstructor extends ParsingList {
 				return false;
 			}
 		}
-		newnode.setLength((int)(context.getPosition() - startIndex));
+		newnode.setEndingPosition(context.getPosition());
 		//context.commitLinkLog2(newnode, startIndex, mark);
 		//System.out.println("newnode: " + newnode.oid);
 		context.left = newnode;

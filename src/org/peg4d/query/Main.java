@@ -99,7 +99,7 @@ public class Main {	//TODO: pipe line mode
 		String dataFilename = targetData.get();
 		ParsingSource dataSource = org.peg4d.ParsingSource.loadSource(dataFilename);
 		ParsingContext context = new ParsingContext(dataSource);
-		ParsingObject parsedObject = context.parse(peg, defaultStartPoint);
+		ParsingObject parsedObject = context.parse2(peg, defaultStartPoint, new ParsingObject(), null);
 
 		if(verboseData) {
 			System.err.println("parsed data:");
@@ -142,7 +142,7 @@ public class Main {	//TODO: pipe line mode
 
 	private static boolean parseAndRunQuery(Executor executor, Grammar queryPeg, ParsingSource source, ParsingObject target) {
 		ParsingContext queryParserContext = new ParsingContext(source);
-		ParsingObject queryTree = queryParserContext.parseChunk(queryPeg, defaultStartPoint);
+		ParsingObject queryTree = queryParserContext.parse2(queryPeg, defaultStartPoint, new ParsingObject(), null);
 		if(verboseQuery) {
 			System.err.println("parsed query:");
 			System.err.println(queryTree);

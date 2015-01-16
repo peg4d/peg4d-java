@@ -18,7 +18,7 @@ public class ParsingCatch extends ParsingCommand {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		context.left.setSourcePosition(context.fpos);
+		//context.left.setSourcePosition(context.fpos);
 		context.left.setValue(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
 		return true;
 	}

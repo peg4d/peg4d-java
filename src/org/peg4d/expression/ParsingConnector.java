@@ -3,7 +3,7 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
-import org.peg4d.ParsingObject;
+import org.peg4d.ParsingTree;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingConnector extends ParsingUnary {
@@ -42,7 +42,7 @@ public class ParsingConnector extends ParsingUnary {
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
-		ParsingObject left = context.left;
+		ParsingTree left = context.left;
 		int mark = context.markLogStack();
 		if(this.inner.matcher.simpleMatch(context)) {
 			if(context.left != left) {

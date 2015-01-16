@@ -9,7 +9,7 @@ FAIL="\0033[91m((FAIL))"
 NL="\0033[0m"
 
 if [ -z $NEZ ] ; then
-	NEZ="nez-0.9.1.jar"
+	NEZ="nez-0.9.2.jar"
 fi
 
 function test_failure {
@@ -22,7 +22,7 @@ function test_failure {
 }
 
 function test_match {
-	java -ea -jar $NEZ parse -p $1 $OPTION -i test/empty >> OUT
+	java -ea -jar $NEZ parse -p $1 $OPTION -i test/empty 
 	if [ $? -eq 0 ]; then
 		echo -e "$PASS $1 $NL"
 	else

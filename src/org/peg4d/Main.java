@@ -7,21 +7,21 @@ import java.util.Map;
 
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.jvm.JavaByteCodeGenerator;
-import org.peg4d.pegcode.PegVMByteCodeGenerator;
 import org.peg4d.pegcode.GrammarGenerator;
-import org.peg4d.writer.ParsingObjectWriter;
-import org.peg4d.writer.ParsingWriter;
-import org.peg4d.writer.TagWriter;
+import org.peg4d.pegcode.PegVMByteCodeGenerator;
 import org.peg4d.regex.RegexObject;
 import org.peg4d.regex.RegexObjectConverter;
 import org.peg4d.regex.RegexPegGenerator;
+import org.peg4d.writer.ParsingObjectWriter;
+import org.peg4d.writer.ParsingWriter;
+import org.peg4d.writer.TagWriter;
 
 public class Main {
 	public final static String  ProgName  = "Nez";
 	public final static String  CodeName  = "yokohama";
 	public final static int     MajorVersion = 0;
 	public final static int     MinerVersion = 9;
-	public final static int     PatchLevel   = 1;
+	public final static int     PatchLevel   = 2;
 	public final static String  Version = "" + MajorVersion + "." + MinerVersion + "." + PatchLevel;
 	public final static String  Copyright = "Copyright (c) 2014, Nez project authors";
 	public final static String  License = "BSD-Style Open Source";
@@ -349,7 +349,7 @@ public class Main {
 		Grammar peg = newGrammar();
 		if(Logger == null) {
 			ParsingContext context = new ParsingContext(newParsingSource(peg));
-			ParsingObject po = context.parse(peg, StartingPoint, new MemoizationManager());
+			ParsingObject po = context.parse2(peg, StartingPoint, new ParsingObject(), new MemoizationManager());
 			if(context.isFailure()) {
 				System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
 				System.out.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
@@ -377,7 +377,7 @@ public class Main {
 				context = new ParsingContext(source);
 				long t1 = System.currentTimeMillis();
 				context.setLogger(Logger);
-				po = context.parse(peg, StartingPoint, new MemoizationManager());
+				po = context.parse2(peg, StartingPoint, new ParsingObject(), new MemoizationManager());
 				long t2 = System.currentTimeMillis();
 				long t = t2 - t1;
 				Main.printVerbose("ErapsedTime", "" + t + "ms");
@@ -405,7 +405,7 @@ public class Main {
 	public static void rel() {
 		Grammar peg = newGrammar();
 		ParsingContext context = new ParsingContext(newParsingSource(peg));
-		ParsingObject pego = context.parse(peg, StartingPoint, new MemoizationManager());
+		ParsingObject pego = context.parse2(peg, StartingPoint, new ParsingObject(), new MemoizationManager());
 		RelationBuilder RBuilder = new RelationBuilder(pego);
 		RBuilder.build(InferRelation);
 	}
@@ -415,7 +415,7 @@ public class Main {
 		Main.printVerbose("Grammar", peg.getName());
 		Main.printVerbose("StartingPoint", StartingPoint);
 		ParsingContext context = new ParsingContext(newParsingSource(peg));
-		ParsingObject pego = context.parse(peg, StartingPoint, new MemoizationManager());
+		ParsingObject pego = context.parse2(peg, StartingPoint, new ParsingObject(), new MemoizationManager());
 		if(context.isFailure()) {
 			System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
 			System.out.println(context.source.formatPositionLine("maximum matched", context.head_pos, ""));
@@ -463,7 +463,7 @@ public class Main {
 			}
 			ParsingSource source = new StringSource("(stdin)", linenum, line);
 			ParsingContext context = new ParsingContext(source);
-			ParsingObject po = context.parse(peg, startPoint);
+			ParsingObject po = context.parse2(peg, startPoint, new ParsingObject(), null);
 			if(context.isFailure()) {
 				System.out.println(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
 			}

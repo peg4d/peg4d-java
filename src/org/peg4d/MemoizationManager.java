@@ -11,7 +11,7 @@ import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingMatcher;
 
 public class MemoizationManager {
-	public final static ParsingObject NonTransition = new ParsingObject(null, null, 0);
+	public final static ParsingTree NonTransition = new ParsingObject();
 	public static boolean NoMemo = false;
 	public static boolean PackratParsing = false;
 	public static boolean SlidingWindowParsing = false;
@@ -246,7 +246,7 @@ public class MemoizationManager {
 				}
 				return !(context.isFailure());
 			}
-			ParsingObject left = context.left;
+			ParsingTree left = context.left;
 			boolean b = ma.simpleMatch(context);
 			int length = (int)(context.getPosition() - pos);
 			context.setMemo(pos, memoPoint(), (context.left == left) ? MemoizationManager.NonTransition : context.left, length);
@@ -270,7 +270,7 @@ public class MemoizationManager {
 				}
 				return !(context.isFailure());
 			}
-			ParsingObject left = context.left;
+			ParsingTree left = context.left;
 			boolean b = ma.simpleMatch(context);
 			int length = (int)(context.getPosition() - pos);
 			context.setMemo2(pos, memoPoint(), stateValue, (context.left == left) ? MemoizationManager.NonTransition : context.left, length);
@@ -321,7 +321,7 @@ public class MemoizationManager {
 		
 		@Override
 		public boolean simpleMatch(ParsingContext context) {
-			ParsingObject left = context.left;
+			ParsingTree left = context.left;
 			int mark = context.markLogStack();
 			if(this.memoMatch(context, this.matchRef)) {
 				if(context.left != left) {
@@ -360,7 +360,7 @@ public class MemoizationManager {
 		
 		@Override
 		public boolean simpleMatch(ParsingContext context) {
-			ParsingObject left = context.left;
+			ParsingTree left = context.left;
 			int mark = context.markLogStack();
 			if(this.memoMatch2(context, 0, this.matchRef)) {
 				if(context.left != left) {
@@ -399,7 +399,7 @@ public class MemoizationManager {
 		
 		@Override
 		public boolean simpleMatch(ParsingContext context) {
-			ParsingObject left = context.left;
+			ParsingTree left = context.left;
 			int mark = context.markLogStack();
 			if(this.memoMatch2(context, context.stateValue, this.matchRef)) {
 				if(context.left != left) {
@@ -482,7 +482,7 @@ public class MemoizationManager {
 
 class MemoEntry {
 	long key = -1;
-	ParsingObject result;
+	ParsingTree result;
 	int  consumed;
 	int  memoPoint;
 	MemoEntry next;
@@ -536,7 +536,7 @@ abstract class MemoTable {
 	MemoEntry get(long pos, int memoPoint) { return null;}
 	void put(long pos, int memoPoint, MemoEntry m) {  }
 
-	protected void setMemo(long pos, int memoPoint, ParsingObject result, int consumed) {
+	protected void setMemo(long pos, int memoPoint, ParsingTree result, int consumed) {
 		MemoEntry m = newMemo();
 		m.memoPoint = memoPoint;
 		m.result = result;
@@ -559,7 +559,7 @@ abstract class MemoTable {
 		return m;
 	}
 
-	protected void setMemo2(long pos, int memoPoint, int stateValue, ParsingObject result, int consumed) {
+	protected void setMemo2(long pos, int memoPoint, int stateValue, ParsingTree result, int consumed) {
 		MemoEntry m = newMemo();
 		m.memoPoint = memoPoint;
 		m.stateValue = stateValue;
@@ -650,7 +650,7 @@ class SlidingWindowTable extends MemoTable {
 	}
 	
 	@Override
-	protected final void setMemo(long pos, int memoPoint, ParsingObject result, int consumed) {
+	protected final void setMemo(long pos, int memoPoint, ParsingTree result, int consumed) {
 		int index = (int)(pos % size);
 		MemoEntry m = this.memoArray[index][memoPoint];
 		m.key = pos;
@@ -722,7 +722,7 @@ class ElasticTable extends MemoTable {
 	}
 	
 	@Override
-	protected final void setMemo(long pos, int memoPoint, ParsingObject result, int consumed) {
+	protected final void setMemo(long pos, int memoPoint, ParsingTree result, int consumed) {
 		long key = longkey(pos, memoPoint, shift);
 		int hash =  (int)(key % memoArray.length);
 		MemoEntry m = this.memoArray[hash];
@@ -747,7 +747,7 @@ class ElasticTable extends MemoTable {
 	}
 
 	@Override
-	protected final void setMemo2(long pos, int memoPoint, int stateValue, ParsingObject result, int consumed) {
+	protected final void setMemo2(long pos, int memoPoint, int stateValue, ParsingTree result, int consumed) {
 		long key = longkey(pos, memoPoint, shift);
 		int hash =  (int)(key % memoArray.length);
 		MemoEntry m = this.memoArray[hash];
@@ -791,7 +791,7 @@ class DebugMemo extends MemoTable {
 		this.m2 = m2;
 	}
 	@Override
-	protected final void setMemo(long pos, int memoPoint, ParsingObject result, int consumed) {
+	protected final void setMemo(long pos, int memoPoint, ParsingTree result, int consumed) {
 		this.m1.setMemo(pos, memoPoint, result, consumed);
 		this.m2.setMemo(pos, memoPoint, result, consumed);
 	}

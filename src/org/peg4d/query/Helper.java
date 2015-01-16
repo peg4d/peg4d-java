@@ -4,9 +4,7 @@ import java.io.UnsupportedEncodingException;
 
 import org.peg4d.Grammar;
 import org.peg4d.ParsingObject;
-import org.peg4d.Utils;
 import org.peg4d.ParsingSource;
-import org.peg4d.ParsingTag;
 
 class StringSource extends ParsingSource {
 	private byte[] utf8;
@@ -94,8 +92,11 @@ public class Helper {
 	}
 
 	public static ParsingObject dummyRoot(ParsingObject target) {
-		Utils.newStringSource(target);
-		ParsingObject dummyRoot = new ParsingObject(new ParsingTag("#$dummy_root$"), target.getSource(), 0);
+		ParsingSource.newStringSource(target);
+		/* Original 
+		ParsingObject dummyRoot = new ParsingObject(new ParsingTag("#$dummy_root$"), target.getSource(), 0); 
+		*/
+		ParsingObject dummyRoot = (ParsingObject)target.newParsingTree(target.getSource(), 0, null);
 		dummyRoot.append(target);
 		return dummyRoot;
 	}

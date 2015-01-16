@@ -23,14 +23,14 @@ public class XMLValidator {
 		Grammar peg4d = dtdGrammarFactory.newGrammar("DTD", pegForDTD);
 		ParsingSource dtdSource = ParsingSource.loadSource(DTDFile);
 		ParsingContext dtdContext = new ParsingContext(dtdSource);
-		ParsingObject node = dtdContext.parse(peg4d, "File");
+		ParsingObject node = dtdContext.parse2(peg4d, "File", new ParsingObject(), null);
 		XMLPegGenerater gen = new XMLPegGenerater(node);
 		String genPegSource = gen.generatePegFile();
 		GrammarFactory xmlGrammarFactory = new GrammarFactory();
 		Grammar genPeg = xmlGrammarFactory.newGrammar("XML", genPegSource);
 		ParsingSource xmlSource = ParsingSource.loadSource(inputXMLFile);
 		ParsingContext xmlContext = new ParsingContext(xmlSource);
-		ParsingObject xmlNode = xmlContext.parse(genPeg, "File");
+		ParsingObject xmlNode = xmlContext.parse2(genPeg, "File", new ParsingObject(), null);
 		return !xmlContext.hasByteChar();
 	}
 

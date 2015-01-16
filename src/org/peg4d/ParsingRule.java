@@ -85,10 +85,10 @@ public class ParsingRule {
 			boolean isBadExample = a.key.equals("bad-example");
 			if(isExample || isBadExample) {
 				boolean ok = true;
-				ParsingSource s = Utils.newStringSource(a.value);
+				ParsingSource s = ParsingSource.newStringSource(a.value);
 				context.resetSource(s, 0);
-				context.parse(peg, this.ruleName, null);
-//				System.out.println("@@ " + context.isFailure() + " " + context.hasByteChar() + " " + isExample + " " + isBadExample);
+				context.parse2(peg, this.ruleName, new ParsingObject(), null);
+				//System.out.println("@@ fail? " + context.isFailure() + " unconsumed? " + context.hasByteChar() + " example " + isExample + " " + isBadExample);
 				if(context.isFailure() || context.hasByteChar()) {
 					if(isExample) ok = false;
 				}

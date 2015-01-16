@@ -3,7 +3,7 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
-import org.peg4d.ParsingObject;
+import org.peg4d.ParsingTree;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingAssert extends ParsingFunction {
@@ -21,7 +21,7 @@ public class ParsingAssert extends ParsingFunction {
 	@Override
 	public boolean simpleMatch(ParsingContext context) {
 		long pos = context.getPosition();
-		ParsingObject left = context.left;
+		ParsingTree left = context.left;
 		this.inner.matcher.simpleMatch(context);
 		if(context.isFailure()) {
 			assert(pos == context.getPosition());
@@ -29,11 +29,11 @@ public class ParsingAssert extends ParsingFunction {
 			left = null;
 			return false;
 		}
-		if(context.left != left) {
-			System.out.println(context.source.formatPositionLine("debug", pos,
-				"transition #" + context.left.getTag() + " => #" + left.getTag() + " in " + inner));
-			return true;
-		}
+//		if(context.left != left) {
+//			System.out.println(context.source.formatPositionLine("debug", pos,
+//				"transition #" + context.left.getTag() + " => #" + left.getTag() + " in " + inner));
+//			return true;
+//		}
 		else if(context.getPosition() != pos) {
 			System.out.println(context.source.formatPositionMessage("debug", pos,
 				"consumed pos=" + pos + " => " + context.getPosition() + " in " + inner));

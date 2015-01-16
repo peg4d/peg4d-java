@@ -4,33 +4,69 @@ import java.util.AbstractList;
 
 import org.peg4d.expression.ParsingExpression;
 
-public class ParsingObject extends AbstractList<ParsingObject> {
+public class ParsingObject extends AbstractList<ParsingObject> implements ParsingTree {
 	private ParsingSource    source = null;
-	private long             pospeg = 0;
+	private long             pos = 0;
 	private int              length = 0;
 	private ParsingTag       tag;
 	private Object           value  = null;
 	ParsingObject            parent = null;
 	private ParsingObject    AST[] = null;
 
-	
-	public ParsingObject(ParsingTag tag, ParsingSource source, long pospeg) {
+	ParsingObject(ParsingTag tag, ParsingSource source, long pos) {
 		this.tag        = tag;
 		this.source     = source;
-		this.pospeg     = pospeg;
+		this.pos        = pos;
 		this.length     = 0;
 	}
 
-	ParsingObject(ParsingTag tag, ParsingSource source, long pos, ParsingExpression e) {
-//		this.oid = idCount++;
-		this.tag        = tag;
-		this.source     = source;
-		this.pospeg     = ParsingUtils.objectId(pos, (short)e.uniqueId);
-		assert(pos == ParsingUtils.getpos(this.pospeg));
+//	ParsingObject(ParsingTag tag, ParsingSource source, long pos, ParsingExpression e) {
+////		this.oid = idCount++;
+//		this.tag        = tag;
+//		this.source     = source;
+//		this.pospeg     = ParsingUtils.objectId(pos, (short)e.uniqueId);
+//		assert(pos == ParsingUtils.getpos(this.pospeg));
+//		this.length     = 0;
+//	}
+
+	public ParsingObject() {
+		this.tag        = new ParsingTag("#Text");
+		this.source     = null;
+		this.pos        = 0;
 		this.length     = 0;
 	}
 
-	private ParsingObject() {
+	@Override
+	public ParsingTree newParsingTree(ParsingSource source, long pos, ParsingExpression e) {
+		return new ParsingObject(this.tag, source, pos);
+	}
+
+
+	@Override
+	public void setTag(ParsingTag tag) {
+		this.tag = tag;
+	}
+
+	@Override
+	public void setValue(Object value) {
+		this.value = value;
+	}
+
+	@Override
+	public void setEndingPosition(long pos) {
+		this.length = (int)(pos - this.getSourcePosition());
+	}
+
+	@Override
+	public final void expandAstToSize(int newSize) {
+		if(newSize > this.size()) {
+			this.resizeAst(newSize);
+		}
+	}
+
+	@Override
+	public void commitChild(int index, ParsingTree child) {
+		this.set(index, (ParsingObject)child);
 	}
 
 	/*
@@ -41,7 +77,7 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 		ParsingObject n = new ParsingObject();
 		n.tag    = this.tag;
 		n.source = this.source;
-		n.pospeg = this.pospeg;
+		n.pos = this.pos;
 		n.length = this.length;
 		n.value  = this.value;
 		if(this.AST != null) {
@@ -68,33 +104,21 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 	}
 
 	public long getSourcePosition() {
-		return ParsingUtils.getpos(this.pospeg);
+		return this.pos;
 	}
 	
-	public void setSourcePosition(long pos) {
-		this.pospeg = ParsingUtils.objectId(pos, ParsingUtils.getpegid(this.pospeg));
-		assert(pos == ParsingUtils.getpos(this.pospeg));
-	}
-
-	void setEndPosition(long pos) {
-		this.length = (int)(pos - this.getSourcePosition());
-	}
+//	public void setSourcePosition(long pos) {
+//		this.pospeg = ParsingUtils.objectId(pos, ParsingUtils.getpegid(this.pospeg));
+//		assert(pos == ParsingUtils.getpos(this.pospeg));
+//	}
 
 	public int getLength() {
 		return this.length;
 	}
 
-	public void setLength(int length) {
-		this.length = length;
-	}
-	
-	public void setTag(ParsingTag tag) {
-		this.tag = tag;
-	}
-
-	public void setValue(Object value) {
-		this.value = value;
-	}
+//	public void setLength(int length) {
+//		this.length = length;
+//	}
 	
 	public final boolean is(int tagId) {
 		return this.tag.tagId == tagId;
@@ -174,12 +198,6 @@ public class ParsingObject extends AbstractList<ParsingObject> {
 				System.arraycopy(this.AST, 0, newast, 0, size);
 			}
 			this.AST = newast;
-		}
-	}
-
-	final void expandAstToSize(int newSize) {
-		if(newSize > this.size()) {
-			this.resizeAst(newSize);
 		}
 	}
 
