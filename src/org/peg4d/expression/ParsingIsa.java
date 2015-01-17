@@ -27,4 +27,8 @@ public class ParsingIsa extends ParsingCommand {
 	public void visit(GrammarVisitor visitor) {
 		visitor.visitIsa(this);
 	}
+	
+	public int getTableType() {
+		return this.tableType;
+	}
 }

@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <unistd.h>
 
-#include "parsing.h"
+#include "libnez.h"
 #include "pegvm.h"
 
 extern void PegVM_PrintProfile(const char *file_type);

@@ -27,4 +27,8 @@ public class ParsingIs extends ParsingCommand {
 	public void visit(GrammarVisitor visitor) {
 		visitor.visitIs(this);
 	}
+	
+	public int getTagId() {
+		return this.tagId;
+	}
 }

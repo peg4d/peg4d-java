@@ -671,12 +671,12 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			System.out.println("\t" + code.toString());
 			codeList.add(code);
 			this.codeIndex++;
-			HashMap<ParsingExpression, Integer> choiceMap = new HashMap<ParsingExpression, Integer>();
+			HashMap<Integer, Integer> choiceMap = new HashMap<Integer, Integer>();
 			optChoiceMode = false;
 			int label = newLabel();
 			for(int i = 0; i < caseList.size(); i++) {
 				ParsingExpression caseElement = caseList.get(i);
-				choiceMap.put(caseElement, codeIndex);
+				choiceMap.put(caseElement.uniqueId, codeIndex);
 				caseElement.visit(this);
 				if (caseElement instanceof ParsingFailure) {
 					writeJumpCode(Instruction.JUMP, this.jumpFailureJump());
@@ -688,7 +688,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			writeLabel(label);
 			optChoiceMode = true;
 			for(int i = 0; i < matchCase.length; i++) {
-				code.append(choiceMap.get(matchCase[i]));
+				code.append(choiceMap.get(matchCase[i].uniqueId));
 			}
 		}
 	}
@@ -1157,7 +1157,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitIsa(ParsingIsa e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		writeCode(Instruction.ISA, e.getTableType());
 	}
 
 	@Override
@@ -1215,14 +1215,14 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitDef(ParsingDef e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
+		writeCode(Instruction.PUSHp1);
+		e.inner.visit(this);
+		writeCode(Instruction.DEF, e.getTableId());
 	}
 
 	@Override
 	public void visitIs(ParsingIs e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
+		writeCode(Instruction.IS, e.getTagId());
 	}
 
 }

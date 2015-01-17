@@ -2,7 +2,7 @@
 #include <time.h>
 #include <assert.h>
 #include <string.h>
-#include "parsing.h"
+#include "libnez.h"
 #include "pegvm.h"
 
 #ifdef DHAVE_CONFIG_H
@@ -189,6 +189,8 @@ void ParsingContext_Init(ParsingContext this, const char *filename) {
   memset(this, 0, sizeof(*this));
   this->pos = this->input_size = 0;
   this->inputs = loadFile(filename, &this->input_size);
+  this->stackedSymbolTable =
+      (SymbolTableEntry)malloc(sizeof(struct SymbolTableEntry) * 256);
   // P4D_setObject(this, &this->left, P4D_newObject(this, this->pos));
   this->stack_pointer_base =
       (long *)malloc(sizeof(long) * PARSING_CONTEXT_MAX_STACK_LENGTH);
@@ -218,6 +220,8 @@ void dispose_pego(ParsingObject *pego) {
 void ParsingContext_Dispose(ParsingContext this) {
   free(this->inputs);
   this->inputs = NULL;
+  free(this->stackedSymbolTable);
+  this->stackedSymbolTable = NULL;
   free(this->call_stack_pointer_base);
   this->call_stack_pointer_base = NULL;
   free(this->stack_pointer_base);
@@ -437,9 +441,7 @@ Instruction *PegVM_Prepare(ParsingContext context, Instruction *inst,
   return inst;
 }
 
-long
-PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool)
-{
+long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
   static const void *table[] = {
 #define DEFINE_TABLE(NAME) &&PEGVM_OP_##NAME,
     PEGVM_OP_EACH(DEFINE_TABLE)
@@ -629,7 +631,7 @@ PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool)
   OP(SCAN) {
     long start = POP_SP();
     long len = pos - start;
-    char *value = malloc(len);
+    char value[len];
     int j = 0;
     for (long i = start; i < pos; i++) {
       value[j] = inputs[i];
@@ -648,6 +650,26 @@ PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool)
       DISPATCH_NEXT;
     }
     JUMP;
+  }
+  OP(DEF) {
+    long start = POP_SP();
+    int len = (int)(pos - start);
+    char *value = malloc(len);
+    int j = 0;
+    for (long i = start; i < pos; i++) {
+      value[j] = inputs[i];
+      j++;
+    }
+    pushSymbolTable(context, pc->ndata[0], len, value);
+    DISPATCH_NEXT;
+  }
+  OP(IS) {
+    failflag = matchSymbolTableTop(context, &pos, pc->ndata[0]);
+    DISPATCH_NEXT;
+  }
+  OP(ISA) {
+    failflag = matchSymbolTable(context, &pos, pc->ndata[0]);
+    DISPATCH_NEXT;
   }
   OP(NOTBYTE) {
     if (inputs[pos] != *(pc)->ndata) {

@@ -67,4 +67,8 @@ public class ParsingDef extends ParsingFunction {
 		return false;
 	}
 	
+	public int getTableId() {
+		return this.tableId;
+	}
+	
 }

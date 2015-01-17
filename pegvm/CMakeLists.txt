@@ -33,7 +33,7 @@ endif(MSVC)
 
 ## Source Code settings
 set(PEGVM_SOURCE pegvm.c main.c memroy_pool.c dump.c)
-set(P4D_SOURCE ../libpeg4d/p4d.c)
+set(P4D_SOURCE ../libnez/libnez.c)
 
 set(PACKAGE_NAME    ${PROJECT_NAME})
 set(PACKAGE_VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
@@ -89,7 +89,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake
 		${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 set(INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
-	${CMAKE_CURRENT_SOURCE_DIR}/../libpeg4d/ ${CMAKE_CURRENT_BINARY_DIR})
+	${CMAKE_CURRENT_SOURCE_DIR}/../libnez/ ${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${INCLUDE_DIRS})
 
 add_library(p4d ${PEGVM_SOURCE})
