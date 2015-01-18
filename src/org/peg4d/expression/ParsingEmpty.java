@@ -12,7 +12,7 @@ public class ParsingEmpty extends ParsingExpression {
 		this.minlen = 0;
 	}
 	@Override
-	public String getInternKey() {
+	public String getInterningKey() {
 		return "";
 	}
 	@Override

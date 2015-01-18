@@ -5,10 +5,10 @@ import org.peg4d.ParsingTag;
 import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingIs extends ParsingCommand {
+public class ParsingIs extends ParsingFunction {
 	int tagId;
 	ParsingIs(int tagId) {
-		super("is");
+		super("is", null);
 		this.tagId = tagId;
 		this.minlen = 1;
 	}

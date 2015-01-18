@@ -5,9 +5,9 @@ import org.peg4d.ParsingContext;
 import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingIndent extends ParsingCommand {
+public class ParsingIndent extends ParsingFunction {
 	ParsingIndent() {
-		super("indent");
+		super("indent", null);
 		this.minlen = 0;
 	}
 	@Override

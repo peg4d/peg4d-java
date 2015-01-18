@@ -15,7 +15,7 @@ public class ParsingConnector extends ParsingUnary {
 	}
 	@Override
 	public
-	String getInternKey() {
+	String getInterningKey() {
 		return (index != -1) ? "@" + index : "@";
 	}
 	@Override

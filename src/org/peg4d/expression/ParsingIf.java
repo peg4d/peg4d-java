@@ -6,11 +6,11 @@ import org.peg4d.ParsingContext;
 import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingIf extends ParsingCommand {
+public class ParsingIf extends ParsingFunction {
 	public final static boolean OldFlag = false;
 	String flagName;
 	ParsingIf(String flagName) {
-		super("if");
+		super("if", null);
 		this.flagName = flagName;
 		this.minlen = 0;
 	}

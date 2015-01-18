@@ -11,7 +11,7 @@ public class ParsingAnd extends ParsingUnary {
 		super(e);
 	}
 	@Override
-	public String getInternKey() { 
+	public String getInterningKey() { 
 		return "&";
 	}
 	@Override

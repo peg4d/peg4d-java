@@ -4,9 +4,9 @@ import org.peg4d.ParsingContext;
 import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingCatch extends ParsingCommand {
+public class ParsingCatch extends ParsingFunction {
 	ParsingCatch() {
-		super("catch");
+		super("catch", null);
 		this.minlen = 0;
 	}
 	@Override

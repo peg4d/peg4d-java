@@ -13,17 +13,21 @@ public class ParsingChoice extends ParsingList {
 	}
 	@Override
 	public
-	String getInternKey() {
+	String getInterningKey() {
 		return "|";
 	}
 	@Override
 	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		boolean afterAll = true;
 		for(ParsingExpression e: this) {
 			if(!e.checkAlwaysConsumed(startNonTerminal, stack)) {
-				return false;
+				if(stack == null) {  // reconfirm 
+					return false;
+				}
+				afterAll = false;
 			}
 		}
-		return true;
+		return afterAll;
 	}
 	@Override
 	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {

@@ -5,10 +5,10 @@ import org.peg4d.ParsingTag;
 import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingIsa extends ParsingCommand {
+public class ParsingIsa extends ParsingFunction {
 	int tableType;
 	ParsingIsa(int tableType) {
-		super("isa");
+		super("isa", null);
 		this.tableType = tableType;
 		this.minlen = 1;
 	}

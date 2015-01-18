@@ -178,10 +178,8 @@ public class Grammar {
 		UList<String> stack = new UList<String>(new String[64]);
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
-			String uName = rule.getUniqueName();
 			stack.clear(0);
-			stack.add(uName);
-			rule.minlen = rule.expr.checkLength(uName, 0, 0, stack);
+			boolean isConsumed = rule.checkAlwaysConsumed(null, stack);
 		}
 		if(this.foundError) {
 			Main._Exit(1, "PegError found");
@@ -189,7 +187,6 @@ public class Grammar {
 		if(stats != null) {
 			stats.setCount("PEG.Rules", nameList.size());
 		}
-
 		// type check
 		UMap<String> flagMap = new UMap<String>();
 		for(int i = 0; i < nameList.size(); i++) {
@@ -228,10 +225,12 @@ public class Grammar {
 			stats.setCount("PEG.ContextSensitiveRules", count);
 			stats.setRatio("PEG.ContextSensitivity", count, nameList.size());
 		}
-
-
-		
-		new Optimizer().optimize(this, stats);
+		try {
+			new Optimizer().optimize(this, stats);
+		}
+		catch(Exception e) {
+			System.out.println("Optimizer error: " + e);
+		}
 		ParsingContext context = new ParsingContext(null);
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);

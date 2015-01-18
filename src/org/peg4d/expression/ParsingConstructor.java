@@ -21,7 +21,7 @@ public class ParsingConstructor extends ParsingList {
 	}
 	@Override
 	public
-	String getInternKey() {
+	String getInterningKey() {
 		return (leftJoin) ? "{@}" : "{}";
 	}
 	@Override

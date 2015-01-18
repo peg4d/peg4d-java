@@ -19,7 +19,7 @@ public class ParsingFailure extends ParsingExpression {
 	}
 	@Override
 	public
-	String getInternKey() {
+	String getInterningKey() {
 		return "!!";
 	}
 	@Override

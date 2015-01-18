@@ -12,7 +12,6 @@ import org.peg4d.expression.ParsingByte;
 import org.peg4d.expression.ParsingByteRange;
 import org.peg4d.expression.ParsingCatch;
 import org.peg4d.expression.ParsingChoice;
-import org.peg4d.expression.ParsingCommand;
 import org.peg4d.expression.ParsingConnector;
 import org.peg4d.expression.ParsingConstructor;
 import org.peg4d.expression.ParsingDef;
@@ -248,20 +247,14 @@ public class PEG4dFormatter extends GrammarGenerator {
 		this.formatString(" }");
 	}
 	
-
-	public void formatParsingCommand(ParsingCommand e) {
-		this.formatString("<");
-		this.formatString(e.funcName);
-		this.formatString(e.getParameters());
-		this.formatString(">");
-	}
-
 	public void formatParsingFunction(ParsingFunction e) {
 		this.formatString("<");
 		this.formatString(e.funcName);
 		this.formatString(e.getParameters());
-		this.formatString(" ");
-		e.inner.visit(this);
+		if(e.inner != null) {
+			this.formatString(" ");
+			e.inner.visit(this);
+		}
 		this.formatString(">");
 	}
 
@@ -273,7 +266,7 @@ public class PEG4dFormatter extends GrammarGenerator {
 	@Override
 	public void visitCatch(ParsingCatch e) {
 		// TODO Auto-generated method stub
-		this.formatParsingCommand(e);
+		this.formatParsingFunction(e);
 	}
 
 	@Override
@@ -284,7 +277,7 @@ public class PEG4dFormatter extends GrammarGenerator {
 	@Override
 	public void visitIfFlag(ParsingIf e) {
 		// TODO Auto-generated method stub
-		this.formatParsingCommand(e);
+		this.formatParsingFunction(e);
 	}
 
 	@Override
@@ -304,7 +297,7 @@ public class PEG4dFormatter extends GrammarGenerator {
 
 	@Override
 	public void visitIndent(ParsingIndent e) {
-		this.formatParsingCommand(e);
+		this.formatParsingFunction(e);
 	}
 
 	@Override
@@ -315,7 +308,7 @@ public class PEG4dFormatter extends GrammarGenerator {
 	@Override
 	public void visitIsa(ParsingIsa e) {
 		// TODO Auto-generated method stub
-		this.formatParsingCommand(e);
+		this.formatParsingFunction(e);
 	}
 	
 	@Override

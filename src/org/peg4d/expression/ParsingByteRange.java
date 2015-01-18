@@ -17,7 +17,7 @@ public class ParsingByteRange extends ParsingExpression {
 	}
 	@Override
 	public 
-	String getInternKey() { 
+	String getInterningKey() { 
 		return "[" + startByteChar + "-" + endByteChar;
 	}
 	@Override

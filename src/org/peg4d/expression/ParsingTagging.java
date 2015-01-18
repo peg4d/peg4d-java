@@ -15,7 +15,7 @@ public class ParsingTagging extends ParsingExpression {
 		this.minlen = 0;
 	}
 	@Override
-	public String getInternKey() {
+	public String getInterningKey() {
 		return "#" + this.tag.toString();
 	}
 	@Override

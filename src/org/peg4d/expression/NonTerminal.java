@@ -19,20 +19,37 @@ public class NonTerminal extends ParsingExpression {
 		this.ruleName = ruleName;
 		this.uniqueName = this.peg.uniqueRuleName(this.ruleName);
 	}
-	
+	@Override
+	public String getInterningKey() {
+		return getUniqueName();
+	}
 	@Override
 	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
-		if(startNonTerminal != null && startNonTerminal.equals(this.uniqueName)) {
-			this.report(ReportLevel.error, "left recursion: " + this.ruleName);
-			this.peg.foundError = true;
-		}
 		ParsingRule r = this.getRule();
 		if(r == null) {
-			this.report(ReportLevel.error, "undefined rule: " + this.ruleName);
+			this.report(ReportLevel.warning, "undefined rule: " + this.ruleName);
 			r = new ParsingRule(this.peg, this.ruleName, null, ParsingExpression.newEmpty());
 			this.peg.setRule(this.ruleName, r);
 		}
+		//System.out.println("uName: " + startNonTerminal + " " + this.uniqueName);
+		if(startNonTerminal != null && startNonTerminal.equals(this.uniqueName)) {
+			this.report(ReportLevel.error, "left recursion: " + this.ruleName);
+			this.peg.foundError = true;
+			return false;
+		}
 		return r.checkAlwaysConsumed(startNonTerminal, stack);
+	}
+	
+	public int typeCheck(int typeStatus) {
+		ParsingRule r = this.getRule();
+		int ruleType = r.type;
+		if(ruleType == ParsingRule.ObjectRule) {
+			return checkObjectConstruction(this, typeStatus);
+		}
+		if(ruleType == ParsingRule.OperationRule) {
+			checkObjectOperation(this, typeStatus);
+		}
+		return typeStatus;
 	}
 	
 	@Override
@@ -83,20 +100,12 @@ public class NonTerminal extends ParsingExpression {
 		}
 		return false;
 	}
-
-
 	
 	@Override
 	public
 	boolean hasObjectOperation() {
 		ParsingRule r = this.getRule();
 		return r.type == ParsingRule.OperationRule;
-	}
-
-	@Override
-	public
-	String getInternKey() {
-		return getUniqueName();
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {

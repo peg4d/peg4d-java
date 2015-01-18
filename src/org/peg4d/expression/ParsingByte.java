@@ -15,7 +15,7 @@ public class ParsingByte extends ParsingExpression {
 		this.minlen = 1;
 	}
 	@Override
-	public String getInternKey() { 
+	public String getInterningKey() { 
 		return "'" + byteChar;
 	}
 	@Override

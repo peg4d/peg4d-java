@@ -42,7 +42,7 @@ public class ParsingRule {
 	}
 
 	public final boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
-		if(stack != null && this.minlen != 0) {
+		if(stack != null && this.minlen != 0 && stack.size() > 0) {
 			for(String n : stack) { // Check Unconsumed Recursion
 				String uName = this.getUniqueName();
 				if(uName.equals(n)) {
@@ -54,9 +54,11 @@ public class ParsingRule {
 		if(minlen == -1) {
 			if(stack == null) {
 				stack = new UList<String>(new String[4]);
+			}
+			if(startNonTerminal == null) {
 				startNonTerminal = this.getUniqueName();
 			}
-			stack.add(startNonTerminal);
+			stack.add(this.getUniqueName());
 			this.minlen = this.expr.checkAlwaysConsumed(startNonTerminal, stack) ? 1 : 0;
 			stack.pop();
 		}

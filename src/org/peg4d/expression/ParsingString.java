@@ -17,7 +17,7 @@ public class ParsingString extends ParsingExpression {
 	}
 	@Override
 	public
-	String getInternKey() { 
+	String getInterningKey() { 
 		return "''" + text;
 	}
 	@Override

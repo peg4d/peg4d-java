@@ -54,7 +54,7 @@ public class EntryPoint extends ParsingExpression {
 	}
 
 	@Override
-	public String getInternKey() {
+	public String getInterningKey() {
 		// TODO Auto-generated method stub
 		return null;
 	}

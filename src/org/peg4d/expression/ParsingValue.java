@@ -14,7 +14,7 @@ public class ParsingValue extends ParsingExpression {
 		this.minlen = 0;
 	}
 	@Override
-	public String getInternKey() {
+	public String getInterningKey() {
 		return "`" + this.value;
 	}
 	@Override

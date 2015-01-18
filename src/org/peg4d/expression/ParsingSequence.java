@@ -12,7 +12,7 @@ public class ParsingSequence extends ParsingList {
 	}
 	@Override
 	public
-	String getInternKey() {
+	String getInterningKey() {
 		return " ";
 	}
 	@Override
