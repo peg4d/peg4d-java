@@ -3,6 +3,7 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingByteRange extends ParsingExpression {
@@ -18,6 +19,10 @@ public class ParsingByteRange extends ParsingExpression {
 	public 
 	String getInternKey() { 
 		return "[" + startByteChar + "-" + endByteChar;
+	}
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return true;
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {

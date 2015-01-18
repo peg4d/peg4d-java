@@ -3,6 +3,7 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingIf extends ParsingCommand {
@@ -12,6 +13,10 @@ public class ParsingIf extends ParsingCommand {
 		super("if");
 		this.flagName = flagName;
 		this.minlen = 0;
+	}
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return false;
 	}
 	@Override
 	public String getParameters() {

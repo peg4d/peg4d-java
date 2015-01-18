@@ -3,6 +3,7 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingWithFlag extends ParsingFunction {
@@ -10,6 +11,10 @@ public class ParsingWithFlag extends ParsingFunction {
 	ParsingWithFlag(String flagName, ParsingExpression inner) {
 		super("with", inner);
 		this.flagName = flagName;
+	}
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return inner.checkAlwaysConsumed(startNonTerminal, stack);
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {

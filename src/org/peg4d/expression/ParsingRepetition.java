@@ -16,6 +16,10 @@ public class ParsingRepetition extends ParsingUnary {
 		return "*";
 	}
 	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return false;
+	}
+	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		ParsingExpression e = inner.norm(lexOnly, withoutMap);
 		if(e == inner) {

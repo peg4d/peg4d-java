@@ -46,14 +46,14 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 		return ParsingExpression.intern(this);
 	}
 
-//
-//	final boolean isAllUnique() {
-//		for(int i = 0; i < this.size(); i++) {
-//			if(!this.get(i).isInterned()) {
-//				return false;
-//			}
-//		}
-//		return true;
+	public boolean isAlwaysConsumed() {
+		return this.checkAlwaysConsumed(null, null);
+	}
+
+	public abstract boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack);
+	
+//	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+//		return false;
 //	}
 	
 	public final static int LeftRecursion     = 1 << 10;

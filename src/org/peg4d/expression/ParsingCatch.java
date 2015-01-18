@@ -1,6 +1,7 @@
 package org.peg4d.expression;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingCatch extends ParsingCommand {
@@ -8,6 +9,11 @@ public class ParsingCatch extends ParsingCommand {
 		super("catch");
 		this.minlen = 0;
 	}
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		throw new RuntimeException("TODO");
+	}
+
 	@Override
 	public boolean hasObjectOperation() {
 		return true;

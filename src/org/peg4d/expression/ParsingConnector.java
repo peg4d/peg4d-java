@@ -4,6 +4,7 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTree;
+import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingConnector extends ParsingUnary {
@@ -14,13 +15,17 @@ public class ParsingConnector extends ParsingUnary {
 	}
 	@Override
 	public
-	boolean hasObjectOperation() {
-		return true;
+	String getInternKey() {
+		return (index != -1) ? "@" + index : "@";
+	}
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return this.inner.checkAlwaysConsumed(startNonTerminal, stack);
 	}
 	@Override
 	public
-	String getInternKey() {
-		return (index != -1) ? "@" + index : "@";
+	boolean hasObjectOperation() {
+		return true;
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {

@@ -20,7 +20,6 @@ public class ParsingRule {
 	public int type;
 	public ParsingExpression expr;
 	
-	public int minlen = -1;
 	public int refc = 0;
 
 	public ParsingRule(Grammar peg, String ruleName, ParsingObject po, ParsingExpression e) {
@@ -34,6 +33,34 @@ public class ParsingRule {
 	
 	final String getUniqueName() {
 		return this.peg.uniqueRuleName(ruleName);
+	}
+
+	public int minlen = -1;
+
+	public boolean isAlwaysConsumed() {
+		return this.checkAlwaysConsumed(null, null);
+	}
+
+	public final boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		if(stack != null && this.minlen != 0) {
+			for(String n : stack) { // Check Unconsumed Recursion
+				String uName = this.getUniqueName();
+				if(uName.equals(n)) {
+					this.minlen = 0;
+					break;
+				}
+			}
+		}
+		if(minlen == -1) {
+			if(stack == null) {
+				stack = new UList<String>(new String[4]);
+				startNonTerminal = this.getUniqueName();
+			}
+			stack.add(startNonTerminal);
+			this.minlen = this.expr.checkAlwaysConsumed(startNonTerminal, stack) ? 1 : 0;
+			stack.pop();
+		}
+		return minlen > 0;
 	}
 	
 	@Override

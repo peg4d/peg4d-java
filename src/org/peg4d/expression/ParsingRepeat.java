@@ -3,14 +3,17 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingRepeat extends ParsingFunction {
-
 	ParsingRepeat(ParsingExpression inner) {
 		super("repeat", inner);
 	}
-
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return this.inner.checkAlwaysConsumed(startNonTerminal, stack);
+	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
 		ParsingExpression e = inner.norm(lexOnly, withoutMap);

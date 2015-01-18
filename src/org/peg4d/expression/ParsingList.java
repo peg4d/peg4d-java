@@ -26,16 +26,31 @@ public abstract class ParsingList extends ParsingExpression {
 		this.inners[index] = e;
 		return oldExpresion;
 	}
-	protected final String uniqueKey() {
-		StringBuilder sb = new StringBuilder();
-		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = this.get(i).intern();
-			set(i, e);
-			sb.append(e.internId);
-			sb.append(":");
-		}
-		return sb.toString();
+	public final void swap(int i, int j) {
+		ParsingExpression e = this.inners[i];
+		this.inners[i] = this.inners[j];
+		this.inners[j] = e;
 	}
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		for(ParsingExpression e: this) {
+			if(e.checkAlwaysConsumed(startNonTerminal, stack)) {
+				return true;
+			}
+		}
+		return false;
+	}
+//
+//	protected final String uniqueKey() {
+//		StringBuilder sb = new StringBuilder();
+//		for(int i = 0; i < this.size(); i++) {
+//			ParsingExpression e = this.get(i).intern();
+//			set(i, e);
+//			sb.append(e.internId);
+//			sb.append(":");
+//		}
+//		return sb.toString();
+//	}
 	
 	@Override
 	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
@@ -58,9 +73,4 @@ public abstract class ParsingList extends ParsingExpression {
 		return false;
 	}
 	
-	public final void swap(int i, int j) {
-		ParsingExpression e = this.inners[i];
-		this.inners[i] = this.inners[j];
-		this.inners[j] = e;
-	}
 }

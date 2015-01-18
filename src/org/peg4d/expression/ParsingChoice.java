@@ -12,6 +12,20 @@ public class ParsingChoice extends ParsingList {
 		super(list);
 	}
 	@Override
+	public
+	String getInternKey() {
+		return "|";
+	}
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		for(ParsingExpression e: this) {
+			if(!e.checkAlwaysConsumed(startNonTerminal, stack)) {
+				return false;
+			}
+		}
+		return true;
+	}
+	@Override
 	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
 		int lmin = Integer.MAX_VALUE;
 		for(int i = 0; i < this.size(); i++) {
@@ -22,12 +36,6 @@ public class ParsingChoice extends ParsingList {
 		}
 		this.minlen = lmin - minlen;
 		return minlen + this.minlen;
-	}
-
-	@Override
-	public
-	String getInternKey() {
-		return "|";
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {

@@ -21,6 +21,21 @@ public class NonTerminal extends ParsingExpression {
 	}
 	
 	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		if(startNonTerminal != null && startNonTerminal.equals(this.uniqueName)) {
+			this.report(ReportLevel.error, "left recursion: " + this.ruleName);
+			this.peg.foundError = true;
+		}
+		ParsingRule r = this.getRule();
+		if(r == null) {
+			this.report(ReportLevel.error, "undefined rule: " + this.ruleName);
+			r = new ParsingRule(this.peg, this.ruleName, null, ParsingExpression.newEmpty());
+			this.peg.setRule(this.ruleName, r);
+		}
+		return r.checkAlwaysConsumed(startNonTerminal, stack);
+	}
+	
+	@Override
 	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
 		NonTerminal ne = this;
 		ne.checkReference();
@@ -127,48 +142,4 @@ public class NonTerminal extends ParsingExpression {
 		return context.matchNonTerminal(this);
 	}
 
-}
-
-// Name[Old->New]
-
-class ParamNonTerminal extends NonTerminal {
-	String baseName;
-	String oldName;
-	String newName;
-	
-	ParamNonTerminal(Grammar peg, String baseName, String oldName, String newName) {
-		super(peg, baseName);
-		this.baseName = baseName;
-		this.oldName = oldName;
-		this.newName = newName;
-
-	}
-
-//	@Override
-//	void checkReference() {
-//		if(baseName.equals(baseName)) {
-//			UList<ParsingRule> l = this.getRule().subRule();
-//			for(ParsingRule r: l) {
-//				if(r.hasNonTerminal(oldName)) {
-//					r.newReplacedNonTerminal(oldName, newName);
-//				}
-//			}
-//		}
-//	}
-
-	
-	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
-		return null;
-	}
-	@Override
-	public void visit(GrammarVisitor visitor) {
-		// TODO Auto-generated method stub
-		
-	}
-	@Override
-	public boolean simpleMatch(ParsingContext context) {
-		// TODO Auto-generated method stub
-		return false;
-	}
 }

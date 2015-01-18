@@ -2,6 +2,7 @@ package org.peg4d.expression;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTag;
+import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingIsa extends ParsingCommand {
@@ -10,6 +11,10 @@ public class ParsingIsa extends ParsingCommand {
 		super("isa");
 		this.tableType = tableType;
 		this.minlen = 1;
+	}
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return true;
 	}
 	@Override
 	public String getParameters() {

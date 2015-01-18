@@ -4,6 +4,8 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTag;
+import org.peg4d.ReportLevel;
+import org.peg4d.UList;
 import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
@@ -12,6 +14,13 @@ public class ParsingDef extends ParsingFunction {
 	ParsingDef(int tableId, ParsingExpression inner) {
 		super("def", inner);
 		this.tableId = tableId;
+	}
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		if(!this.checkAlwaysConsumed(startNonTerminal, stack)) {
+			this.report(ReportLevel.warning, "unconsumed expression: " + this.inner);
+		}
+		return true;
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {

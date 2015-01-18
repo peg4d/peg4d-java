@@ -3,6 +3,7 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingMatch extends ParsingFunction {
@@ -10,12 +11,16 @@ public class ParsingMatch extends ParsingFunction {
 		super("match", inner);
 	}
 	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return this.get(0).checkAlwaysConsumed(startNonTerminal, stack);
+	}
+	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
-//		ParsingExpression e = inner.normalizeImpl(true, flagMap, withoutMap);
-//		if(e == inner) {
-//			return this;
-//		}
-//		return ParsingExpression.newMatch(e);
+	//		ParsingExpression e = inner.normalizeImpl(true, flagMap, withoutMap);
+	//		if(e == inner) {
+	//			return this;
+	//		}
+	//		return ParsingExpression.newMatch(e);
 		return inner.norm(true, withoutMap);
 	}
 	@Override

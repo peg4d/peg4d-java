@@ -3,6 +3,7 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingValue extends ParsingExpression {
@@ -13,14 +14,16 @@ public class ParsingValue extends ParsingExpression {
 		this.minlen = 0;
 	}
 	@Override
-	public
-	boolean hasObjectOperation() {
-		return true;
+	public String getInternKey() {
+		return "`" + this.value;
 	}
 	@Override
-	public
-	String getInternKey() {
-		return "`" + this.value;
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return false;
+	}
+	@Override
+	public boolean hasObjectOperation() {
+		return true;
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {

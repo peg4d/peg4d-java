@@ -4,6 +4,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.UList;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.pegcode.GrammarVisitor;
 
@@ -14,7 +15,10 @@ public class EntryPoint extends ParsingExpression {
 	public EntryPoint(String ruleName) {
 		this.methodName = ruleName;
 	}
-
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		throw new RuntimeException("TODO");
+	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
 		return this;

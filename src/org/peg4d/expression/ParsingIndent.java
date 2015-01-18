@@ -2,12 +2,17 @@ package org.peg4d.expression;
 
 import org.peg4d.PEG4d;
 import org.peg4d.ParsingContext;
+import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingIndent extends ParsingCommand {
 	ParsingIndent() {
 		super("indent");
 		this.minlen = 0;
+	}
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return false;
 	}
 	@Override
 	public short acceptByte(int ch) {

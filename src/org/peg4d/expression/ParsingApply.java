@@ -3,6 +3,7 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.UList;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingApply extends ParsingFunction {
@@ -10,8 +11,11 @@ public class ParsingApply extends ParsingFunction {
 		super("apply", inner);
 	}
 	@Override
-	public
-	boolean hasObjectOperation() {
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		throw new RuntimeException("TODO");
+	}
+	@Override
+	public boolean hasObjectOperation() {
 		return true;
 	}
 	@Override
