@@ -19,6 +19,14 @@ public class ParsingIf extends ParsingFunction {
 		return false;
 	}
 	@Override
+	public ParsingExpression removeParsingFlag(TreeMap<String,String> withoutMap) {
+		if(withoutMap != null && withoutMap.containsKey(flagName)) {
+			return ParsingExpression.newFailure(this);
+		}
+		return this;
+	}
+
+	@Override
 	public String getParameters() {
 		return " " + this.flagName;
 	}

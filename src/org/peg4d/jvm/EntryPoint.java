@@ -58,4 +58,12 @@ public class EntryPoint extends ParsingExpression {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	@Override
+	public ParsingExpression transformPEG() {
+		return this;
+	}
+	@Override
+	public ParsingExpression removeParsingFlag(TreeMap<String, String> withoutMap) {
+		return this;
+	}
 }

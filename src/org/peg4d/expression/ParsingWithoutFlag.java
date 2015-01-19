@@ -16,6 +16,20 @@ public class ParsingWithoutFlag extends ParsingFunction {
 	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
 		return inner.checkAlwaysConsumed(startNonTerminal, stack);
 	}
+	
+	@Override
+	public ParsingExpression removeParsingFlag(TreeMap<String,String> withoutMap) {
+		boolean addWithout = false;
+		if(withoutMap != null && !withoutMap.containsKey(flagName)) {
+			withoutMap.put(flagName, flagName);
+			addWithout = true;
+		}
+		ParsingExpression e = inner.removeParsingFlag(withoutMap);
+		if(addWithout) {
+			withoutMap.remove(flagName);
+		}
+		return e;
+	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		boolean addWithout = false;

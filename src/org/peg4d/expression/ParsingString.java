@@ -25,6 +25,14 @@ public class ParsingString extends ParsingExpression {
 		return utf8.length > 0;
 	}
 	@Override
+	public ParsingExpression transformPEG() {
+		return this;
+	}
+	@Override
+	public ParsingExpression removeParsingFlag(TreeMap<String, String> withoutMap) {
+		return this;
+	}
+	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
 		return this;
 	}

@@ -26,6 +26,7 @@ public class ParsingAnd extends ParsingUnary {
 		}
 		return ParsingExpression.newAnd(e);
 	}
+
 	@Override
 	public void visit(GrammarVisitor visitor) {
 		visitor.visitAnd(this);

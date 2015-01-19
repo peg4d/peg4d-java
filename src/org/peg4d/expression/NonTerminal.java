@@ -39,7 +39,6 @@ public class NonTerminal extends ParsingExpression {
 		}
 		return r.checkAlwaysConsumed(startNonTerminal, stack);
 	}
-	
 	public int typeCheck(int typeStatus) {
 		ParsingRule r = this.getRule();
 		int ruleType = r.type;
@@ -51,7 +50,60 @@ public class NonTerminal extends ParsingExpression {
 		}
 		return typeStatus;
 	}
+	@Override
+	public ParsingExpression transformPEG() {
+		ParsingRule rule = this.getRule();
+		throw new RuntimeException("TODO");
+//		ParsingRule pureRule = this.peg.getPureRule(this.ruleName);
+//		if(rule != pureRule) {
+//			return new NonTerminal(peg, pureRule.ruleName).intern();
+//		}
+	//	return this;
+	}
+	@Override
+	public ParsingExpression removeParsingFlag(TreeMap<String,String> withoutMap) {
+		if(withoutMap != null && withoutMap.size() > 0) {
+			ParsingRule rule = this.getRule();
+			StringBuilder sb = new StringBuilder();
+			int loc = this.ruleName.indexOf('!');
+			if(loc > 0) {
+				sb.append(this.ruleName.substring(0, loc));
+			}
+			else {
+				sb.append(this.ruleName);
+			}
+			for(String flag: withoutMap.keySet()) {
+				if(ParsingExpression.hasReachableIf(rule.expr, flag)) {
+					sb.append("!");
+					sb.append(this.ruleName);
+				}
+			}
+			String rName = sb.toString();
+			ParsingRule rRule = peg.getRule(rName);
+			if(rRule == null) {
+				rRule = peg.newRule(rName, ParsingExpression.newEmpty());
+				rRule.expr = rule.expr.removeParsingFlag(withoutMap);
+			}
+			return (rRule == rule) ? this : new NonTerminal(peg, rRule.ruleName).intern();
+		}
+		return this;
+	}
 	
+	@Override
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		NonTerminal ne = this;
+		ParsingRule rule = ne.getRule();
+		String optName = ParsingRule.toOptionName(rule, lexOnly, withoutMap);
+		if(ne.peg.getRule(optName) != rule) {
+			ne.peg.makeOptionRule(rule, optName, lexOnly, withoutMap);
+			ne = ne.peg.newNonTerminal(optName);
+			//System.out.println(rule.ruleName + "@=>" + optName);
+		}
+		if(isExpectedConnector()) {
+			 return ParsingExpression.newConnector(ne, -1);
+		}
+		return ne;
+	}
 	@Override
 	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
 		NonTerminal ne = this;
@@ -106,21 +158,6 @@ public class NonTerminal extends ParsingExpression {
 	boolean hasObjectOperation() {
 		ParsingRule r = this.getRule();
 		return r.type == ParsingRule.OperationRule;
-	}
-	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
-		NonTerminal ne = this;
-		ParsingRule rule = ne.getRule();
-		String optName = ParsingRule.toOptionName(rule, lexOnly, withoutMap);
-		if(ne.peg.getRule(optName) != rule) {
-			ne.peg.makeOptionRule(rule, optName, lexOnly, withoutMap);
-			ne = ne.peg.newNonTerminal(optName);
-			//System.out.println(rule.ruleName + "@=>" + optName);
-		}
-		if(isExpectedConnector()) {
-			 return ParsingExpression.newConnector(ne, -1);
-		}
-		return ne;
 	}
 
 	public final String getUniqueName() {

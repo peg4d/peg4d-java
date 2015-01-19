@@ -14,7 +14,7 @@ public class ParsingChoice extends ParsingList {
 	@Override
 	public
 	String getInterningKey() {
-		return "|";
+		return "/";
 	}
 	@Override
 	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
@@ -30,6 +30,32 @@ public class ParsingChoice extends ParsingList {
 		return afterAll;
 	}
 	@Override
+	public ParsingExpression transformPEG() {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
+		for(ParsingExpression e : this) {
+			ParsingExpression.addChoice(l, e.transformPEG());
+		}
+		return ParsingExpression.newChoice(l);
+	}
+	@Override
+	public ParsingExpression removeParsingFlag(TreeMap<String, String> withoutMap) {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
+		for(ParsingExpression e : this) {
+			ParsingExpression.addChoice(l, e.removeParsingFlag(withoutMap));
+		}
+		return ParsingExpression.newChoice(l);
+	}
+	@Override
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
+		for(int i = 0; i < this.size(); i++) {
+			ParsingExpression e = get(i).norm(lexOnly, withoutMap);
+			ParsingExpression.addChoice(l, e);
+		}
+		return ParsingExpression.newChoice(l);
+	}
+
+	@Override
 	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
 		int lmin = Integer.MAX_VALUE;
 		for(int i = 0; i < this.size(); i++) {
@@ -40,15 +66,6 @@ public class ParsingChoice extends ParsingList {
 		}
 		this.minlen = lmin - minlen;
 		return minlen + this.minlen;
-	}
-	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
-		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
-		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = get(i).norm(lexOnly, withoutMap);
-			ParsingExpression.addChoice(l, e);
-		}
-		return ParsingExpression.newChoice(l);
 	}
 
 	@Override

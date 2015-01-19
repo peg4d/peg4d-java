@@ -95,6 +95,12 @@ public class Grammar {
 		}
 	}
 	
+	public final ParsingRule newRule(String name, ParsingExpression e) {
+		ParsingRule r = new ParsingRule(this, name, null, e);
+		this.ruleMap.put(name, r);
+		return r;
+	}
+	
 	public int getRuleSize() {
 		return this.ruleMap.size();
 	}
@@ -295,6 +301,7 @@ public class Grammar {
 	public final ParsingTag newStartTag() {
 		return model.get("Text");
 	}
+
 
 }
 

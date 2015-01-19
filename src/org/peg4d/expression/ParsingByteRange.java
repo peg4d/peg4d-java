@@ -25,6 +25,14 @@ public class ParsingByteRange extends ParsingExpression {
 		return true;
 	}
 	@Override
+	public ParsingExpression transformPEG() {
+		return this;
+	}
+	@Override
+	public ParsingExpression removeParsingFlag(TreeMap<String, String> withoutMap) {
+		return this;
+	}
+	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
 		return this;
 	}

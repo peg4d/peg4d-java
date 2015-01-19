@@ -31,6 +31,7 @@ public abstract class ParsingList extends ParsingExpression {
 		this.inners[i] = this.inners[j];
 		this.inners[j] = e;
 	}
+	
 	@Override
 	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
 		for(ParsingExpression e: this) {
@@ -40,17 +41,15 @@ public abstract class ParsingList extends ParsingExpression {
 		}
 		return false;
 	}
-//
-//	protected final String uniqueKey() {
-//		StringBuilder sb = new StringBuilder();
-//		for(int i = 0; i < this.size(); i++) {
-//			ParsingExpression e = this.get(i).intern();
-//			set(i, e);
-//			sb.append(e.internId);
-//			sb.append(":");
-//		}
-//		return sb.toString();
-//	}
+
+	@Override
+	public ParsingExpression transformPEG() {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
+		for(ParsingExpression e : this) {
+			ParsingExpression.addSequence(l, e.transformPEG());
+		}
+		return ParsingExpression.newSequence(l);
+	}
 	
 	@Override
 	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {

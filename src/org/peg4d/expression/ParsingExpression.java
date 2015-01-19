@@ -27,30 +27,39 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	protected ParsingExpression() {
 		this.matcher = this;
 	}
-	
-	public int    internId   = 0;
-	//public abstract String getInternKey();
-
-	public final boolean isInterned() {
-		return (this.internId > 0);
-	}
-
-	public abstract String getInterningKey();
 
 	public Recognizer  matcher;
 	public final boolean isOptimized() {
 		return (this.matcher != this);
 	}
 
+	public int    internId   = 0;
+	public final boolean isInterned() {
+		return (this.internId > 0);
+	}
+	public abstract String getInterningKey();
 	public final ParsingExpression intern() {
 		return ParsingExpression.intern(this);
 	}
-
 	public boolean isAlwaysConsumed() {
 		return this.checkAlwaysConsumed(null, null);
 	}
-
 	public abstract boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack);
+
+	//public abstract boolean updatedRule(ParsingRule rule);
+	
+//	final has(ExpressionPattern p) {
+//		if(p.preCheck()) {
+//			return true;
+//		}
+//		for(Expression e : this) {
+//			if(e.has(p)) {
+//				return true;
+//			}
+//		}
+//		return p.check();
+//	}
+	
 //	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
 //		return false;
 //	}
@@ -100,6 +109,9 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 	
 	public abstract ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap);	
+	public abstract ParsingExpression transformPEG();
+	public abstract ParsingExpression removeParsingFlag(TreeMap<String,String> withoutMap);	
+
 	// Expr[Expr -> Expr2]
 	// public abstract ParsingExpression replace(Grammar peg, String oldName, String newName, UMap<ParsingRule>  visited);
 
@@ -171,15 +183,15 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 		}
 	}
 		
-	private static boolean checkRecursion(String uName, UList<String> stack) {
-		for(int i = 0; i < stack.size() - 1; i++) {
-			if(uName.equals(stack.ArrayValues[i])) {
-				return true;
-			}
-		}
-		return false;
-	}
-
+//	private static boolean checkRecursion(String uName, UList<String> stack) {
+//		for(int i = 0; i < stack.size() - 1; i++) {
+//			if(uName.equals(stack.ArrayValues[i])) {
+//				return true;
+//			}
+//		}
+//		return false;
+//	}
+//
 //	public static int checkLeftRecursion(ParsingExpression e, String uName, int start, int minlen, UList<String> stack) {
 //		if(e instanceof NonTerminal) {
 //			NonTerminal ne = (NonTerminal) e;
@@ -271,7 +283,38 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	public static boolean containFlag(ParsingExpression e, String flagName) {
 		return containFlag(e, flagName, new UMap<String>());
 	}
-		
+
+	static boolean hasReachableIf(ParsingExpression e, String flagName, UMap<String> visited) {
+		if(e instanceof ParsingWithFlag) {
+			if(flagName.equals(((ParsingWithFlag) e).flagName)) {
+				return false;
+			}
+		}
+		for(ParsingExpression se : e) {
+			if(hasReachableIf(se, flagName, visited)) {
+				return true;
+			}
+		}
+		if(e instanceof ParsingIf) {
+			return flagName.equals(((ParsingIf) e).flagName);
+		}
+		if(e instanceof NonTerminal) {
+			NonTerminal ne = (NonTerminal)e;
+			String un = ne.getUniqueName();
+			if(!visited.hasKey(un)) {
+				visited.put(un, un);
+				ParsingRule r = ne.getRule();
+				return hasReachableIf(r.expr, flagName, visited);
+			}
+		}
+		return false;
+	}
+
+	public static boolean hasReachableIf(ParsingExpression e, String flagName) {
+		return hasReachableIf(e, flagName, new UMap<String>());
+	}
+	
+	
 	protected final static int checkObjectConstruction(ParsingExpression e, int status) {
 		if(status == ParsingRule.ReservedRule) {
 			return status;
@@ -794,6 +837,24 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 			e = e.intern();
 		}
 		return e;
+	}
+	public static ParsingExpression dupUnary(ParsingUnary u, ParsingExpression e) {
+		if(u.inner != e) {
+			if(u instanceof ParsingNot) {
+				return newNot(e);
+			}
+			if(u instanceof ParsingOption) {
+				return newOption(e);
+			}
+			if(u instanceof ParsingRepetition) {
+				return newRepetition(e);
+			}
+			if(u instanceof ParsingAnd) {
+				return newAnd(e);
+			}
+			throw new RuntimeException("undefined unary: " + u);
+		}
+		return u;
 	}
 }
 

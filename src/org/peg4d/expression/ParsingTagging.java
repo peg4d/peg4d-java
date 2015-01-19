@@ -23,6 +23,14 @@ public class ParsingTagging extends ParsingExpression {
 		return false;
 	}
 	@Override
+	public ParsingExpression transformPEG() {
+		return this;
+	}
+	@Override
+	public ParsingExpression removeParsingFlag(TreeMap<String, String> withoutMap) {
+		return this;
+	}
+	@Override
 	public boolean hasObjectOperation() {
 		return true;
 	}
