@@ -115,6 +115,9 @@ int match(ParsingContext ctx, long pos, char *utf8, int utf8_length);
 int matchSymbolTableTop(ParsingContext ctx, long *pos, int tableType);
 int matchSymbolTable(ParsingContext ctx, long *pos, int tableType);
 
+char *getIndentText(ParsingContext ctx, const char *inputs, long from,
+                    long *len);
+long getLineStartPosition(ParsingContext ctx, const char *inputs, long from);
 // static void P4D_consume(long *pos, long length)
 // {
 //     *pos += length;

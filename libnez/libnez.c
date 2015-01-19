@@ -188,3 +188,45 @@ int matchSymbolTable(ParsingContext ctx, long *pos, int tableType) {
   }
   return 1;
 }
+
+char *getIndentText(ParsingContext ctx, const char *inputs, long from,
+                    long *len) {
+  long start = getLineStartPosition(ctx, inputs, from);
+  long i = start;
+  int pos = 0;
+  *len = from - start;
+  char *indent = (char *)malloc(*len);
+  for (; i < from; i++) {
+    char ch = inputs[i];
+    if (ch != ' ' && ch != '\t') {
+      if (i + 1 != from) {
+        for (long j = i; j < from; j++) {
+          indent[pos++] = ' ';
+        }
+        break;
+      }
+    } else {
+      indent[pos++] = inputs[i];
+    }
+  }
+  return indent;
+}
+
+long getLineStartPosition(ParsingContext ctx, const char *inputs, long from) {
+  long startIndex = from;
+  if (!(startIndex < ctx->input_size)) {
+    startIndex = ctx->input_size - 1;
+  }
+  if (startIndex < 0) {
+    startIndex = 0;
+  }
+  while (startIndex > 0) {
+    char ch = inputs[startIndex];
+    if (ch == '\n') {
+      startIndex = startIndex + 1;
+      break;
+    }
+    startIndex = startIndex - 1;
+  }
+  return startIndex;
+}

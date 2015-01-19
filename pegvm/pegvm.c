@@ -671,6 +671,22 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     failflag = matchSymbolTable(context, &pos, pc->ndata[0]);
     DISPATCH_NEXT;
   }
+  OP(BLOCKSTART) {
+    long len;
+    PUSH_SP(context->stateValue);
+    char *value = getIndentText(context, inputs, pos, &len);
+    PUSH_SP(pushSymbolTable(context, pc->ndata[0], (int)len, value));
+    DISPATCH_NEXT;
+  }
+  OP(BLOCKEND) {
+    popSymbolTable(context, (int)POP_SP());
+    context->stateValue = (int)POP_SP();
+    DISPATCH_NEXT;
+  }
+  OP(INDENT) {
+    matchSymbolTableTop(context, &pos, pc->ndata[0]);
+    DISPATCH_NEXT;
+  }
   OP(NOTBYTE) {
     if (inputs[pos] != *(pc)->ndata) {
       DISPATCH_NEXT;

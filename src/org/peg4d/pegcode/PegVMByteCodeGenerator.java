@@ -8,6 +8,7 @@ import java.util.HashMap;
 
 import org.peg4d.Grammar;
 import org.peg4d.Main;
+import org.peg4d.PEG4d;
 import org.peg4d.ParsingRule;
 import org.peg4d.UList;
 import org.peg4d.expression.NonTerminal;
@@ -116,7 +117,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		// byte code (m byte)
 		for(int i = 0; i < codeList.size(); i++) {
 			Opcode code = codeList.ArrayValues[i];
-			if (code.inst.equals(Instruction.SCAN)) {
+			if (code.inst.equals(Instruction.INDENT)) {
 				int a;
 				a = 1;
 			}
@@ -1147,12 +1148,14 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitBlock(ParsingBlock e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		writeCode(Instruction.BLOCKSTART, PEG4d.Indent);
+		e.inner.visit(this);
+		writeCode(Instruction.BLOCKEND);
 	}
 
 	@Override
 	public void visitIndent(ParsingIndent e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+		writeCode(Instruction.INDENT, PEG4d.Indent);
 	}
 
 	@Override
