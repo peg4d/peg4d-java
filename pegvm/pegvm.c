@@ -130,12 +130,37 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
   }
   info.filename[info.filename_length] = 0;
   info.pool_size_info = read32(buf, &info);
+
+  int ruleSize = read32(buf, &info);
+  char **ruleTable = (char **)malloc(sizeof(char *) * ruleSize);
+  for (int i = 0; i < ruleSize; i++) {
+    int ruleNameLen = read32(buf, &info);
+    ruleTable[i] = (char *)malloc(ruleNameLen);
+    for (int j = 0; j < ruleNameLen; j++) {
+      ruleTable[i][j] = buf[info.pos++];
+    }
+    long index = read64(buf, &info);
+    if (nonTerminalName != NULL) {
+      if (!strcmp(ruleTable[i], nonTerminalName)) {
+        context->startPoint = index;
+      }
+    }
+  }
+
+  if (context->startPoint == 0) {
+    context->startPoint = 1;
+  }
+
   info.bytecode_length = read64(buf, &info);
 
   // dump byte code infomation
   dump_byteCodeInfo(&info);
 
+  // free bytecode info
   free(info.filename);
+  for (int i = 0; i < ruleSize; i++) {
+    free(ruleTable[i]);
+  }
 
   // memset(inst, 0, sizeof(*inst) * info.bytecode_length);
   inst = malloc(sizeof(*inst) * info.bytecode_length);
@@ -203,6 +228,7 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
 void nez_CreateParsingContext(ParsingContext this, const char *filename) {
   memset(this, 0, sizeof(*this));
   this->pos = this->input_size = 0;
+  this->startPoint = 0;
   this->inputs = loadFile(filename, &this->input_size);
   this->stackedSymbolTable =
       (SymbolTableEntry)malloc(sizeof(struct SymbolTableEntry) * 256);
@@ -502,7 +528,7 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
   int failflag = 0;
   ParsingObject left = context->left;
   long pos = context->pos;
-  Instruction *pc = inst + 1;
+  Instruction *pc = inst + context->startPoint;
   const char *inputs = context->inputs;
 
   PUSH_IP(context, inst);

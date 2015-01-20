@@ -4,6 +4,7 @@ import java.io.BufferedOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.peg4d.Grammar;
@@ -61,12 +62,18 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	int scanCount = 0;
 	Grammar peg;
 	
+	class EntryRule {
+		String ruleName;
+		long entryPoint;
+	}
+	
 	UList<Opcode> codeList = new UList<Opcode>(new Opcode[256]);
 	UList<Opcode> optimizedCodeList = new UList<Opcode>(new Opcode[256]);
 	HashMap<Integer,Integer> labelMap = new HashMap<Integer,Integer>();
 	HashMap<String, Integer> callMap = new HashMap<String, Integer>();
 	HashMap<String, Integer> ruleMap = new HashMap<String, Integer>();
 	HashMap<String, Integer> repeatMap = new HashMap<String, Integer>();
+	ArrayList<EntryRule> ruleList = new ArrayList<EntryRule>();
 	
 	public void writeByteCode(String grammerfileName, String outputFileName, Grammar peg) {
 		generateProfileCode(peg);
@@ -110,6 +117,51 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		pos++;
 		byteCode[pos] = (byte) (0x000000ff & (poolSizeInfo >> 24));
 		pos++;
+		
+		// rule table
+		int ruleSize = ruleList.size();
+		byteCode[pos] = (byte) (0x000000ff & (ruleSize));
+		pos++;
+		byteCode[pos] = (byte) (0x000000ff & (ruleSize >> 8));
+		pos++;
+		byteCode[pos] = (byte) (0x000000ff & (ruleSize >> 16));
+		pos++;
+		byteCode[pos] = (byte) (0x000000ff & (ruleSize >> 24));
+		pos++;
+		for(int i = 0; i < ruleList.size(); i++) {
+			EntryRule rule = ruleList.get(i);
+			byte[] ruleName = rule.ruleName.getBytes();
+			int ruleNamelen = ruleName.length;
+			long entryPoint = rule.entryPoint;
+			byteCode[pos] = (byte) (0x000000ff & (ruleNamelen));
+			pos++;
+			byteCode[pos] = (byte) (0x000000ff & (ruleNamelen >> 8));
+			pos++;
+			byteCode[pos] = (byte) (0x000000ff & (ruleNamelen >> 16));
+			pos++;
+			byteCode[pos] = (byte) (0x000000ff & (ruleNamelen >> 24));
+			pos++;
+			for(int j = 0; j < ruleName.length; j++) {
+				byteCode[pos] = ruleName[j];
+				pos++;
+			}
+			byteCode[pos] = (byte) (0x000000ff & (entryPoint));
+			pos++;
+			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 8));
+			pos++;
+			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 16));
+			pos++;
+			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 24));
+			pos++;
+			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 32));
+			pos++;
+			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 40));
+			pos++;
+			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 48));
+			pos++;
+			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 56));
+			pos++;
+		}
 
 		int bytecodelen_pos = pos;
 		pos = pos + 8;
@@ -819,12 +871,20 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		this.formatHeader();
 		for(ParsingRule r: peg.getRuleList()) {
 			if (r.ruleName.equals("File")) {
+				EntryRule entry = new EntryRule();
+				entry.ruleName = r.ruleName;
+				entry.entryPoint = this.codeIndex;
+				ruleList.add(entry);
 				this.formatRule(r, sb);		//string builder is not used.
 				break;
 			}
 		}
 		for(ParsingRule r: peg.getRuleList()) {
 			if (!r.ruleName.equals("File")) {
+				EntryRule entry = new EntryRule();
+				entry.ruleName = r.ruleName;
+				entry.entryPoint = this.codeIndex;
+				ruleList.add(entry);
 				if (!r.ruleName.startsWith("\"")) {
 					this.formatRule(r, sb);		//string builder is not used.
 				}
