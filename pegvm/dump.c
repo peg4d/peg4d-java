@@ -27,12 +27,8 @@ void dump_pego(ParsingObject *pego, char *source, int level) {
       for (i = 0; i < level; i++) {
         fprintf(stderr, "  ");
       }
-      free(pego[0]->child);
-      pego[0]->child = NULL;
     }
     fprintf(stderr, "}\n");
-    // free(pego[0]);
-    // pego[0] = NULL;
   } else {
     fprintf(stderr, "%p tag:null\n", pego);
   }
@@ -64,12 +60,8 @@ void dump_pego_file(FILE *file, ParsingObject *pego, char *source, int level) {
       for (i = 0; i < level; i++) {
         fprintf(file, " ");
       }
-      free(pego[0]->child);
-      pego[0]->child = NULL;
     }
     fprintf(file, "}\n");
-    // free(pego[0]);
-    // pego[0] = NULL;
   } else {
     fprintf(file, "%p tag:null\n", pego);
   }

@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <sys/time.h> // gettimeofday
 #include <string.h>
 #include <assert.h>
 #include <unistd.h>
@@ -8,29 +7,13 @@
 #include "pegvm.h"
 
 extern void PegVM_PrintProfile(const char *file_type);
-struct Instruction *loadByteCodeFile(ParsingContext context,
-                                     struct Instruction *inst,
-                                     const char *fileName);
+struct Instruction *nez_LoadMachineCode(ParsingContext context,
+                                        struct Instruction *inst,
+                                        const char *fileName,
+                                        const char *nonTerminalName);
 
-void dump_pego(ParsingObject *pego, char *source, int level);
 void dump_json_file(FILE *file, ParsingObject *pego, char *source, int level);
 void dump_pego_file(FILE *file, ParsingObject *pego, char *source, int level);
-
-static uint64_t timer() {
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  return tv.tv_sec * 1000 + tv.tv_usec / 1000;
-}
-
-static void peg_usage(const char *file) {
-  fprintf(stderr, "Usage: %s -f peg_bytecode target_file\n", file);
-  exit(EXIT_FAILURE);
-}
-
-static void peg_error(const char *errmsg) {
-  fprintf(stderr, "%s\n", errmsg);
-  exit(EXIT_FAILURE);
-}
 
 int main(int argc, char *const argv[]) {
   struct ParsingContext context;
@@ -66,34 +49,18 @@ int main(int argc, char *const argv[]) {
     peg_error("not input syntaxfile");
   }
   input_file = argv[0];
-  ParsingContext_Init(&context, input_file);
-  inst = loadByteCodeFile(&context, inst, syntax_file);
+  nez_CreateParsingContext(&context, input_file);
+  inst = nez_LoadMachineCode(&context, inst, syntax_file, "String");
   uint64_t bytecode_length = context.bytecode_length;
-  MemoryPool_Init(&pool, context.pool_size * context.input_size / 100);
+  nez_CreateMemoryPool(&pool, context.pool_size * context.input_size / 100);
   inst = PegVM_Prepare(&context, inst, &pool);
   if (output_type == NULL || !strcmp(output_type, "pego")) {
-    uint64_t start, end;
-    context.bytecode_length = bytecode_length;
-    start = timer();
-    if (PegVM_Execute(&context, inst, &pool)) {
-      peg_error("parse error");
-    }
-    end = timer();
-    dump_pego(&context.left, context.inputs, 0);
-    fprintf(stderr, "ErapsedTime: %llu msec\n", end - start);
+    ParsingObject po = nez_Parse(&context, inst, &pool);
+    nez_DisposeObject(&po);
+  } else if (!strcmp(output_type, "match")) {
+    nez_Match(&context, inst, &pool);
   } else if (!strcmp(output_type, "stat")) {
-    for (int i = 0; i < 20; i++) {
-      uint64_t start, end;
-      MemoryPool_Reset(&pool);
-      start = timer();
-      if (PegVM_Execute(&context, inst, &pool)) {
-        peg_error("parse error");
-      }
-      end = timer();
-      fprintf(stderr, "ErapsedTime: %llu msec\n", end - start);
-      dispose_pego(&context.left);
-      context.pos = 0;
-    }
+    nez_ParseStat(&context, inst, &pool);
   } else if (!strcmp(output_type, "file")) {
     context.bytecode_length = bytecode_length;
     char output_file[256] = "dump_parsed_";
@@ -123,6 +90,7 @@ int main(int argc, char *const argv[]) {
       assert(0 && "can not open file");
     }
     dump_pego_file(file, &context.left, context.inputs, 0);
+    nez_DisposeObject(&context.left);
     fclose(file);
   } else if (!strcmp(output_type, "json")) {
     context.bytecode_length = bytecode_length;
@@ -153,11 +121,12 @@ int main(int argc, char *const argv[]) {
       assert(0 && "can not open file");
     }
     dump_json_file(file, &context.left, context.inputs, 0);
+    nez_DisposeObject(&context.left);
     fclose(file);
   }
   PegVM_PrintProfile(file_type);
-  MemoryPool_Dispose(&pool);
-  ParsingContext_Dispose(&context);
+  nez_DisposeMemoryPool(&pool);
+  nez_DisposeParsingContext(&context);
   free(inst);
   inst = NULL;
   return 0;

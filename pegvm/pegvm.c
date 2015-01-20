@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <time.h>
+#include <sys/time.h> // gettimeofday
 #include <assert.h>
 #include <string.h>
 #include "libnez.h"
@@ -8,6 +8,22 @@
 #ifdef DHAVE_CONFIG_H
 #include "config.h"
 #endif
+
+uint64_t timer() {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
+void peg_usage(const char *file) {
+  fprintf(stderr, "Usage: %s -f peg_bytecode target_file\n", file);
+  exit(EXIT_FAILURE);
+}
+
+void peg_error(const char *errmsg) {
+  fprintf(stderr, "%s\n", errmsg);
+  exit(EXIT_FAILURE);
+}
 
 static char *loadFile(const char *filename, size_t *length) {
   size_t len = 0;
@@ -95,9 +111,10 @@ static uint64_t read64(char *inputs, byteCodeInfo *info) {
   return value2 << 32 | value1;
 }
 
-PegVMInstruction *loadByteCodeFile(ParsingContext context,
-                                   PegVMInstruction *inst,
-                                   const char *fileName) {
+PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
+                                      PegVMInstruction *inst,
+                                      const char *fileName,
+                                      const char *nonTerminalName) {
   size_t len;
   char *buf = loadFile(fileName, &len);
   int j = 0;
@@ -143,8 +160,6 @@ PegVMInstruction *loadByteCodeFile(ParsingContext context,
         inst[i].ndata[0] = read32(buf, &info);
         inst[i].ndata[1] = read32(buf, &info);
       } else {
-        //              inst[i].ndata = malloc(sizeof(int) * (code_length + 1));
-        //              inst[i].ndata.len = code_length;
         inst[i].ndata = malloc(sizeof(int));
         inst[i].ndata[0] = code_length;
         inst[i].chardata = malloc(sizeof(int) * code_length);
@@ -185,7 +200,7 @@ PegVMInstruction *loadByteCodeFile(ParsingContext context,
   return inst;
 }
 
-void ParsingContext_Init(ParsingContext this, const char *filename) {
+void nez_CreateParsingContext(ParsingContext this, const char *filename) {
   memset(this, 0, sizeof(*this));
   this->pos = this->input_size = 0;
   this->inputs = loadFile(filename, &this->input_size);
@@ -203,11 +218,11 @@ void ParsingContext_Init(ParsingContext this, const char *filename) {
   this->call_stack_pointer = &this->call_stack_pointer_base[0];
 }
 
-void dispose_pego(ParsingObject *pego) {
+void nez_DisposeObject(ParsingObject *pego) {
   if (pego[0] != NULL) {
     if (pego[0]->child_size != 0) {
       for (int i = 0; i < pego[0]->child_size; i++) {
-        dispose_pego(&pego[0]->child[i]);
+        nez_DisposeObject(&pego[0]->child[i]);
       }
       free(pego[0]->child);
       pego[0]->child = NULL;
@@ -217,7 +232,7 @@ void dispose_pego(ParsingObject *pego) {
   }
 }
 
-void ParsingContext_Dispose(ParsingContext this) {
+void nez_DisposeParsingContext(ParsingContext this) {
   free(this->inputs);
   this->inputs = NULL;
   free(this->stackedSymbolTable);
@@ -429,6 +444,38 @@ void PegVM_PrintProfile(const char *file_type) {
     }
   }
 #endif
+}
+
+ParsingObject nez_Parse(ParsingContext context, Instruction *inst,
+                        MemoryPool pool) {
+  if (PegVM_Execute(context, inst, pool)) {
+    peg_error("parse error");
+  }
+  dump_pego(&context->left, context->inputs, 0);
+  return context->left;
+}
+
+void nez_ParseStat(ParsingContext context, Instruction *inst, MemoryPool pool) {
+  for (int i = 0; i < 20; i++) {
+    uint64_t start, end;
+    MemoryPool_Reset(pool);
+    start = timer();
+    if (PegVM_Execute(context, inst, pool)) {
+      peg_error("parse error");
+    }
+    end = timer();
+    fprintf(stderr, "ErapsedTime: %llu msec\n", end - start);
+    nez_DisposeObject(&context->left);
+    context->pos = 0;
+  }
+}
+
+void nez_Match(ParsingContext context, Instruction *inst, MemoryPool pool) {
+  if (PegVM_Execute(context, inst, pool)) {
+    peg_error("parse error");
+  }
+  fprintf(stdout, "match\n\n");
+  nez_DisposeObject(&context->left);
 }
 
 Instruction *PegVM_Prepare(ParsingContext context, Instruction *inst,

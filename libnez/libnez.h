@@ -45,6 +45,7 @@ struct ParsingContext {
 
   long bytecode_length;
   size_t pool_size;
+  long startPoint;
 
   long *stack_pointer;
   struct ParsingObject **object_stack_pointer;
@@ -70,9 +71,9 @@ struct MemoryPool {
 
 typedef struct MemoryPool *MemoryPool;
 
-extern MemoryPool MemoryPool_Init(MemoryPool mpool, size_t init_size);
+extern MemoryPool nez_CreateMemoryPool(MemoryPool mpool, size_t init_size);
 extern void MemoryPool_Reset(MemoryPool mpool);
-extern void MemoryPool_Dispose(MemoryPool mpool);
+extern void nez_DisposeMemoryPool(MemoryPool mpool);
 
 static inline ParsingObject MemoryPool_AllocParsingObject(MemoryPool mpool) {
   assert(mpool->oidx < mpool->init_size);
@@ -86,13 +87,13 @@ static inline ParsingLog MemoryPool_AllocParsingLog(MemoryPool mpool) {
 
 ParsingObject P4D_newObject(ParsingContext ctx, long start, MemoryPool pool);
 void P4D_setObject(ParsingContext ctx, ParsingObject *var, ParsingObject o);
-void dispose_pego(ParsingObject *pego);
+void nez_DisposeObject(ParsingObject *pego);
 
 #define PARSING_CONTEXT_MAX_ERROR_LENGTH 256
 #define PARSING_CONTEXT_MAX_STACK_LENGTH 1024
 
-void ParsingContext_Init(ParsingContext ctx, const char *filename);
-void ParsingContext_Dispose(ParsingContext ctx);
+void nez_CreateParsingContext(ParsingContext ctx, const char *filename);
+void nez_DisposeParsingContext(ParsingContext ctx);
 
 ParsingLog P4D_newLog(ParsingContext ctx, MemoryPool pool);
 void P4D_unuseLog(ParsingContext ctx, ParsingLog log);
