@@ -15,12 +15,18 @@ uint64_t timer() {
   return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
 
-void peg_usage(const char *file) {
-  fprintf(stderr, "Usage: %s -f peg_bytecode target_file\n", file);
+void nez_ShowUsage(const char *file) {
+  // fprintf(stderr, "Usage: %s -f peg_bytecode target_file\n", file);
+  fprintf(stderr, "\npegvm <command> optional files\n");
+  fprintf(stderr, "  -p <filename> Specify an PEGs grammar bytecode file\n");
+  fprintf(stderr, "  -i <filename> Specify an input file\n");
+  fprintf(stderr, "  -o <filename> Specify an output file\n");
+  fprintf(stderr, "  -t <type>     Specify an output type\n");
+  fprintf(stderr, "  -h            Display this help and exit\n\n");
   exit(EXIT_FAILURE);
 }
 
-void peg_error(const char *errmsg) {
+void nez_PrintErrorInfo(const char *errmsg) {
   fprintf(stderr, "%s\n", errmsg);
   exit(EXIT_FAILURE);
 }
@@ -225,23 +231,41 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
   return inst;
 }
 
-void nez_CreateParsingContext(ParsingContext this, const char *filename) {
-  memset(this, 0, sizeof(*this));
-  this->pos = this->input_size = 0;
-  this->startPoint = 0;
-  this->inputs = loadFile(filename, &this->input_size);
-  this->stackedSymbolTable =
+void nez_DisposeInstruction(Instruction *inst, long length) {
+  for (long i = 0; i < length; i++) {
+    if (inst[i].ndata != NULL) {
+      free(inst[i].ndata);
+      inst[i].ndata = NULL;
+    }
+    if (inst[i].chardata != NULL) {
+      free(inst[i].chardata);
+      inst[i].chardata = NULL;
+    }
+  }
+  free(inst);
+  inst = NULL;
+}
+
+ParsingContext nez_CreateParsingContext(ParsingContext ctx,
+                                        const char *filename) {
+  ctx = (ParsingContext)malloc(sizeof(struct ParsingContext));
+  ctx->pos = ctx->input_size = 0;
+  ctx->startPoint = 0;
+  ctx->mpool = (MemoryPool)malloc(sizeof(struct MemoryPool));
+  ctx->inputs = loadFile(filename, &ctx->input_size);
+  ctx->stackedSymbolTable =
       (SymbolTableEntry)malloc(sizeof(struct SymbolTableEntry) * 256);
-  // P4D_setObject(this, &this->left, P4D_newObject(this, this->pos));
-  this->stack_pointer_base =
+  // P4D_setObject(ctx, &ctx->left, P4D_newObject(ctx, ctx->pos));
+  ctx->stack_pointer_base =
       (long *)malloc(sizeof(long) * PARSING_CONTEXT_MAX_STACK_LENGTH);
-  this->object_stack_pointer_base = (ParsingObject *)malloc(
+  ctx->object_stack_pointer_base = (ParsingObject *)malloc(
       sizeof(ParsingObject) * PARSING_CONTEXT_MAX_STACK_LENGTH);
-  this->call_stack_pointer_base = (Instruction **)malloc(
+  ctx->call_stack_pointer_base = (Instruction **)malloc(
       sizeof(Instruction *) * PARSING_CONTEXT_MAX_STACK_LENGTH);
-  this->stack_pointer = &this->stack_pointer_base[0];
-  this->object_stack_pointer = &this->object_stack_pointer_base[0];
-  this->call_stack_pointer = &this->call_stack_pointer_base[0];
+  ctx->stack_pointer = &ctx->stack_pointer_base[0];
+  ctx->object_stack_pointer = &ctx->object_stack_pointer_base[0];
+  ctx->call_stack_pointer = &ctx->call_stack_pointer_base[0];
+  return ctx;
 }
 
 void nez_DisposeObject(ParsingObject *pego) {
@@ -258,18 +282,22 @@ void nez_DisposeObject(ParsingObject *pego) {
   }
 }
 
-void nez_DisposeParsingContext(ParsingContext this) {
-  free(this->inputs);
-  this->inputs = NULL;
-  free(this->stackedSymbolTable);
-  this->stackedSymbolTable = NULL;
-  free(this->call_stack_pointer_base);
-  this->call_stack_pointer_base = NULL;
-  free(this->stack_pointer_base);
-  this->stack_pointer_base = NULL;
-  free(this->object_stack_pointer_base);
-  this->object_stack_pointer_base = NULL;
-  // dispose_pego(&this->unusedObject);
+void nez_DisposeParsingContext(ParsingContext ctx) {
+  free(ctx->inputs);
+  ctx->inputs = NULL;
+  free(ctx->mpool);
+  ctx->mpool = NULL;
+  free(ctx->stackedSymbolTable);
+  ctx->stackedSymbolTable = NULL;
+  free(ctx->call_stack_pointer_base);
+  ctx->call_stack_pointer_base = NULL;
+  free(ctx->stack_pointer_base);
+  ctx->stack_pointer_base = NULL;
+  free(ctx->object_stack_pointer_base);
+  ctx->object_stack_pointer_base = NULL;
+  free(ctx);
+  ctx = NULL;
+  // dispose_pego(&ctx->unusedObject);
 }
 
 // static inline int ParserContext_IsFailure(ParsingContext context)
@@ -422,7 +450,7 @@ static const char *get_c99_rule(uint8_t c99_rule) {
   return "";
 }
 
-void PegVM_PrintProfile(const char *file_type) {
+void nez_VM_PrintProfile(const char *file_type) {
 #if PEGVM_PROFILE
   fprintf(stderr, "\ninstruction count \n");
   for (int i = 0; i < PEGVM_PROFILE_MAX; i++) {
@@ -472,22 +500,21 @@ void PegVM_PrintProfile(const char *file_type) {
 #endif
 }
 
-ParsingObject nez_Parse(ParsingContext context, Instruction *inst,
-                        MemoryPool pool) {
-  if (PegVM_Execute(context, inst, pool)) {
-    peg_error("parse error");
+ParsingObject nez_Parse(ParsingContext context, Instruction *inst) {
+  if (nez_VM_Execute(context, inst)) {
+    nez_PrintErrorInfo("parse error");
   }
   dump_pego(&context->left, context->inputs, 0);
   return context->left;
 }
 
-void nez_ParseStat(ParsingContext context, Instruction *inst, MemoryPool pool) {
+void nez_ParseStat(ParsingContext context, Instruction *inst) {
   for (int i = 0; i < 20; i++) {
     uint64_t start, end;
-    MemoryPool_Reset(pool);
+    MemoryPool_Reset(context->mpool);
     start = timer();
-    if (PegVM_Execute(context, inst, pool)) {
-      peg_error("parse error");
+    if (nez_VM_Execute(context, inst)) {
+      nez_PrintErrorInfo("parse error");
     }
     end = timer();
     fprintf(stderr, "ErapsedTime: %llu msec\n", end - start);
@@ -496,25 +523,24 @@ void nez_ParseStat(ParsingContext context, Instruction *inst, MemoryPool pool) {
   }
 }
 
-void nez_Match(ParsingContext context, Instruction *inst, MemoryPool pool) {
-  if (PegVM_Execute(context, inst, pool)) {
-    peg_error("parse error");
+void nez_Match(ParsingContext context, Instruction *inst) {
+  if (nez_VM_Execute(context, inst)) {
+    nez_PrintErrorInfo("parse error");
   }
   fprintf(stdout, "match\n\n");
   nez_DisposeObject(&context->left);
 }
 
-Instruction *PegVM_Prepare(ParsingContext context, Instruction *inst,
-                           MemoryPool pool) {
+Instruction *nez_VM_Prepare(ParsingContext context, Instruction *inst) {
   long i;
-  const void **table = (const void **)PegVM_Execute(context, NULL, NULL);
+  const void **table = (const void **)nez_VM_Execute(context, NULL);
   for (i = 0; i < context->bytecode_length; i++) {
     (inst + i)->ptr = table[(inst + i)->opcode];
   }
   return inst;
 }
 
-long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
+long nez_VM_Execute(ParsingContext context, Instruction *inst) {
   static const void *table[] = {
 #define DEFINE_TABLE(NAME) &&PEGVM_OP_##NAME,
     PEGVM_OP_EACH(DEFINE_TABLE)
@@ -530,6 +556,7 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
   long pos = context->pos;
   Instruction *pc = inst + context->startPoint;
   const char *inputs = context->inputs;
+  MemoryPool pool = context->mpool;
 
   PUSH_IP(context, inst);
   P4D_setObject(context, &left, P4D_newObject(context, context->pos, pool));
@@ -809,49 +836,6 @@ long PegVM_Execute(ParsingContext context, Instruction *inst, MemoryPool pool) {
     pos = backtrack_pos;
     failflag = 1;
     JUMP;
-  }
-  OP(ANDBYTE) {
-    if (inputs[pos] != *(pc)->ndata) {
-      failflag = 1;
-      JUMP;
-    }
-    DISPATCH_NEXT;
-  }
-  OP(ANDCHARSET) {
-    int j = 0;
-    int len = *(pc)->ndata;
-    while (j < len) {
-      if (inputs[pos] == (pc)->chardata[j]) {
-        DISPATCH_NEXT;
-      }
-      j++;
-    }
-    failflag = 1;
-    JUMP;
-  }
-  OP(ANDBYTERANGE) {
-    if (!(inputs[pos] >= (pc)->chardata[0] &&
-          inputs[pos] <= (pc)->chardata[1])) {
-      failflag = 1;
-      JUMP;
-    }
-    DISPATCH_NEXT;
-  }
-  OP(ANDSTRING) {
-    int j = 0;
-    int len = *(pc)->ndata;
-    long backtrack_pos = pos;
-    while (j < len) {
-      if (inputs[pos] != (pc)->chardata[j]) {
-        failflag = 1;
-        pos = backtrack_pos;
-        JUMP;
-      }
-      pos++;
-      j++;
-    }
-    pos = backtrack_pos;
-    DISPATCH_NEXT;
   }
   OP(OPTIONALBYTE) {
     if (inputs[pos] == *(pc)->ndata) {

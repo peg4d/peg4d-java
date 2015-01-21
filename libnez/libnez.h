@@ -22,6 +22,14 @@ struct ParsingLog {
   int index;
 } __attribute__((packed));
 
+struct MemoryPool {
+  struct ParsingObject *object_pool;
+  struct ParsingLog *log_pool;
+  size_t oidx;
+  size_t lidx;
+  size_t init_size;
+};
+
 struct SymbolTableEntry {
   int tableType; // T in <def T e>
   int utf8_length;
@@ -38,13 +46,15 @@ struct ParsingContext {
   int logStackSize;
   struct ParsingLog *logStack;
 
+  size_t pool_size;
+  struct MemoryPool *mpool;
+
   int symbolTableSize;
   int stateValue;
   int stateCount;
   struct SymbolTableEntry *stackedSymbolTable;
 
   long bytecode_length;
-  size_t pool_size;
   long startPoint;
 
   long *stack_pointer;
@@ -60,14 +70,6 @@ typedef struct ParsingObject *ParsingObject;
 typedef struct ParsingContext *ParsingContext;
 typedef struct ParsingLog *ParsingLog;
 typedef struct SymbolTableEntry *SymbolTableEntry;
-
-struct MemoryPool {
-  struct ParsingObject *object_pool;
-  struct ParsingLog *log_pool;
-  size_t oidx;
-  size_t lidx;
-  size_t init_size;
-};
 
 typedef struct MemoryPool *MemoryPool;
 
@@ -92,7 +94,8 @@ void nez_DisposeObject(ParsingObject *pego);
 #define PARSING_CONTEXT_MAX_ERROR_LENGTH 256
 #define PARSING_CONTEXT_MAX_STACK_LENGTH 1024
 
-void nez_CreateParsingContext(ParsingContext ctx, const char *filename);
+ParsingContext nez_CreateParsingContext(ParsingContext ctx,
+                                        const char *filename);
 void nez_DisposeParsingContext(ParsingContext ctx);
 
 ParsingLog P4D_newLog(ParsingContext ctx, MemoryPool pool);

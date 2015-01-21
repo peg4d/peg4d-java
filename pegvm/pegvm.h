@@ -36,10 +36,9 @@ typedef struct Instruction {
       OP(NEWJOIN) OP(COMMIT) OP(ABORT) OP(LINK) OP(SETendp) OP(TAG) OP(VALUE)  \
       OP(MAPPEDCHOICE) OP(SCAN) OP(CHECKEND) OP(DEF) OP(IS) OP(ISA)            \
       OP(BLOCKSTART) OP(BLOCKEND) OP(INDENT) OP(NOTBYTE) OP(NOTANY)            \
-      OP(NOTCHARSET) OP(NOTBYTERANGE) OP(NOTSTRING) OP(ANDBYTE) OP(ANDCHARSET) \
-      OP(ANDBYTERANGE) OP(ANDSTRING) OP(OPTIONALBYTE) OP(OPTIONALCHARSET)      \
-      OP(OPTIONALBYTERANGE) OP(OPTIONALSTRING) OP(ZEROMOREBYTERANGE)           \
-      OP(ZEROMORECHARSET) OP(REPEATANY)
+      OP(NOTCHARSET) OP(NOTBYTERANGE) OP(NOTSTRING) OP(OPTIONALBYTE)           \
+      OP(OPTIONALCHARSET) OP(OPTIONALBYTERANGE) OP(OPTIONALSTRING)             \
+      OP(ZEROMOREBYTERANGE) OP(ZEROMORECHARSET) OP(REPEATANY)
 // OP(DTABLE)
 
 enum pegvm_opcode {
@@ -120,22 +119,19 @@ enum pegvm_c99_rule {
 };
 
 uint64_t timer();
-void peg_usage(const char *file);
-void peg_error(const char *errmsg);
+void nez_ShowUsage(const char *file);
+void nez_PrintErrorInfo(const char *errmsg);
 void dump_pego(ParsingObject *pego, char *source, int level);
 PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
                                       PegVMInstruction *inst,
                                       const char *fileName,
                                       const char *nonTerminalName);
+void nez_DisposeInstruction(Instruction *inst, long length);
 int ParserContext_Execute(ParsingContext context, PegVMInstruction *inst);
-extern ParsingObject nez_Parse(ParsingContext context, Instruction *inst,
-                               MemoryPool pool);
-extern void nez_ParseStat(ParsingContext context, Instruction *inst,
-                          MemoryPool pool);
-extern void nez_Match(ParsingContext context, Instruction *inst,
-                      MemoryPool pool);
-extern long PegVM_Execute(ParsingContext context, Instruction *inst,
-                          MemoryPool pool);
-extern Instruction *PegVM_Prepare(ParsingContext context, Instruction *inst,
-                                  MemoryPool pool);
+extern ParsingObject nez_Parse(ParsingContext context, Instruction *inst);
+extern void nez_ParseStat(ParsingContext context, Instruction *inst);
+extern void nez_Match(ParsingContext context, Instruction *inst);
+extern long nez_VM_Execute(ParsingContext context, Instruction *inst);
+extern Instruction *nez_VM_Prepare(ParsingContext context, Instruction *inst);
+extern void nez_VM_PrintProfile(const char *file_type);
 #endif

@@ -546,28 +546,6 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		writeJumpCode(Instruction.CONDBRANCH, 1, jumpFailureJump());
 	}
 	
-	private void writeAndCharsetCode(ParsingChoice e) {
-		Opcode code = new Opcode(Instruction.ANDCHARSET);
-		for(int i = 0; i < e.size(); i++) {
-			code.append(((ParsingByte)e.get(i)).byteChar);
-		}
-		code.jump = this.jumpFailureJump();
-		System.out.println("\t" + code.toString());
-		this.codeIndex++;
-		codeList.add(code);
-	}
-	
-	private void writeAndStringCode(ParsingSequence e) {
-		Opcode code = new Opcode(Instruction.ANDSTRING);
-		for(int i = 0; i < e.size(); i++) {
-			code.append(((ParsingByte)e.get(i)).byteChar);
-		}
-		code.jump = this.jumpFailureJump();
-		System.out.println("\t" + code.toString());
-		this.codeIndex++;
-		codeList.add(code);
-	}
-	
 	private void writeOptionalCode(ParsingOption e) {
 		int label = newLabel();
 		this.pushFailureJumpPoint();
@@ -746,34 +724,6 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		}
 	}
 	
-	private boolean optimizeAnd(ParsingAnd e) {
-		ParsingExpression inner = e.inner;
-		if (inner instanceof NonTerminal) {
-			inner = getNonTerminalRule(inner);
-		}
-		if (inner instanceof ParsingByte) {
-			writeCode(Instruction.ANDBYTE, ((ParsingByte)inner).byteChar, this.jumpFailureJump());
-			return true;
-		}
-		if (inner instanceof ParsingByteRange) {
-			writeCode(Instruction.ANDBYTERANGE, ((ParsingByteRange)inner).startByteChar, ((ParsingByteRange)inner).endByteChar, this.jumpFailureJump());
-			return true;
-		}
-		if(inner instanceof ParsingChoice) {
-			if (checkCharset((ParsingChoice)inner)) {
-				writeAndCharsetCode((ParsingChoice)inner);
-				return true;
-			}
-		}
-		if (inner instanceof ParsingSequence) {
-			if (checkString((ParsingSequence)inner)) {
-				writeAndStringCode((ParsingSequence)inner);
-				return true;
-			}
-		}
-		return false;
-	}
-	
 	private boolean optimizeNot(ParsingNot e) {
 		ParsingExpression inner = e.inner;
 		if (inner instanceof NonTerminal) {
@@ -950,16 +900,16 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitNonTerminal(NonTerminal ne) {
-		/*if (optimizationLevel > 1 && optNonTerminalMode) {
+		if (optimizationLevel > 1 && optNonTerminalMode) {
 			optNonTerminalMode = false;
 			ParsingExpression e = getNonTerminalRule(ne);
 			e.visit(this);
 			optNonTerminalMode = true;
 		}
-		else {*/
+		else {
 			writeCode(Instruction.CALL, ne.ruleName);
 			writeJumpCode(Instruction.CONDBRANCH, 1, this.jumpFailureJump());
-		//}
+		}
 	}
 
 	@Override
@@ -1008,14 +958,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitAnd(ParsingAnd e) {
-		if (optimizationLevel > 2) {
-			if (!optimizeAnd(e)) {
-				writeAndCode(e);
-			}
-		}
-		else {
-			writeAndCode(e);
-		}
+		writeAndCode(e);
 	}
 
 	@Override
