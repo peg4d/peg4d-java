@@ -25,7 +25,7 @@ public abstract class ParsingFunction extends ParsingUnary {
 		return Accept;
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> undefedFlags) {
 		return null;
 	}
 }

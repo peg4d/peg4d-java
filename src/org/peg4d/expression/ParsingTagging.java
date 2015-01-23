@@ -41,7 +41,7 @@ public class ParsingTagging extends ParsingExpression {
 		return ParsingExpression.newEmpty();
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String, String> withoutMap) {
+	public ParsingExpression removeParsingFlag(TreeMap<String, String> undefedFlags) {
 		return this;
 	}
 	@Override
@@ -49,7 +49,7 @@ public class ParsingTagging extends ParsingExpression {
 		return true;
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
 		if(lexOnly || this.isRemovedOperation()) {
 			return ParsingExpression.newEmpty();
 		}

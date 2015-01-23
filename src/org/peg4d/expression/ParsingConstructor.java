@@ -48,19 +48,19 @@ public class ParsingConstructor extends ParsingList {
 		return this;
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String, String> withoutMap) {
+	public ParsingExpression removeParsingFlag(TreeMap<String, String> undefedFlags) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
 		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = get(i).removeParsingFlag(withoutMap);
+			ParsingExpression e = get(i).removeParsingFlag(undefedFlags);
 			ParsingExpression.addSequence(l, e);
 		}
 		return ParsingExpression.newConstructor(this.leftJoin, l);
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
 		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = get(i).norm(lexOnly, withoutMap);
+			ParsingExpression e = get(i).norm(lexOnly, undefedFlags);
 			ParsingExpression.addSequence(l, e);
 		}
 		ParsingExpression ne = (lexOnly) ? ParsingExpression.newSequence(l) : ParsingExpression.newConstructor(this.leftJoin, l);

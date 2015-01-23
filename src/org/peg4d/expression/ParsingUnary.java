@@ -32,11 +32,11 @@ public abstract class ParsingUnary extends ParsingExpression {
 		return ParsingExpression.dupUnary(this, inner.transformPEG());
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String,String> withoutMap) {
+	public ParsingExpression removeParsingFlag(TreeMap<String,String> undefedFlags) {
 		if(inner == null) {
 			return this;
 		}
-		return ParsingExpression.dupUnary(this, inner.removeParsingFlag(withoutMap));
+		return ParsingExpression.dupUnary(this, inner.removeParsingFlag(undefedFlags));
 	}
 
 //	protected final int uniqueKey() {

@@ -28,8 +28,8 @@ public class ParsingIf extends ParsingFunction {
 		return this;
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String,String> withoutMap) {
-		if(withoutMap != null && withoutMap.containsKey(flagName)) {
+	public ParsingExpression removeParsingFlag(TreeMap<String,String> undefedFlags) {
+		if(undefedFlags != null && undefedFlags.containsKey(flagName)) {
 			return ParsingExpression.newFailure(this);
 		}
 		return this;
@@ -54,8 +54,8 @@ public class ParsingIf extends ParsingFunction {
 		return LazyAccept;
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
-		if(withoutMap != null && withoutMap.containsKey(flagName)) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
+		if(undefedFlags != null && undefedFlags.containsKey(flagName)) {
 			return ParsingExpression.newFailure(this);
 		}
 		return this;

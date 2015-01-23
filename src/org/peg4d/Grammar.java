@@ -124,7 +124,7 @@ public class Grammar {
 		return this.getRule(lexName);
 	}
 
-	public void makeOptionRule(ParsingRule r, String optName, boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public void makeOptionRule(ParsingRule r, String optName, boolean lexOnly, TreeMap<String, String> undefedFlags) {
 		ParsingRule r2 = this.getRule(optName);
 		if(r2 == null) {
 			r2 = new ParsingRule(this, optName, null, null);
@@ -133,7 +133,7 @@ public class Grammar {
 			r2.baseName = r.baseName;  // important
 			r2.minlen = r.minlen;
 			r2.refc = r.refc;
-			r2.expr = r.expr.norm(lexOnly, withoutMap).intern();
+			r2.expr = r.expr.norm(lexOnly, undefedFlags).intern();
 			Main.printVerbose("producing lexical rule", r2);
 		}
 	}
@@ -199,7 +199,6 @@ public class Grammar {
 			ParsingRule r = this.getRule(nameList.ArrayValues[i]);
 			r.checkPEG4dTransition(new PEG4dTransition());
 		}
-		UMap<String> flagMap = new UMap<String>();
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
 			//ParsingExpression.typeCheck(rule, flagMap);
@@ -207,11 +206,12 @@ public class Grammar {
 			//ParsingExpression.dumpId(rule.ruleName+ " ", rule.expr);
 		}
 		int size = nameList.size();
-		TreeMap<String,String> withoutMap = new TreeMap<String,String>();
+		TreeMap<String,String> undefedFlags = new TreeMap<String,String>();
 		for(int i = 0; i < size; i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
 			if(rule.getGrammar() == this) {
-				ParsingExpression e = rule.expr.norm(false, withoutMap).intern();
+				rule.expr = rule.expr.removeParsingFlag(undefedFlags).intern();
+//				ParsingExpression e = rule.expr.norm(false, undefedFlags).intern();
 //				if(rule.expr.uniqueId != e.uniqueId) {
 //					System.out.println("RULE; " + rule.ruleName);
 //					System.out.println("\tBEFORE; " + rule.expr);
@@ -219,12 +219,13 @@ public class Grammar {
 //					ParsingExpression.dumpId("", rule.expr);
 //					ParsingExpression.dumpId("", e);
 //				}
-				rule.expr = e;
+//				rule.expr = e;
 			}
 		}
 		if(stats != null) {
 			stats.setCount("PEG.NormalizedRules", nameList.size());
 			int count = 0;
+			UMap<String> flagMap = new UMap<String>();
 			for(int i = 0; i < nameList.size(); i++) {
 				ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
 				flagMap.clear();

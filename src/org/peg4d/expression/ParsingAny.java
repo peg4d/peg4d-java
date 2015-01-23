@@ -34,11 +34,11 @@ public class ParsingAny extends ParsingExpression {
 		return this;
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String, String> withoutMap) {
+	public ParsingExpression removeParsingFlag(TreeMap<String, String> undefedFlags) {
 		return this;
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> undefedFlags) {
 		return this;
 	}
 	@Override

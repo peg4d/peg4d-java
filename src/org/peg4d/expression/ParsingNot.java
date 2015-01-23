@@ -33,8 +33,8 @@ public class ParsingNot extends ParsingUnary {
 		return this;
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
-		ParsingExpression e = inner.norm(true, withoutMap);
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
+		ParsingExpression e = inner.norm(true, undefedFlags);
 		if(e == inner) {
 			return this;
 		}

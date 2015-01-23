@@ -76,41 +76,21 @@ public class NonTerminal extends ParsingExpression {
 		return this;
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String,String> withoutMap) {
-		if(withoutMap != null && withoutMap.size() > 0) {
-			ParsingRule rule = this.getRule();
-			StringBuilder sb = new StringBuilder();
-			int loc = this.ruleName.indexOf('!');
-			if(loc > 0) {
-				sb.append(this.ruleName.substring(0, loc));
-			}
-			else {
-				sb.append(this.ruleName);
-			}
-			for(String flag: withoutMap.keySet()) {
-				if(ParsingExpression.hasReachableIf(rule.expr, flag)) {
-					sb.append("!");
-					sb.append(this.ruleName);
-				}
-			}
-			String rName = sb.toString();
-			ParsingRule rRule = peg.getRule(rName);
-			if(rRule == null) {
-				rRule = peg.newRule(rName, ParsingExpression.newEmpty());
-				rRule.expr = rule.expr.removeParsingFlag(withoutMap);
-			}
-			return (rRule == rule) ? this : new NonTerminal(peg, rRule.localName).intern();
+	public ParsingExpression removeParsingFlag(TreeMap<String,String> undefedFlags) {
+		ParsingRule r = (ParsingRule)this.getRule().removeParsingFlag(undefedFlags);
+		if(!this.ruleName.equals(r.localName)) {
+			return new NonTerminal(peg, r.localName);
 		}
 		return this;
 	}
 	
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
 		NonTerminal ne = this;
 		ParsingRule rule = ne.getRule();
-		String optName = ParsingRule.toOptionName(rule, lexOnly, withoutMap);
+		String optName = ParsingRule.toOptionName(rule, lexOnly, undefedFlags);
 		if(ne.peg.getRule(optName) != rule) {
-			ne.peg.makeOptionRule(rule, optName, lexOnly, withoutMap);
+			ne.peg.makeOptionRule(rule, optName, lexOnly, undefedFlags);
 			ne = ne.peg.newNonTerminal(optName);
 			//System.out.println(rule.ruleName + "@=>" + optName);
 		}

@@ -10,8 +10,8 @@ package org.peg4d.expression;
 //
 //	}
 //	@Override
-//	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
-//		return inner.norm(lexOnly, withoutMap);
+//	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
+//		return inner.norm(lexOnly, undefedFlags);
 //	}
 //	@Override
 //	public short acceptByte(int ch) {

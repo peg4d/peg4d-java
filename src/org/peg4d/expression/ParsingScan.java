@@ -29,8 +29,8 @@ public class ParsingScan extends ParsingFunction {
 	}
 
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
-		ParsingExpression e = inner.norm(lexOnly, withoutMap);
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> undefedFlags) {
+		ParsingExpression e = inner.norm(lexOnly, undefedFlags);
 		if (e == inner) {
 			return this;
 		}

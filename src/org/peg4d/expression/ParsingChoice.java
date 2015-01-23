@@ -56,18 +56,18 @@ public class ParsingChoice extends ParsingList {
 		return ParsingExpression.newChoice(l);
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String, String> withoutMap) {
+	public ParsingExpression removeParsingFlag(TreeMap<String, String> undefedFlags) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
 		for(ParsingExpression e : this) {
-			ParsingExpression.addChoice(l, e.removeParsingFlag(withoutMap));
+			ParsingExpression.addChoice(l, e.removeParsingFlag(undefedFlags));
 		}
 		return ParsingExpression.newChoice(l);
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
 		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = get(i).norm(lexOnly, withoutMap);
+			ParsingExpression e = get(i).norm(lexOnly, undefedFlags);
 			ParsingExpression.addChoice(l, e);
 		}
 		return ParsingExpression.newChoice(l);

@@ -50,11 +50,11 @@ public class ParsingConnector extends ParsingUnary {
 		return true;
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
 		if(this.isRemovedOperation()) {
 			lexOnly = true;
 		}
-		ParsingExpression e = this.inner.norm(lexOnly, withoutMap);
+		ParsingExpression e = this.inner.norm(lexOnly, undefedFlags);
 		if(this.isNothingConnected() || lexOnly) {
 			return e;
 		}

@@ -92,9 +92,9 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 		return this.minlen + minlen;
 	}
 	
-	public abstract ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap);	
+	public abstract ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags);	
 	public abstract ParsingExpression transformPEG();
-	public abstract ParsingExpression removeParsingFlag(TreeMap<String,String> withoutMap);	
+	public abstract ParsingExpression removeParsingFlag(TreeMap<String,String> undefedFlags);	
 
 	// Expr[Expr -> Expr2]
 	// public abstract ParsingExpression replace(Grammar peg, String oldName, String newName, UMap<ParsingRule>  visited);

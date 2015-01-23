@@ -29,7 +29,7 @@ public class ParsingApply extends ParsingFunction {
 		return true;
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
 		//TODO;
 		return null;
 	}

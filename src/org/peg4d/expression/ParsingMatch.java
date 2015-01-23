@@ -26,13 +26,13 @@ public class ParsingMatch extends ParsingFunction {
 	}
 
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
-	//		ParsingExpression e = inner.normalizeImpl(true, flagMap, withoutMap);
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
+	//		ParsingExpression e = inner.normalizeImpl(true, flagMap, undefedFlags);
 	//		if(e == inner) {
 	//			return this;
 	//		}
 	//		return ParsingExpression.newMatch(e);
-		return inner.norm(true, withoutMap);
+		return inner.norm(true, undefedFlags);
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

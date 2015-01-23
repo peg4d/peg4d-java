@@ -127,9 +127,32 @@ public class ParsingRule extends ParsingExpression {
 	}
 
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String, String> withoutMap) {
-		// TODO Auto-generated method stub
-		return null;
+	public ParsingExpression removeParsingFlag(TreeMap<String, String> undefedFlags) {
+		if(undefedFlags.size() > 0) {
+			StringBuilder sb = new StringBuilder();
+			int loc = localName.indexOf('!');
+			if(loc > 0) {
+				sb.append(this.localName.substring(0, loc));
+			}
+			else {
+				sb.append(this.localName);
+			}
+			for(String flag: undefedFlags.keySet()) {
+				if(ParsingExpression.hasReachableIf(this.expr, flag)) {
+					sb.append("!");
+					sb.append(flag);
+				}
+			}
+			String rName = sb.toString();
+			System.out.println("creating new rule: " + rName);
+			ParsingRule rRule = peg.getRule(rName);
+			if(rRule == null) {
+				rRule = peg.newRule(rName, ParsingExpression.newEmpty());
+				rRule.expr = expr.removeParsingFlag(undefedFlags).intern();
+			}
+			return rRule;
+		}
+		return this;
 	}
 	
 	@Override
@@ -139,7 +162,7 @@ public class ParsingRule extends ParsingExpression {
 
 	@Override
 	public ParsingExpression norm(boolean lexOnly,
-			TreeMap<String, String> withoutMap) {
+			TreeMap<String, String> undefedFlags) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -254,13 +277,13 @@ public class ParsingRule extends ParsingExpression {
 		return checkNamingConvention(ruleName) == ParsingRule.LexicalRule;
 	}
 
-	public static String toOptionName(ParsingRule rule, boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public static String toOptionName(ParsingRule rule, boolean lexOnly, TreeMap<String,String> undefedFlags) {
 		String ruleName = rule.baseName;
 		if(lexOnly && !isLexicalName(ruleName)) {
 			ruleName = "__" + ruleName.toUpperCase();
 		}
-		if(withoutMap != null) {
-			for(String flag : withoutMap.keySet()) {
+		if(undefedFlags != null) {
+			for(String flag : undefedFlags.keySet()) {
 				ParsingExpression.containFlag(rule.expr, flag);
 				ruleName += "!" + flag;
 			}

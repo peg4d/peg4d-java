@@ -27,28 +27,28 @@ public class ParsingWithoutFlag extends ParsingFunction {
 		return this;
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String,String> withoutMap) {
+	public ParsingExpression removeParsingFlag(TreeMap<String,String> undefedFlags) {
 		boolean addWithout = false;
-		if(withoutMap != null && !withoutMap.containsKey(flagName)) {
-			withoutMap.put(flagName, flagName);
+		if(undefedFlags != null && !undefedFlags.containsKey(flagName)) {
+			undefedFlags.put(flagName, flagName);
 			addWithout = true;
 		}
-		ParsingExpression e = inner.removeParsingFlag(withoutMap);
+		ParsingExpression e = inner.removeParsingFlag(undefedFlags);
 		if(addWithout) {
-			withoutMap.remove(flagName);
+			undefedFlags.remove(flagName);
 		}
 		return e;
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
 		boolean addWithout = false;
-		if(withoutMap != null && !withoutMap.containsKey(flagName)) {
-			withoutMap.put(flagName, flagName);
+		if(undefedFlags != null && !undefedFlags.containsKey(flagName)) {
+			undefedFlags.put(flagName, flagName);
 			addWithout = true;
 		}
-		ParsingExpression e = inner.norm(lexOnly, withoutMap);
+		ParsingExpression e = inner.norm(lexOnly, undefedFlags);
 		if(addWithout) {
-			withoutMap.remove(flagName);
+			undefedFlags.remove(flagName);
 		}
 		if(e == inner) {
 			return this;
