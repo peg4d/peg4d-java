@@ -4,6 +4,7 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.UList;
+import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingByte extends ParsingExpression {
@@ -21,6 +22,14 @@ public class ParsingByte extends ParsingExpression {
 	@Override
 	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
 		return true;
+	}
+	@Override
+	public int inferPEG4dTranstion(UMap<String> visited) {
+		return PEG4dTransition.BooleanType;
+	}
+	@Override
+	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+		return this;
 	}
 	@Override
 	public ParsingExpression transformPEG() {

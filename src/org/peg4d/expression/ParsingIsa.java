@@ -3,6 +3,7 @@ package org.peg4d.expression;
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTag;
 import org.peg4d.UList;
+import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingIsa extends ParsingFunction {
@@ -17,8 +18,12 @@ public class ParsingIsa extends ParsingFunction {
 		return true;
 	}
 	@Override
-	public String getParameters() {
-		return " " + ParsingTag.tagName(this.tableType);
+	public int inferPEG4dTranstion(UMap<String> visited) {
+		return PEG4dTransition.BooleanType;
+	}
+	@Override
+	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+		return this;
 	}
 	@Override
 	public short acceptByte(int ch) {
@@ -31,5 +36,9 @@ public class ParsingIsa extends ParsingFunction {
 	@Override
 	public void visit(GrammarVisitor visitor) {
 		visitor.visitIsa(this);
+	}
+	@Override
+	public String getParameters() {
+		return " " + ParsingTag.tagName(this.tableType);
 	}
 }

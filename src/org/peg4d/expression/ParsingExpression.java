@@ -67,7 +67,8 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	static int ObjectContext    = 1 << 0;
 	static int OperationContext = 1 << 1;
 
-	//public abstract int typeCheck(int typeStatus);
+	public abstract int inferPEG4dTranstion(UMap<String> visited);
+	public abstract ParsingExpression checkPEG4dTransition(PEG4dTransition c);
 
 	
 	public final static int LeftRecursion     = 1 << 10;

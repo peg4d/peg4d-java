@@ -221,9 +221,9 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		grammerName = grammerName.substring(0, grammerName.length() - 4);
 		System.out.println("#define PEGVM_PROFILE_" + grammerName + "_EACH(RULE) \\");
 		for(ParsingRule r: peg.getRuleList()) {
-			if (!r.ruleName.startsWith("\"")) {
-				ruleMap.put(r.ruleName, count);
-				System.out.println("  RULE("+ r.ruleName + ") \\");
+			if (!r.localName.startsWith("\"")) {
+				ruleMap.put(r.localName, count);
+				System.out.println("  RULE("+ r.localName + ") \\");
 				count++;
 			}
 		}
@@ -815,14 +815,14 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		this.peg = peg;
 		this.formatHeader();
 		for(ParsingRule r: peg.getRuleList()) {
-			if (r.ruleName.equals("File")) {
+			if (r.localName.equals("File")) {
 				this.formatRule(r, sb);		//string builder is not used.
 				break;
 			}
 		}
 		for(ParsingRule r: peg.getRuleList()) {
-			if (!r.ruleName.equals("File")) {
-				if (!r.ruleName.startsWith("\"")) {
+			if (!r.localName.equals("File")) {
+				if (!r.localName.startsWith("\"")) {
 					this.formatRule(r, sb);		//string builder is not used.
 				}
 			}
@@ -877,8 +877,8 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitRule(ParsingRule e) {
-		this.callMap.put(e.ruleName, this.codeIndex);
-		System.out.println(e.ruleName + ":");
+		this.callMap.put(e.localName, this.codeIndex);
+		System.out.println(e.localName + ":");
 		this.pushFailureJumpPoint();
 		e.expr.visit(this);
 		this.popFailureJumpPoint(e);

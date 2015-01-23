@@ -3,7 +3,9 @@ package org.peg4d.expression;
 import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
+import org.peg4d.ReportLevel;
 import org.peg4d.UList;
+import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingValue extends ParsingExpression {
@@ -22,8 +24,20 @@ public class ParsingValue extends ParsingExpression {
 		return false;
 	}
 	@Override
-	public ParsingExpression transformPEG() {
+	public int inferPEG4dTranstion(UMap<String> visited) {
+		return PEG4dTransition.OperationType;
+	}
+	@Override
+	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+		if(c.required != PEG4dTransition.OperationType) {
+			this.report(ReportLevel.warning, "unexpected value");
+			return ParsingExpression.newEmpty();
+		}
 		return this;
+	}
+	@Override
+	public ParsingExpression transformPEG() {
+		return ParsingExpression.newEmpty();
 	}
 	@Override
 	public ParsingExpression removeParsingFlag(TreeMap<String, String> withoutMap) {

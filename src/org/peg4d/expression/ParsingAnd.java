@@ -4,6 +4,7 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.UList;
+import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingAnd extends ParsingUnary {
@@ -17,6 +18,26 @@ public class ParsingAnd extends ParsingUnary {
 	@Override
 	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
 		return false;
+	}
+	@Override
+	public int inferPEG4dTranstion(UMap<String> visited) {
+		int t = this.inner.inferPEG4dTranstion(visited);
+		if(t == PEG4dTransition.ObjectType) {  // typeCheck needs to report error
+			return PEG4dTransition.BooleanType;
+		}
+		return t;
+	}
+	@Override
+	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+		if(c.required == PEG4dTransition.ObjectType) {
+			c.required = PEG4dTransition.BooleanType;
+			this.inner = this.inner.checkPEG4dTransition(c);
+			c.required = PEG4dTransition.ObjectType;
+		}
+		else {
+			this.inner = this.inner.checkPEG4dTransition(c);
+		}
+		return this;
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {

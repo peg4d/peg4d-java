@@ -4,6 +4,7 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.UList;
+import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingIf extends ParsingFunction {
@@ -19,13 +20,20 @@ public class ParsingIf extends ParsingFunction {
 		return false;
 	}
 	@Override
+	public int inferPEG4dTranstion(UMap<String> visited) {
+		return PEG4dTransition.BooleanType;
+	}
+	@Override
+	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+		return this;
+	}
+	@Override
 	public ParsingExpression removeParsingFlag(TreeMap<String,String> withoutMap) {
 		if(withoutMap != null && withoutMap.containsKey(flagName)) {
 			return ParsingExpression.newFailure(this);
 		}
 		return this;
 	}
-
 	@Override
 	public String getParameters() {
 		return " " + this.flagName;

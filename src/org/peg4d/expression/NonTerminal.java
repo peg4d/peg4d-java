@@ -7,6 +7,7 @@ import org.peg4d.ParsingContext;
 import org.peg4d.ParsingRule;
 import org.peg4d.ReportLevel;
 import org.peg4d.UList;
+import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class NonTerminal extends ParsingExpression {
@@ -39,16 +40,33 @@ public class NonTerminal extends ParsingExpression {
 		}
 		return r.checkAlwaysConsumed(startNonTerminal, stack);
 	}
-	public int typeCheck(int typeStatus) {
+	@Override
+	public int inferPEG4dTranstion(UMap<String> visited) {
 		ParsingRule r = this.getRule();
-		int ruleType = r.type;
-		if(ruleType == ParsingRule.ObjectRule) {
-			return checkObjectConstruction(this, typeStatus);
+		return r.inferExpressionType(visited);
+	}
+	@Override
+	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+		ParsingRule r = this.getRule();
+		int t = r.inferExpressionType();
+		if(t == PEG4dTransition.BooleanType) {
+			return this;
 		}
-		if(ruleType == ParsingRule.OperationRule) {
-			checkObjectOperation(this, typeStatus);
+		if(c.required == PEG4dTransition.ObjectType) {
+			if(t == PEG4dTransition.OperationType) {
+				this.report(ReportLevel.warning, "unexpected operation");
+				return this.transformPEG();
+			}
+			c.required = PEG4dTransition.OperationType;
+			return this;
 		}
-		return typeStatus;
+		if(c.required == PEG4dTransition.OperationType) {
+			if(t == PEG4dTransition.ObjectType) {
+				this.report(ReportLevel.warning, "expected connector");
+				return ParsingExpression.newConnector(this, -1);
+			}
+		}
+		return this;
 	}
 	@Override
 	public ParsingExpression transformPEG() {
@@ -84,7 +102,7 @@ public class NonTerminal extends ParsingExpression {
 				rRule = peg.newRule(rName, ParsingExpression.newEmpty());
 				rRule.expr = rule.expr.removeParsingFlag(withoutMap);
 			}
-			return (rRule == rule) ? this : new NonTerminal(peg, rRule.ruleName).intern();
+			return (rRule == rule) ? this : new NonTerminal(peg, rRule.localName).intern();
 		}
 		return this;
 	}

@@ -143,7 +143,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 	public void formatGrammar(Grammar peg, StringBuilder sb) {
 		this.formatHeader();
 		for(ParsingRule r: peg.getRuleList()) {
-			String methodName = this.checkAndReplaceRuleName(r.ruleName);
+			String methodName = this.checkAndReplaceRuleName(r.localName);
 			this.createMethod(methodName, r.expr);
 			r.expr = new EntryPoint(methodName);
 		}

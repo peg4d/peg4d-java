@@ -5,6 +5,8 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.UList;
+import org.peg4d.UMap;
+import org.peg4d.expression.PEG4dTransition;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.pegcode.GrammarVisitor;
 
@@ -19,6 +21,15 @@ public class EntryPoint extends ParsingExpression {
 	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
 		throw new RuntimeException("TODO");
 	}
+	@Override
+	public int inferPEG4dTranstion(UMap<String> visited) {
+		throw new RuntimeException("TODO");
+	}
+	@Override
+	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+		throw new RuntimeException("TODO");
+	}
+
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
 		return this;

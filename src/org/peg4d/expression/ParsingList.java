@@ -31,7 +31,9 @@ public abstract class ParsingList extends ParsingExpression {
 		this.inners[i] = this.inners[j];
 		this.inners[j] = e;
 	}
-	
+	protected final UList<ParsingExpression> newList() {
+		return new UList<ParsingExpression>(new ParsingExpression[this.size()]);
+	}
 	@Override
 	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
 		for(ParsingExpression e: this) {

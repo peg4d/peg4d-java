@@ -4,6 +4,7 @@ import java.util.TreeMap;
 
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.Optimizer;
+import org.peg4d.expression.PEG4dTransition;
 import org.peg4d.expression.ParsingExpression;
 
 public class ParsingRule {
@@ -13,8 +14,10 @@ public class ParsingRule {
 	public final static int ReservedRule  = 1 << 15;
 	
 	public Grammar  peg;
+	public String   localName;
+	public ParsingRule definedRule;
+	
 	String baseName;
-	public String ruleName;
 
 	ParsingObject po;
 	public int type;
@@ -26,13 +29,13 @@ public class ParsingRule {
 		this.peg = peg;
 		this.po = po;
 		this.baseName = ruleName;
-		this.ruleName = ruleName;
+		this.localName = ruleName;
 		this.expr = e;
 		this.type = ParsingRule.typeOf(ruleName);
 	}
 	
-	final String getUniqueName() {
-		return this.peg.uniqueRuleName(ruleName);
+	public final String getUniqueName() {
+		return this.peg.uniqueRuleName(localName);
 	}
 
 	public int minlen = -1;
@@ -40,7 +43,7 @@ public class ParsingRule {
 	public boolean isAlwaysConsumed() {
 		return this.checkAlwaysConsumed(null, null);
 	}
-
+	
 	public final boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
 		if(stack != null && this.minlen != 0 && stack.size() > 0) {
 			for(String n : stack) { // Check Unconsumed Recursion
@@ -65,6 +68,38 @@ public class ParsingRule {
 		return minlen > 0;
 	}
 	
+	public int type2 = PEG4dTransition.BooleanType;
+	public int inferExpressionType(UMap<String> visited) {
+		if(this.type2 != PEG4dTransition.Undefined) {
+			return this.type2;
+		}
+		String uname = this.getUniqueName();
+		if(visited != null) {
+			if(visited.hasKey(uname)) {
+				this.type2 = PEG4dTransition.BooleanType;
+				return this.type2;
+			}
+		}
+		else {
+			visited = new UMap<String>();
+		}
+		visited.put(uname, uname);
+		int t = expr.inferPEG4dTranstion(visited);
+		assert(t != PEG4dTransition.Undefined);
+		if(this.type2 == PEG4dTransition.Undefined) {
+			this.type2 = t;
+		}
+		else {
+			assert(type2 == t);
+		}
+		return this.type2;
+	}
+
+	public int inferExpressionType() {
+		return this.inferExpressionType(null);
+	}
+	
+	
 	@Override
 	public String toString() {
 		String t = "";
@@ -73,7 +108,7 @@ public class ParsingRule {
 		case ObjectRule:    t = "Object "; break;
 		case OperationRule: t = "void "; break;
 		}
-		return t + this.ruleName + "[" + this.minlen + "]" + "=" + this.expr;
+		return t + this.localName + "[" + this.minlen + "]" + "=" + this.expr;
 	}
 	
 	
@@ -116,7 +151,7 @@ public class ParsingRule {
 				boolean ok = true;
 				ParsingSource s = ParsingSource.newStringSource(a.value);
 				context.resetSource(s, 0);
-				context.parse2(peg, this.ruleName, new ParsingObject(), null);
+				context.parse2(peg, this.localName, new ParsingObject(), null);
 				//System.out.println("@@ fail? " + context.isFailure() + " unconsumed? " + context.hasByteChar() + " example " + isExample + " " + isBadExample);
 				if(context.isFailure() || context.hasByteChar()) {
 					if(isExample) ok = false;
@@ -124,9 +159,9 @@ public class ParsingRule {
 				else {
 					if(isBadExample) ok = false;
 				}
-				String msg = ( ok ? "[PASS]" : "[FAIL]" ) + " " + this.ruleName + " " + a.value.getText();
+				String msg = ( ok ? "[PASS]" : "[FAIL]" ) + " " + this.localName + " " + a.value.getText();
 				if(Main.TestMode && !ok) {	
-					Main._Exit(1, "[FAIL] tested " + a.value.getText() + " by " + peg.getRule(this.ruleName));
+					Main._Exit(1, "[FAIL] tested " + a.value.getText() + " by " + peg.getRule(this.localName));
 				}
 				Main.printVerbose("Testing", msg);
 			}

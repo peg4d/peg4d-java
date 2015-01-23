@@ -5,6 +5,7 @@ import java.util.TreeMap;
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTree;
 import org.peg4d.UList;
+import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingChoice extends ParsingList {
@@ -30,8 +31,25 @@ public class ParsingChoice extends ParsingList {
 		return afterAll;
 	}
 	@Override
+	public int inferPEG4dTranstion(UMap<String> visited) {
+		if(this.size() > 0) {
+			return this.get(0).inferPEG4dTranstion(visited);
+		}
+		return PEG4dTransition.BooleanType;
+	}
+	@Override
+	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+		int required = c.required;
+		UList<ParsingExpression> l = newList();
+		for(ParsingExpression e : this) {
+			c.required = required;
+			ParsingExpression.addChoice(l, e.checkPEG4dTransition(c));
+		}
+		return ParsingExpression.newChoice(l);
+	}
+	@Override
 	public ParsingExpression transformPEG() {
-		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
+		UList<ParsingExpression> l = newList();
 		for(ParsingExpression e : this) {
 			ParsingExpression.addChoice(l, e.transformPEG());
 		}

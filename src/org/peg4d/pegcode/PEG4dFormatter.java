@@ -53,7 +53,7 @@ public class PEG4dFormatter extends GrammarGenerator {
 	@Override
 	public void visitRule(ParsingRule rule) {
 		ParsingExpression e = rule.expr;
-		this.formatRuleName(rule.ruleName, e);
+		this.formatRuleName(rule.localName, e);
 		this.formatString(this.getNewLine());
 		this.formatString(this.getSetter());
 		this.formatString(" ");

@@ -84,7 +84,7 @@ public class PythonGenerator extends GrammarGenerator {
 	}
 	void popFailureJumpPoint(ParsingRule r) {
 		this.closeIndent();
-		writeLine("except :" + " ## " + r.ruleName );
+		writeLine("except :" + " ## " + r.localName );
 		this.openIndent();
 		fLabel = fLabel.prev;
 	}
@@ -116,7 +116,7 @@ public class PythonGenerator extends GrammarGenerator {
 	@Override
 	public void visitRule(ParsingRule e) {
 		this.initFailureJumpPoint();
-		writeLine("def " + funcName(e.ruleName) + "(c) :");
+		writeLine("def " + funcName(e.localName) + "(c) :");
 		openIndent();
 		this.let("long", "pos", "c.pos");
 		this.pushFailureJumpPoint();

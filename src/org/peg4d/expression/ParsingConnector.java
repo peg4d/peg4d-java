@@ -4,7 +4,9 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTree;
+import org.peg4d.ReportLevel;
 import org.peg4d.UList;
+import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingConnector extends ParsingUnary {
@@ -23,8 +25,28 @@ public class ParsingConnector extends ParsingUnary {
 		return this.inner.checkAlwaysConsumed(startNonTerminal, stack);
 	}
 	@Override
-	public
-	boolean hasObjectOperation() {
+	public int inferPEG4dTranstion(UMap<String> visited) {
+		return PEG4dTransition.OperationType;
+	}
+	@Override
+	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+		if(c.required != PEG4dTransition.OperationType) {
+			this.report(ReportLevel.warning, "unexpected connector");
+			return this.inner.transformPEG();
+		}
+		c.required = PEG4dTransition.ObjectType;
+		ParsingExpression inn = inner.checkPEG4dTransition(c);
+		if(c.required != PEG4dTransition.OperationType) {
+			this.report(ReportLevel.warning, "no object created");
+			c.required = PEG4dTransition.OperationType;
+			return inn;
+		}
+		c.required = PEG4dTransition.OperationType;
+		this.inner = inn;
+		return this;
+	}
+	@Override
+	public boolean hasObjectOperation() {
 		return true;
 	}
 	@Override

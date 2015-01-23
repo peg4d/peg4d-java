@@ -77,7 +77,7 @@ public class CGenerator2 extends GrammarGenerator {
 		fID += 1;
 	}
 	void popFailureJumpPoint(ParsingRule r) {
-		writeLine("CATCH_FAILURE" + fLabel.id + ":" + "/* " + r.ruleName + " */");
+		writeLine("CATCH_FAILURE" + fLabel.id + ":" + "/* " + r.localName + " */");
 		fLabel = fLabel.prev;
 	}
 	void popFailureJumpPoint(ParsingExpression e) {
@@ -177,13 +177,13 @@ public class CGenerator2 extends GrammarGenerator {
 	public void formatGrammar(Grammar peg, StringBuilder sb) {
 		this.formatHeader();
 		for(ParsingRule r: peg.getRuleList()) {
-			if (!r.ruleName.startsWith("\"")) {
-				this.writeLine("int " + funcName(r.ruleName) + "(ParsingContext c);");
+			if (!r.localName.startsWith("\"")) {
+				this.writeLine("int " + funcName(r.localName) + "(ParsingContext c);");
 			}
 		}
 		this.generateMainFunction();
 		for(ParsingRule r: peg.getRuleList()) {
-			if (!r.ruleName.startsWith("\"")) {
+			if (!r.localName.startsWith("\"")) {
 				this.formatRule(r, sb);
 			}
 		}
@@ -201,7 +201,7 @@ public class CGenerator2 extends GrammarGenerator {
 	@Override
 	public void visitRule(ParsingRule e) {
 		this.initFailureJumpPoint();
-		writeLine("int " + funcName(e.ruleName) + "(ParsingContext c)");
+		writeLine("int " + funcName(e.localName) + "(ParsingContext c)");
 		openIndent();
 		let("long", "pos", "c->pos");
 

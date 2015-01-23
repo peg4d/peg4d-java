@@ -262,7 +262,7 @@ public class Grammar {
 		if(e instanceof NonTerminal) {
 			ParsingRule rule = this.getRule(((NonTerminal) e).ruleName);
 			l.add(rule);
-			Main.printVerbose("export", rule.ruleName);
+			Main.printVerbose("export", rule.localName);
 		}
 		if(e instanceof ParsingChoice) {
 			for(int i = 0; i < e.size(); i++) {

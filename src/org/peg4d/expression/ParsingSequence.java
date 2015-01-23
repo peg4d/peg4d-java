@@ -4,6 +4,7 @@ import java.util.TreeMap;
 
 import org.peg4d.ParsingContext;
 import org.peg4d.UList;
+import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingSequence extends ParsingList {
@@ -16,8 +17,26 @@ public class ParsingSequence extends ParsingList {
 		return " ";
 	}
 	@Override
+	public int inferPEG4dTranstion(UMap<String> visited) {
+		for(ParsingExpression e: this) {
+			int t = e.inferPEG4dTranstion(visited);
+			if(t == PEG4dTransition.ObjectType || t == PEG4dTransition.OperationType) {
+				return t;
+			}
+		}
+		return PEG4dTransition.BooleanType;
+	}
+	@Override
+	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+		UList<ParsingExpression> l = newList();
+		for(ParsingExpression e : this) {
+			ParsingExpression.addSequence(l, e.checkPEG4dTransition(c));
+		}
+		return ParsingExpression.newSequence(l);
+	}
+	@Override
 	public ParsingExpression removeParsingFlag(TreeMap<String, String> withoutMap) {
-		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
+		UList<ParsingExpression> l = newList();
 		for(int i = 0; i < this.size(); i++) {
 			ParsingExpression e = get(i).removeParsingFlag(withoutMap);
 			ParsingExpression.addSequence(l, e);

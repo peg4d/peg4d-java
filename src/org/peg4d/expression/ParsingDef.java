@@ -23,6 +23,18 @@ public class ParsingDef extends ParsingFunction {
 		return true;
 	}
 	@Override
+	public int inferPEG4dTranstion(UMap<String> visited) {
+		return PEG4dTransition.BooleanType;
+	}
+	@Override
+	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+		int t = this.inner.inferPEG4dTranstion(null);
+		if(t != PEG4dTransition.BooleanType) {
+			this.inner = this.inner.transformPEG();
+		}
+		return this;
+	}	
+	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
 		ParsingExpression e = inner.norm(lexOnly, withoutMap);
 		if(e == inner) {
