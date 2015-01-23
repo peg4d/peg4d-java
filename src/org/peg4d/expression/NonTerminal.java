@@ -43,12 +43,12 @@ public class NonTerminal extends ParsingExpression {
 	@Override
 	public int inferPEG4dTranstion(UMap<String> visited) {
 		ParsingRule r = this.getRule();
-		return r.inferExpressionType(visited);
+		return r.inferPEG4dTranstion(visited);
 	}
 	@Override
 	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
 		ParsingRule r = this.getRule();
-		int t = r.inferExpressionType();
+		int t = r.inferPEG4dTranstion();
 		if(t == PEG4dTransition.BooleanType) {
 			return this;
 		}

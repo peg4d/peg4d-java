@@ -19,8 +19,6 @@ import org.peg4d.pegcode.GrammarVisitor;
 import org.peg4d.pegcode.PEG4dFormatter;
 
 public abstract class ParsingExpression extends AbstractList<ParsingExpression> implements Recognizer {
-//	public  static boolean  VerboseStack = false;
-//
 	public ParsingObject po      = null;
 	int           minlen = -1;
 		
@@ -46,30 +44,15 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 	public abstract boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack);
 
-	//public abstract boolean updatedRule(ParsingRule rule);
-	
-//	final has(ExpressionPattern p) {
-//		if(p.preCheck()) {
-//			return true;
-//		}
-//		for(Expression e : this) {
-//			if(e.has(p)) {
-//				return true;
-//			}
-//		}
-//		return p.check();
-//	}
-	
-//	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
-//		return false;
-//	}
-	
-	static int ObjectContext    = 1 << 0;
-	static int OperationContext = 1 << 1;
+	public final int inferPEG4dTranstion() {
+		return this.inferPEG4dTranstion(null);
+	}
 
 	public abstract int inferPEG4dTranstion(UMap<String> visited);
 	public abstract ParsingExpression checkPEG4dTransition(PEG4dTransition c);
 
+	static int ObjectContext    = 1 << 0;
+	static int OperationContext = 1 << 1;
 	
 	public final static int LeftRecursion     = 1 << 10;
 	public final static int HasSyntaxError    = 1 << 16;
@@ -172,7 +155,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	
 	public static int WarningLevel = 1;
 
-	final void report(ReportLevel level, String msg) {
+	public final void report(ReportLevel level, String msg) {
 		if(WarningLevel == 0 && level.compareTo(ReportLevel.error) != 0) {
 			return;
 		}
@@ -440,7 +423,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 		int result = typeCheckImpl(rule.expr, rule.type, flagMap);
 		if(rule.type == ParsingRule.ObjectRule) {
 			if(result != OperationContext) {
-				rule.report(ReportLevel.warning, "object construction is expected: " + rule);
+				//rule.report(ReportLevel.warning, "object construction is expected: " + rule);
 			}
 		}
 	}

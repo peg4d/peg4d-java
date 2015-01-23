@@ -6,44 +6,22 @@ import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.Optimizer;
 import org.peg4d.expression.PEG4dTransition;
 import org.peg4d.expression.ParsingExpression;
+import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingRule {
-	public final static int LexicalRule   = 0;
-	public final static int ObjectRule    = 1;
-	public final static int OperationRule = 1 << 1;
-	public final static int ReservedRule  = 1 << 15;
-	
-	public Grammar  peg;
-	public String   localName;
-	public ParsingRule definedRule;
-	
-	String baseName;
-
-	ParsingObject po;
-	public int type;
+public class ParsingRule extends ParsingExpression {
+	public Grammar           peg;
+	public String            localName;
+	public ParsingRule       definedRule;
 	public ParsingExpression expr;
-	
-	public int refc = 0;
-
-	public ParsingRule(Grammar peg, String ruleName, ParsingObject po, ParsingExpression e) {
-		this.peg = peg;
-		this.po = po;
-		this.baseName = ruleName;
-		this.localName = ruleName;
-		this.expr = e;
-		this.type = ParsingRule.typeOf(ruleName);
-	}
-	
-	public final String getUniqueName() {
-		return this.peg.uniqueRuleName(localName);
-	}
 
 	public int minlen = -1;
 
+	@Override
 	public boolean isAlwaysConsumed() {
 		return this.checkAlwaysConsumed(null, null);
 	}
 	
+	@Override
 	public final boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
 		if(stack != null && this.minlen != 0 && stack.size() > 0) {
 			for(String n : stack) { // Check Unconsumed Recursion
@@ -68,16 +46,18 @@ public class ParsingRule {
 		return minlen > 0;
 	}
 	
-	public int type2 = PEG4dTransition.BooleanType;
-	public int inferExpressionType(UMap<String> visited) {
-		if(this.type2 != PEG4dTransition.Undefined) {
-			return this.type2;
+	public int transType = PEG4dTransition.Undefined;
+
+	@Override
+	public int inferPEG4dTranstion(UMap<String> visited) {
+		if(this.transType != PEG4dTransition.Undefined) {
+			return this.transType;
 		}
 		String uname = this.getUniqueName();
 		if(visited != null) {
 			if(visited.hasKey(uname)) {
-				this.type2 = PEG4dTransition.BooleanType;
-				return this.type2;
+				this.transType = PEG4dTransition.BooleanType;
+				return this.transType;
 			}
 		}
 		else {
@@ -86,20 +66,88 @@ public class ParsingRule {
 		visited.put(uname, uname);
 		int t = expr.inferPEG4dTranstion(visited);
 		assert(t != PEG4dTransition.Undefined);
-		if(this.type2 == PEG4dTransition.Undefined) {
-			this.type2 = t;
+		if(this.transType == PEG4dTransition.Undefined) {
+			this.transType = t;
 		}
 		else {
-			assert(type2 == t);
+			assert(transType == t);
 		}
-		return this.type2;
+		return this.transType;
 	}
 
-	public int inferExpressionType() {
-		return this.inferExpressionType(null);
+	@Override
+	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+		c.required = this.inferPEG4dTranstion();
+		this.expr = this.expr.checkPEG4dTransition(c);
+		return this;
 	}
+
+	@Override
+	public String getInterningKey() {
+		return "=";
+	}
+
+	@Override
+	public ParsingExpression norm(boolean lexOnly,
+			TreeMap<String, String> withoutMap) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ParsingExpression transformPEG() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ParsingExpression removeParsingFlag(
+			TreeMap<String, String> withoutMap) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public short acceptByte(int ch) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public boolean simpleMatch(ParsingContext context) {
+		return this.expr.simpleMatch(context);
+	}
+
+	public ParsingRule(Grammar peg, String ruleName, ParsingObject po, ParsingExpression e) {
+		this.peg = peg;
+		this.po = po;
+		this.baseName = ruleName;
+		this.localName = ruleName;
+		this.expr = e;
+		this.type = ParsingRule.typeOf(ruleName);
+	}
+
+	public final String getUniqueName() {
+		return this.peg.uniqueRuleName(localName);
+	}
+
+	public final static int LexicalRule   = 0;
+	public final static int ObjectRule    = 1;
+	public final static int OperationRule = 1 << 1;
+	public final static int ReservedRule  = 1 << 15;
+	String baseName;
+
+	ParsingObject po;
+	public int type;
 	
-	
+	public int refc = 0;
+
 	@Override
 	public String toString() {
 		String t = "";
@@ -110,17 +158,7 @@ public class ParsingRule {
 		}
 		return t + this.localName + "[" + this.minlen + "]" + "=" + this.expr;
 	}
-	
-	
-	public final void report(ReportLevel level, String msg) {
-		if(this.po != null) {
-			Main._PrintLine(po.formatSourceMessage(level.toString(), msg));
-		}
-		else {
-			System.out.println("" + level.toString() + ": " + msg);
-		}
-	}
-	
+		
 	Grammar getGrammar() {
 		return this.peg;
 	}
@@ -239,5 +277,6 @@ public class ParsingRule {
 			}
 		}
 	}
+
 
 }
