@@ -4,6 +4,7 @@ import java.util.TreeMap;
 
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.Optimizer;
+import org.peg4d.expression.PEG4dTransition;
 import org.peg4d.expression.ParsingChoice;
 import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingExpression;
@@ -185,7 +186,7 @@ public class Grammar {
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
 			stack.clear(0);
-			boolean isConsumed = rule.checkAlwaysConsumed(null, stack);
+			rule.checkAlwaysConsumed(null, stack);
 		}
 		if(this.foundError) {
 			Main._Exit(1, "PegError found");
@@ -194,14 +195,17 @@ public class Grammar {
 			stats.setCount("PEG.Rules", nameList.size());
 		}
 		// type check
+		for(int i = 0; i < nameList.size(); i++) {
+			ParsingRule r = this.getRule(nameList.ArrayValues[i]);
+			r.checkPEG4dTransition(new PEG4dTransition());
+		}
 		UMap<String> flagMap = new UMap<String>();
 		for(int i = 0; i < nameList.size(); i++) {
 			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
-			ParsingExpression.typeCheck(rule, flagMap);
+			//ParsingExpression.typeCheck(rule, flagMap);
 			rule.expr = rule.expr.intern();
 			//ParsingExpression.dumpId(rule.ruleName+ " ", rule.expr);
 		}
-
 		int size = nameList.size();
 		TreeMap<String,String> withoutMap = new TreeMap<String,String>();
 		for(int i = 0; i < size; i++) {

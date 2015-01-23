@@ -162,9 +162,9 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 		if(this.po != null) {
 			Main._PrintLine(po.formatSourceMessage(level.toString(), msg));
 		}
-		else {
-			System.out.println("" + level.toString() + ": " + msg + " in " + this);
-		}
+//		else {
+//			System.out.println("" + level.toString() + ": " + msg + " in " + this);
+//		}
 	}
 		
 //	private static boolean checkRecursion(String uName, UList<String> stack) {
@@ -815,7 +815,6 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 		}
 		return e;
 	}
-
 	private static ParsingExpression checkUnique(ParsingExpression e, boolean unique) {
 		if(unique) {
 			e = e.intern();
@@ -836,7 +835,10 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 			if(u instanceof ParsingAnd) {
 				return newAnd(e);
 			}
-			throw new RuntimeException("undefined unary: " + u);
+			if(u instanceof ParsingConnector) {
+				return newConnector(e, ((ParsingConnector) u).index);
+			}
+			throw new RuntimeException("undefined unary: " + u.getClass().getSimpleName());
 		}
 		return u;
 	}

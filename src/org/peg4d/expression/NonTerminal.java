@@ -32,7 +32,6 @@ public class NonTerminal extends ParsingExpression {
 			r = new ParsingRule(this.peg, this.ruleName, null, ParsingExpression.newEmpty());
 			this.peg.setRule(this.ruleName, r);
 		}
-		//System.out.println("uName: " + startNonTerminal + " " + this.uniqueName);
 		if(startNonTerminal != null && startNonTerminal.equals(this.uniqueName)) {
 			this.report(ReportLevel.error, "left recursion: " + this.ruleName);
 			this.peg.foundError = true;
@@ -70,13 +69,11 @@ public class NonTerminal extends ParsingExpression {
 	}
 	@Override
 	public ParsingExpression transformPEG() {
-		ParsingRule rule = this.getRule();
-		throw new RuntimeException("TODO");
-//		ParsingRule pureRule = this.peg.getPureRule(this.ruleName);
-//		if(rule != pureRule) {
-//			return new NonTerminal(peg, pureRule.ruleName).intern();
-//		}
-	//	return this;
+		ParsingRule r = (ParsingRule)this.getRule().transformPEG();
+		if(!this.ruleName.equals(r.localName)) {
+			return new NonTerminal(peg, r.localName);
+		}
+		return this;
 	}
 	@Override
 	public ParsingExpression removeParsingFlag(TreeMap<String,String> withoutMap) {

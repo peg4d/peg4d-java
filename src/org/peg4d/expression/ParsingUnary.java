@@ -12,7 +12,7 @@ public abstract class ParsingUnary extends ParsingExpression {
 	}
 	@Override
 	public final int size() {
-		return 1;
+		return this.inner == null ? 0 : 1;
 	}
 	@Override
 	public final ParsingExpression get(int index) {

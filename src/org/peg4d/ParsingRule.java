@@ -77,11 +77,61 @@ public class ParsingRule extends ParsingExpression {
 
 	@Override
 	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+		int t = checkNamingConvention(this.localName);
 		c.required = this.inferPEG4dTranstion();
+		if(t != PEG4dTransition.Undefined && c.required != t) {
+			this.report(ReportLevel.warning, "invalid naming convention: " + this.localName);
+		}
 		this.expr = this.expr.checkPEG4dTransition(c);
 		return this;
 	}
 
+	public final static int checkNamingConvention(String ruleName) {
+		int start = 0;
+		if(ruleName.startsWith("~") || ruleName.startsWith("\"")) {
+			return PEG4dTransition.BooleanType;
+		}
+		for(;ruleName.charAt(start) == '_'; start++) {
+			if(start + 1 == ruleName.length()) {
+				return PEG4dTransition.BooleanType;
+			}
+		}
+		boolean firstUpperCase = Character.isUpperCase(ruleName.charAt(start));
+		for(int i = start+1; i < ruleName.length(); i++) {
+			char ch = ruleName.charAt(i);
+			if(ch == '!') break; // option
+			if(Character.isUpperCase(ch) && !firstUpperCase) {
+				return PEG4dTransition.OperationType;
+			}
+			if(Character.isLowerCase(ch) && firstUpperCase) {
+				return PEG4dTransition.ObjectType;
+			}
+		}
+		return firstUpperCase ? PEG4dTransition.BooleanType : PEG4dTransition.Undefined;
+	}
+
+	@Override
+	public ParsingExpression transformPEG() {
+		if(this.inferPEG4dTranstion() == PEG4dTransition.BooleanType) {
+			return this;
+		}
+		String name = "~" + this.localName;
+		ParsingRule r = this.peg.getRule(name);
+		if(r == null) {
+			r = this.peg.newRule(name, this.expr);
+			r.definedRule = this;
+			r.transType = PEG4dTransition.BooleanType;
+			r.expr = this.expr.transformPEG();
+		}
+		return r;
+	}
+
+	@Override
+	public ParsingExpression removeParsingFlag(TreeMap<String, String> withoutMap) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
 	@Override
 	public String getInterningKey() {
 		return "=";
@@ -94,18 +144,6 @@ public class ParsingRule extends ParsingExpression {
 		return null;
 	}
 
-	@Override
-	public ParsingExpression transformPEG() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public ParsingExpression removeParsingFlag(
-			TreeMap<String, String> withoutMap) {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 	@Override
 	public void visit(GrammarVisitor visitor) {
@@ -130,17 +168,17 @@ public class ParsingRule extends ParsingExpression {
 		this.baseName = ruleName;
 		this.localName = ruleName;
 		this.expr = e;
-		this.type = ParsingRule.typeOf(ruleName);
+		this.type = ParsingRule.checkNamingConvention(ruleName);
 	}
 
 	public final String getUniqueName() {
 		return this.peg.uniqueRuleName(localName);
 	}
 
-	public final static int LexicalRule   = 0;
-	public final static int ObjectRule    = 1;
-	public final static int OperationRule = 1 << 1;
-	public final static int ReservedRule  = 1 << 15;
+	public final static int LexicalRule   = PEG4dTransition.BooleanType;
+	public final static int ObjectRule    = PEG4dTransition.ObjectType;
+	public final static int OperationRule = PEG4dTransition.OperationType;
+	public final static int ReservedRule  = PEG4dTransition.Undefined;
 	String baseName;
 
 	ParsingObject po;
@@ -211,29 +249,9 @@ public class ParsingRule extends ParsingExpression {
 		return this.type == ParsingRule.ObjectRule;
 	}
 
-	public final static int typeOf(String ruleName) {
-		int start = 0;
-		for(;ruleName.charAt(start) == '_'; start++) {
-			if(start + 1 == ruleName.length()) {
-				return LexicalRule;
-			}
-		}
-		boolean firstUpperCase = Character.isUpperCase(ruleName.charAt(start));
-		for(int i = start+1; i < ruleName.length(); i++) {
-			char ch = ruleName.charAt(i);
-			if(ch == '!') break; // option
-			if(Character.isUpperCase(ch) && !firstUpperCase) {
-				return OperationRule;
-			}
-			if(Character.isLowerCase(ch) && firstUpperCase) {
-				return ObjectRule;
-			}
-		}
-		return firstUpperCase ? LexicalRule : ReservedRule;
-	}
 
 	public static boolean isLexicalName(String ruleName) {
-		return typeOf(ruleName) == ParsingRule.LexicalRule;
+		return checkNamingConvention(ruleName) == ParsingRule.LexicalRule;
 	}
 
 	public static String toOptionName(ParsingRule rule, boolean lexOnly, TreeMap<String,String> withoutMap) {
