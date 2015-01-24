@@ -37,7 +37,7 @@ public class ParsingTagging extends ParsingExpression {
 		return this;
 	}
 	@Override
-	public ParsingExpression transformPEG() {
+	public ParsingExpression removePEG4dOperator() {
 		return ParsingExpression.newEmpty();
 	}
 	@Override
@@ -57,7 +57,7 @@ public class ParsingTagging extends ParsingExpression {
 	}
 	@Override
 	public short acceptByte(int ch) {
-		return LazyAccept;
+		return Unconsumed;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

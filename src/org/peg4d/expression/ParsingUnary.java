@@ -25,11 +25,11 @@ public abstract class ParsingUnary extends ParsingExpression {
 		return old;
 	}
 	@Override
-	public ParsingExpression transformPEG() {
+	public ParsingExpression removePEG4dOperator() {
 		if(inner == null) {
 			return this;
 		}
-		return ParsingExpression.dupUnary(this, inner.transformPEG());
+		return ParsingExpression.dupUnary(this, inner.removePEG4dOperator());
 	}
 	@Override
 	public ParsingExpression removeParsingFlag(TreeMap<String,String> undefedFlags) {

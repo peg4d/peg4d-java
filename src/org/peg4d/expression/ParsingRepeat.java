@@ -30,7 +30,7 @@ public class ParsingRepeat extends ParsingFunction {
 		ParsingExpression inn = this.inner.checkPEG4dTransition(c);
 		if(required != PEG4dTransition.OperationType && c.required == PEG4dTransition.OperationType) {
 			this.report(ReportLevel.warning, "unable to create objects in repeat");
-			this.inner = inn.transformPEG();
+			this.inner = inn.removePEG4dOperator();
 			c.required = required;
 		}
 		else {

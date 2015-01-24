@@ -56,11 +56,11 @@ public class ParsingSequence extends ParsingList {
 	public short acceptByte(int ch) {
 		for(int i = 0; i < this.size(); i++) {
 			short r = this.get(i).acceptByte(ch);
-			if(r != LazyAccept) {
+			if(r != Unconsumed) {
 				return r;
 			}
 		}
-		return LazyAccept;
+		return Unconsumed;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

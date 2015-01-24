@@ -36,7 +36,7 @@ public class ParsingFailure extends ParsingExpression {
 		return this;
 	}
 	@Override
-	public ParsingExpression transformPEG() {
+	public ParsingExpression removePEG4dOperator() {
 		return this;
 	}
 	@Override

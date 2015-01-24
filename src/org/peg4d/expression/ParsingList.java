@@ -45,10 +45,10 @@ public abstract class ParsingList extends ParsingExpression {
 	}
 
 	@Override
-	public ParsingExpression transformPEG() {
+	public ParsingExpression removePEG4dOperator() {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
 		for(ParsingExpression e : this) {
-			ParsingExpression.addSequence(l, e.transformPEG());
+			ParsingExpression.addSequence(l, e.removePEG4dOperator());
 		}
 		return ParsingExpression.newSequence(l);
 	}

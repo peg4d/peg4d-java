@@ -32,7 +32,7 @@ public class ParsingConnector extends ParsingUnary {
 	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
 		if(c.required != PEG4dTransition.OperationType) {
 			this.report(ReportLevel.warning, "unexpected connector");
-			return this.inner.transformPEG();
+			return this.inner.removePEG4dOperator();
 		}
 		c.required = PEG4dTransition.ObjectType;
 		ParsingExpression inn = inner.checkPEG4dTransition(c);

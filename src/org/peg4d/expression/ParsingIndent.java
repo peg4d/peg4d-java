@@ -28,7 +28,7 @@ public class ParsingIndent extends ParsingFunction {
 		if (ch == '\t' || ch == ' ') {
 			return Accept;
 		}
-		return LazyAccept;
+		return Unconsumed;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

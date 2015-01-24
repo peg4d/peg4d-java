@@ -28,7 +28,7 @@ public class ParsingNot extends ParsingUnary {
 	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
 		int t = this.inner.inferPEG4dTranstion(null);
 		if(t == PEG4dTransition.ObjectType || t == PEG4dTransition.OperationType) {
-			this.inner = this.inner.transformPEG();
+			this.inner = this.inner.removePEG4dOperator();
 		}
 		return this;
 	}
@@ -48,7 +48,7 @@ public class ParsingNot extends ParsingUnary {
 //		if(r == Accept || r == LazyAccept) {
 //			return Reject;
 //		}
-		return LazyAccept;
+		return Unconsumed;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

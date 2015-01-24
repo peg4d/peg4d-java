@@ -48,10 +48,10 @@ public class ParsingChoice extends ParsingList {
 		return ParsingExpression.newChoice(l);
 	}
 	@Override
-	public ParsingExpression transformPEG() {
+	public ParsingExpression removePEG4dOperator() {
 		UList<ParsingExpression> l = newList();
 		for(ParsingExpression e : this) {
-			ParsingExpression.addChoice(l, e.transformPEG());
+			ParsingExpression.addChoice(l, e.removePEG4dOperator());
 		}
 		return ParsingExpression.newChoice(l);
 	}
@@ -98,11 +98,11 @@ public class ParsingChoice extends ParsingList {
 			if(r == Accept) {
 				return r;
 			}
-			if(r == LazyAccept) {
+			if(r == Unconsumed) {
 				hasLazyAccept = true;
 			}
 		}
-		return hasLazyAccept ? LazyAccept : Reject;
+		return hasLazyAccept ? Unconsumed : Reject;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

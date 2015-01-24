@@ -51,7 +51,7 @@ public class ParsingIf extends ParsingFunction {
 	}
 	@Override
 	public short acceptByte(int ch) {
-		return LazyAccept;
+		return Unconsumed;
 	}
 	@Override
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {

@@ -21,7 +21,7 @@ public class ParsingMatch extends ParsingFunction {
 	}
 	@Override
 	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
-		this.inner = this.inner.transformPEG();
+		this.inner = this.inner.removePEG4dOperator();
 		return this;
 	}
 

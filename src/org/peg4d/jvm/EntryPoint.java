@@ -70,7 +70,7 @@ public class EntryPoint extends ParsingExpression {
 		return null;
 	}
 	@Override
-	public ParsingExpression transformPEG() {
+	public ParsingExpression removePEG4dOperator() {
 		return this;
 	}
 	@Override

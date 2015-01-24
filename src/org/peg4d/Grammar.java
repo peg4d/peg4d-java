@@ -54,9 +54,6 @@ public class Grammar {
 		}
 		PEG4d builder = new PEG4d(this);
 		while(context.hasByteChar()) {
-			if (context.pos == 14381) {
-				context.pos = context.pos;
-			}
 			ParsingObject po = context.parse2(peg4d, "Chunk", new ParsingObject(), null);
 			if(context.isFailure()) {
 				String msg = context.source.formatPositionLine("error", context.fpos, context.getErrorMessage());
@@ -99,6 +96,7 @@ public class Grammar {
 	public final ParsingRule newRule(String name, ParsingExpression e) {
 		ParsingRule r = new ParsingRule(this, name, null, e);
 		this.ruleMap.put(name, r);
+		//System.out.println("creating rule: " + name);
 		return r;
 	}
 	

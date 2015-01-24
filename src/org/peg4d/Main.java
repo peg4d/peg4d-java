@@ -21,7 +21,7 @@ public class Main {
 	public final static String  CodeName  = "yokohama";
 	public final static int     MajorVersion = 0;
 	public final static int     MinerVersion = 9;
-	public final static int     PatchLevel   = 2;
+	public final static int     PatchLevel   = 3;
 	public final static String  Version = "" + MajorVersion + "." + MinerVersion + "." + PatchLevel;
 	public final static String  Copyright = "Copyright (c) 2014, Nez project authors";
 	public final static String  License = "BSD-Style Open Source";

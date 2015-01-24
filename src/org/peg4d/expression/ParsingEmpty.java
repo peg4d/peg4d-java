@@ -29,7 +29,7 @@ public class ParsingEmpty extends ParsingExpression {
 		return this;
 	}
 	@Override
-	public ParsingExpression transformPEG() {
+	public ParsingExpression removePEG4dOperator() {
 		return this;
 	}
 	@Override
@@ -50,6 +50,6 @@ public class ParsingEmpty extends ParsingExpression {
 	}
 	@Override
 	public short acceptByte(int ch) {
-		return LazyAccept;
+		return Unconsumed;
 	}
 }

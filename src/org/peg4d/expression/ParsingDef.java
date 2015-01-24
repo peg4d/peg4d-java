@@ -30,7 +30,7 @@ public class ParsingDef extends ParsingFunction {
 	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
 		int t = this.inner.inferPEG4dTranstion(null);
 		if(t != PEG4dTransition.BooleanType) {
-			this.inner = this.inner.transformPEG();
+			this.inner = this.inner.removePEG4dOperator();
 		}
 		return this;
 	}	

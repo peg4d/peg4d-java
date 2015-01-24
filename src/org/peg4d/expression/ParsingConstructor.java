@@ -35,13 +35,13 @@ public class ParsingConstructor extends ParsingList {
 		if(this.leftJoin) {
 			if(c.required != PEG4dTransition.OperationType) {
 				this.report(ReportLevel.warning, "unexpected left-associative constructor");
-				return this.transformPEG();
+				return this.removePEG4dOperator();
 			}
 		}
 		else {
 			if(c.required != PEG4dTransition.ObjectType) {
 				this.report(ReportLevel.warning, "unexpected constructor");
-				return this.transformPEG();
+				return this.removePEG4dOperator();
 			}
 		}
 		c.required = PEG4dTransition.OperationType;
@@ -73,11 +73,11 @@ public class ParsingConstructor extends ParsingList {
 	public short acceptByte(int ch) {
 		for(int i = 0; i < this.size(); i++) {
 			short r = this.get(i).acceptByte(ch);
-			if(r != LazyAccept) {
+			if(r != Unconsumed) {
 				return r;
 			}
 		}
-		return LazyAccept;
+		return Unconsumed;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

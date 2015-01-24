@@ -54,7 +54,7 @@ public class NonTerminal extends ParsingExpression {
 		if(c.required == PEG4dTransition.ObjectType) {
 			if(t == PEG4dTransition.OperationType) {
 				this.report(ReportLevel.warning, "unexpected operation");
-				return this.transformPEG();
+				return this.removePEG4dOperator();
 			}
 			c.required = PEG4dTransition.OperationType;
 			return this;
@@ -68,8 +68,8 @@ public class NonTerminal extends ParsingExpression {
 		return this;
 	}
 	@Override
-	public ParsingExpression transformPEG() {
-		ParsingRule r = (ParsingRule)this.getRule().transformPEG();
+	public ParsingExpression removePEG4dOperator() {
+		ParsingRule r = (ParsingRule)this.getRule().removePEG4dOperator();
 		if(!this.ruleName.equals(r.localName)) {
 			return new NonTerminal(peg, r.localName);
 		}
@@ -176,7 +176,7 @@ public class NonTerminal extends ParsingExpression {
 		if(this.deReference() != null && !this.is(LeftRecursion)) {
 			return this.deReference().acceptByte(ch);
 		}
-		return LazyAccept;
+		return Unconsumed;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

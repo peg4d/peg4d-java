@@ -34,7 +34,7 @@ public class ParsingString extends ParsingExpression {
 		return this;
 	}
 	@Override
-	public ParsingExpression transformPEG() {
+	public ParsingExpression removePEG4dOperator() {
 		return this;
 	}
 	@Override
@@ -51,7 +51,7 @@ public class ParsingString extends ParsingExpression {
 	}
 	@Override public short acceptByte(int ch) {
 		if(this.utf8.length == 0) {
-			return LazyAccept;
+			return Unconsumed;
 		}
 		return ((this.utf8[0] & 0xff) == ch) ? Accept : Reject;
 	}

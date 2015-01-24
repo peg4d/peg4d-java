@@ -111,7 +111,7 @@ public class ParsingRule extends ParsingExpression {
 	}
 
 	@Override
-	public ParsingExpression transformPEG() {
+	public ParsingExpression removePEG4dOperator() {
 		if(this.inferPEG4dTranstion() == PEG4dTransition.BooleanType) {
 			return this;
 		}
@@ -121,7 +121,7 @@ public class ParsingRule extends ParsingExpression {
 			r = this.peg.newRule(name, this.expr);
 			r.definedRule = this;
 			r.transType = PEG4dTransition.BooleanType;
-			r.expr = this.expr.transformPEG();
+			r.expr = this.expr.removePEG4dOperator();
 		}
 		return r;
 	}
@@ -138,7 +138,7 @@ public class ParsingRule extends ParsingExpression {
 				sb.append(this.localName);
 			}
 			for(String flag: undefedFlags.keySet()) {
-				if(ParsingExpression.hasReachableIf(this.expr, flag)) {
+				if(ParsingExpression.hasReachableFlag(this.expr, flag)) {
 					sb.append("!");
 					sb.append(flag);
 				}

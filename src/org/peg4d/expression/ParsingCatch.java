@@ -29,7 +29,7 @@ public class ParsingCatch extends ParsingFunction {
 	}
 	@Override
 	public short acceptByte(int ch) {
-		return LazyAccept;
+		return Unconsumed;
 	}
 	@Override
 	public boolean simpleMatch(ParsingContext context) {

@@ -19,7 +19,7 @@ public class ParsingAny extends ParsingExpression {
 	}
 	@Override
 	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
-		return false;
+		return true;
 	}
 	@Override
 	public int inferPEG4dTranstion(UMap<String> visited) {
@@ -30,7 +30,7 @@ public class ParsingAny extends ParsingExpression {
 		return this;
 	}
 	@Override
-	public ParsingExpression transformPEG() {
+	public ParsingExpression removePEG4dOperator() {
 		return this;
 	}
 	@Override

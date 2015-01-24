@@ -63,8 +63,8 @@ public class ParsingAnd extends ParsingUnary {
 	@Override
 	public short acceptByte(int ch) {
 		short r = this.inner.acceptByte(ch);
-		if(r == Accept || r == LazyAccept) {
-			return LazyAccept;
+		if(r == Accept || r == Unconsumed) {
+			return Unconsumed;
 		}
 		return r;
 	}

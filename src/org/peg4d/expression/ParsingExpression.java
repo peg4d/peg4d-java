@@ -19,8 +19,6 @@ import org.peg4d.pegcode.GrammarVisitor;
 import org.peg4d.pegcode.PEG4dFormatter;
 
 public abstract class ParsingExpression extends AbstractList<ParsingExpression> implements Recognizer {
-	public ParsingObject po      = null;
-	int           minlen = -1;
 		
 	protected ParsingExpression() {
 		this.matcher = this;
@@ -32,6 +30,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 
 	public int    internId   = 0;
+	public ParsingObject po      = null;
 	public final boolean isInterned() {
 		return (this.internId > 0);
 	}
@@ -39,6 +38,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	public final ParsingExpression intern() {
 		return ParsingExpression.intern(this);
 	}
+	
 	public boolean isAlwaysConsumed() {
 		return this.checkAlwaysConsumed(null, null);
 	}
@@ -50,6 +50,112 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 
 	public abstract int inferPEG4dTranstion(UMap<String> visited);
 	public abstract ParsingExpression checkPEG4dTransition(PEG4dTransition c);
+	
+	public abstract ParsingExpression removePEG4dOperator();
+	public abstract ParsingExpression removeParsingFlag(TreeMap<String,String> undefedFlags);	
+
+	static boolean hasReachableFlag(ParsingExpression e, String flagName, UMap<String> visited) {
+		if(e instanceof ParsingWithFlag) {
+			if(flagName.equals(((ParsingWithFlag) e).flagName)) {
+				return false;
+			}
+		}
+		for(ParsingExpression se : e) {
+			if(hasReachableFlag(se, flagName, visited)) {
+				return true;
+			}
+		}
+		if(e instanceof ParsingIf) {
+			return flagName.equals(((ParsingIf) e).flagName);
+		}
+		if(e instanceof NonTerminal) {
+			NonTerminal ne = (NonTerminal)e;
+			String un = ne.getUniqueName();
+			if(!visited.hasKey(un)) {
+				visited.put(un, un);
+				ParsingRule r = ne.getRule();
+				return hasReachableFlag(r.expr, flagName, visited);
+			}
+		}
+		return false;
+	}
+
+	public static boolean hasReachableFlag(ParsingExpression e, String flagName) {
+		return hasReachableFlag(e, flagName, new UMap<String>());
+	}
+	
+	
+	public final static short Reject         = 0;
+	public final static short Accept         = 1;
+	public final static short Unconsumed     = 2;  // depending on the next
+	
+	public abstract short acceptByte(int ch);
+
+	public abstract void visit(GrammarVisitor visitor);
+
+	
+	@Override
+	public int size() {
+		return 0;
+	}
+	
+	@Override
+	public ParsingExpression get(int index) {
+		return null;
+	}
+	
+	public final boolean debugMatch(ParsingContext c) {
+//		int d = cc; cc++;
+//		int dpos = dstack.size();
+//		int pos = (int)c.getPosition() ;
+//		if(pos % (1024 * 1024) == 0) {
+//			System.out.println("["+(pos/(1024 * 1024))+"] calling: " + this + " mark=" + c.markObjectStack() + " free" + Runtime.getRuntime().freeMemory());
+//		}
+//		dstack.add(this);
+		boolean b = this.matcher.simpleMatch(c);
+//		if(this instanceof NonTerminal) {
+////			c.dumpCallStack("["+pos+"] called: " + b + " ");
+//		}
+//		dstack.clear(dpos);
+//		if(pos > 12717) {
+//			System.out.println(dstack);
+//		}
+//		//assert(c.isFailure() == !b);
+		return b;
+	}
+	
+	private final static GrammarGenerator DefaultFormatter = new PEG4dFormatter();
+	
+	@Override public String toString() {
+		StringBuilder sb = new StringBuilder();
+		DefaultFormatter.formatExpression(this, sb);
+		return sb.toString();
+	}
+	
+	public static int WarningLevel = 1;
+
+	public final void report(ReportLevel level, String msg) {
+		if(WarningLevel == 0 && level.compareTo(ReportLevel.error) != 0) {
+			return;
+		}
+		if(this.po != null) {
+			Main._PrintLine(po.formatSourceMessage(level.toString(), msg));
+		}
+//		else {
+//			System.out.println("" + level.toString() + ": " + msg + " in " + this);
+//		}
+	}
+
+	// ======================================================================
+	
+	
+	// ======================================================================
+	
+	int           minlen = -1;
+
+	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
+		return this.minlen + minlen;
+	}
 
 	static int ObjectContext    = 1 << 0;
 	static int OperationContext = 1 << 1;
@@ -87,46 +193,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 			dumpId(indent + " ", e.get(i));
 		}
 	}
-	
-	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
-		return this.minlen + minlen;
-	}
-	
-	public abstract ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags);	
-	public abstract ParsingExpression transformPEG();
-	public abstract ParsingExpression removeParsingFlag(TreeMap<String,String> undefedFlags);	
 
-	// Expr[Expr -> Expr2]
-	// public abstract ParsingExpression replace(Grammar peg, String oldName, String newName, UMap<ParsingRule>  visited);
-
-	public abstract void visit(GrammarVisitor visitor);
-	
-	public final boolean debugMatch(ParsingContext c) {
-//		int d = cc; cc++;
-//		int dpos = dstack.size();
-//		int pos = (int)c.getPosition() ;
-//		if(pos % (1024 * 1024) == 0) {
-//			System.out.println("["+(pos/(1024 * 1024))+"] calling: " + this + " mark=" + c.markObjectStack() + " free" + Runtime.getRuntime().freeMemory());
-//		}
-//		dstack.add(this);
-		boolean b = this.matcher.simpleMatch(c);
-//		if(this instanceof NonTerminal) {
-////			c.dumpCallStack("["+pos+"] called: " + b + " ");
-//		}
-//		dstack.clear(dpos);
-//		if(pos > 12717) {
-//			System.out.println(dstack);
-//		}
-//		//assert(c.isFailure() == !b);
-		return b;
-	}
-	
-	public final static short Reject         = 0;
-	public final static short Accept         = 1;
-	public final static short LazyAccept     = 2;  // depending on the next
-	
-	public abstract short acceptByte(int ch);
-	
 	public final boolean is(int uflag) {
 		return ((this.flag & uflag) == uflag);
 	}
@@ -134,38 +201,8 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	public void set(int uflag) {
 		this.flag = this.flag | uflag;
 	}
-	
-	@Override
-	public int size() {
-		return 0;
-	}
-	
-	@Override
-	public ParsingExpression get(int index) {
-		return null;
-	}
 
-	private final static GrammarGenerator DefaultFormatter = new PEG4dFormatter();
-	
-	@Override public String toString() {
-		StringBuilder sb = new StringBuilder();
-		DefaultFormatter.formatExpression(this, sb);
-		return sb.toString();
-	}
-	
-	public static int WarningLevel = 1;
-
-	public final void report(ReportLevel level, String msg) {
-		if(WarningLevel == 0 && level.compareTo(ReportLevel.error) != 0) {
-			return;
-		}
-		if(this.po != null) {
-			Main._PrintLine(po.formatSourceMessage(level.toString(), msg));
-		}
-//		else {
-//			System.out.println("" + level.toString() + ": " + msg + " in " + this);
-//		}
-	}
+	public abstract ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags);	
 		
 //	private static boolean checkRecursion(String uName, UList<String> stack) {
 //		for(int i = 0; i < stack.size() - 1; i++) {
@@ -267,37 +304,6 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	public static boolean containFlag(ParsingExpression e, String flagName) {
 		return containFlag(e, flagName, new UMap<String>());
 	}
-
-	static boolean hasReachableIf(ParsingExpression e, String flagName, UMap<String> visited) {
-		if(e instanceof ParsingWithFlag) {
-			if(flagName.equals(((ParsingWithFlag) e).flagName)) {
-				return false;
-			}
-		}
-		for(ParsingExpression se : e) {
-			if(hasReachableIf(se, flagName, visited)) {
-				return true;
-			}
-		}
-		if(e instanceof ParsingIf) {
-			return flagName.equals(((ParsingIf) e).flagName);
-		}
-		if(e instanceof NonTerminal) {
-			NonTerminal ne = (NonTerminal)e;
-			String un = ne.getUniqueName();
-			if(!visited.hasKey(un)) {
-				visited.put(un, un);
-				ParsingRule r = ne.getRule();
-				return hasReachableIf(r.expr, flagName, visited);
-			}
-		}
-		return false;
-	}
-
-	public static boolean hasReachableIf(ParsingExpression e, String flagName) {
-		return hasReachableIf(e, flagName, new UMap<String>());
-	}
-	
 	
 	protected final static int checkObjectConstruction(ParsingExpression e, int status) {
 		if(status == ParsingRule.ReservedRule) {
@@ -428,6 +434,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 		}
 	}
 	
+	// ======================================================================
 	// factory
 	
 	private static boolean Conservative = false;
