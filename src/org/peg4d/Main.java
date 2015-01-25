@@ -55,15 +55,12 @@ public class Main {
 	// -o, --output
 	private static String OutputFileName = null;
 
-	// -t, --type
-	private static String OutputType = null;
-
 	// --start
 	private static String StartingPoint = "File";  // default
 	// -W
 	public static int WarningLevel = 1;
 	// -g
-	public static int DebugLevel = 0;
+	public static int DebugLevel = 1;
 	// --verbose
 	public static boolean VerboseMode    = false;
 	// --test
@@ -129,15 +126,8 @@ public class Main {
 			}
 			else if ((argument.equals("-o") || argument.equals("--output")) && (index < args.length)) {
 				OutputFileName = args[index];
-//				if(OutputType == null && OutputFileName.lastIndexOf('.') > 0) {
-//					OutputType = OutputFileName.substring(OutputFileName.lastIndexOf('.')+1);
-//				}
 				index = index + 1;
 			}
-//			else if ((argument.equals("-t") || argument.equals("--type")) && (index < args.length)) {
-//				OutputType = args[index];
-//				index = index + 1;
-//			}
 			else if (argument.equals("--start") && (index < args.length)) {
 				StartingPoint = args[index];
 				index = index + 1;
