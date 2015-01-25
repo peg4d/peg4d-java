@@ -144,7 +144,6 @@ public class ParsingRule extends ParsingExpression {
 				}
 			}
 			String rName = sb.toString();
-			System.out.println("creating new rule: " + rName);
 			ParsingRule rRule = peg.getRule(rName);
 			if(rRule == null) {
 				rRule = peg.newRule(rName, ParsingExpression.newEmpty());
@@ -313,8 +312,10 @@ public class ParsingRule extends ParsingExpression {
 			ParsingRule memoed = visited.get(un);
 			if(memoed == null) {
 				memoed = ne.getRule();
-				visited.put(un, memoed);
-				makeSubRule(memoed.expr, visited);
+				if(memoed != null) {
+					visited.put(un, memoed);
+					makeSubRule(memoed.expr, visited);
+				}
 			}
 		}
 	}
