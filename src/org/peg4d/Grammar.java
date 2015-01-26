@@ -1,5 +1,9 @@
 package org.peg4d;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
 import org.peg4d.expression.NonTerminal;
@@ -122,7 +126,29 @@ public class Grammar {
 		return this.getRule(lexName);
 	}
 
+	private Map<String, List<String>> flagDependencyMap = new HashMap<>();
+
+	public List<String> getDependingFlags(ParsingRule r){
+		if(!flagDependencyMap.containsKey(r.baseName)){
+			FlagDependencyCheckVisitor visitor = new FlagDependencyCheckVisitor(flagDependencyMap);
+			visitor.visitRule(r);
+		}
+		return flagDependencyMap.get(r.baseName);
+	}
+
+	public boolean isRuleDependingOnFlag(ParsingRule r){
+		return getDependingFlags(r).size() > 0;
+	}
+
 	public void makeOptionRule(ParsingRule r, String optName, boolean lexOnly, TreeMap<String, String> undefedFlags) {
+		final List<String> dependingFlagList = getDependingFlags(r);
+		final boolean isDependOnFlag = dependingFlagList.size() > 0;
+//		if(isDependOnFlag){
+//			System.out.println("==== " + r.baseName + " ==============================");
+//			for(String flag : flagDependencyMap.get(r.baseName)){
+//				System.out.println(r.baseName + " ~ " + flag);
+//			}
+//		}
 		ParsingRule r2 = this.getRule(optName);
 		if(r2 == null) {
 			r2 = new ParsingRule(this, optName, null, null);
@@ -131,7 +157,7 @@ public class Grammar {
 			r2.baseName = r.baseName;  // important
 			r2.minlen = r.minlen;
 			r2.refc = r.refc;
-			r2.expr = r.expr.norm(lexOnly, undefedFlags).intern();
+			r2.expr = isDependOnFlag ? r.expr.norm(lexOnly, undefedFlags).intern() : r.expr;
 			Main.printVerbose("producing lexical rule", r2);
 		}
 	}
