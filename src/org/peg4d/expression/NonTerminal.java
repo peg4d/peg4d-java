@@ -88,7 +88,7 @@ public class NonTerminal extends ParsingExpression {
 	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
 		NonTerminal ne = this;
 		ParsingRule rule = ne.getRule();
-		String optName = ParsingRule.toOptionName(rule, lexOnly, undefedFlags);
+		String optName = ParsingRule.toOptionName(rule, lexOnly, ne.peg.isRuleDependingOnFlag(rule) ? undefedFlags : null);
 		if(ne.peg.getRule(optName) != rule) {
 			ne.peg.makeOptionRule(rule, optName, lexOnly, undefedFlags);
 			ne = ne.peg.newNonTerminal(optName);
