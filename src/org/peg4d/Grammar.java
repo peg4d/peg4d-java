@@ -1,5 +1,6 @@
 package org.peg4d;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -127,21 +128,21 @@ public class Grammar {
 
 	private Map<String, List<String>> flagDependencyMap = new HashMap<>();
 
-	public boolean isRuleDependingOnFlag(ParsingRule r){
+	public List<String> getDependingFlags(ParsingRule r){
 		if(!flagDependencyMap.containsKey(r.baseName)){
 			FlagDependencyCheckVisitor visitor = new FlagDependencyCheckVisitor(flagDependencyMap);
 			visitor.visitRule(r);
 		}
-		return flagDependencyMap.get(r.baseName).size() > 0;
+		return flagDependencyMap.get(r.baseName);
+	}
+
+	public boolean isRuleDependingOnFlag(ParsingRule r){
+		return getDependingFlags(r).size() > 0;
 	}
 
 	public void makeOptionRule(ParsingRule r, String optName, boolean lexOnly, TreeMap<String, String> undefedFlags) {
-		if(!flagDependencyMap.containsKey(r.baseName)){
-			FlagDependencyCheckVisitor visitor = new FlagDependencyCheckVisitor(flagDependencyMap);
-			visitor.visitRule(r);
-		}
-		List<String> dependingFlagList = flagDependencyMap.get(r.baseName);
-		boolean isDependOnFlag = dependingFlagList.size() > 0;
+		final List<String> dependingFlagList = getDependingFlags(r);
+		final boolean isDependOnFlag = dependingFlagList.size() > 0;
 //		if(isDependOnFlag){
 //			System.out.println("==== " + r.baseName + " ==============================");
 //			for(String flag : flagDependencyMap.get(r.baseName)){

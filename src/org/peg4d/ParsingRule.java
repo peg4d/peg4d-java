@@ -1,5 +1,6 @@
 package org.peg4d;
 
+import java.util.List;
 import java.util.TreeMap;
 
 import org.peg4d.expression.NonTerminal;
@@ -283,9 +284,11 @@ public class ParsingRule extends ParsingExpression {
 			ruleName = "__" + ruleName.toUpperCase();
 		}
 		if(undefedFlags != null) {
-			for(String flag : undefedFlags.keySet()) {
-				ParsingExpression.containFlag(rule.expr, flag);
-				ruleName += "!" + flag;
+			List<String> flags = rule.peg.getDependingFlags(rule);
+			for(String flag : flags) {
+				if(undefedFlags.containsKey(flag)){
+					ruleName += "!" + flag;
+				}
 			}
 		}
 		return ruleName;
