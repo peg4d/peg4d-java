@@ -64,5 +64,9 @@ public class ParsingIf extends ParsingFunction {
 	public void accept(GrammarVisitor visitor) {
 		visitor.visitIfFlag(this);
 	}
+	
+	public String getFlagName(){
+		return this.flagName;
+	}
 
 }

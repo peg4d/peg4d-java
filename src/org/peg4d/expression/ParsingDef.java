@@ -17,7 +17,7 @@ public class ParsingDef extends ParsingFunction {
 	}
 	@Override
 	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
-		if(!this.checkAlwaysConsumed(startNonTerminal, stack)) {
+		if(!this.inner.checkAlwaysConsumed(startNonTerminal, stack)) {
 			this.report(ReportLevel.warning, "unconsumed expression: " + this.inner);
 		}
 		return true;
