@@ -35,7 +35,7 @@ public class ParsingIndent extends ParsingFunction {
 		return context.matchSymbolTableTop(PEG4d.Indent);
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitIndent(this);
 	}
 }

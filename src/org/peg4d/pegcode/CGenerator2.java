@@ -206,7 +206,7 @@ public class CGenerator2 extends GrammarGenerator {
 		let("long", "pos", "c->pos");
 
 		this.pushFailureJumpPoint();
-		e.expr.visit(this);
+		e.expr.accept(this);
 		//let(null, "c->pos", "pos");
 		writeLine("return 0;");
 		
@@ -274,7 +274,7 @@ public class CGenerator2 extends GrammarGenerator {
 		this.pushFailureJumpPoint();
 		String posName = "pos" + this.fID;
 		let("long", posName, "c->pos");
-		e.inner.visit(this);
+		e.inner.accept(this);
 		let(null, "c->pos", posName);
 		this.jumpPrevFailureJump();
 		this.popFailureJumpPoint(e);
@@ -287,7 +287,7 @@ public class CGenerator2 extends GrammarGenerator {
 		this.openIndent();
 		String posName = "pos" + this.fID;
 		let("long", posName, "c->pos");
-		e.inner.visit(this);
+		e.inner.accept(this);
 		let(null, "c->pos", posName);
 		this.closeIndent();
 	}
@@ -298,7 +298,7 @@ public class CGenerator2 extends GrammarGenerator {
 		String labelName = "EXIT_OPTIONAL" + this.fID;
 		String posName = "pos" + this.fID;
 		let("long", posName, "c->pos");
-		e.inner.visit(this);
+		e.inner.accept(this);
 		this.gotoLabel(labelName);
 		this.popFailureJumpPoint(e);
 		let(null, "c->pos", posName);
@@ -315,7 +315,7 @@ public class CGenerator2 extends GrammarGenerator {
 		writeLine("while(" + pposName + " < " + posName + ")");
 		this.openIndent();
 		let(null, posName, "c->pos");
-		e.inner.visit(this);
+		e.inner.accept(this);
 		let(null, pposName, posName);
 		let(null, posName, "c->pos");
 		this.closeIndent();
@@ -326,7 +326,7 @@ public class CGenerator2 extends GrammarGenerator {
 	@Override
 	public void visitSequence(ParsingSequence e) {
 		for(int i = 0; i < e.size(); i++) {
-			e.get(i).visit(this);
+			e.get(i).accept(this);
 		}
 	}
 
@@ -339,7 +339,7 @@ public class CGenerator2 extends GrammarGenerator {
 		let("long", posName, "c->pos");
 		for(int i = 0; i < e.size(); i++) {
 			this.pushFailureJumpPoint();
-			e.get(i).visit(this);
+			e.get(i).accept(this);
 			this.gotoLabel(labelName);
 			this.popFailureJumpPoint(e.get(i));
 			let(null, "c->pos", posName);
@@ -352,7 +352,7 @@ public class CGenerator2 extends GrammarGenerator {
 	@Override
 	public void visitConstructor(ParsingConstructor e) {
 		for(int i = 0; i < e.prefetchIndex; i++) {
-			e.get(i).visit(this);
+			e.get(i).accept(this);
 		}
 		this.pushFailureJumpPoint();
 		String leftName = "left" + this.fID;
@@ -370,7 +370,7 @@ public class CGenerator2 extends GrammarGenerator {
 			writeLine("P4D_lazyLink(c, c->left, 0, " + leftName + ");");
 		}
 		for(int i = e.prefetchIndex; i < e.size(); i++) {
-			e.get(i).visit(this);
+			e.get(i).accept(this);
 		}
 		writeLine("c->left->end_pos = c->pos;");
 		this.letO(null, leftName, "NULL");
@@ -395,7 +395,7 @@ public class CGenerator2 extends GrammarGenerator {
 		openIndent();
 		this.letO("ParsingObject", leftName, "c->left");
 		this.let("int", markName, "P4D_markLogStack(c);");
-		e.inner.visit(this);
+		e.inner.accept(this);
 		writeLine("P4D_commitLog(c, " + markName + ", c->left);");
 		writeLine("P4D_lazyLink(c, " + leftName + "," + e.index + " , c->left);");
 		this.letO(null, "c->left", leftName);

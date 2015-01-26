@@ -38,7 +38,7 @@ public class ParsingScan extends ParsingFunction {
 	}
 
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitScan(this);
 	}
 

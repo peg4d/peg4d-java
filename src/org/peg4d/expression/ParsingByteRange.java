@@ -51,7 +51,7 @@ public class ParsingByteRange extends ParsingExpression {
 		}
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitByteRange(this);
 	}
 	@Override 

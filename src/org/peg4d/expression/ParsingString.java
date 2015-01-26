@@ -46,7 +46,7 @@ public class ParsingString extends ParsingExpression {
 		return this;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitString(this);
 	}
 	@Override public short acceptByte(int ch) {

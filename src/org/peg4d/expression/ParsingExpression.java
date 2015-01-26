@@ -91,7 +91,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	
 	public abstract short acceptByte(int ch);
 
-	public abstract void visit(GrammarVisitor visitor);
+	public abstract void accept(GrammarVisitor visitor);
 
 	
 	@Override

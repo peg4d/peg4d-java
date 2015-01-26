@@ -79,11 +79,11 @@ public class PEGjsFormatter extends GrammarGenerator {
 					this.formatString(this.getNewLine());
 					this.formatString("/ ");
 				}
-				e.get(i).visit(this);
+				e.get(i).accept(this);
 			}
 		}
 		else {
-			e.visit(this);
+			e.accept(this);
 		}
 		this.formatString("\n");
 	}
@@ -163,11 +163,11 @@ public class PEGjsFormatter extends GrammarGenerator {
 			this.formatString(prefix);
 		}
 		if(e.inner instanceof ParsingString || e.inner instanceof NonTerminal || e.inner instanceof ParsingConstructor) {
-			e.inner.visit(this);
+			e.inner.accept(this);
 		}
 		else {
 			this.formatString("(");
-			e.inner.visit(this);
+			e.inner.accept(this);
 			this.formatString(")");
 		}
 		if(suffix != null) {
@@ -214,11 +214,11 @@ public class PEGjsFormatter extends GrammarGenerator {
 			ParsingExpression e = l.get(i);
 			if(e instanceof ParsingChoice || e instanceof ParsingSequence) {
 				this.formatString("( ");
-				e.visit(this);
+				e.accept(this);
 				this.formatString(" )");
 				continue;
 			}
-			e.visit(this);
+			e.accept(this);
 		}
 	}
 
@@ -256,7 +256,7 @@ public class PEGjsFormatter extends GrammarGenerator {
 			if(i > 0) {
 				this.formatString(" / ");
 			}
-			e.get(i).visit(this);
+			e.get(i).accept(this);
 		}
 	}
 
@@ -278,7 +278,7 @@ public class PEGjsFormatter extends GrammarGenerator {
 		this.formatString(e.getParameters());
 		if(e.inner != null) {
 			this.formatString(" ");
-			e.inner.visit(this);
+			e.inner.accept(this);
 		}
 		this.formatString(">");
 	}

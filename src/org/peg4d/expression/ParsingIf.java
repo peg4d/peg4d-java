@@ -61,7 +61,7 @@ public class ParsingIf extends ParsingFunction {
 		return this;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitIfFlag(this);
 	}
 

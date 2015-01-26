@@ -395,7 +395,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			}
 		}
 		if (count <= 1) {
-			e.get(index).visit(this);
+			e.get(index).accept(this);
 			return index++;
 		}
 		Opcode code = new Opcode(Instruction.STRING);
@@ -423,7 +423,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		if (charCount <= 1) {
 			this.pushFailureJumpPoint();
 			writeCode(Instruction.PUSHp1);
-			e.get(index).visit(this);
+			e.get(index).accept(this);
 			this.backTrackFlag = true;
 			return index++;
 		}
@@ -451,7 +451,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	private void writeNotCode(ParsingNot e) {
 		this.pushFailureJumpPoint();
 		writeCode(Instruction.PUSHp1);
-		e.inner.visit(this);
+		e.inner.accept(this);
 		writeCode(Instruction.STOREp);
 		writeCode(Instruction.STOREflag, 1);
 		writeJumpCode(Instruction.JUMP, this.jumpPrevFailureJump());
@@ -485,7 +485,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	private void writeAndCode(ParsingAnd e) {
 		this.pushFailureJumpPoint();
 		writeCode(Instruction.PUSHp1);
-		e.inner.visit(this);
+		e.inner.accept(this);
 		this.popFailureJumpPoint(e);
 		writeCode(Instruction.STOREp);
 		writeJumpCode(Instruction.CONDBRANCH, 1, jumpFailureJump());
@@ -517,7 +517,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		int label = newLabel();
 		this.pushFailureJumpPoint();
 		writeCode(Instruction.PUSHp1);
-		e.inner.visit(this);
+		e.inner.accept(this);
 		writeCode(Instruction.POPp);
 		writeJumpCode(Instruction.JUMP, label);
 		this.popFailureJumpPoint(e);
@@ -561,7 +561,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		this.pushFailureJumpPoint();
 		writeLabel(label);
 		writeCode(Instruction.PUSHp1);
-		e.inner.visit(this);
+		e.inner.accept(this);
 		writeJumpCode(Instruction.REPCOND, end);
 		writeJumpCode(Instruction.JUMP, label);
 		this.popFailureJumpPoint(e);
@@ -675,7 +675,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			for(int i = 0; i < caseList.size(); i++) {
 				ParsingExpression caseElement = caseList.get(i);
 				choiceMap.put(caseElement, codeIndex);
-				caseElement.visit(this);
+				caseElement.accept(this);
 				if (caseElement instanceof ParsingFailure) {
 					writeJumpCode(Instruction.JUMP, this.jumpFailureJump());
 				}
@@ -880,7 +880,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		this.callMap.put(e.localName, this.codeIndex);
 		System.out.println(e.localName + ":");
 		this.pushFailureJumpPoint();
-		e.expr.visit(this);
+		e.expr.accept(this);
 		this.popFailureJumpPoint(e);
 		writeCode(Instruction.RET);
 	}
@@ -986,7 +986,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 				i = writeSequenceCode(e, i, e.size());
 			}
 			else {
-				e.get(i).visit(this);
+				e.get(i).accept(this);
 			}
 		}
 	}
@@ -1023,7 +1023,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			for(int i = 0; i < e.size(); i++) {
 				this.pushFailureJumpPoint();
 				writeCode(Instruction.PUSHp1);
-				e.get(i).visit(this);
+				e.get(i).accept(this);
 				writeJumpCode(Instruction.JUMP, label);
 				this.popFailureJumpPoint(e.get(i));
 				if (i != e.size() - 1) {
@@ -1059,7 +1059,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 				i = writeSequenceCode(e, i, e.size());
 			}
 			else {
-				e.get(i).visit(this);
+				e.get(i).accept(this);
 			}
 		}
 		writeCode(Instruction.SETendp);
@@ -1085,7 +1085,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		this.pushFailureJumpPoint();
 		writeCode(Instruction.PUSHconnect);
 		//writeCode(Instruction.PUSHm);
-		e.inner.visit(this);
+		e.inner.accept(this);
 		writeCode(Instruction.COMMIT, e.index);
 		//writeCode(Instruction.LINK, e.index);
 		//writeCode(Instruction.STOREo);
@@ -1166,7 +1166,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	@Override
 	public void visitScan(ParsingScan e) {
 		writeCode(Instruction.PUSHp1);
-		e.inner.visit(this);
+		e.inner.accept(this);
 		writeScanCode(Instruction.SCAN, e.number, this.scanCount);
 		this.repeatMap.put(e.repeatExpression.toString(), this.scanCount);
 		this.scanCount++;
@@ -1181,7 +1181,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 				this.pushFailureJumpPoint();
 				writeLabel(label);
 				writeCode(Instruction.PUSHp1);
-				e.inner.visit(this);
+				e.inner.accept(this);
 				writeJumpCode(Instruction.CHECKEND, this.repeatMap.get(e.inner.toString()));
 				writeJumpCode(Instruction.JUMP, label);
 				this.popFailureJumpPoint(e);
@@ -1196,7 +1196,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			this.pushFailureJumpPoint();
 			writeLabel(label);
 			writeCode(Instruction.PUSHp1);
-			e.inner.visit(this);
+			e.inner.accept(this);
 			writeJumpCode(Instruction.CHECKEND, this.repeatMap.get(e.inner.toString()));
 			writeJumpCode(Instruction.JUMP, label);
 			this.popFailureJumpPoint(e);

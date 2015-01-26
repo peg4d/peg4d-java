@@ -34,7 +34,7 @@ public class ParsingIs extends ParsingFunction {
 		return context.matchSymbolTableTop(tagId);
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitIs(this);
 	}
 	@Override

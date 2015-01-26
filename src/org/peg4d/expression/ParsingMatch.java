@@ -50,7 +50,7 @@ public class ParsingMatch extends ParsingFunction {
 		return this.inner.matcher.simpleMatch(context);
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitMatch(this);
 	}
 }

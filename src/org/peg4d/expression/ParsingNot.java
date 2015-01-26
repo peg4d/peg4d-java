@@ -70,7 +70,7 @@ public class ParsingNot extends ParsingUnary {
 		}
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitNot(this);
 	}
 }

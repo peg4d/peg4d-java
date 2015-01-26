@@ -120,7 +120,7 @@ public class PythonGenerator extends GrammarGenerator {
 		openIndent();
 		this.let("long", "pos", "c.pos");
 		this.pushFailureJumpPoint();
-		e.expr.visit(this);
+		e.expr.accept(this);
 		
 		this.let(null, "c.pos", "pos");
 		writeLine("return True");
@@ -188,7 +188,7 @@ public class PythonGenerator extends GrammarGenerator {
 		this.pushFailureJumpPoint();
 		String posName = "pos" + this.fID;
 		this.let("long", posName, "pos");
-		e.inner.visit(this);
+		e.inner.accept(this);
 		this.let(null, "pos", posName);
 		this.jumpPrevFailureJump();
 		this.popFailureJumpPoint(e);
@@ -200,14 +200,14 @@ public class PythonGenerator extends GrammarGenerator {
 	public void visitAnd(ParsingAnd e) {
 		String posName = "pos" + this.fID;
 		this.let("long", posName, "pos");
-		e.inner.visit(this);
+		e.inner.accept(this);
 		this.let(null, "pos", posName);
 	}
 
 	@Override
 	public void visitOptional(ParsingOption e) {
 		this.pushFailureJumpPoint();
-		e.inner.visit(this);
+		e.inner.accept(this);
 		this.popFailureJumpPoint(e);
 		endFailureJumpPoint();
 	}
@@ -217,7 +217,7 @@ public class PythonGenerator extends GrammarGenerator {
 		this.pushFailureJumpPoint();
 		writeLine("while(True): ");
 		this.openIndent();
-		e.inner.visit(this);
+		e.inner.accept(this);
 		this.closeIndent();
 		this.popFailureJumpPoint(e);
 		endFailureJumpPoint();
@@ -226,7 +226,7 @@ public class PythonGenerator extends GrammarGenerator {
 	@Override
 	public void visitSequence(ParsingSequence e) {
 		for(int i = 0; i < e.size(); i++) {
-			e.get(i).visit(this);
+			e.get(i).accept(this);
 		}
 	}
 
@@ -238,13 +238,13 @@ public class PythonGenerator extends GrammarGenerator {
 		this.let("long", posName, "pos");
 		for(int i = 0; i < e.size() - 1; i++) {
 			this.pushFailureJumpPoint();
-			e.get(i).visit(this);
+			e.get(i).accept(this);
 			this.writeLine("goto " + labelName + "");
 			this.popFailureJumpPoint(e.get(i));
 			this.let(null, "pos", posName);
 			endFailureJumpPoint();
 		}
-		e.get(e.size() - 1).visit(this);
+		e.get(e.size() - 1).accept(this);
 		closeIndent();
 		this.writeLine(labelName + ": ");
 	}
@@ -252,7 +252,7 @@ public class PythonGenerator extends GrammarGenerator {
 	@Override
 	public void visitConstructor(ParsingConstructor e) {
 		for(int i = 0; i < e.prefetchIndex; i++) {
-			e.get(i).visit(this);
+			e.get(i).accept(this);
 		}
 		this.pushFailureJumpPoint();
 		String leftName = "left" + this.fID;
@@ -269,7 +269,7 @@ public class PythonGenerator extends GrammarGenerator {
 			writeLine("Parsing_lazyLink(c, c.left, 0, left)");
 		}
 		for(int i = e.prefetchIndex; i < e.size(); i++) {
-			e.get(i).visit(this);
+			e.get(i).accept(this);
 		}
 		writeLine("c.left.end_pos = pos");
 		writeLine("Parsing_setObject(c, &" + leftName+ ", NULL)");
@@ -294,7 +294,7 @@ public class PythonGenerator extends GrammarGenerator {
 		writeLine("ParsingObject" + leftName+ " = NULL");
 		writeLine("Parsing_setObject(c, &" + leftName+ ", c.left)");
 		writeLine("int tid = Parsing_markLogStack(c)");
-		e.inner.visit(this);
+		e.inner.accept(this);
 		writeLine("Parsing_commitLog(c, tid)");
 		writeLine("Parsing_lazyLink(c, " + leftName + ", c.left)");
 		writeLine("Parsing_setObject(c, &c.left, " + leftName+ ")");

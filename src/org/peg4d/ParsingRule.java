@@ -169,7 +169,7 @@ public class ParsingRule extends ParsingExpression {
 
 
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		// TODO Auto-generated method stub
 		
 	}

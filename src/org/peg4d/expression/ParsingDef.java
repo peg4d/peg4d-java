@@ -59,7 +59,7 @@ public class ParsingDef extends ParsingFunction {
 		return false;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitDef(this);
 	}
 	

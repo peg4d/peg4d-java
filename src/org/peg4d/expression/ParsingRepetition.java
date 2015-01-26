@@ -92,7 +92,7 @@ public class ParsingRepetition extends ParsingUnary {
 		return true;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitRepetition(this);
 	}
 }

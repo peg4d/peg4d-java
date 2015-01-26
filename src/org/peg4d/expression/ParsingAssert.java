@@ -59,7 +59,7 @@ public class ParsingAssert extends ParsingFunction {
 		return true;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitAssert(this);
 	}
 

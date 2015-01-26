@@ -38,7 +38,7 @@ public class ParsingCatch extends ParsingFunction {
 		return true;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitCatch(this);
 	}
 }

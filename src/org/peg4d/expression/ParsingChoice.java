@@ -87,7 +87,7 @@ public class ParsingChoice extends ParsingList {
 	}
 
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitChoice(this);
 	}
 	@Override
