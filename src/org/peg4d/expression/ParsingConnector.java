@@ -83,7 +83,7 @@ public class ParsingConnector extends ParsingUnary {
 		return false;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitConnector(this);
 	}
 }

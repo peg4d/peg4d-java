@@ -57,7 +57,7 @@ public class ParsingFailure extends ParsingExpression {
 		return false;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitFailure(this);
 	}
 }

@@ -176,7 +176,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		this.entry_context = this.mBuilder.defineArgument(ParsingContext.class);	// represent first argument of generating method
 
 		// generate method body
-		e.visit(this);
+		e.accept(this);
 
 		// finalize
 		this.mBuilder.exitScope();
@@ -443,7 +443,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		Label thenLabel = this.mBuilder.newLabel();
 		Label mergeLabel = this.mBuilder.newLabel();
 
-		e.inner.visit(this);
+		e.inner.accept(this);
 		this.mBuilder.push(true);
 		this.mBuilder.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.EQ, thenLabel);
 
@@ -490,7 +490,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		// generate variable
 		VarEntry entry_pos = this.mBuilder.createNewVarAndStore(long.class);
 
-		e.inner.visit(this);
+		e.inner.accept(this);
 //		this.mBuilder.pop();
 
 		// generate rollback
@@ -522,7 +522,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		Label thenLabel = this.mBuilder.newLabel();
 		Label mergeLabel = this.mBuilder.newLabel();
 
-		e.inner.visit(this);
+		e.inner.accept(this);
 		this.mBuilder.push(true);
 		this.mBuilder.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.NE, thenLabel);
 
@@ -582,7 +582,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 			Label thenLabel = this.mBuilder.newLabel();
 			Label mergeLabel = this.mBuilder.newLabel();
 
-			e.inner.visit(this);
+			e.inner.accept(this);
 			this.mBuilder.push(true);
 			this.mBuilder.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.NE, thenLabel);
 			this.mBuilder.goTo(mergeLabel);
@@ -635,7 +635,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		Label mergeLabel = this.mBuilder.newLabel();
 
 		// if cond
-		e.inner.visit(this);
+		e.inner.accept(this);
 		this.mBuilder.push(true);
 		this.mBuilder.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.EQ, thenLabel);
 
@@ -709,7 +709,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		Label mergeLabel = this.mBuilder.newLabel();
 
 		for(int i = 0; i < e.size(); i++) {
-			e.get(i).visit(this);
+			e.get(i).accept(this);
 			this.mBuilder.push(true);
 			this.mBuilder.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.NE, thenLabel);
 		}
@@ -735,12 +735,12 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 
 	private void optimizeAlternative(ParsingExpression alter) {
 		if(!enableOptimization) {
-			alter.visit(this);
+			alter.accept(this);
 			return;
 		}
 
 		if(!(alter instanceof ParsingList)) {
-			alter.visit(this);
+			alter.accept(this);
 			return;
 		}
 
@@ -854,7 +854,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		Label mergeLabel = this.mBuilder.newLabel();
 
 		for(int i = 0; i < e.size(); i++) {	// only support prefetchIndex = 0
-			e.get(i).visit(this);
+			e.get(i).accept(this);
 			this.mBuilder.push(true);
 			this.mBuilder.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.NE, thenLabel);
 		}
@@ -914,7 +914,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 			this.mBuilder.push(true);
 			this.mBuilder.callInvocationTarget(this.target_setFlag);
 
-			e.inner.visit(this);
+			e.inner.accept(this);
 			VarEntry entry_res = this.mBuilder.createNewVarAndStore(boolean.class);
 
 			this.mBuilder.loadFromVar(this.entry_context);
@@ -927,7 +927,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 			this.mBuilder.exitScope();
 			return;
 		}
-		e.inner.visit(this);
+		e.inner.accept(this);
 	}
 
 	@Override
@@ -946,7 +946,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 			this.mBuilder.push(false);
 			this.mBuilder.callInvocationTarget(this.target_setFlag);
 
-			e.inner.visit(this);
+			e.inner.accept(this);
 			VarEntry entry_res = this.mBuilder.createNewVarAndStore(boolean.class);
 
 			this.mBuilder.loadFromVar(this.entry_context);
@@ -959,7 +959,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 			this.mBuilder.exitScope();
 			return;
 		}
-		e.inner.visit(this);
+		e.inner.accept(this);
 	}
 
 	@Override
@@ -1038,7 +1038,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		this.mBuilder.callInstanceMethod(ParsingContext.class, int.class, "pushSymbolTable", int.class, String.class);
 		VarEntry entry_stackTop = this.mBuilder.createNewVarAndStore(int.class);
 
-		e.inner.visit(this);
+		e.inner.accept(this);
 		VarEntry entry_b = this.mBuilder.createNewVar(boolean.class);
 
 		this.mBuilder.loadFromVar(this.entry_context);
@@ -1062,7 +1062,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		Label mergeLabel = this.mBuilder.newLabel();
 
 		this.mBuilder.push(true);
-		e.inner.visit(this);
+		e.inner.accept(this);
 
 		this.mBuilder.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.EQ, thenLabel);
 		this.mBuilder.push(false);

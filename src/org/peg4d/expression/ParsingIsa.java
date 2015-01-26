@@ -34,7 +34,7 @@ public class ParsingIsa extends ParsingFunction {
 		return context.matchSymbolTable(tableType);
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitIsa(this);
 	}
 	@Override

@@ -50,7 +50,7 @@ public class ParsingByte extends ParsingExpression {
 //		return this.toString();
 //	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitByte(this);
 	}
 	@Override

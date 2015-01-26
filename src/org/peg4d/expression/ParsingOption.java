@@ -53,7 +53,7 @@ public class ParsingOption extends ParsingUnary {
 		return ParsingExpression.newOption(e);
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitOptional(this);
 	}
 	@Override 

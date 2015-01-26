@@ -65,7 +65,7 @@ public class ParsingTagging extends ParsingExpression {
 		return true;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitTagging(this);
 	}
 }

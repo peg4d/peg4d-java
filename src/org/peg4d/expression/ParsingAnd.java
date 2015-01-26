@@ -49,7 +49,7 @@ public class ParsingAnd extends ParsingUnary {
 	}
 
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitAnd(this);
 	}
 	@Override

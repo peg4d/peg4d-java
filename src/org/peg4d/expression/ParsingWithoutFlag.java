@@ -71,7 +71,7 @@ public class ParsingWithoutFlag extends ParsingFunction {
 		return this.inner.matcher.simpleMatch(context);
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitWithoutFlag(this);
 	}
 

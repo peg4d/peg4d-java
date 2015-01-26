@@ -44,7 +44,7 @@ public class ParsingBlock extends ParsingFunction {
 		return b;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitBlock(this);
 	}
 

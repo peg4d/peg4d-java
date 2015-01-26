@@ -46,7 +46,7 @@ public class ParsingAny extends ParsingExpression {
 		return (ch == ParsingSource.EOF) ? Reject : Accept;
 	}
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitAny(this);
 	}
 	@Override

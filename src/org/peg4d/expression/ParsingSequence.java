@@ -77,7 +77,7 @@ public class ParsingSequence extends ParsingList {
 	}
 
 	@Override
-	public void visit(GrammarVisitor visitor) {
+	public void accept(GrammarVisitor visitor) {
 		visitor.visitSequence(this);
 	}
 }

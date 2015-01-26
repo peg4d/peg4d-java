@@ -35,7 +35,7 @@ public abstract class GrammarGenerator extends GrammarVisitor {
 
 	public final void formatExpression(ParsingExpression e, StringBuilder sb) {
 		this.sb = sb;
-		e.visit(this);
+		e.accept(this);
 	}
 	
 	protected final void formatString(String s) {
