@@ -62,8 +62,6 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	boolean backTrackFlag = false;
 	boolean optChoiceMode = true;
 	boolean optNonTerminalMode = true;
-	int optimizationLevel = 0;
-	int optimizationCount = 0;
 	int choiceCaseCount = 0;
 	int constructorCount = 0;
 	int scanCount = 0;
@@ -124,14 +122,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		
 		// Length of grammerfileName (4 byte)
 		int fileNamelen = grammerfileName.length();
-		byteCode[pos] = (byte) (0x000000ff & (fileNamelen));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (fileNamelen >> 8));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (fileNamelen >> 16));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (fileNamelen >> 24));
-		pos++;
+		pos = write32(byteCode, fileNamelen, pos);
 		
 		// GrammerfileName (n byte)
 		byte[] name = grammerfileName.getBytes();
@@ -142,58 +133,22 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		
 		// pool_size_info
 		int poolSizeInfo = choiceCaseCount * constructorCount;
-		byteCode[pos] = (byte) (0x000000ff & (poolSizeInfo));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (poolSizeInfo >> 8));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (poolSizeInfo >> 16));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (poolSizeInfo >> 24));
-		pos++;
+		pos = write32(byteCode, poolSizeInfo, pos);
 		
 		// rule table
 		int ruleSize = ruleList.size();
-		byteCode[pos] = (byte) (0x000000ff & (ruleSize));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (ruleSize >> 8));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (ruleSize >> 16));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (ruleSize >> 24));
-		pos++;
+		pos = write32(byteCode, ruleSize, pos);
 		for(int i = 0; i < ruleList.size(); i++) {
 			EntryRule rule = ruleList.get(i);
 			byte[] ruleName = rule.ruleName.getBytes();
 			int ruleNamelen = ruleName.length;
 			long entryPoint = rule.entryPoint;
-			byteCode[pos] = (byte) (0x000000ff & (ruleNamelen));
-			pos++;
-			byteCode[pos] = (byte) (0x000000ff & (ruleNamelen >> 8));
-			pos++;
-			byteCode[pos] = (byte) (0x000000ff & (ruleNamelen >> 16));
-			pos++;
-			byteCode[pos] = (byte) (0x000000ff & (ruleNamelen >> 24));
-			pos++;
+			pos = write32(byteCode, ruleNamelen, pos);
 			for(int j = 0; j < ruleName.length; j++) {
 				byteCode[pos] = ruleName[j];
 				pos++;
 			}
-			byteCode[pos] = (byte) (0x000000ff & (entryPoint));
-			pos++;
-			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 8));
-			pos++;
-			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 16));
-			pos++;
-			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 24));
-			pos++;
-			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 32));
-			pos++;
-			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 40));
-			pos++;
-			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 48));
-			pos++;
-			byteCode[pos] = (byte) (0x000000ff & (entryPoint >> 56));
-			pos++;
+			pos = write64(byteCode, entryPoint, pos);
 		}
 
 		int bytecodelen_pos = pos;
@@ -202,10 +157,6 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		// byte code (m byte)
 		for(int i = 0; i < codeList.size(); i++) {
 			Opcode code = codeList.ArrayValues[i];
-			if (code.inst.equals(Instruction.INDENT)) {
-				int a;
-				a = 1;
-			}
 			byteCode[pos] = (byte) code.inst.ordinal();
 			pos++;
 			if (code.inst == Instruction.CALL) {
@@ -214,14 +165,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 				byteCode[pos] = 0;
 				pos++;
 				int ndata = ruleMap.get(code.name);
-				byteCode[pos] = (byte) (0x000000ff & (ndata));
-				pos++;
-				byteCode[pos] = (byte) (0x000000ff & (ndata >> 8));
-				pos++;
-				byteCode[pos] = (byte) (0x000000ff & (ndata >> 16));
-				pos++;
-				byteCode[pos] = (byte) (0x000000ff & (ndata >> 24));
-				pos++;
+				pos = write32(byteCode, ndata, pos);
 			}
 			else if (code.ndata != null) {
 				byteCode[pos] = (byte) (0x000000ff & (code.ndata.size()));
@@ -229,28 +173,14 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 				byteCode[pos] = (byte) (0x000000ff & (code.ndata.size() >> 8));
 				pos++;
 				for(int j = 0; j < code.ndata.size(); j++){
-					byteCode[pos] = (byte) (0x000000ff & (code.ndata.get(j)));
-					pos++;
-					byteCode[pos] = (byte) (0x000000ff & (code.ndata.get(j) >> 8));
-					pos++;
-					byteCode[pos] = (byte) (0x000000ff & (code.ndata.get(j) >> 16));
-					pos++;
-					byteCode[pos] = (byte) (0x000000ff & (code.ndata.get(j) >> 24));
-					pos++;
+					pos = write32(byteCode, code.ndata.get(j), pos);
 				}
 			}
 			else {
 				byteCode[pos] = 0;
 				pos++;
 			}
-			byteCode[pos] = (byte) (0x000000ff & (code.jump));
-			pos++;
-			byteCode[pos] = (byte) (0x000000ff & (code.jump >> 8));
-			pos++;
-			byteCode[pos] = (byte) (0x000000ff & (code.jump >> 16));
-			pos++;
-			byteCode[pos] = (byte) (0x000000ff & (code.jump >> 24));
-			pos++;
+			pos = write32(byteCode, code.jump, pos);
 			if(code.name != null) {
 				int j = 0;
 				byteCode[pos] = (byte) code.name.length();
@@ -270,21 +200,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		// Length of byte code (8 byte) 
 		long byteCodelength = codeList.size();
 		pos = bytecodelen_pos;
-		byteCode[pos] = (byte) (0x000000ff & (byteCodelength));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (byteCodelength >> 8));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (byteCodelength >> 16));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (byteCodelength >> 24));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (byteCodelength >> 32));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (byteCodelength >> 40));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (byteCodelength >> 48));
-		pos++;
-		byteCode[pos] = (byte) (0x000000ff & (byteCodelength >> 56));
+		write64(byteCode, byteCodelength, pos);
 		
 		try {
 			if (outputFileName == null) {
@@ -301,6 +217,24 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} 
+	}
+	
+	private int write32(byte[] byteCode, long num, int pos) {
+		byteCode[pos] = (byte) (0x000000ff & (num));
+		pos++;
+		byteCode[pos] = (byte) (0x000000ff & (num >> 8));
+		pos++;
+		byteCode[pos] = (byte) (0x000000ff & (num >> 16));
+		pos++;
+		byteCode[pos] = (byte) (0x000000ff & (num >> 24));
+		pos++;
+		return pos;
+	}
+	
+	private int write64(byte[] byteCode, long num, int pos) {
+		pos = write32(byteCode, num, pos);
+		pos = write32(byteCode, num >> 32, pos);
+		return pos;
 	}
 	
 	private void generateProfileCode(Grammar peg) {
@@ -849,7 +783,6 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	
 	@Override
 	public void formatGrammar(Grammar peg, StringBuilder sb) {
-		this.optimizationLevel = Main.OptimizationLevel;
 		this.peg = peg;
 		this.formatHeader();
 		for(ParsingRule r: peg.getRuleList()) {
