@@ -885,16 +885,15 @@ long nez_VM_Execute(ParsingContext context, Instruction *inst) {
     }
   }
   OP(ZEROMORECHARSET) {
-    int j;
+    int j = 0;
     int len = *(pc)->ndata;
-  ZEROMORECHARSET_LABEL:
-    j = 0;
     while (j < len) {
       if (inputs[pos] == (pc)->chardata[j]) {
         pos++;
-        goto ZEROMORECHARSET_LABEL;
+        j = 0;
+      } else {
+        j++;
       }
-      j++;
     }
     DISPATCH_NEXT;
   }
