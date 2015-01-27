@@ -51,6 +51,13 @@ import org.peg4d.vm.Instruction;
 
 public class PegVMByteCodeGenerator extends GrammarGenerator {
 	
+	// Kind of optimize
+	boolean O_Inlining = false;
+	boolean O_MappedChoice = false;
+	boolean O_FusionInstruction = false;
+	boolean O_FusionOperand = false;
+	boolean O_StackCaching = false;
+	
 	int codeIndex = 0;
 	boolean backTrackFlag = false;
 	boolean optChoiceMode = true;
@@ -61,6 +68,32 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	int constructorCount = 0;
 	int scanCount = 0;
 	Grammar peg;
+	
+	public PegVMByteCodeGenerator(int level) {
+		switch (level) {
+		case 2:
+			O_Inlining = true;
+			break;
+		case 3:
+			O_Inlining = true;
+			O_FusionInstruction = true;
+			break;
+		case 4:
+			O_Inlining = true;
+			O_FusionInstruction = true;
+			O_MappedChoice = true;
+			break;
+		case 5:
+			O_Inlining = true;
+			O_FusionInstruction = true;
+			O_MappedChoice = true;
+			O_FusionOperand = true;
+			O_StackCaching = true;
+			break;
+		default:
+			break;
+		}
+	}
 	
 	class EntryRule {
 		String ruleName;
@@ -900,7 +933,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitNonTerminal(NonTerminal ne) {
-		if (optimizationLevel > 1 && optNonTerminalMode) {
+		if (O_Inlining && optNonTerminalMode) {
 			optNonTerminalMode = false;
 			ParsingExpression e = getNonTerminalRule(ne);
 			e.visit(this);
@@ -946,7 +979,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitNot(ParsingNot e) {
-		if (optimizationLevel > 2) {
+		if (O_FusionInstruction) {
 			if (!optimizeNot(e)) {
 				writeNotCode(e);
 			}
@@ -963,7 +996,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitOptional(ParsingOption e) {
-		if (optimizationLevel > 2) {
+		if (O_FusionInstruction) {
 			if (!optimizeOptional(e)) {
 				writeOptionalCode(e);
 			}
@@ -975,7 +1008,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitRepetition(ParsingRepetition e) {
-		if (optimizationLevel > 2) {
+		if (O_FusionInstruction) {
 			if (!optimizeRepetition(e)) {
 				writeRepetitionCode(e);
 			}
@@ -988,7 +1021,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	@Override
 	public void visitSequence(ParsingSequence e) {
 		for(int i = 0; i < e.size(); i++) {
-			if (optimizationLevel > 0) {
+			if (O_FusionInstruction) {
 				i = writeSequenceCode(e, i, e.size());
 			}
 			else {
@@ -1001,10 +1034,10 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	public void visitChoice(ParsingChoice e) {
 		this.choiceCaseCount += e.size();
 		int label = newLabel();
-		if (optimizationLevel > 2 && optChoiceMode) {
+		if (O_MappedChoice && optChoiceMode) {
 			optimizeChoice(e);
 		}
-		else if (optimizationLevel > 0) {
+		else if (O_FusionInstruction) {
 			boolean backTrackFlag = this.backTrackFlag = false;
 			for(int i = 0; i < e.size(); i++) {
 				i = writeChoiceCode(e, i, e.size());
@@ -1061,7 +1094,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			writeCode(Instruction.NEW);
 		}
 		for(int i = 0; i < e.size(); i++) {
-			if (optimizationLevel > 0) {
+			if (O_FusionInstruction) {
 				i = writeSequenceCode(e, i, e.size());
 			}
 			else {
@@ -1187,7 +1220,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitRepeat(ParsingRepeat e) {
-		if (optimizationLevel > 0) {
+		if (O_FusionInstruction) {
 			if (!optimizeRepeat(e)) {
 				int label = newLabel();
 				int end = newLabel();

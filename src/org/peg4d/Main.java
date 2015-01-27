@@ -80,6 +80,8 @@ public class Main {
 	
 	// --pegvm
 	public static boolean PegVMByteCodeGeneration = false;
+	
+	public static int PegVMByteCodeOptimizedLevel = 0;
 
 	// -O
 	public static int OptimizationLevel = 2;
@@ -203,6 +205,8 @@ public class Main {
 			}
 			else if(argument.equals("--pegvm")) {
 				PegVMByteCodeGeneration = true;
+				PegVMByteCodeOptimizedLevel = Utils.parseInt(args[index], 0);
+				index = index + 1;
 			}
 			else {
 				showUsage("unknown option: " + argument);
@@ -396,7 +400,7 @@ public class Main {
 	public static void conv() {
 		Grammar peg = newGrammar();
 		if (PegVMByteCodeGeneration) {
-			PegVMByteCodeGenerator g = new PegVMByteCodeGenerator();
+			PegVMByteCodeGenerator g = new PegVMByteCodeGenerator(Main.PegVMByteCodeOptimizedLevel);
 			g.formatGrammar(peg, null);
 			g.writeByteCode(GrammarFile, OutputFileName, peg);
 		}
