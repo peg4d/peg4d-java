@@ -32,8 +32,9 @@ typedef struct Instruction {
 #define PEGVM_OP_EACH(OP)                                                      \
   OP(EXIT) OP(JUMP) OP(CALL) OP(RET) OP(CONDBRANCH) OP(REPCOND) OP(CHARRANGE)  \
       OP(CHARSET) OP(STRING) OP(ANY) OP(PUSHo) OP(PUSHconnect) OP(PUSHp1)      \
-      OP(PUSHp2) OP(POPp) OP(POPo) OP(STOREo) OP(STOREp) OP(STOREflag) OP(NEW) \
-      OP(NEWJOIN) OP(COMMIT) OP(ABORT) OP(LINK) OP(SETendp) OP(TAG) OP(VALUE)  \
+      OP(LOADrp) OP(LOADnp) OP(LOADop) OP(POPp) OP(POPo) OP(STOREo) OP(STOREp) \
+      OP(STORErp) OP(STOREnp) OP(STOREop) OP(STOREflag) OP(NEW) OP(NEWJOIN)    \
+      OP(COMMIT) OP(ABORT) OP(LINK) OP(SETendp) OP(TAG) OP(VALUE)              \
       OP(MAPPEDCHOICE) OP(SCAN) OP(CHECKEND) OP(DEF) OP(IS) OP(ISA)            \
       OP(BLOCKSTART) OP(BLOCKEND) OP(INDENT) OP(NOTBYTE) OP(NOTANY)            \
       OP(NOTCHARSET) OP(NOTBYTERANGE) OP(NOTSTRING) OP(OPTIONALBYTE)           \

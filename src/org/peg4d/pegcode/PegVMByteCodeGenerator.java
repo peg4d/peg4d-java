@@ -33,6 +33,7 @@ import org.peg4d.expression.ParsingIf;
 import org.peg4d.expression.ParsingIndent;
 import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
+import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
@@ -43,6 +44,7 @@ import org.peg4d.expression.ParsingScan;
 import org.peg4d.expression.ParsingSequence;
 import org.peg4d.expression.ParsingString;
 import org.peg4d.expression.ParsingTagging;
+import org.peg4d.expression.ParsingUnary;
 import org.peg4d.expression.ParsingValue;
 import org.peg4d.expression.ParsingWithFlag;
 import org.peg4d.expression.ParsingWithoutFlag;
@@ -487,6 +489,18 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		writeCode(Instruction.STOREp);
 	}
 	
+	private void writeSCNotCode(ParsingNot e) {
+		this.pushFailureJumpPoint();
+		writeCode(Instruction.LOADnp);
+		e.inner.visit(this);
+		writeCode(Instruction.STOREnp);
+		writeCode(Instruction.STOREflag, 1);
+		writeJumpCode(Instruction.JUMP, this.jumpPrevFailureJump());
+		this.popFailureJumpPoint(e);
+		writeCode(Instruction.STOREflag, 0);
+		writeCode(Instruction.STOREnp);
+	}
+	
 	private void writeNotCharsetCode(ParsingChoice e) {
 		Opcode code = new Opcode(Instruction.NOTCHARSET);
 		for(int i = 0; i < e.size(); i++) {
@@ -515,7 +529,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		e.inner.visit(this);
 		this.popFailureJumpPoint(e);
 		writeCode(Instruction.STOREp);
-		writeJumpCode(Instruction.CONDBRANCH, 1, jumpFailureJump());
+		writeCode(Instruction.CONDBRANCH, 1, jumpFailureJump());
 	}
 	
 	private void writeOptionalCode(ParsingOption e) {
@@ -528,6 +542,18 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		this.popFailureJumpPoint(e);
 		writeCode(Instruction.STOREflag, 0);
 		writeCode(Instruction.STOREp);
+		writeLabel(label);
+	}
+	
+	private void writeSCOptionalCode(ParsingOption e) {
+		int label = newLabel();
+		this.pushFailureJumpPoint();
+		writeCode(Instruction.LOADop);
+		e.inner.visit(this);
+		writeJumpCode(Instruction.JUMP, label);
+		this.popFailureJumpPoint(e);
+		writeCode(Instruction.STOREflag, 0);
+		writeCode(Instruction.STOREop);
 		writeLabel(label);
 	}
 	
@@ -572,6 +598,20 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		this.popFailureJumpPoint(e);
 		writeCode(Instruction.STOREflag, 0);
 		writeCode(Instruction.STOREp);
+		writeLabel(end);
+	}
+	
+	private void writeSCRepetitionCode(ParsingRepetition e) {
+		int label = newLabel();
+		int end = newLabel();
+		this.pushFailureJumpPoint();
+		writeLabel(label);
+		writeCode(Instruction.LOADrp);
+		e.inner.visit(this);
+		writeJumpCode(Instruction.JUMP, label);
+		this.popFailureJumpPoint(e);
+		writeCode(Instruction.STOREflag, 0);
+		writeCode(Instruction.STORErp);
 		writeLabel(end);
 	}
 	
@@ -655,6 +695,87 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 				}
 			}
 		}
+	}
+	
+	private boolean checkRepcond(ParsingExpression e) {
+		if (e instanceof NonTerminal) {
+			e = getNonTerminalRule(e);
+		}
+		if (e instanceof ParsingUnary) {
+			return true;
+		}
+		if(e instanceof ParsingList) {
+			for(int i = 0; i < e.size(); i++) {
+				if (!checkRepcond(e.get(i))) {
+					return false;
+				}
+			}
+			return true;
+		}
+		return false;
+	}
+	
+	private boolean checkSCRepetition(ParsingExpression e) {
+		if (e instanceof NonTerminal) {
+			e = getNonTerminalRule(e);
+		}
+		if (e instanceof ParsingRepetition) {
+			return false;
+		}
+		if (e instanceof ParsingUnary) {
+			return checkSCRepetition(((ParsingUnary) e).inner);
+		}
+		if(e instanceof ParsingList) {
+			for(int i = 0; i < e.size(); i++) {
+				if (!checkSCRepetition(e.get(i))) {
+					return false;
+				}
+			}
+			return true;
+		}
+		return true;
+	}
+	
+	private boolean checkSCNot(ParsingExpression e) {
+		if (e instanceof NonTerminal) {
+			e = getNonTerminalRule(e);
+		}
+		if (e instanceof ParsingNot) {
+			return false;
+		}
+		if (e instanceof ParsingUnary) {
+			return checkSCNot(((ParsingUnary) e).inner);
+		}
+		if(e instanceof ParsingList) {
+			for(int i = 0; i < e.size(); i++) {
+				if (!checkSCNot(e.get(i))) {
+					return false;
+				}
+			}
+			return true;
+		}
+		return true;
+	}
+	
+	private boolean checkSCOptional(ParsingExpression e) {
+		if (e instanceof NonTerminal) {
+			e = getNonTerminalRule(e);
+		}
+		if (e instanceof ParsingOption) {
+			return false;
+		}
+		if (e instanceof ParsingUnary) {
+			return checkSCOptional(((ParsingUnary) e).inner);
+		}
+		if(e instanceof ParsingList) {
+			for(int i = 0; i < e.size(); i++) {
+				if (!checkSCOptional(e.get(i))) {
+					return false;
+				}
+			}
+			return true;
+		}
+		return true;
 	}
 	
 	private ParsingExpression getNonTerminalRule(ParsingExpression e) {
@@ -941,6 +1062,10 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	public void visitNot(ParsingNot e) {
 		if (O_FusionInstruction) {
 			if (!optimizeNot(e)) {
+				if (O_StackCaching && checkSCNot(e.inner)) {
+					writeSCNotCode(e);
+					return;
+				}
 				writeNotCode(e);
 			}
 		}
@@ -958,6 +1083,10 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	public void visitOptional(ParsingOption e) {
 		if (O_FusionInstruction) {
 			if (!optimizeOptional(e)) {
+				if (O_StackCaching && checkSCOptional(e.inner)) {
+					writeSCOptionalCode(e);
+					return;
+				}
 				writeOptionalCode(e);
 			}
 		}
@@ -970,6 +1099,10 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	public void visitRepetition(ParsingRepetition e) {
 		if (O_FusionInstruction) {
 			if (!optimizeRepetition(e)) {
+				if (O_StackCaching && checkSCRepetition(e.inner)) {
+					writeSCRepetitionCode(e);
+					return;
+				}
 				writeRepetitionCode(e);
 			}
 		}

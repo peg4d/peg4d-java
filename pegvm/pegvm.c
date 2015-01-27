@@ -561,6 +561,10 @@ long nez_VM_Execute(ParsingContext context, Instruction *inst) {
   PUSH_IP(context, inst);
   P4D_setObject(context, &left, P4D_newObject(context, context->pos, pool));
 
+  long Regrp = 0;
+  long Regnp = 0;
+  long Regop = 0;
+
   goto *(pc)->ptr;
 
   OP(EXIT) {
@@ -653,8 +657,16 @@ long nez_VM_Execute(ParsingContext context, Instruction *inst) {
     PUSH_SP(pos);
     DISPATCH_NEXT;
   }
-  OP(PUSHp2) {
-    PUSH_SP(P4D_markLogStack(context));
+  OP(LOADrp) {
+    Regrp = pos;
+    DISPATCH_NEXT;
+  }
+  OP(LOADnp) {
+    Regnp = pos;
+    DISPATCH_NEXT;
+  }
+  OP(LOADop) {
+    Regop = pos;
     DISPATCH_NEXT;
   }
   OP(POPp) {
@@ -673,6 +685,18 @@ long nez_VM_Execute(ParsingContext context, Instruction *inst) {
   }
   OP(STOREp) {
     pos = POP_SP();
+    DISPATCH_NEXT;
+  }
+  OP(STORErp) {
+    pos = Regrp;
+    DISPATCH_NEXT;
+  }
+  OP(STOREnp) {
+    pos = Regnp;
+    DISPATCH_NEXT;
+  }
+  OP(STOREop) {
+    pos = Regop;
     DISPATCH_NEXT;
   }
   OP(STOREflag) {
