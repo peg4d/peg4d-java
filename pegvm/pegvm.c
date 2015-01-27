@@ -898,6 +898,17 @@ long nez_VM_Execute(ParsingContext context, Instruction *inst) {
     }
     DISPATCH_NEXT;
   }
+  OP(ZEROMOREWS) {
+    while (1) {
+      char c = inputs[pos];
+      if (c == 32 || c == 9 || c == 10 || c == 13) {
+        pos++;
+      } else {
+        break;
+      }
+    }
+    DISPATCH_NEXT;
+  }
   OP(REPEATANY) {
     long back = pos;
     pos = pos + context->repeat_table[pc->ndata[0]];

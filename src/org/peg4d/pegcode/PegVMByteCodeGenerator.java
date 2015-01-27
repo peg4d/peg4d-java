@@ -99,15 +99,14 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	}
 	
 	UList<Opcode> codeList = new UList<Opcode>(new Opcode[256]);
-	UList<Opcode> optimizedCodeList = new UList<Opcode>(new Opcode[256]);
 	HashMap<Integer,Integer> labelMap = new HashMap<Integer,Integer>();
 	HashMap<String, Integer> callMap = new HashMap<String, Integer>();
 	HashMap<String, Integer> ruleMap = new HashMap<String, Integer>();
 	HashMap<String, Integer> repeatMap = new HashMap<String, Integer>();
-	ArrayList<EntryRule> ruleList = new ArrayList<EntryRule>();
+	ArrayList<EntryRule> entryRuleList = new ArrayList<EntryRule>();
 	
 	public void writeByteCode(String grammerfileName, String outputFileName, Grammar peg) {
-		generateProfileCode(peg);
+		//generateProfileCode(peg);
 		//System.out.println("choiceCase: " + choiceCaseCount + "\nconstructor: " + constructorCount);
 		byte[] byteCode = new byte[codeList.size() * 64];
 		int pos = 0;
@@ -136,10 +135,10 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		pos = write32(byteCode, poolSizeInfo, pos);
 		
 		// rule table
-		int ruleSize = ruleList.size();
+		int ruleSize = entryRuleList.size();
 		pos = write32(byteCode, ruleSize, pos);
-		for(int i = 0; i < ruleList.size(); i++) {
-			EntryRule rule = ruleList.get(i);
+		for(int i = 0; i < entryRuleList.size(); i++) {
+			EntryRule rule = entryRuleList.get(i);
 			byte[] ruleName = rule.ruleName.getBytes();
 			int ruleNamelen = ruleName.length;
 			long entryPoint = rule.entryPoint;
@@ -160,12 +159,16 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			byteCode[pos] = (byte) code.inst.ordinal();
 			pos++;
 			if (code.inst == Instruction.CALL) {
-				byteCode[pos] = 1;
+				byteCode[pos] = 0;
 				pos++;
 				byteCode[pos] = 0;
 				pos++;
-				int ndata = ruleMap.get(code.name);
-				pos = write32(byteCode, ndata, pos);
+//				byteCode[pos] = 1;
+//				pos++;
+//				byteCode[pos] = 0;
+//				pos++;
+//				int ndata = ruleMap.get(code.name);
+//				pos = write32(byteCode, ndata, pos);
 			}
 			else if (code.ndata != null) {
 				byteCode[pos] = (byte) (0x000000ff & (code.ndata.size()));
@@ -177,6 +180,8 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 				}
 			}
 			else {
+				byteCode[pos] = 0;
+				pos++;
 				byteCode[pos] = 0;
 				pos++;
 			}
@@ -596,12 +601,27 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	}
 	
 	private boolean checkCharset(ParsingChoice e) {
+		isWS = true;
 		for (int i = 0; i < e.size(); i++) {
-			if (!(e.get(i) instanceof ParsingByte)) {
+			ParsingExpression inner = e.get(i);
+			if (!(inner instanceof ParsingByte)) {
+				isWS = false;
 				return false;
+			}
+			if (isWS) {
+				if (!checkWS(((ParsingByte)inner).byteChar)) {
+					isWS = false;
+				}
 			}
 		}
 		return true;
+	}
+	
+	private boolean checkWS(int byteChar) {
+		if (byteChar == 32 || byteChar == 9 || byteChar == 10 || byteChar == 13) {
+			return true;
+		}
+		return false;
 	}
 	
 	private boolean checkString(ParsingSequence e) {
@@ -751,6 +771,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		return false;
 	}
 	
+	boolean isWS = false;
 	private boolean optimizeRepetition(ParsingRepetition e) {
 		ParsingExpression inner = e.inner;
 		if (inner instanceof NonTerminal) {
@@ -762,7 +783,13 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		}
 		if (inner instanceof ParsingChoice) {
 			if (checkCharset((ParsingChoice)inner)) {
-				writeZeroMoreCharsetCode((ParsingChoice)inner);
+				if (isWS && O_FusionOperand) {
+					writeCode(Instruction.ZEROMOREWS);
+					isWS = false;
+				}
+				else {
+					writeZeroMoreCharsetCode((ParsingChoice)inner);
+				}
 				return true;
 			}
 		}
@@ -790,7 +817,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 				EntryRule entry = new EntryRule();
 				entry.ruleName = r.ruleName;
 				entry.entryPoint = this.codeIndex;
-				ruleList.add(entry);
+				entryRuleList.add(entry);
 				this.formatRule(r, sb);		//string builder is not used.
 				break;
 			}
@@ -800,7 +827,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 				EntryRule entry = new EntryRule();
 				entry.ruleName = r.ruleName;
 				entry.entryPoint = this.codeIndex;
-				ruleList.add(entry);
+				entryRuleList.add(entry);
 				if (!r.ruleName.startsWith("\"")) {
 					this.formatRule(r, sb);		//string builder is not used.
 				}
