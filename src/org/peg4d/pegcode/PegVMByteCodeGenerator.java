@@ -657,7 +657,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	
 	private void checkChoice(ParsingChoice choice, int c, UList<ParsingExpression> l) {
 		for(int i = 0; i < choice.size(); i++) {
-			ParsingExpression e = getNonTerminalRule(choice.get(i));
+			ParsingExpression e = choice.get(i);
 			if (e instanceof ParsingChoice) {
 				checkChoice((ParsingChoice)e, c, l);
 			}
