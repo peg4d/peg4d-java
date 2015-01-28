@@ -84,7 +84,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			O_MappedChoice = true;
 			break;
 		case 5:
-			O_Inlining = true;
+			//O_Inlining = true;
 			O_FusionInstruction = true;
 			O_MappedChoice = true;
 			O_FusionOperand = true;
@@ -697,33 +697,25 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		}
 	}
 	
-	private boolean checkRepcond(ParsingExpression e) {
-		if (e instanceof NonTerminal) {
-			e = getNonTerminalRule(e);
-		}
-		if (e instanceof ParsingUnary) {
-			return true;
-		}
-		if(e instanceof ParsingList) {
-			for(int i = 0; i < e.size(); i++) {
-				if (!checkRepcond(e.get(i))) {
-					return false;
-				}
-			}
-			return true;
-		}
-		return false;
-	}
+	// The depth to control the stack caching optimization
+	int depth = 0;
 	
 	private boolean checkSCRepetition(ParsingExpression e) {
 		if (e instanceof NonTerminal) {
 			e = getNonTerminalRule(e);
 		}
 		if (e instanceof ParsingRepetition) {
+			if (checkOptRepetition((ParsingRepetition)e)) {
+				return true;
+			}
 			return false;
 		}
 		if (e instanceof ParsingUnary) {
-			return checkSCRepetition(((ParsingUnary) e).inner);
+			if (depth++ < 3) {
+				return checkSCRepetition(((ParsingUnary) e).inner);
+			}
+			depth = 0;
+			return false;
 		}
 		if(e instanceof ParsingList) {
 			for(int i = 0; i < e.size(); i++) {
@@ -735,16 +727,23 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		}
 		return true;
 	}
-	
+
 	private boolean checkSCNot(ParsingExpression e) {
 		if (e instanceof NonTerminal) {
 			e = getNonTerminalRule(e);
 		}
 		if (e instanceof ParsingNot) {
+			if (checkOptNot((ParsingNot)e)) {
+				return true;
+			}
 			return false;
 		}
 		if (e instanceof ParsingUnary) {
-			return checkSCNot(((ParsingUnary) e).inner);
+			if (depth++ < 3) {
+				return checkSCNot(((ParsingUnary) e).inner);
+			}
+			depth = 0;
+			return false;
 		}
 		if(e instanceof ParsingList) {
 			for(int i = 0; i < e.size(); i++) {
@@ -756,16 +755,23 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		}
 		return true;
 	}
-	
+
 	private boolean checkSCOptional(ParsingExpression e) {
 		if (e instanceof NonTerminal) {
 			e = getNonTerminalRule(e);
 		}
 		if (e instanceof ParsingOption) {
+			if (checkOptOptional((ParsingOption)e)) {
+				return true;
+			}
 			return false;
 		}
 		if (e instanceof ParsingUnary) {
-			return checkSCOptional(((ParsingUnary) e).inner);
+			if (depth++ < 3) {
+				return checkSCOptional(((ParsingUnary) e).inner);
+			}
+			depth = 0;
+			return false;
 		}
 		if(e instanceof ParsingList) {
 			for(int i = 0; i < e.size(); i++) {
@@ -777,7 +783,64 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		}
 		return true;
 	}
-	
+
+	private boolean checkOptRepetition(ParsingRepetition e) {
+		ParsingExpression inner = e.inner;
+		if (inner instanceof NonTerminal) {
+			inner = getNonTerminalRule(inner);
+		}
+		if (inner instanceof ParsingByteRange) {
+			return true;
+		}
+		if (inner instanceof ParsingChoice) {
+			return checkCharset((ParsingChoice)inner);
+		}
+		return false;
+	}
+
+	private boolean checkOptNot(ParsingNot e) {
+		ParsingExpression inner = e.inner;
+		if (inner instanceof NonTerminal) {
+			inner = getNonTerminalRule(inner);
+		}
+		if (inner instanceof ParsingByte) {
+			return true;
+		}
+		if (inner instanceof ParsingByteRange) {
+			return true;
+		}
+		if(inner instanceof ParsingAny) {
+			return true;
+		}
+		if(inner instanceof ParsingChoice) {
+			return checkCharset((ParsingChoice)inner);
+		}
+		if (inner instanceof ParsingSequence) {
+			return checkString((ParsingSequence)inner);
+		}
+		return false;
+	}
+
+	private boolean checkOptOptional(ParsingOption e) {
+		ParsingExpression inner = e.inner;
+		if (inner instanceof NonTerminal) {
+			inner = getNonTerminalRule(inner);
+		}
+		if (inner instanceof ParsingByte) {
+			return true;
+		}
+		if (inner instanceof ParsingByteRange) {
+			return true;
+		}
+		if(inner instanceof ParsingChoice) {
+			return checkCharset((ParsingChoice)inner);
+		}
+		if (inner instanceof ParsingSequence) {
+			return checkString((ParsingSequence)inner);
+		}
+		return false;
+	}
+
 	private ParsingExpression getNonTerminalRule(ParsingExpression e) {
 		while(e instanceof NonTerminal) {
 			NonTerminal nterm = (NonTerminal) e;

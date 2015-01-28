@@ -375,6 +375,7 @@ static inline Instruction **POP_IP(ParsingContext context) {
   return context->call_stack_pointer;
 }
 
+#define SP_TOP(INST) (*context->stack_pointer)
 #define PUSH_SP(INST) (*context->stack_pointer = (INST), INC_SP(context, 1))
 #define POP_SP(INST) (DEC_SP(context, 1))
 #define PUSH_OSP(INST) \
