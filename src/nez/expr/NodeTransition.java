@@ -1,6 +1,6 @@
-package org.peg4d.expression;
+package nez.expr;
 
-public class PEG4dTransition {
+public class NodeTransition {
 	public final static int Undefined         = -1;
 	public final static int BooleanType       = 0;
 	public final static int ObjectType        = 1;

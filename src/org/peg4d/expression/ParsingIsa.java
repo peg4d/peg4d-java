@@ -1,9 +1,11 @@
 package org.peg4d.expression;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTag;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingIsa extends ParsingFunction {
@@ -18,11 +20,11 @@ public class ParsingIsa extends ParsingFunction {
 		return true;
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
-		return PEG4dTransition.BooleanType;
+	public int inferNodeTransition(UMap<String> visited) {
+		return NodeTransition.BooleanType;
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
 		return this;
 	}
 	@Override
@@ -30,7 +32,7 @@ public class ParsingIsa extends ParsingFunction {
 		return Accept;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		return context.matchSymbolTable(tableType);
 	}
 	@Override

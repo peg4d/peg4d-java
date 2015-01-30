@@ -6,10 +6,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 
+import nez.util.UList;
+
 import org.peg4d.Grammar;
 import org.peg4d.Main;
 import org.peg4d.ParsingRule;
-import org.peg4d.UList;
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.ParsingAnd;
 import org.peg4d.expression.ParsingAny;

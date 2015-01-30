@@ -2,6 +2,8 @@ package org.peg4d;
 
 import java.util.HashMap;
 
+import nez.util.UList;
+
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.ParsingConstructor;
 import org.peg4d.expression.ParsingExpression;
@@ -76,6 +78,14 @@ public class ParsingContext {
 		this.left = null;
 	}
 	
+	public boolean failure2(nez.expr.Expression e) {
+		if(this.pos > fpos) {  // adding error location
+			this.fpos = this.pos;
+		}
+		this.left = null;
+		return false;
+	}
+
 	public final long rememberFailure() {
 		return this.fpos;
 	}
@@ -484,11 +494,11 @@ public class ParsingContext {
 			int pos = this.stackedNonTerminals.size();
 			this.stackedNonTerminals.add(e);
 			stackedPositions[pos] = (int)this.pos;
-			boolean b = e.deReference().matcher.simpleMatch(this);
+			boolean b = e.deReference().matcher.match(this);
 			this.stackedNonTerminals.clear(pos);
 			return b;
 		}
-		return e.deReference().matcher.simpleMatch(this);
+		return e.deReference().matcher.match(this);
 	}
 	
 	protected MemoTable memoTable = null;
@@ -540,6 +550,7 @@ public class ParsingContext {
 	public final String getRepeatByteString(long startIndex) {
 		return this.source.substring(startIndex, this.pos);
 	}
+
 
 }
 

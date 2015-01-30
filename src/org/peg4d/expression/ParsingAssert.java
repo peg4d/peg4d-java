@@ -2,10 +2,12 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTree;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingAssert extends ParsingFunction {
@@ -17,11 +19,11 @@ public class ParsingAssert extends ParsingFunction {
 		throw new RuntimeException("TODO");
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
+	public int inferNodeTransition(UMap<String> visited) {
 		throw new RuntimeException("TODO");
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
 		throw new RuntimeException("TODO");
 	}
 	@Override
@@ -33,10 +35,10 @@ public class ParsingAssert extends ParsingFunction {
 		return ParsingExpression.newDebug(e);
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		long pos = context.getPosition();
 		ParsingTree left = context.left;
-		this.inner.matcher.simpleMatch(context);
+		this.inner.matcher.match(context);
 		if(context.isFailure()) {
 			assert(pos == context.getPosition());
 			System.out.println(context.source.formatPositionLine("debug", context.getPosition(), "failure at pos=" + pos  + " in " + inner));

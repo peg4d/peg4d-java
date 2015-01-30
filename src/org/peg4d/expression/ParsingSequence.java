@@ -2,9 +2,11 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingSequence extends ParsingList {
@@ -17,28 +19,28 @@ public class ParsingSequence extends ParsingList {
 		return " ";
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
+	public int inferNodeTransition(UMap<String> visited) {
 		for(ParsingExpression e: this) {
-			int t = e.inferPEG4dTranstion(visited);
-			if(t == PEG4dTransition.ObjectType || t == PEG4dTransition.OperationType) {
+			int t = e.inferNodeTransition(visited);
+			if(t == NodeTransition.ObjectType || t == NodeTransition.OperationType) {
 				return t;
 			}
 		}
-		return PEG4dTransition.BooleanType;
+		return NodeTransition.BooleanType;
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
 		UList<ParsingExpression> l = newList();
 		for(ParsingExpression e : this) {
-			ParsingExpression.addSequence(l, e.checkPEG4dTransition(c));
+			ParsingExpression.addSequence(l, e.checkNodeTransition(c));
 		}
 		return ParsingExpression.newSequence(l);
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String, String> undefedFlags) {
+	public ParsingExpression removeFlag(TreeMap<String, String> undefedFlags) {
 		UList<ParsingExpression> l = newList();
 		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = get(i).removeParsingFlag(undefedFlags);
+			ParsingExpression e = get(i).removeFlag(undefedFlags);
 			ParsingExpression.addSequence(l, e);
 		}
 		return ParsingExpression.newSequence(l);
@@ -63,11 +65,11 @@ public class ParsingSequence extends ParsingList {
 		return Unconsumed;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		long pos = context.getPosition();
 		int mark = context.markLogStack();
 		for(int i = 0; i < this.size(); i++) {
-			if(!(this.get(i).matcher.simpleMatch(context))) {
+			if(!(this.get(i).matcher.match(context))) {
 				context.abortLog(mark);
 				context.rollback(pos);
 				return false;

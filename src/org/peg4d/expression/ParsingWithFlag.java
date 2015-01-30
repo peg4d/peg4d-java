@@ -2,9 +2,11 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingWithFlag extends ParsingFunction {
@@ -18,22 +20,22 @@ public class ParsingWithFlag extends ParsingFunction {
 		return inner.checkAlwaysConsumed(startNonTerminal, stack);
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
-		return this.inner.inferPEG4dTranstion(visited);
+	public int inferNodeTransition(UMap<String> visited) {
+		return this.inner.inferNodeTransition(visited);
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
-		this.inner = this.inner.checkPEG4dTransition(c);
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		this.inner = this.inner.checkNodeTransition(c);
 		return this;
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String,String> undefedFlags) {
+	public ParsingExpression removeFlag(TreeMap<String,String> undefedFlags) {
 		boolean removeWithout = false;
 		if(undefedFlags != null && undefedFlags.containsKey(flagName)) {
 			undefedFlags.remove(flagName);
 			removeWithout = true;
 		}
-		ParsingExpression e = inner.removeParsingFlag(undefedFlags);
+		ParsingExpression e = inner.removeFlag(undefedFlags);
 		if(removeWithout) {
 			undefedFlags.put(flagName, flagName);
 		}
@@ -61,15 +63,15 @@ public class ParsingWithFlag extends ParsingFunction {
 		return " " + this.flagName;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		if(ParsingIf.OldFlag) {
 			final boolean currentFlag = context.getFlag(this.flagName);
 			context.setFlag(this.flagName, true);
-			boolean res = this.inner.matcher.simpleMatch(context);
+			boolean res = this.inner.matcher.match(context);
 			context.setFlag(this.flagName, currentFlag);
 			return res;
 		}
-		return this.inner.matcher.simpleMatch(context);
+		return this.inner.matcher.match(context);
 	}
 	@Override
 	public void visit(GrammarVisitor visitor) {

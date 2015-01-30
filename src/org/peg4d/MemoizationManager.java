@@ -3,6 +3,9 @@ package org.peg4d;
 import java.util.HashMap;
 import java.util.Map;
 
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.Optimizer;
 import org.peg4d.expression.ParsingConnector;
@@ -247,7 +250,7 @@ public class MemoizationManager {
 				return !(context.isFailure());
 			}
 			ParsingTree left = context.left;
-			boolean b = ma.simpleMatch(context);
+			boolean b = ma.match(context);
 			int length = (int)(context.getPosition() - pos);
 			context.setMemo(pos, memoPoint(), (context.left == left) ? MemoizationManager.NonTransition : context.left, length);
 			this.memo.memoMiss += 1;
@@ -271,7 +274,7 @@ public class MemoizationManager {
 				return !(context.isFailure());
 			}
 			ParsingTree left = context.left;
-			boolean b = ma.simpleMatch(context);
+			boolean b = ma.match(context);
 			int length = (int)(context.getPosition() - pos);
 			context.setMemo2(pos, memoPoint(), stateValue, (context.left == left) ? MemoizationManager.NonTransition : context.left, length);
 			this.memo.memoMiss += 1;
@@ -320,7 +323,7 @@ public class MemoizationManager {
 		}
 		
 		@Override
-		public boolean simpleMatch(ParsingContext context) {
+		public boolean match(ParsingContext context) {
 			ParsingTree left = context.left;
 			int mark = context.markLogStack();
 			if(this.memoMatch(context, this.matchRef)) {
@@ -359,7 +362,7 @@ public class MemoizationManager {
 		}
 		
 		@Override
-		public boolean simpleMatch(ParsingContext context) {
+		public boolean match(ParsingContext context) {
 			ParsingTree left = context.left;
 			int mark = context.markLogStack();
 			if(this.memoMatch2(context, 0, this.matchRef)) {
@@ -398,7 +401,7 @@ public class MemoizationManager {
 		}
 		
 		@Override
-		public boolean simpleMatch(ParsingContext context) {
+		public boolean match(ParsingContext context) {
 			ParsingTree left = context.left;
 			int mark = context.markLogStack();
 			if(this.memoMatch2(context, context.stateValue, this.matchRef)) {
@@ -431,7 +434,7 @@ public class MemoizationManager {
 		}
 		
 		@Override
-		public boolean simpleMatch(ParsingContext context) {
+		public boolean match(ParsingContext context) {
 			return memoMatch(context, this.matchRef);
 		}
 	}
@@ -445,7 +448,7 @@ public class MemoizationManager {
 		}
 		
 		@Override
-		public boolean simpleMatch(ParsingContext context) {
+		public boolean match(ParsingContext context) {
 			return memoMatch2(context, 0, this.matchRef);
 		}
 	}
@@ -459,7 +462,7 @@ public class MemoizationManager {
 		}
 		
 		@Override
-		public boolean simpleMatch(ParsingContext context) {
+		public boolean match(ParsingContext context) {
 			return memoMatch2(context, context.stateValue, this.matchRef);
 		}
 	}
@@ -473,8 +476,8 @@ public class MemoizationManager {
 		}
 		
 		@Override
-		public boolean simpleMatch(ParsingContext context) {
-			return this.matchRef.simpleMatch(context);
+		public boolean match(ParsingContext context) {
+			return this.matchRef.match(context);
 		}
 	}
 

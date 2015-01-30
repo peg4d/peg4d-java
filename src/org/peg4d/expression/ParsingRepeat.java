@@ -2,10 +2,12 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.ReportLevel;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
-import org.peg4d.ReportLevel;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingRepeat extends ParsingFunction {
@@ -17,20 +19,20 @@ public class ParsingRepeat extends ParsingFunction {
 		return this.inner.checkAlwaysConsumed(startNonTerminal, stack);
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
-		int t = this.inner.inferPEG4dTranstion(visited);
-		if(t == PEG4dTransition.ObjectType) {
-			return PEG4dTransition.BooleanType;
+	public int inferNodeTransition(UMap<String> visited) {
+		int t = this.inner.inferNodeTransition(visited);
+		if(t == NodeTransition.ObjectType) {
+			return NodeTransition.BooleanType;
 		}
 		return t;
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
 		int required = c.required;
-		ParsingExpression inn = this.inner.checkPEG4dTransition(c);
-		if(required != PEG4dTransition.OperationType && c.required == PEG4dTransition.OperationType) {
+		ParsingExpression inn = this.inner.checkNodeTransition(c);
+		if(required != NodeTransition.OperationType && c.required == NodeTransition.OperationType) {
 			this.report(ReportLevel.warning, "unable to create objects in repeat");
-			this.inner = inn.removePEG4dOperator();
+			this.inner = inn.removeNodeOperator();
 			c.required = required;
 		}
 		else {
@@ -53,12 +55,12 @@ public class ParsingRepeat extends ParsingFunction {
 	}
 
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		long pos = context.getPosition();
 		try {
 			int repeat = context.getRepeatValue(this.inner.toString());
 			for(int i = 0; i < repeat; i++) {
-				if(!this.inner.matcher.simpleMatch(context)) {
+				if(!this.inner.matcher.match(context)) {
 					context.rollback(pos);
 					return false;
 				}

@@ -2,9 +2,11 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingAnd extends ParsingUnary {
@@ -20,22 +22,22 @@ public class ParsingAnd extends ParsingUnary {
 		return false;
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
-		int t = this.inner.inferPEG4dTranstion(visited);
-		if(t == PEG4dTransition.ObjectType) {  // typeCheck needs to report error
-			return PEG4dTransition.BooleanType;
+	public int inferNodeTransition(UMap<String> visited) {
+		int t = this.inner.inferNodeTransition(visited);
+		if(t == NodeTransition.ObjectType) {  // typeCheck needs to report error
+			return NodeTransition.BooleanType;
 		}
 		return t;
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
-		if(c.required == PEG4dTransition.ObjectType) {
-			c.required = PEG4dTransition.BooleanType;
-			this.inner = this.inner.checkPEG4dTransition(c);
-			c.required = PEG4dTransition.ObjectType;
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		if(c.required == NodeTransition.ObjectType) {
+			c.required = NodeTransition.BooleanType;
+			this.inner = this.inner.checkNodeTransition(c);
+			c.required = NodeTransition.ObjectType;
 		}
 		else {
-			this.inner = this.inner.checkPEG4dTransition(c);
+			this.inner = this.inner.checkNodeTransition(c);
 		}
 		return this;
 	}
@@ -53,9 +55,9 @@ public class ParsingAnd extends ParsingUnary {
 		visitor.visitAnd(this);
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		long pos = context.getPosition();
-		this.inner.matcher.simpleMatch(context);
+		this.inner.matcher.match(context);
 		context.rollback(pos);
 		return !context.isFailure();
 	}

@@ -2,9 +2,11 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingApply extends ParsingFunction {
@@ -16,11 +18,11 @@ public class ParsingApply extends ParsingFunction {
 		throw new RuntimeException("TODO");
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
+	public int inferNodeTransition(UMap<String> visited) {
 		throw new RuntimeException("TODO");
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
 		throw new RuntimeException("TODO");
 	}
 
@@ -34,7 +36,7 @@ public class ParsingApply extends ParsingFunction {
 		return null;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 //		ParsingContext s = new ParsingContext(context.left);
 //		
 //		this.inner.matcher.simpleMatch(s);

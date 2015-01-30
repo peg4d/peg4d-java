@@ -3,10 +3,11 @@ package org.peg4d.jvm;
 import java.lang.reflect.InvocationTargetException;
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
-import org.peg4d.UList;
-import org.peg4d.UMap;
-import org.peg4d.expression.PEG4dTransition;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.pegcode.GrammarVisitor;
 
@@ -22,11 +23,11 @@ public class EntryPoint extends ParsingExpression {
 		throw new RuntimeException("TODO");
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
+	public int inferNodeTransition(UMap<String> visited) {
 		throw new RuntimeException("TODO");
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
 		throw new RuntimeException("TODO");
 	}
 
@@ -45,7 +46,7 @@ public class EntryPoint extends ParsingExpression {
 	}
 
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		try {
 			java.lang.reflect.Method method = parserClass.getMethod(this.methodName, ParsingContext.class);
 			Object status = method.invoke(null, context);
@@ -70,11 +71,11 @@ public class EntryPoint extends ParsingExpression {
 		return null;
 	}
 	@Override
-	public ParsingExpression removePEG4dOperator() {
+	public ParsingExpression removeNodeOperator() {
 		return this;
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String, String> undefedFlags) {
+	public ParsingExpression removeFlag(TreeMap<String, String> undefedFlags) {
 		return this;
 	}
 }

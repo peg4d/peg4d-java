@@ -2,9 +2,13 @@ package org.peg4d;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.ReportLevel;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.Optimizer;
-import org.peg4d.expression.PEG4dTransition;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.pegcode.GrammarVisitor;
 
@@ -46,17 +50,17 @@ public class ParsingRule extends ParsingExpression {
 		return minlen > 0;
 	}
 	
-	public int transType = PEG4dTransition.Undefined;
+	public int transType = NodeTransition.Undefined;
 
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
-		if(this.transType != PEG4dTransition.Undefined) {
+	public int inferNodeTransition(UMap<String> visited) {
+		if(this.transType != NodeTransition.Undefined) {
 			return this.transType;
 		}
 		String uname = this.getUniqueName();
 		if(visited != null) {
 			if(visited.hasKey(uname)) {
-				this.transType = PEG4dTransition.BooleanType;
+				this.transType = NodeTransition.BooleanType;
 				return this.transType;
 			}
 		}
@@ -64,9 +68,9 @@ public class ParsingRule extends ParsingExpression {
 			visited = new UMap<String>();
 		}
 		visited.put(uname, uname);
-		int t = expr.inferPEG4dTranstion(visited);
-		assert(t != PEG4dTransition.Undefined);
-		if(this.transType == PEG4dTransition.Undefined) {
+		int t = expr.inferNodeTransition(visited);
+		assert(t != NodeTransition.Undefined);
+		if(this.transType == NodeTransition.Undefined) {
 			this.transType = t;
 		}
 		else {
@@ -76,24 +80,24 @@ public class ParsingRule extends ParsingExpression {
 	}
 
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
 		int t = checkNamingConvention(this.localName);
-		c.required = this.inferPEG4dTranstion();
-		if(t != PEG4dTransition.Undefined && c.required != t) {
+		c.required = this.inferNodeTransition();
+		if(t != NodeTransition.Undefined && c.required != t) {
 			this.report(ReportLevel.warning, "invalid naming convention: " + this.localName);
 		}
-		this.expr = this.expr.checkPEG4dTransition(c);
+		this.expr = this.expr.checkNodeTransition(c);
 		return this;
 	}
 
 	public final static int checkNamingConvention(String ruleName) {
 		int start = 0;
 		if(ruleName.startsWith("~") || ruleName.startsWith("\"")) {
-			return PEG4dTransition.BooleanType;
+			return NodeTransition.BooleanType;
 		}
 		for(;ruleName.charAt(start) == '_'; start++) {
 			if(start + 1 == ruleName.length()) {
-				return PEG4dTransition.BooleanType;
+				return NodeTransition.BooleanType;
 			}
 		}
 		boolean firstUpperCase = Character.isUpperCase(ruleName.charAt(start));
@@ -101,18 +105,18 @@ public class ParsingRule extends ParsingExpression {
 			char ch = ruleName.charAt(i);
 			if(ch == '!') break; // option
 			if(Character.isUpperCase(ch) && !firstUpperCase) {
-				return PEG4dTransition.OperationType;
+				return NodeTransition.OperationType;
 			}
 			if(Character.isLowerCase(ch) && firstUpperCase) {
-				return PEG4dTransition.ObjectType;
+				return NodeTransition.ObjectType;
 			}
 		}
-		return firstUpperCase ? PEG4dTransition.BooleanType : PEG4dTransition.Undefined;
+		return firstUpperCase ? NodeTransition.BooleanType : NodeTransition.Undefined;
 	}
 
 	@Override
-	public ParsingExpression removePEG4dOperator() {
-		if(this.inferPEG4dTranstion() == PEG4dTransition.BooleanType) {
+	public ParsingExpression removeNodeOperator() {
+		if(this.inferNodeTransition() == NodeTransition.BooleanType) {
 			return this;
 		}
 		String name = "~" + this.localName;
@@ -120,14 +124,14 @@ public class ParsingRule extends ParsingExpression {
 		if(r == null) {
 			r = this.peg.newRule(name, this.expr);
 			r.definedRule = this;
-			r.transType = PEG4dTransition.BooleanType;
-			r.expr = this.expr.removePEG4dOperator();
+			r.transType = NodeTransition.BooleanType;
+			r.expr = this.expr.removeNodeOperator();
 		}
 		return r;
 	}
 
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String, String> undefedFlags) {
+	public ParsingExpression removeFlag(TreeMap<String, String> undefedFlags) {
 		if(undefedFlags.size() > 0) {
 			StringBuilder sb = new StringBuilder();
 			int loc = localName.indexOf('!');
@@ -147,7 +151,7 @@ public class ParsingRule extends ParsingExpression {
 			ParsingRule rRule = peg.getRule(rName);
 			if(rRule == null) {
 				rRule = peg.newRule(rName, ParsingExpression.newEmpty());
-				rRule.expr = expr.removeParsingFlag(undefedFlags).intern();
+				rRule.expr = expr.removeFlag(undefedFlags).intern();
 			}
 			return rRule;
 		}
@@ -180,8 +184,8 @@ public class ParsingRule extends ParsingExpression {
 	}
 
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
-		return this.expr.simpleMatch(context);
+	public boolean match(ParsingContext context) {
+		return this.expr.match(context);
 	}
 
 	public ParsingRule(Grammar peg, String ruleName, ParsingObject po, ParsingExpression e) {
@@ -197,10 +201,10 @@ public class ParsingRule extends ParsingExpression {
 		return this.peg.uniqueRuleName(localName);
 	}
 
-	public final static int LexicalRule   = PEG4dTransition.BooleanType;
-	public final static int ObjectRule    = PEG4dTransition.ObjectType;
-	public final static int OperationRule = PEG4dTransition.OperationType;
-	public final static int ReservedRule  = PEG4dTransition.Undefined;
+	public final static int LexicalRule   = NodeTransition.BooleanType;
+	public final static int ObjectRule    = NodeTransition.ObjectType;
+	public final static int OperationRule = NodeTransition.OperationType;
+	public final static int ReservedRule  = NodeTransition.Undefined;
 	String baseName;
 
 	ParsingObject po;

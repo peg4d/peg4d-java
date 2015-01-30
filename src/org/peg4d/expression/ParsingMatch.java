@@ -2,9 +2,11 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingMatch extends ParsingFunction {
@@ -16,12 +18,12 @@ public class ParsingMatch extends ParsingFunction {
 		return this.get(0).checkAlwaysConsumed(startNonTerminal, stack);
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
-		return PEG4dTransition.BooleanType;
+	public int inferNodeTransition(UMap<String> visited) {
+		return NodeTransition.BooleanType;
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
-		this.inner = this.inner.removePEG4dOperator();
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		this.inner = this.inner.removeNodeOperator();
 		return this;
 	}
 
@@ -35,7 +37,7 @@ public class ParsingMatch extends ParsingFunction {
 		return inner.norm(true, undefedFlags);
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 //		boolean oldMode = context.setRecognitionMode(true);
 //		ParsingObject left = context.left;
 //		if(this.inner.matcher.simpleMatch(context)) {
@@ -47,7 +49,7 @@ public class ParsingMatch extends ParsingFunction {
 //		context.setRecognitionMode(oldMode);
 //		left = null;
 //		return false;
-		return this.inner.matcher.simpleMatch(context);
+		return this.inner.matcher.match(context);
 	}
 	@Override
 	public void visit(GrammarVisitor visitor) {

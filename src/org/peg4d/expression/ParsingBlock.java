@@ -2,10 +2,12 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.PEG4d;
 import org.peg4d.ParsingContext;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingBlock extends ParsingFunction {
@@ -17,12 +19,12 @@ public class ParsingBlock extends ParsingFunction {
 		return this.inner.checkAlwaysConsumed(startNonTerminal, stack);
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
-		return this.inner.inferPEG4dTranstion(visited);
+	public int inferNodeTransition(UMap<String> visited) {
+		return this.inner.inferNodeTransition(visited);
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
-		this.inner = this.inner.checkPEG4dTransition(c);
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		this.inner = this.inner.checkNodeTransition(c);
 		return this;
 	}
 	@Override
@@ -34,11 +36,11 @@ public class ParsingBlock extends ParsingFunction {
 		return ParsingExpression.newBlock(e);
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		int stateValue = context.stateValue;
 		String indent = context.source.getIndentText(context.pos);
 		int stackTop = context.pushSymbolTable(PEG4d.Indent, indent);
-		boolean b = this.inner.matcher.simpleMatch(context);
+		boolean b = this.inner.matcher.match(context);
 		context.popSymbolTable(stackTop);
 		context.stateValue = stateValue;
 		return b;

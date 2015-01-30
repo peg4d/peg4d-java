@@ -2,12 +2,14 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.ReportLevel;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.Grammar;
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingRule;
-import org.peg4d.ReportLevel;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class NonTerminal extends ParsingExpression {
@@ -40,27 +42,27 @@ public class NonTerminal extends ParsingExpression {
 		return r.checkAlwaysConsumed(startNonTerminal, stack);
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
+	public int inferNodeTransition(UMap<String> visited) {
 		ParsingRule r = this.getRule();
-		return r.inferPEG4dTranstion(visited);
+		return r.inferNodeTransition(visited);
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
 		ParsingRule r = this.getRule();
-		int t = r.inferPEG4dTranstion();
-		if(t == PEG4dTransition.BooleanType) {
+		int t = r.inferNodeTransition();
+		if(t == NodeTransition.BooleanType) {
 			return this;
 		}
-		if(c.required == PEG4dTransition.ObjectType) {
-			if(t == PEG4dTransition.OperationType) {
+		if(c.required == NodeTransition.ObjectType) {
+			if(t == NodeTransition.OperationType) {
 				this.report(ReportLevel.warning, "unexpected operation");
-				return this.removePEG4dOperator();
+				return this.removeNodeOperator();
 			}
-			c.required = PEG4dTransition.OperationType;
+			c.required = NodeTransition.OperationType;
 			return this;
 		}
-		if(c.required == PEG4dTransition.OperationType) {
-			if(t == PEG4dTransition.ObjectType) {
+		if(c.required == NodeTransition.OperationType) {
+			if(t == NodeTransition.ObjectType) {
 				this.report(ReportLevel.warning, "expected connector");
 				return ParsingExpression.newConnector(this, -1);
 			}
@@ -68,16 +70,16 @@ public class NonTerminal extends ParsingExpression {
 		return this;
 	}
 	@Override
-	public ParsingExpression removePEG4dOperator() {
-		ParsingRule r = (ParsingRule)this.getRule().removePEG4dOperator();
+	public ParsingExpression removeNodeOperator() {
+		ParsingRule r = (ParsingRule)this.getRule().removeNodeOperator();
 		if(!this.ruleName.equals(r.localName)) {
 			return new NonTerminal(peg, r.localName);
 		}
 		return this;
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String,String> undefedFlags) {
-		ParsingRule r = (ParsingRule)this.getRule().removeParsingFlag(undefedFlags);
+	public ParsingExpression removeFlag(TreeMap<String,String> undefedFlags) {
+		ParsingRule r = (ParsingRule)this.getRule().removeFlag(undefedFlags);
 		if(!this.ruleName.equals(r.localName)) {
 			return new NonTerminal(peg, r.localName);
 		}
@@ -179,7 +181,7 @@ public class NonTerminal extends ParsingExpression {
 		return Unconsumed;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		return context.matchNonTerminal(this);
 	}
 

@@ -3,6 +3,11 @@ package org.peg4d.expression;
 import java.util.AbstractList;
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.ReportLevel;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.CharacterReader;
 import org.peg4d.Main;
 import org.peg4d.ParsingCharset;
@@ -11,9 +16,6 @@ import org.peg4d.ParsingObject;
 import org.peg4d.ParsingRule;
 import org.peg4d.ParsingSource;
 import org.peg4d.ParsingTag;
-import org.peg4d.ReportLevel;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarGenerator;
 import org.peg4d.pegcode.GrammarVisitor;
 import org.peg4d.pegcode.PEG4dFormatter;
@@ -44,17 +46,17 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 	public abstract boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack);
 
-	public final int inferPEG4dTranstion() {
-		return this.inferPEG4dTranstion(null);
+	public final int inferNodeTransition() {
+		return this.inferNodeTransition(null);
 	}
 
-	public abstract int inferPEG4dTranstion(UMap<String> visited);
-	public abstract ParsingExpression checkPEG4dTransition(PEG4dTransition c);
+	public abstract int inferNodeTransition(UMap<String> visited);
+	public abstract ParsingExpression checkNodeTransition(NodeTransition c);
 	
-	public abstract ParsingExpression removePEG4dOperator();
-	public abstract ParsingExpression removeParsingFlag(TreeMap<String,String> undefedFlags);	
+	public abstract ParsingExpression removeNodeOperator();
+	public abstract ParsingExpression removeFlag(TreeMap<String,String> undefedFlags);	
 
-	static boolean hasReachableFlag(ParsingExpression e, String flagName, UMap<String> visited) {
+	public static boolean hasReachableFlag(ParsingExpression e, String flagName, UMap<String> visited) {
 		if(e instanceof ParsingWithFlag) {
 			if(flagName.equals(((ParsingWithFlag) e).flagName)) {
 				return false;
@@ -112,7 +114,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 //			System.out.println("["+(pos/(1024 * 1024))+"] calling: " + this + " mark=" + c.markObjectStack() + " free" + Runtime.getRuntime().freeMemory());
 //		}
 //		dstack.add(this);
-		boolean b = this.matcher.simpleMatch(c);
+		boolean b = this.matcher.match(c);
 //		if(this instanceof NonTerminal) {
 ////			c.dumpCallStack("["+pos+"] called: " + b + " ");
 //		}

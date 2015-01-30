@@ -2,10 +2,12 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.ReportLevel;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
-import org.peg4d.ReportLevel;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingValue extends ParsingExpression {
@@ -24,23 +26,23 @@ public class ParsingValue extends ParsingExpression {
 		return false;
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
-		return PEG4dTransition.OperationType;
+	public int inferNodeTransition(UMap<String> visited) {
+		return NodeTransition.OperationType;
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
-		if(c.required != PEG4dTransition.OperationType) {
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		if(c.required != NodeTransition.OperationType) {
 			this.report(ReportLevel.warning, "unexpected value");
 			return ParsingExpression.newEmpty();
 		}
 		return this;
 	}
 	@Override
-	public ParsingExpression removePEG4dOperator() {
+	public ParsingExpression removeNodeOperator() {
 		return ParsingExpression.newEmpty();
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String, String> undefedFlags) {
+	public ParsingExpression removeFlag(TreeMap<String, String> undefedFlags) {
 		return this;
 	}
 	@Override
@@ -59,7 +61,7 @@ public class ParsingValue extends ParsingExpression {
 		return Unconsumed;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		context.left.setValue(this.value);
 		return true;
 	}

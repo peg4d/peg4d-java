@@ -5,10 +5,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.Main;
 import org.peg4d.ParsingObject;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.Utils;
 
 public class Generator {

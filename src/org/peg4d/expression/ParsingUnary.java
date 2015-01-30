@@ -2,7 +2,7 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
-import org.peg4d.UList;
+import nez.util.UList;
 
 public abstract class ParsingUnary extends ParsingExpression {
 	public ParsingExpression inner;
@@ -25,18 +25,18 @@ public abstract class ParsingUnary extends ParsingExpression {
 		return old;
 	}
 	@Override
-	public ParsingExpression removePEG4dOperator() {
+	public ParsingExpression removeNodeOperator() {
 		if(inner == null) {
 			return this;
 		}
-		return ParsingExpression.dupUnary(this, inner.removePEG4dOperator());
+		return ParsingExpression.dupUnary(this, inner.removeNodeOperator());
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String,String> undefedFlags) {
+	public ParsingExpression removeFlag(TreeMap<String,String> undefedFlags) {
 		if(inner == null) {
 			return this;
 		}
-		return ParsingExpression.dupUnary(this, inner.removeParsingFlag(undefedFlags));
+		return ParsingExpression.dupUnary(this, inner.removeFlag(undefedFlags));
 	}
 
 //	protected final int uniqueKey() {

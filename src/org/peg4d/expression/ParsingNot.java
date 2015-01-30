@@ -2,10 +2,12 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTree;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingNot extends ParsingUnary {
@@ -21,14 +23,14 @@ public class ParsingNot extends ParsingUnary {
 		return false;
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
-		return PEG4dTransition.BooleanType;
+	public int inferNodeTransition(UMap<String> visited) {
+		return NodeTransition.BooleanType;
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
-		int t = this.inner.inferPEG4dTranstion(null);
-		if(t == PEG4dTransition.ObjectType || t == PEG4dTransition.OperationType) {
-			this.inner = this.inner.removePEG4dOperator();
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		int t = this.inner.inferNodeTransition(null);
+		if(t == NodeTransition.ObjectType || t == NodeTransition.OperationType) {
+			this.inner = this.inner.removeNodeOperator();
 		}
 		return this;
 	}
@@ -51,11 +53,11 @@ public class ParsingNot extends ParsingUnary {
 		return Unconsumed;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		long pos = context.getPosition();
 		long f   = context.rememberFailure();
 		ParsingTree left = context.left;
-		if(this.inner.matcher.simpleMatch(context)) {
+		if(this.inner.matcher.match(context)) {
 			context.rollback(pos);
 			context.failure(this);
 			left = null;

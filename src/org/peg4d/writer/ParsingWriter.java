@@ -5,9 +5,10 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 
+import nez.util.UMap;
+
 import org.peg4d.Main;
 import org.peg4d.ParsingObject;
-import org.peg4d.UMap;
 
 public abstract class ParsingWriter {
 	protected String fileName = null;

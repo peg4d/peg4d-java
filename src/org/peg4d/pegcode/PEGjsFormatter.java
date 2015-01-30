@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import nez.util.StringUtils;
+
 import org.peg4d.ParsingRule;
 import org.peg4d.Utils;
 import org.peg4d.expression.NonTerminal;
@@ -137,9 +139,9 @@ public class PEGjsFormatter extends GrammarGenerator {
 	@Override
 	public void visitByteRange(ParsingByteRange e) {
 		this.formatString("[");
-		this.formatString(GrammarGenerator.stringfyByte2(e.startByteChar));
+		this.formatString(StringUtils.stringfyByte2(e.startByteChar));
 		this.formatString("-");
-		this.formatString(GrammarGenerator.stringfyByte2(e.endByteChar));
+		this.formatString(StringUtils.stringfyByte2(e.endByteChar));
 		this.formatString("]");
 	}
 	

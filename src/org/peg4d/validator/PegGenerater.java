@@ -8,10 +8,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+import nez.util.UMap;
+
 import org.peg4d.Main;
 import org.peg4d.ParsingObject;
 import org.peg4d.ParsingSource;
-import org.peg4d.UMap;
 
 public class PegGenerater {
 	ParsingObject node;

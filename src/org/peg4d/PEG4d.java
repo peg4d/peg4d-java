@@ -2,6 +2,9 @@ package org.peg4d;
 
 import java.io.File;
 
+import nez.util.ReportLevel;
+import nez.util.UList;
+
 import org.peg4d.expression.ParsingExpression;
 
 public class PEG4d extends ParsingBuilder {

@@ -1,8 +1,10 @@
 package org.peg4d.expression;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingCatch extends ParsingFunction {
@@ -15,11 +17,11 @@ public class ParsingCatch extends ParsingFunction {
 		throw new RuntimeException("TODO");
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
+	public int inferNodeTransition(UMap<String> visited) {
 		throw new RuntimeException("TODO");
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
 		throw new RuntimeException("TODO");
 	}
 
@@ -32,7 +34,7 @@ public class ParsingCatch extends ParsingFunction {
 		return Unconsumed;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		//context.left.setSourcePosition(context.fpos);
 		context.left.setValue(context.source.formatPositionLine("error", context.fpos, context.getErrorMessage()));
 		return true;

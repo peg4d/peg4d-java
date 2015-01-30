@@ -2,11 +2,13 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.ReportLevel;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTree;
-import org.peg4d.ReportLevel;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingRepetition extends ParsingUnary {
@@ -22,23 +24,23 @@ public class ParsingRepetition extends ParsingUnary {
 		return false;
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
-		int t = this.inner.inferPEG4dTranstion(visited);
-		if(t == PEG4dTransition.ObjectType) {
-			return PEG4dTransition.BooleanType;
+	public int inferNodeTransition(UMap<String> visited) {
+		int t = this.inner.inferNodeTransition(visited);
+		if(t == NodeTransition.ObjectType) {
+			return NodeTransition.BooleanType;
 		}
 		return t;
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
 		int required = c.required;
 		if(!this.inner.checkAlwaysConsumed(null, null)) {
 			this.report(ReportLevel.warning, "empty repetition");
 		}
-		ParsingExpression inn = this.inner.checkPEG4dTransition(c);
-		if(required != PEG4dTransition.OperationType && c.required == PEG4dTransition.OperationType) {
+		ParsingExpression inn = this.inner.checkNodeTransition(c);
+		if(required != NodeTransition.OperationType && c.required == NodeTransition.OperationType) {
 			this.report(ReportLevel.warning, "unable to create objects in repetition");
-			this.inner = inn.removePEG4dOperator();
+			this.inner = inn.removeNodeOperator();
 			c.required = required;
 		}
 		else {
@@ -73,13 +75,13 @@ public class ParsingRepetition extends ParsingUnary {
 		return Unconsumed;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		long ppos = -1;
 		long pos = context.getPosition();
 //		long f = context.rememberFailure();
 		while(ppos < pos) {
 			ParsingTree left = context.left;
-			if(!this.inner.matcher.simpleMatch(context)) {
+			if(!this.inner.matcher.match(context)) {
 				context.left = left;
 				left = null;
 				break;

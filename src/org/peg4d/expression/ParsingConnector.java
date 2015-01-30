@@ -2,11 +2,13 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.ReportLevel;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTree;
-import org.peg4d.ReportLevel;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingConnector extends ParsingUnary {
@@ -25,23 +27,23 @@ public class ParsingConnector extends ParsingUnary {
 		return this.inner.checkAlwaysConsumed(startNonTerminal, stack);
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
-		return PEG4dTransition.OperationType;
+	public int inferNodeTransition(UMap<String> visited) {
+		return NodeTransition.OperationType;
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
-		if(c.required != PEG4dTransition.OperationType) {
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		if(c.required != NodeTransition.OperationType) {
 			this.report(ReportLevel.warning, "unexpected connector");
-			return this.inner.removePEG4dOperator();
+			return this.inner.removeNodeOperator();
 		}
-		c.required = PEG4dTransition.ObjectType;
-		ParsingExpression inn = inner.checkPEG4dTransition(c);
-		if(c.required != PEG4dTransition.OperationType) {
+		c.required = NodeTransition.ObjectType;
+		ParsingExpression inn = inner.checkNodeTransition(c);
+		if(c.required != NodeTransition.OperationType) {
 			this.report(ReportLevel.warning, "no object created");
-			c.required = PEG4dTransition.OperationType;
+			c.required = NodeTransition.OperationType;
 			return inn;
 		}
-		c.required = PEG4dTransition.OperationType;
+		c.required = NodeTransition.OperationType;
 		this.inner = inn;
 		return this;
 	}
@@ -66,10 +68,10 @@ public class ParsingConnector extends ParsingUnary {
 		return inner.acceptByte(ch);
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		ParsingTree left = context.left;
 		int mark = context.markLogStack();
-		if(this.inner.matcher.simpleMatch(context)) {
+		if(this.inner.matcher.match(context)) {
 			if(context.left != left) {
 				context.commitLog(mark, context.left);
 				context.lazyLink(left, this.index, context.left);

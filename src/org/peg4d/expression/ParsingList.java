@@ -1,6 +1,6 @@
 package org.peg4d.expression;
 
-import org.peg4d.UList;
+import nez.util.UList;
 
 public abstract class ParsingList extends ParsingExpression {
 	//UList<ParsingExpression> inners;
@@ -45,10 +45,10 @@ public abstract class ParsingList extends ParsingExpression {
 	}
 
 	@Override
-	public ParsingExpression removePEG4dOperator() {
+	public ParsingExpression removeNodeOperator() {
 		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
 		for(ParsingExpression e : this) {
-			ParsingExpression.addSequence(l, e.removePEG4dOperator());
+			ParsingExpression.addSequence(l, e.removeNodeOperator());
 		}
 		return ParsingExpression.newSequence(l);
 	}

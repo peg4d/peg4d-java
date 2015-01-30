@@ -1,6 +1,8 @@
-package org.peg4d;
+package nez.util;
 
 import java.util.HashMap;
+
+import org.peg4d.Utils;
 
 public final class UMap <T> {
 	final HashMap<String, T>	m;

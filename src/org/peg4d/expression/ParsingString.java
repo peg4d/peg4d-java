@@ -2,9 +2,11 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarVisitor;
 
 public class ParsingString extends ParsingExpression {
@@ -26,19 +28,19 @@ public class ParsingString extends ParsingExpression {
 		return utf8.length > 0;
 	}
 	@Override
-	public int inferPEG4dTranstion(UMap<String> visited) {
-		return PEG4dTransition.BooleanType;
+	public int inferNodeTransition(UMap<String> visited) {
+		return NodeTransition.BooleanType;
 	}
 	@Override
-	public ParsingExpression checkPEG4dTransition(PEG4dTransition c) {
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
 		return this;
 	}
 	@Override
-	public ParsingExpression removePEG4dOperator() {
+	public ParsingExpression removeNodeOperator() {
 		return this;
 	}
 	@Override
-	public ParsingExpression removeParsingFlag(TreeMap<String, String> undefedFlags) {
+	public ParsingExpression removeFlag(TreeMap<String, String> undefedFlags) {
 		return this;
 	}
 	@Override
@@ -56,7 +58,7 @@ public class ParsingString extends ParsingExpression {
 		return ((this.utf8[0] & 0xff) == ch) ? Accept : Reject;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		if(context.source.match(context.pos, this.utf8)) {
 			context.consume(this.utf8.length);
 			return true;

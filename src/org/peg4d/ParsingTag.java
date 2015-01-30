@@ -2,6 +2,8 @@ package org.peg4d;
 
 import java.util.HashMap;
 
+import nez.util.UList;
+
 public class ParsingTag {
 	private static HashMap<String, Integer> idMap = new HashMap<String, Integer>();
 	private static UList<String> tagNameList = new UList<String>(new String[16]);

@@ -33,7 +33,7 @@ public class ByteMapMatcher implements Recognizer {
 		this.bitMap[256] = eof;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		int c = context.source.byteAt(context.pos);
 		if(this.bitMap[c]) {
 			context.consume(1);

@@ -5,6 +5,9 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.Map;
 
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.jvm.JavaByteCodeGenerator;
 import org.peg4d.pegcode.GrammarGenerator;

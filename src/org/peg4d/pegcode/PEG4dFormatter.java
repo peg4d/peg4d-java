@@ -1,5 +1,7 @@
 package org.peg4d.pegcode;
 
+import nez.util.StringUtils;
+
 import org.peg4d.ParsingRule;
 import org.peg4d.Utils;
 import org.peg4d.expression.NonTerminal;
@@ -100,7 +102,7 @@ public class PEG4dFormatter extends GrammarGenerator {
 
 	@Override
 	public void visitByte(ParsingByte e) {
-		this.formatString(GrammarGenerator.stringfyByte(e.byteChar));
+		this.formatString(StringUtils.stringfyByte(e.byteChar));
 	}
 
 	@Override
@@ -112,9 +114,9 @@ public class PEG4dFormatter extends GrammarGenerator {
 	@Override
 	public void visitByteRange(ParsingByteRange e) {
 		this.formatString("[");
-		this.formatString(GrammarGenerator.stringfyByte2(e.startByteChar));
+		this.formatString(StringUtils.stringfyByte2(e.startByteChar));
 		this.formatString("-");
-		this.formatString(GrammarGenerator.stringfyByte2(e.endByteChar));
+		this.formatString(StringUtils.stringfyByte2(e.endByteChar));
 		this.formatString("]");
 	}
 	
