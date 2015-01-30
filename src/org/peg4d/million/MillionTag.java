@@ -121,5 +121,5 @@ public class MillionTag {
 	public static final int TAG_TABLE_SETTER_APPLY = ParsingTag.tagId("TableSetterApply");
 	public static final int TAG_VARIADIC_PARAMETER = ParsingTag.tagId("VariadicParameter");
 	public static final int TAG_OBJECT = ParsingTag.tagId("Object");
-	
+	public static final int TAG_PROPERTY = ParsingTag.tagId("Property");
 }
