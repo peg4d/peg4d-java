@@ -510,7 +510,7 @@ ParsingObject nez_Parse(ParsingContext context, Instruction *inst) {
 }
 
 void nez_ParseStat(ParsingContext context, Instruction *inst) {
-  for (int i = 0; i < 20; i++) {
+  for (int i = 0; i < 5; i++) {
     uint64_t start, end;
     MemoryPool_Reset(context->mpool);
     start = timer();

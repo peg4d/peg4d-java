@@ -71,20 +71,22 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	
 	public PegVMByteCodeGenerator(int level) {
 		switch (level) {
+		case 1:
+			O_Inlining = true;
+			break;
 		case 2:
 			O_Inlining = true;
+			O_FusionInstruction = true;
+			O_FusionOperand = true;
 			break;
 		case 3:
 			O_Inlining = true;
 			O_FusionInstruction = true;
+			O_FusionOperand = true;
+			O_StackCaching = true;
 			break;
 		case 4:
 			O_Inlining = true;
-			O_FusionInstruction = true;
-			O_MappedChoice = true;
-			break;
-		case 5:
-			//O_Inlining = true;
 			O_FusionInstruction = true;
 			O_MappedChoice = true;
 			O_FusionOperand = true;
