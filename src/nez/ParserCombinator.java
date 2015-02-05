@@ -9,13 +9,13 @@ import nez.expr.Expression;
 import nez.expr.Factory;
 import nez.util.UList;
 
-public class Combinator {
+public class ParserCombinator {
 	Grammar grammar;
-	protected Combinator(Grammar grammar) {
+	protected ParserCombinator(Grammar grammar) {
 		this.grammar = grammar;
 	}
 	
-	public Grammar load(GrammarChecker checker) {
+	public final Grammar load(GrammarChecker checker) {
 		Class<?> c = this.getClass();
 		for(Method m : c.getDeclaredMethods()) {
 			if(m.getReturnType() == Expression.class && m.getParameterCount() == 0) {
@@ -36,8 +36,14 @@ public class Combinator {
 				}
 			}
 		}
-		checker.verify(grammar);
+		if(checker != null) {
+			checker.verify(grammar);
+		}
 		return grammar;
+	}
+
+	public final Grammar load() {
+		return this.load(null);
 	}
 
 	private SourcePosition src() {

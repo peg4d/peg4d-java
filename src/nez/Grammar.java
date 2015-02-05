@@ -12,7 +12,7 @@ public class Grammar {
 	public UList<String> nameList;
 	public boolean foundError = false;
 
-	Grammar(String name) {
+	public Grammar(String name) {
 		this.name = name;
 	}
 
@@ -45,6 +45,14 @@ public class Grammar {
 
 	public final Rule getRule(String ruleName) {
 		return this.ruleMap.get(ruleName);
+	}
+
+	public final Production getProduction(String name) {
+		Rule r = this.getRule(name);
+		if(r != null) {
+			return new Production(r);
+		}
+		return null;
 	}
 
 

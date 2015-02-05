@@ -1,11 +1,11 @@
 package nez.expr;
 
-import nez.Combinator;
+import nez.ParserCombinator;
 import nez.Grammar;
 
-public class NezCombinator extends Combinator {
+public class NezParserCombinator extends ParserCombinator {
 
-	NezCombinator(Grammar grammar) {
+	public NezParserCombinator(Grammar grammar) {
 		super(grammar);
 	}
 

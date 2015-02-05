@@ -622,7 +622,16 @@ public abstract class SourceContext {
 //	public final String getRepeatByteString(long startIndex) {
 //		return this.source.substring(startIndex, this.pos);
 //	}
+	
+	public final static SourceContext newStringSourceContext(String str) {
+		return new StringSourceContext(str);
+	}
 
+	public final static SourceContext newStringSourceContext(String resource, long linenum, String str) {
+		return new StringSourceContext(resource, linenum, str);
+	}
+
+	
 }
 
 class StringSourceContext extends SourceContext {
@@ -635,8 +644,8 @@ class StringSourceContext extends SourceContext {
 		this.textLength = utf8.length-1;
 	}
 
-	StringSourceContext(String fileName, long linenum, String sourceText) {
-		super(fileName, linenum);
+	StringSourceContext(String resource, long linenum, String sourceText) {
+		super(resource, linenum);
 		this.utf8 = toZeroTerminalByteSequence(sourceText);
 		this.textLength = utf8.length-1;
 	}
