@@ -11,6 +11,7 @@ public class Production {
 
 	Production(Rule rule) {
 		this.startingRule = rule;
+		this.ruleMap = new UMap<Rule>();
 		add(rule);
 	}
 

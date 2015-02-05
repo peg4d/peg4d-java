@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.Map;
 
+import nez.Production;
+import nez.expr.NezParserCombinator;
 import nez.util.UList;
 import nez.util.UMap;
 
@@ -480,6 +482,14 @@ public class Main {
 		}
 		System.out.println("");
 		return startPoint;
+	}
+	
+	public final static void nez() {
+		nez.Grammar peg = new nez.Grammar("");
+		assert(peg != null);
+		peg = new NezParserCombinator(peg).load();
+		Production p = peg.getProduction("DIGIT");
+		assert(p.match("8"));
 	}
 
 	private static jline.ConsoleReader ConsoleReader = null;

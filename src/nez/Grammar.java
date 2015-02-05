@@ -14,6 +14,7 @@ public class Grammar {
 
 	public Grammar(String name) {
 		this.name = name;
+		this.ruleMap = new UMap<Rule>();
 	}
 
 	public String uniqueName(String rulename) {

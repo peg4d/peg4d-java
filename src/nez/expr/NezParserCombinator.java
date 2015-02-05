@@ -1,7 +1,7 @@
 package nez.expr;
 
-import nez.ParserCombinator;
 import nez.Grammar;
+import nez.ParserCombinator;
 
 public class NezParserCombinator extends ParserCombinator {
 
@@ -9,91 +9,91 @@ public class NezParserCombinator extends ParserCombinator {
 		super(grammar);
 	}
 
-	Expression EOL() {
+	public Expression EOL() {
 		return c("\\r\\n");
 	}
 
-	Expression EOT() {
+	public Expression EOT() {
 		return Not(Any());
 	}
 
-	Expression S() {
+	public Expression S() {
 		return Choice(c(" \\t\\r\\n"), t("\u3000"));
 	}
 
-	Expression DIGIT() {
+	public Expression DIGIT() {
 		return c("0-9");
 	}
 
-	Expression LETTER() {
+	public Expression LETTER() {
 		return c("A-Za-z_");
 	}
 
-	Expression HEX() {
+	public Expression HEX() {
 		return c("0-9A-Fa-f");
 	}
 
-	Expression W() {
+	public Expression W() {
 		return c("A-Za-z0-9_");
 	}
 
-	Expression INT() {
+	public Expression INT() {
 		return Sequence(P("DIGIT"), ZeroMore(P("DIGIT")));
 	}
 	
-	Expression NAME() {
+	public Expression NAME() {
 		return Sequence(P("LETTER"), ZeroMore(P("W")));
 	}
 
-	Expression COMMENT() {
+	public Expression COMMENT() {
 		return Choice(
 			Sequence(t("/*"), ZeroMore(Not(t("*/")), Any()), t("*/")),
 			Sequence(t("//"), ZeroMore(Not(P("EOL")), Any()), P("EOL"))
 		);
 	}
 
-	Expression SPACING() {
+	public Expression SPACING() {
 		return ZeroMore(Choice(P("S"), P("COMMENT")));
 	}
 	
-	Expression Integer() {
+	public Expression Integer() {
 		return Constructor(P("INT"), Tag(NezTag.Integer));
 	}
 
-	Expression Name() {
+	public Expression Name() {
 		return Constructor(P("LETTER"), ZeroMore(P("W")), Tag(NezTag.Name));
 	}
 
-	Expression DotName() {
+	public Expression DotName() {
 		return Constructor(P("LETTER"), ZeroMore(c("A-Za-z0-9_.")), Tag(NezTag.Name));
 	}
 
-	Expression HyphenName() {
+	public Expression HyphenName() {
 		return Constructor(P("LETTER"), ZeroMore(Choice(P("W"), t("-"))), Tag(NezTag.Name));
 	}
 
-	Expression String() {
+	public Expression String() {
 		Expression StringContent  = ZeroMore(Choice(
 			t("\\\""), t("\\\\"), Sequence(Not(t("\"")), Any())
 		));
 		return Sequence(t("\""), Constructor(StringContent, Tag(NezTag.String)), t("\""));
 	}
 
-	Expression SingleQuotedString() {
+	public Expression SingleQuotedString() {
 		Expression StringContent  = ZeroMore(Choice(
 			t("\\'"), t("\\\\"), Sequence(Not(t("'")), Any())
 		));
 		return Sequence(t("'"),  Constructor(StringContent, Tag(NezTag.CharacterSequence)), t("'"));
 	}
 
-	Expression ValueReplacement() {
+	public Expression ValueReplacement() {
 		Expression ValueContent = ZeroMore(Choice(
 			t("\\`"), t("\\\\"), Sequence(Not(t("`")), Any())
 		));
 		return Sequence(t("`"), Constructor(ValueContent, Tag(NezTag.Value)), t("`"));
 	}
 
-	Expression NonTerminal() {
+	public Expression NonTerminal() {
 		return Constructor(
 				P("LETTER"), 
 				ZeroMore(c("A-Za-z0-9_:")), 
@@ -101,7 +101,7 @@ public class NezParserCombinator extends ParserCombinator {
 		);
 	}
 	
-	Expression CHAR() {
+	public Expression CHAR() {
 		return Choice( 
 			Sequence(t("\\u"), P("HEX"), P("HEX"), P("HEX"), P("HEX")),
 			Sequence(t("\\x"), P("HEX"), P("HEX")),
@@ -110,7 +110,7 @@ public class NezParserCombinator extends ParserCombinator {
 		);
 	}
 
-	Expression Charset() {
+	public Expression Charset() {
 		Expression _CharChunk = Sequence(
 			Constructor (P("CHAR"), Tag(NezTag.Character)), 
 			Optional(
@@ -120,7 +120,7 @@ public class NezParserCombinator extends ParserCombinator {
 		return Sequence(t("["), Constructor(ZeroMore(Link(_CharChunk)), Tag(NezTag.Character)), t("]"));
 	}
 
-	Expression Constructor() {
+	public Expression Constructor() {
 		Expression ConstructorBegin = Choice(t("{"), t("<{"), t("<<"), t("8<"));
 		Expression Connector  = Choice(t("@"), t("^"));
 		Expression ConstructorEnd   = Choice(t("}>"), t("}"), t(">>"), t(">8"));
@@ -136,7 +136,7 @@ public class NezParserCombinator extends ParserCombinator {
 		);
 	}
 	
-	Expression Func() {
+	public Expression Func() {
 		return Sequence(t("<"), Constructor(
 		Choice(
 			Sequence(t("debug"),   P("S"), Link(P("Expr")), Tag(NezTag.Debug)),
@@ -166,7 +166,7 @@ public class NezParserCombinator extends ParserCombinator {
 		);
 	}
 
-	Expression Term() {
+	public Expression Term() {
 		Expression _Any = Constructor(t("."), Tag(NezTag.Any));
 		Expression _Tagging = Sequence(t("#"), Constructor(c("A-Za-z0-9"), ZeroMore(c("A-Za-z0-9_.")), Tag(NezTag.Tagging)));
 		Expression _Byte = Constructor(t("0x"), P("HEX"), P("HEX"), Tag(NezTag.Byte));
@@ -179,7 +179,7 @@ public class NezParserCombinator extends ParserCombinator {
 		);
 	}
 	
-	Expression SuffixTerm() {
+	public Expression SuffixTerm() {
 		Expression Connector  = Choice(t("@"), t("^"));
 		return Sequence(
 			P("Term"), 
@@ -196,7 +196,7 @@ public class NezParserCombinator extends ParserCombinator {
 		);
 	}
 	
-	Expression Predicate() {
+	public Expression Predicate() {
 		return Choice(
 			Constructor(
 				Choice(
@@ -211,11 +211,11 @@ public class NezParserCombinator extends ParserCombinator {
 		);
 	}
 
-	Expression NOTRULE() {
+	public Expression NOTRULE() {
 		return Not(Choice(P("Rule"), P("Import")));
 	}
 
-	Expression Sequence() {
+	public Expression Sequence() {
 		return Sequence(
 			P("Predicate"), 
 			Optional(
@@ -234,7 +234,7 @@ public class NezParserCombinator extends ParserCombinator {
 		);
 	}
 
-	Expression Expr() {
+	public Expression Expr() {
 		return Sequence(
 			P("Sequence"), 
 			Optional(
@@ -251,14 +251,14 @@ public class NezParserCombinator extends ParserCombinator {
 		);
 	}
 		
-	Expression DOC() {
+	public Expression DOC() {
 		return Sequence(
 			ZeroMore(Not(t("]")), Not(t("[")), Any()),
 			Optional(Sequence(t("["), P("DOC"), t("]"), P("DOC") ))
 		);
 	}
 
-	Expression Annotation() {
+	public Expression Annotation() {
 		return Sequence(
 			t("["),
 			Constructor(
@@ -274,7 +274,7 @@ public class NezParserCombinator extends ParserCombinator {
 		);
 	}
 
-	Expression Annotations() {
+	public Expression Annotations() {
 		return Constructor(
 			Link(P("Annotation")),
 			ZeroMore(Link(P("Annotation"))),
@@ -282,7 +282,7 @@ public class NezParserCombinator extends ParserCombinator {
 		);	
 	}
 	
-	Expression Rule() {
+	public Expression Rule() {
 		return Constructor(
 			Link(0, Choice(P("Name"), P("String"))), P("_"), 
 //			Optional(Sequence(Link(3, P("Param_")), P("_"))),
@@ -293,7 +293,7 @@ public class NezParserCombinator extends ParserCombinator {
 		);
 	}
 	
-	Expression Import() {
+	public Expression Import() {
 //		return Constructor(
 //			t("import"), 
 //			P("S"), 
@@ -311,7 +311,7 @@ public class NezParserCombinator extends ParserCombinator {
 	);
 	}
 	
-	Expression Chunk() {
+	public Expression Chunk() {
 		return Sequence(
 			P("_"), 
 			Choice(
@@ -323,7 +323,7 @@ public class NezParserCombinator extends ParserCombinator {
 		);
 	}
 
-	Expression File() {
+	public Expression File() {
 		return Constructor(
 			P("_"), 
 			ZeroMore(Link(P("Chunk"))),
