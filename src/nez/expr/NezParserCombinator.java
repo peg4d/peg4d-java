@@ -5,8 +5,16 @@ import nez.ParserCombinator;
 
 public class NezParserCombinator extends ParserCombinator {
 
-	public NezParserCombinator(Grammar grammar) {
+	NezParserCombinator(Grammar grammar) {
 		super(grammar);
+	}
+	
+	private static Grammar peg = null;
+	public final static Grammar newGrammar() {
+		if(peg == null) {
+			peg = new NezParserCombinator(new Grammar("nez")).load();
+		}
+		return peg;
 	}
 
 	public Expression EOL() {

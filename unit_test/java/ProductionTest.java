@@ -10,11 +10,11 @@ public class ProductionTest {
 
 	@Test
 	public void test() {
-		Grammar peg = new Grammar("");
-		assertTrue(peg != null);
-		peg = new NezParserCombinator(peg).load();
+		Grammar peg = NezParserCombinator.newGrammar();
 		Production p = peg.getProduction("DIGIT");
 		assertTrue(p.match("8"));
+		assertTrue(!p.match("88"));
+		assertTrue(!p.match("x"));
 	}
 
 }

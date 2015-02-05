@@ -485,9 +485,7 @@ public class Main {
 	}
 	
 	public final static void nez() {
-		nez.Grammar peg = new nez.Grammar("");
-		assert(peg != null);
-		peg = new NezParserCombinator(peg).load();
+		nez.Grammar peg = NezParserCombinator.newGrammar();
 		Production p = peg.getProduction("DIGIT");
 		assert(p.match("8"));
 	}
