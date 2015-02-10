@@ -60,6 +60,8 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	boolean O_FusionOperand = false;
 	boolean O_StackCaching = false;
 	
+	boolean PatternMatching = true;
+	
 	int codeIndex = 0;
 	boolean backTrackFlag = false;
 	boolean optChoiceMode = true;
@@ -1236,6 +1238,17 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitConstructor(ParsingConstructor e) {
+		if (PatternMatching) {
+			for(int i = 0; i < e.size(); i++) {
+				if (O_FusionInstruction) {
+					i = writeSequenceCode(e, i, e.size());
+				}
+				else {
+					e.get(i).visit(this);
+				}
+			}
+		}
+		else {
 		this.constructorCount++;
 		int label = newLabel();
 		this.pushFailureJumpPoint();
@@ -1247,52 +1260,58 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			writeCode(Instruction.NEWJOIN, 0);
 		}
 		else {
-			//writeCode(Instruction.PUSHo);
-			//writeCode(Instruction.PUSHm);
-			writeCode(Instruction.NEW);
-		}
-		for(int i = 0; i < e.size(); i++) {
-			if (O_FusionInstruction) {
-				i = writeSequenceCode(e, i, e.size());
+				//writeCode(Instruction.PUSHo);
+				//writeCode(Instruction.PUSHm);
+				writeCode(Instruction.NEW);
 			}
-			else {
-				e.get(i).visit(this);
+			for(int i = 0; i < e.size(); i++) {
+				if (O_FusionInstruction) {
+					i = writeSequenceCode(e, i, e.size());
+				}
+				else {
+					e.get(i).visit(this);
+				}
 			}
+			writeCode(Instruction.SETendp);
+			writeCode(Instruction.POPp);
+			if (e.leftJoin) {
+				writeCode(Instruction.POPo);
+			}
+			//writeCode(Instruction.POPo);
+			writeJumpCode(Instruction.JUMP, label);
+			this.popFailureJumpPoint(e);
+			writeCode(Instruction.ABORT);
+			if (e.leftJoin) {
+				writeCode(Instruction.STOREo);
+			}
+			//writeCode(Instruction.STOREo);
+			writeJumpCode(Instruction.JUMP, this.jumpFailureJump());
+			writeLabel(label);
 		}
-		writeCode(Instruction.SETendp);
-		writeCode(Instruction.POPp);
-		if (e.leftJoin) {
-			writeCode(Instruction.POPo);
-		}
-		//writeCode(Instruction.POPo);
-		writeJumpCode(Instruction.JUMP, label);
-		this.popFailureJumpPoint(e);
-		writeCode(Instruction.ABORT);
-		if (e.leftJoin) {
-			writeCode(Instruction.STOREo);
-		}
-		//writeCode(Instruction.STOREo);
-		writeJumpCode(Instruction.JUMP, this.jumpFailureJump());
-		writeLabel(label);
 	}
 
 	@Override
 	public void visitConnector(ParsingConnector e) {
-		int label = newLabel();
-		this.pushFailureJumpPoint();
-		writeCode(Instruction.PUSHconnect);
-		//writeCode(Instruction.PUSHm);
-		e.inner.visit(this);
-		writeCode(Instruction.COMMIT, e.index);
-		//writeCode(Instruction.LINK, e.index);
-		//writeCode(Instruction.STOREo);
-		writeJumpCode(Instruction.JUMP, label);
-		this.popFailureJumpPoint(e);
-		//writeCode(Instruction.SUCC);
-		writeCode(Instruction.ABORT);
-		writeCode(Instruction.STOREo);
-		writeJumpCode(Instruction.JUMP, jumpFailureJump());
-		writeLabel(label);
+		if (PatternMatching) {
+			e.inner.visit(this);
+		}
+		else {
+			int label = newLabel();
+			this.pushFailureJumpPoint();
+			writeCode(Instruction.PUSHconnect);
+			//writeCode(Instruction.PUSHm);
+			e.inner.visit(this);
+			writeCode(Instruction.COMMIT, e.index);
+			//writeCode(Instruction.LINK, e.index);
+			//writeCode(Instruction.STOREo);
+			writeJumpCode(Instruction.JUMP, label);
+			this.popFailureJumpPoint(e);
+			//writeCode(Instruction.SUCC);
+			writeCode(Instruction.ABORT);
+			writeCode(Instruction.STOREo);
+			writeJumpCode(Instruction.JUMP, jumpFailureJump());
+			writeLabel(label);
+		}
 	}
 
 	@Override
