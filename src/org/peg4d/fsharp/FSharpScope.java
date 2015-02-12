@@ -18,6 +18,7 @@ public class FSharpScope {
 		FUNCTION
 	}
 	public ScopeType type;
+	public ArrayList<ParsingObject> returnList;
 	
 	public FSharpScope(String name){
 		this.name = name;
@@ -28,6 +29,7 @@ public class FSharpScope {
 		this.node = node;
 		this.varList = new ArrayList<FSharpVar>();
 		this.funcList = new ArrayList<FSharpFunc>();
+		this.returnList = new ArrayList<ParsingObject>();
 		this.path = new ArrayList<String>();
 		//deep copy
 		for(int i = 0; i < path.size(); i++){

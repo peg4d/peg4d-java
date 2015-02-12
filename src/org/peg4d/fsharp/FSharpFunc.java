@@ -52,7 +52,7 @@ public class FSharpFunc {
 				if(i != 0){
 					argsStr += " ";
 				}
-				argsStr += argsNode.get(0).getText();
+				argsStr += argsNode.get(i).getText();
 			}
 		}
 		this.argsStr = argsStr;

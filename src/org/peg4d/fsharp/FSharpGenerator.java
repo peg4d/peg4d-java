@@ -12,89 +12,96 @@ import org.peg4d.million.SourceGenerator;
 
 public class FSharpGenerator extends SourceGenerator {
 	private static boolean UseExtend;
-	public ArrayList<FSharpFunc> funcList = new ArrayList<FSharpFunc>();
 	public ArrayList<FSharpVar> varList = new ArrayList<FSharpVar>();
-	public ArrayList<String> objList = new ArrayList<String>();
 	public ArrayList<FSharpScope> scopeList = new ArrayList<FSharpScope>();
 	private String prefixName = "";
-	public int currentNest = 0;
 	private int ifResultKey = 0;
-	private int lamdaKey = 0;
+	private int lambdaKey = 0;
 	private boolean forFlag = false;
 	private boolean objFlag = false;
 	private boolean assignFlag= false;
+	private boolean letFlag = false;
 	private ArrayList<String> addedGetterList = new ArrayList<String>();
 	private String forConunter = "";
 	private FSharpScope currentScope;
+	
+	private final int TAG_LAMBDA_NAME = ParsingTag.tagId("LambdaName");
 
 	public FSharpGenerator() {
 		FSharpGenerator.UseExtend = false;
 	}
 	
-	public int nest(){
-		return ++this.currentNest;
-	}
-	
-	public int unNest(){
-		return --this.currentNest;
-	}
-	
-	protected void initialCheck(ParsingObject node){
+	protected void initialSetting(ParsingObject node){
 		ParsingObject target;
 		for(int i = 0; i < node.size(); i++){
 			target = node.get(i);
 			if(target.is(MillionTag.TAG_VAR_DECL_STMT)){
 				
 			}
-			this.checkFuncDecl(target, new ArrayList<String>());
+			this.findScope(target, new ArrayList<String>());
 		}
 	}
 	
-	protected void checkFuncDecl(ParsingObject node, ArrayList<String> path){
+	protected void findScope(ParsingObject node, ArrayList<String> path){
 		boolean addScope = false;
-		String name = "";
-		ArrayList<String> cpath = path;
+		String scopeName = "";
+		ArrayList<String> nextPath = path;
 		boolean isFuncDecl = node.is(MillionTag.TAG_FUNC_DECL);
 		boolean isObject = node.is(MillionTag.TAG_OBJECT);
 		
 		if(isFuncDecl){
 			addScope = true;
-			name = node.get(2).getText();
-			if(name.isEmpty()){
-				try{
-					//sNode = superNode
-					ParsingObject sNode = node.getParent();
-					ParsingObject ssNode = sNode.getParent();
-					ParsingObject sssNode = ssNode.getParent();
-					if(sssNode.is(MillionTag.TAG_VAR_DECL_STMT)){
-						name = sNode.get(0).getText();
-					} else if(sNode.is(MillionTag.TAG_PROPERTY)) {
-						name = sNode.get(0).getText();
-					} else {
-						name = "lamda" + this.lamdaKey++;
-					}
-				} catch(NullPointerException e) {
-					name = "lamda" + this.lamdaKey++;
+			scopeName = node.get(2).getText();
+			if(scopeName.isEmpty()){
+				//sNode = superNode
+				ParsingObject sNode = node.getParent();
+				ParsingObject ssNode = sNode.getParent();
+				ParsingObject sssNode = ssNode.getParent();
+				if(sssNode.is(MillionTag.TAG_VAR_DECL_STMT)){
+					scopeName = sNode.get(0).getText();
+				} else if(sNode.is(MillionTag.TAG_PROPERTY)) {
+					scopeName = sNode.get(0).getText();
+				} else {
+					scopeName = "lambda" + this.lambdaKey++;
+					ParsingObject nameNode = new ParsingObject(new ParsingTag("Name"), null, 0);
+					ParsingObject parent = node.getParent();
+//					int i = 0;
+//					for(String pathElement : path){
+//						nameNode.add(new ParsingObject(new ParsingTag("Name"), null, 0));
+//						nameNode.get(i).setValue(pathElement);
+//						i++;
+//					}
+//					nameNode.add(new ParsingObject(new ParsingTag("Name"), null, 0));
+					nameNode.setValue(scopeName);
+					parent.insert(this.indexOf(node), nameNode);
+					parent.remove(this.indexOf(node));
 				}
-				node.get(2).setValue(name);
+				node.get(2).setValue(scopeName);
+			} else if(node.get(2).is(this.TAG_LAMBDA_NAME)){
+				node.get(2).setTag(new ParsingTag("Name"));
+				ParsingObject nameNode = new ParsingObject(new ParsingTag("Name"), null, 0);
+				ParsingObject parent = node.getParent();
+				String fullName = "";
+				String lambdaName = node.get(2).getText();
+				for(String pathElement : path){
+					fullName += pathElement + "_";
+				}
+				fullName += lambdaName;
+				nameNode.setValue("ScopeOf" + fullName + "." + lambdaName);
+				parent.insert(this.indexOf(node), nameNode);
+				parent.remove(this.indexOf(node));
 			}
-			String pathName = "";
-			for(String p : path){
-				pathName += p + ".";
-			}
-			this.funcList.add(new FSharpFunc(name, pathName, !path.isEmpty(), node));
-			this.funcList.add(new FSharpFunc("_" + name, pathName, !path.isEmpty(), node));
 		} else if(isObject){
 			addScope = true;
 			ParsingObject sNode = node.getParent();
 			if(sNode.is(MillionTag.TAG_VAR_DECL)){
-				name = sNode.get(0).getText();
+				scopeName = sNode.get(0).getText();
 			} else {
-				name = "lamda" + this.lamdaKey++;
+				scopeName = "lambda" + this.lambdaKey++;
 			}
 		}
 		if(addScope){
-			FSharpScope fs = new FSharpScope(name, node, cpath);
+			FSharpScope fs = new FSharpScope(scopeName, node, path);
 			this.scopeList.add(fs);
 			
 			if(isFuncDecl){
@@ -106,14 +113,20 @@ public class FSharpGenerator extends SourceGenerator {
 					this.varList.add(argVar);
 					fs.numOfArgs++;
 				}
+				this.findReturn(node.get(6), fs, false);
+			} else if(isObject){
+				ParsingObject objNode = new ParsingObject(new ParsingTag("ObjectName"), null, 0);
+				objNode.setValue("new " + fs.getScopeName()+"()");
+				node.getParent().insert(this.indexOf(node), objNode);
+				node.getParent().remove(node);
 			}
 			
-			cpath = new ArrayList<String>();
+			nextPath = new ArrayList<String>();
 			//deep copy path -> cpath
-			for(int i = 0; i < path.size(); i++){
-				cpath.add(path.get(i));
+			for(String pathElement : path){
+				nextPath.add(pathElement);
 			}
-			cpath.add(name);
+			nextPath.add(scopeName);
 			
 			if(isFuncDecl){
 				this.checkVarDecl(node.get(6), fs);
@@ -123,9 +136,13 @@ public class FSharpGenerator extends SourceGenerator {
 		}
 		if(node.size() > 0){
 			for(int i = 0; i < node.size(); i++){
-				this.checkFuncDecl(node.get(i), cpath);
+				this.findScope(node.get(i), nextPath);
 			}
 		}
+	}
+	
+	public void visitObjectName(ParsingObject node){
+		this.currentBuilder.append(node.getText());
 	}
 	
 	private int indexOf(ParsingObject node){
@@ -147,6 +164,7 @@ public class FSharpGenerator extends SourceGenerator {
 			if(!propertyNode.get(1).is(MillionTag.TAG_FUNC_DECL)){
 				fv = new FSharpVar(propertyNode.get(0).getText(), fs.getPathName(), propertyNode.get(1));
 				fs.varList.add(fv);
+				this.varList.add(fv);
 			} else {
 				ff = new FSharpFunc(propertyNode.get(0).getText(), fs.getPathName(), false, propertyNode.get(1));
 				fs.funcList.add(ff);
@@ -168,6 +186,8 @@ public class FSharpGenerator extends SourceGenerator {
 						varDeclNode.setTag(new ParsingTag("Assign"));
 						node.getParent().insert(this.indexOf(node) + i, varDeclNode);
 					} else {
+						FSharpFunc ff = new FSharpFunc(varDeclNode.get(0).getText(), fs.getPathName(), false, varDeclNode.get(1));
+						fs.funcList.add(ff);
 						return false;
 					}
 				} catch(ArrayIndexOutOfBoundsException e){
@@ -177,6 +197,13 @@ public class FSharpGenerator extends SourceGenerator {
 			node.getParent().remove(this.indexOf(node));
 		} else
 		if(node.is(MillionTag.TAG_FUNC_DECL)){
+			ParsingObject nameNode = node.get(2);
+			if(nameNode.getText().isEmpty()){
+				nameNode.setValue("lambda" + this.lambdaKey++);
+				nameNode.setTag(new ParsingTag("LambdaName"));
+			}
+			FSharpFunc ff = new FSharpFunc(nameNode.getText(), fs.getPathName(), false, node);
+			fs.funcList.add(ff);
 			return false;
 		} else
 		if(node.is(MillionTag.TAG_ASSIGN)){
@@ -201,15 +228,14 @@ public class FSharpGenerator extends SourceGenerator {
 		return true;
 	}
 	
-	protected String typeCode(String name){
+	protected String typeCode(FSharpScope fs){
+		String name = fs.getScopeName();
+		String pathString = "";
+		for(String pathElement : fs.path){
+			pathString += this.currentBuilder.quoteString + pathElement + this.currentBuilder.quoteString + ";";
+		}
 		this.currentBuilder.appendNewLine("let " + name + "0 = " + "new " + name + "()");
-//		String forStr = "for i in ";
-//		String argStr = name + ".GetType().GetMethods() ";
-//		String doStr = "do printfn " + this.currentBuilder.quoteString + "%s" + this.currentBuilder.quoteString + " (" + this.currentBuilder.quoteString + "  " + this.currentBuilder.quoteString + " + i.ToString()) done";
-
-//		String printStr = "printfn " + this.currentBuilder.quoteString + "%s" + this.currentBuilder.quoteString;
-//		String argStr = " (" + this.currentBuilder.quoteString + name + " : " + this.currentBuilder.quoteString + " + " + name + ".GetType().GetMethods().[0].ToString())";
-		String printStr = "fsLib.fl.printObject " + this.currentBuilder.quoteString + name + this.currentBuilder.quoteString + " 1 2 (" + name + "0.GetType().GetMethods())";
+		String printStr = "fsLib.fl.printObject " + this.currentBuilder.quoteString + name + this.currentBuilder.quoteString + ((fs.type==fs.type.OBJECT)? " true":" false") + " [|"+ pathString + "|] (" + name + "0.GetType().GetMethods())";
 		return printStr;
 	}
 	
@@ -222,9 +248,6 @@ public class FSharpGenerator extends SourceGenerator {
 		} else {
 			argStr = ffunc.getFullname() + ".GetType().GetMethods().[0].ToString()";
 		}
-//		for(int i = 0; i <= ffunc.uniqueKey; i++){
-//			argStr += " + " + ffunc.getFullname() + i + ".GetType().ToString()";
-//		}
 		String argEndStr = ")";
 		return printStr + argBeginStr + argStr + argEndStr;
 	}
@@ -241,19 +264,8 @@ public class FSharpGenerator extends SourceGenerator {
 	}
 	
 	protected void generateTypeCode(){
-//		for(int i = 0; i< this.funcList.size(); i++){
-//			if(i % 2 == 0){
-//				this.currentBuilder.appendNewLine(typeCode(this.funcList.get(i)));
-//			}
-//		}
-//		for(FSharpVar fvar : this.varList){
-//			this.currentBuilder.appendNewLine(typeCode(fvar));
-//		}
-//		for(String obj : this.objList){
-//			this.currentBuilder.appendNewLine(typeCode(obj));
-//		}
 		for(FSharpScope fs : this.scopeList){
-			this.currentBuilder.appendNewLine(typeCode(fs.getScopeName()));
+			this.currentBuilder.appendNewLine(typeCode(fs));
 		}
 	}
 	
@@ -268,6 +280,23 @@ public class FSharpGenerator extends SourceGenerator {
 			}
 		}
 		return result;
+	}
+	
+	protected boolean findReturn(ParsingObject node, FSharpScope fs, boolean result){
+		boolean res = false;
+		if(result){
+			res = true;
+		}
+		if(node.is(MillionTag.TAG_RETURN)){
+			res = true;
+			fs.returnList.add(node);
+		}
+		if(node.size() >= 1 && !node.is(MillionTag.TAG_FUNC_DECL)) {
+			for(int i = 0; i < node.size(); i++){
+				res = findReturn(node.get(i), fs, res);
+			}
+		}
+		return res;
 	}
 	
 	protected void checkAssignVarName(ParsingObject node, FSharpVar targetVar){
@@ -289,8 +318,17 @@ public class FSharpGenerator extends SourceGenerator {
 	}
 	
 	protected boolean checkApplyFuncName(String funcName){
-		for(FSharpFunc target : this.funcList){
-			if(target.getFullname().contentEquals(funcName)){
+		for(FSharpScope target : this.scopeList){
+			if(target.getPathName().contentEquals(funcName + ".")){
+				return true;
+			}
+			if(funcName.startsWith("_") && target.getPathName().contentEquals(funcName.substring(1) + ".")){
+				return true;
+			}
+			if(target.getPathName().contentEquals(this.prefixName + funcName + ".")){
+				return true;
+			}
+			if(funcName.startsWith("_") && target.getPathName().contentEquals(this.prefixName + funcName.substring(1) + ".")){
 				return true;
 			}
 		}
@@ -301,8 +339,15 @@ public class FSharpGenerator extends SourceGenerator {
 		String prefixName = this.prefixName;
 		String[] prefixNameElements = prefixName.split(".");
 		if(prefixNameElements.length == 0){
-			prefixNameElements = new String[1];
-			prefixNameElements[0] = prefixName.substring(0, prefixName.length() - 1);
+			int num = prefixName.indexOf(".");			
+			if(num > 0 && prefixName.length() - 1 > num){
+				prefixNameElements = new String[2];
+				prefixNameElements[0] = prefixName.substring(0, num);
+				prefixNameElements[1] = prefixName.substring(num + 1, prefixName.length() - 1);
+			} else {
+				prefixNameElements = new String[1];
+				prefixNameElements[0] = prefixName.substring(0, prefixName.length() - 1);
+			}
 		}
 		for(FSharpVar element : varList){
 			if(element.getFullname().contentEquals(prefixName + varName)){
@@ -333,7 +378,7 @@ public class FSharpGenerator extends SourceGenerator {
 		if(node.is(MillionTag.TAG_FIELD)){
 			for(int i = 0; i < node.size(); i++){
 				result += node.get(i).getText();
-				if(i == node.size() - 1){
+				if(i < node.size() - 1){
 					result += ".";
 				}
 			}
@@ -559,7 +604,6 @@ public class FSharpGenerator extends SourceGenerator {
 		this.currentBuilder.unIndent();
 		this.varList.add(new FSharpVar(name, this.prefixName));
 		this.currentBuilder.appendNewLine("let " + searchVarFromList(name, false).getCurrentName() + " = new ClassOf" + name + "(0)");
-		this.objList.add(searchVarFromList(name, false).getCurrentName());
 		this.objFlag = false;
 	}
 	
@@ -571,6 +615,7 @@ public class FSharpGenerator extends SourceGenerator {
 		
 		this.currentBuilder.indent();
 		FSharpVar fv;
+		this.letFlag = true;
 		for(int i = fs.numOfArgs; i < fs.varList.size(); i++){
 			fv = fs.varList.get(i);
 			if(fv.initialValue == null){
@@ -581,6 +626,7 @@ public class FSharpGenerator extends SourceGenerator {
 				this.currentBuilder.append("))");
 			}
 		}
+		this.letFlag = false;
 		if(fs.node.is(MillionTag.TAG_FUNC_DECL)){
 			ParsingObject argsNode = fs.node.get(4);
 			ParsingObject arg;
@@ -602,19 +648,38 @@ public class FSharpGenerator extends SourceGenerator {
 			}
 			this.currentBuilder.unIndent();
 			this.generateBlock(fs.node.get(6));
-			if(!this.checkReturn(fs.node.get(6), false)){
-				this.currentBuilder.appendNewLine(this.currentBuilder.indentString + "new fsLib.fl.Void(0)");
+			this.currentBuilder.indent();
+			if(fs.returnList.size() > 1) {
+				this.assignFlag = true;
+				ParsingObject firstReturnNode = fs.returnList.get(0).get(0);
+				for(int i = 1; i < fs.returnList.size(); i++){
+					this.currentBuilder.appendNewLine();
+					this.visit(firstReturnNode);
+					this.visit(fs.returnList.get(i).get(0), " = ", "");
+				}
+				this.currentBuilder.appendNewLine();
+				this.visit(firstReturnNode, "ref(", ")");
+				this.assignFlag = false;
 			}
+			this.currentBuilder.unIndent();
 			if(fs.recursive){
 				this.currentBuilder.appendNewLine("static member " + fs.name + argsStr + " = _" + fs.name + argsStr);
 			}
 		}
 		for(FSharpFunc ff : fs.funcList){
-			this.currentBuilder.appendNewLine("static member " + ff.name + " " + ff.argsStr + " = ScopeOf" + fs.getFullname() + "_" + ff.name + "." + ff.name + " " + ff.argsStr);
+			if(fs.type == FSharpScope.ScopeType.OBJECT){
+				this.currentBuilder.appendNewLine("member this." + ff.name + " " + ff.argsStr + " = ScopeOf" + fs.getFullname() + "_" + ff.name + "." + ff.name + " " + ff.argsStr);
+			} else {
+				this.currentBuilder.appendNewLine("static member " + ff.name + " " + ff.argsStr + " = ScopeOf" + fs.getFullname() + "_" + ff.name + "." + ff.name + " " + ff.argsStr);
+			}
 		}
 		for(int i = fs.numOfArgs; i < fs.varList.size(); i++){
 			fv = fs.varList.get(i);
-			this.currentBuilder.appendNewLine("static member g_" + fv.getTrueName() + " = " + fv.getTrueName());
+			if(fs.type == FSharpScope.ScopeType.OBJECT){
+				this.currentBuilder.appendNewLine("member this.g_" + fv.getTrueName() + " = " + fv.getTrueName());
+			} else {
+				this.currentBuilder.appendNewLine("static member g_" + fv.getTrueName() + " = " + fv.getTrueName());
+			}
 		}
 		
 		this.currentBuilder.appendNewLine("end");
@@ -624,7 +689,7 @@ public class FSharpGenerator extends SourceGenerator {
 	}
 	
 	public void visitSource(ParsingObject node) {
-		this.initialCheck(node);
+		this.initialSetting(node);
 		this.generateScope(this.scopeList.get(0), true);
 		for(int i = 1; i < this.scopeList.size(); i++){
 			this.generateScope(this.scopeList.get(i), false);
@@ -641,10 +706,21 @@ public class FSharpGenerator extends SourceGenerator {
 	public void visitName(ParsingObject node) {
 		String varName = node.getText();
 		FSharpVar targetVar = searchVarFromList(varName, false);
+		FSharpScope fs = null;
 		if(targetVar != null){
 			varName = targetVar.getCurrentName();
+			for(FSharpScope targetScope : this.scopeList){
+				for(FSharpVar fv : targetScope.varList){
+					if(fv == targetVar && targetScope != this.currentScope){
+						fs = targetScope;
+						this.currentBuilder.append(fs.getScopeName() + ".g_" + node.getText());
+					}
+				}
+			}
 		}
-		this.currentBuilder.append(node.getText());
+		if(fs == null){
+			this.currentBuilder.append(node.getText());
+		}
 	}
 	
 	public void visitInteger(ParsingObject node) {
@@ -742,6 +818,9 @@ public class FSharpGenerator extends SourceGenerator {
 	public void generateBlock(ParsingObject node) {
 		this.currentBuilder.indent();
 		this.visit(node);
+		if(!this.checkReturn(node, false)){
+			this.currentBuilder.appendNewLine("ref(new fsLib.fl.Void(0))");
+		}
 		this.currentBuilder.unIndent();
 	}
 	
@@ -753,7 +832,8 @@ public class FSharpGenerator extends SourceGenerator {
 	
 	@Deprecated
 	public void visitObject(ParsingObject node){
-		this.generateClass(node.getParent());
+		
+		//this.generateClass(node.getParent());
 	}
 	
 	public void visitProperty(ParsingObject node) {
@@ -989,17 +1069,17 @@ public class FSharpGenerator extends SourceGenerator {
 					targetVar = fs.searchVar(node.get(node.size()-1).getText());
 				}
 				fs = null;
-				node.remove(i);
 			}
 			
 			if(targetVar != null){
-				fieldValue += "g_" + node.get(0).getText() + ")).Value";
+				fieldValue += "g_" + targetVar.getTrueName() + ")).Value";
 			} else {
 				fieldValue += node.get(0).getText() + ")).Value";
 			}
-			node.remove(0);
-			node.setTag(new ParsingTag("Name"));
-			node.setValue(fieldValue);
+			ParsingObject nameNode = new ParsingObject(new ParsingTag("Name"), null, 0);
+			nameNode.setValue(fieldValue);
+			node.getParent().insert(this.indexOf(node), nameNode);
+			node.getParent().remove(node);
 		} else if(node.is(MillionTag.TAG_NAME)){
 			String name = node.getText();
 //			FSharpScope target = this.searchVarOrFuncFromScopeList(this.currentScope, name);
@@ -1008,7 +1088,27 @@ public class FSharpGenerator extends SourceGenerator {
 //			} else {
 //				node.setValue("(!(" + target.getPathName() + name + ")).Value");
 //			}
-			node.setValue("(!(" + name + ")).Value");
+			if(!node.getParent().is(MillionTag.TAG_FIELD)){
+				FSharpVar targetVar = searchVarFromList(name, false);
+				FSharpScope fs = null;
+				if(targetVar != null){
+					name = targetVar.getTrueName();
+					for(FSharpScope targetScope : this.scopeList){
+						for(FSharpVar fv : targetScope.varList){
+							if(fv == targetVar && targetScope != this.currentScope){
+								fs = targetScope;
+								name = fs.getScopeName() + ".g_" + name;
+							}
+						}
+					}
+					node.setValue("(!(" + name + ")).Value");
+				} else {
+					FSharpScope tScope = this.searchScopeFromList(name);
+					if(tScope != null){
+						node.setValue("new " + tScope.getScopeName() + "()");
+					}
+				}
+			}
 		} else {
 			for(int i = 0; i < node.size(); i++){
 				this.formatRightSide(node.get(i));
@@ -1028,19 +1128,20 @@ public class FSharpGenerator extends SourceGenerator {
 			pathes.add(scopePath.toString());
 			scopePath.remove(scopePath.size() - 1);
 		}
+		pathes.add("[]");
 		
 		for(int scope_i = 0; scope_i < this.scopeList.size(); scope_i++){
 			if(!pathes.isEmpty()){
 				for(int path_i = 0; path_i < pathes.size(); path_i++){
 					if(pathes.get(path_i).contentEquals(this.scopeList.get(scope_i).path.toString())){
-						if(this.scopeList.get(scope_i).searchFunc(targetName) != null || this.scopeList.get(scope_i).searchVar(targetName) != null){
+						if(this.scopeList.get(scope_i).searchFunc(targetName) != null || this.scopeList.get(scope_i).searchVar(targetName) != null || this.scopeList.get(scope_i).name.contentEquals(targetName)){
 							result = this.scopeList.get(scope_i);
 						}
 					}
 				}
 			} else {
 				if(("[]").contentEquals(this.scopeList.get(scope_i).path.toString())){
-					if(this.scopeList.get(scope_i).searchFunc(targetName) != null || this.scopeList.get(scope_i).searchVar(targetName) != null){
+					if(this.scopeList.get(scope_i).searchFunc(targetName) != null || this.scopeList.get(scope_i).searchVar(targetName) != null || this.scopeList.get(scope_i).name.contentEquals(targetName)){
 						result = this.scopeList.get(scope_i);
 					}
 				}
@@ -1084,24 +1185,34 @@ public class FSharpGenerator extends SourceGenerator {
 		}
 	}
 	
+	private void generateAssignCalc(ParsingObject node, String tagName){
+		ParsingObject rexpr = new ParsingObject(new ParsingTag(tagName), null, 0);
+		ParsingObject lexpr = node.get(0).dup();
+		rexpr.add(lexpr);
+		rexpr.add(node.get(1));
+		node.setTag(new ParsingTag("Assign"));
+		node.set(1, rexpr);
+		this.visitAssign(node);
+	}
+	
 	public void visitAssignAdd(ParsingObject node) {
-		this.generateBinary(node, "+=");
+		this.generateAssignCalc(node, "Add");
 	}
 
 	public void visitAssignSub(ParsingObject node) {
-		this.generateBinary(node, "-=");
+		this.generateAssignCalc(node, "Sub");
 	}
 
 	public void visitAssignMul(ParsingObject node) {
-		this.generateBinary(node, "*=");
+		this.generateAssignCalc(node, "Mul");
 	}
 
 	public void visitAssignDiv(ParsingObject node) {
-		this.generateBinary(node, "/=");
+		this.generateAssignCalc(node, "Div");
 	}
 
 	public void visitAssignMod(ParsingObject node) {
-		this.generateBinary(node, "%=");
+		this.generateAssignCalc(node, "Mod");
 	}
 
 	public void visitAssignLeftShift(ParsingObject node) {
@@ -1207,11 +1318,23 @@ public class FSharpGenerator extends SourceGenerator {
 		if(node.is(MillionTag.TAG_FIELD)){
 			ParsingObject field;
 			FSharpScope fs;
+			String fieldValue = "";
 			for(int i = 0; i < node.size() - 1; i++){
 				field = node.get(i);
-				fs = this.searchScopeFromList(field.getText());
-				field.setValue(fs.getScopeName());
+				if(field.is(MillionTag.TAG_APPLY)){
+					this.formatApplyFuncName(field.get(0));
+				} else {
+					fs = this.searchScopeFromList(field.getText());
+					if(fs != null){
+						fieldValue += fs.getScopeName();
+					}
+					//field.setValue(fs.getScopeName());
+				}
 			}
+			ParsingObject nameNode = new ParsingObject(new ParsingTag("Name"), null, 0);
+			nameNode.setValue(fieldValue);
+			node.getParent().insert(this.indexOf(node), nameNode);
+			node.getParent().remove(node);
 		} else if(node.is(MillionTag.TAG_NAME)){
 			FSharpScope fs;
 			fs = this.searchVarOrFuncFromScopeList(this.currentScope, node.getText());
@@ -1227,14 +1350,19 @@ public class FSharpGenerator extends SourceGenerator {
 		if(this.assignFlag){
 			this.currentBuilder.append("!(");
 		}
-		if(this.checkApplyFuncName(getFieldText(func))){
-			this.formatApplyFuncName(func);
-			this.visit(func);
+		//if(this.checkApplyFuncName(getFieldText(func))){
+		this.formatApplyFuncName(func);
+		boolean asFlag = this.assignFlag;
+		this.assignFlag = true;
+		this.visit(func);
+		this.assignFlag = asFlag;
+		if(arguments.size() > 0){
 			this.currentBuilder.appendSpace();
 			this.currentBuilder.append("(ref(Some(");
 			this.generateList(arguments, "))) (ref(Some(");
 			this.currentBuilder.append(")))");
 		}
+		//}
 		if(this.assignFlag){
 			this.currentBuilder.append(")");
 		}
@@ -1256,12 +1384,12 @@ public class FSharpGenerator extends SourceGenerator {
 	}
 
 	public void visitIf(ParsingObject node) {
+		String thenBlock;
 		this.visit(node.get(0), "if (", ")");
 		this.currentBuilder.appendNewLine("then");
+		int start = this.currentBuilder.getPosition();
 		this.generateBlock(node.get(1));
-		if(!this.checkReturn(node.get(1), false)){
-			this.currentBuilder.appendNewLine(this.currentBuilder.indentString + "printfn(" + this.currentBuilder.quoteString + "dammy" + this.currentBuilder.quoteString + ")");
-		} else {
+		if(this.checkReturn(node.get(1), false)){
 			if(!isNullOrEmpty(node, 2)){
 				ParsingObject elseBlock = node.get(2);
 				if(!this.checkReturn(elseBlock, false)){
@@ -1289,14 +1417,18 @@ public class FSharpGenerator extends SourceGenerator {
 						parent.remove(i);
 					}
 				}
+				if(elseBlock.size() < 1){
+					node.remove(2);
+				}
 			}
 		}
+		thenBlock = this.currentBuilder.substring(start, this.currentBuilder.getPosition());
 		if(!isNullOrEmpty(node, 2)){
 			this.currentBuilder.appendNewLine("else");
 			this.generateBlock(node.get(2));
-			if(!this.checkReturn(node.get(2), false)){
-				this.currentBuilder.appendNewLine(this.currentBuilder.indentString + "printfn(" + this.currentBuilder.quoteString + "dammy" + this.currentBuilder.quoteString + ")");
-			}
+		} else {
+			this.currentBuilder.appendNewLine("else");
+			this.currentBuilder.append(thenBlock);
 		}
 	}
 
@@ -1307,9 +1439,6 @@ public class FSharpGenerator extends SourceGenerator {
 		this.currentBuilder.appendNewLine("then");
 		begin = this.currentBuilder.getPosition();
 		this.generateBlock(node.get(1));
-		if(!this.checkReturn(node, false)){
-			this.currentBuilder.appendNewLine(this.currentBuilder.indentString + "printfn " + this.currentBuilder.quoteString + "dammy" + this.currentBuilder.quoteString);
-		}
 		end = this.currentBuilder.getPosition();
 		this.currentBuilder.appendNewLine("else");
 		this.currentBuilder.append(this.currentBuilder.substring(begin, end));
@@ -1323,25 +1452,8 @@ public class FSharpGenerator extends SourceGenerator {
 		int begin, end;
 		String thenBlock;
 		this.forFlag = true;
-//		this.visit(node.get(0), "for ", " to ");
-//		this.visit(node.get(1));
-//		this.visit(node.get(2), ';', ')');
-//		this.generateBlock(node.get(3));
-//		if(!isNullOrEmpty(node, 4)){
-//			this.currentBuilder.appendNewLine();
-//			this.visit(node.get(4));
-//		}
 		ParsingObject exp1 = node.get(0).get(0);
 		this.currentBuilder.append("for ");
-//		ParsingObject exp1VarDeclNode = null;
-//		for(int i = 0; i < exp1.getLength() - 1; i++){
-//			if(exp1.get(i).is(MillionTag.TAG_VAR_DECL)){
-//				exp1VarDeclNode = exp1.get(i);
-//			}
-//		}
-//		if(exp1.is(MillionTag.TAG_LIST) && exp1VarDeclNode != null){
-//			this.visitAssign(exp1VarDeclNode);
-//		}
 		if(exp1.is(MillionTag.TAG_VAR_DECL)){
 			this.currentBuilder.append(exp1.get(0).getText());
 			this.forConunter = exp1.get(0).getText();
@@ -1352,14 +1464,11 @@ public class FSharpGenerator extends SourceGenerator {
 		this.forFlag = false;
 		this.currentBuilder.append("=0 to 1 do");
 		this.currentBuilder.indent();
-		this.currentBuilder.appendNewLine("if ");
-		this.visit(node.get(1), "(", ") ");
+		this.currentBuilder.appendNewLine();
+		this.visit(node.get(1), "if (", ") ");
 		this.currentBuilder.appendNewLine("then");
 		begin = this.currentBuilder.getPosition();
 		this.generateBlock(node.get(3));
-		if(!this.checkReturn(node.get(3), false)){
-			this.currentBuilder.appendNewLine(this.currentBuilder.indentString + "printfn " + this.currentBuilder.quoteString + "dammy" + this.currentBuilder.quoteString);
-		}
 		end = this.currentBuilder.getPosition();
 		thenBlock = this.currentBuilder.substring(begin, end);
 		this.currentBuilder.appendNewLine("else");
@@ -1385,44 +1494,6 @@ public class FSharpGenerator extends SourceGenerator {
 			for(int i = 0; i < node.size(); i++){
 				this.formatForCounter(node.get(i));
 			}
-		}
-	}
-
-	//none
-	public void visitForInRange(ParsingObject node) {
-		ParsingObject i = node.get(0);
-		ParsingObject begin = node.get(1);
-		ParsingObject end = node.get(2);
-		
-		this.visit(i, "for (var ", " = ");
-		this.visit(begin);
-		this.visit(end, ", __end = ", ";");
-		this.visit(i);
-		this.currentBuilder.append(" < __end;");
-		if(!isNullOrEmpty(node, 3)){
-			ParsingObject step = node.get(3);
-			this.visit(i);
-			this.currentBuilder.append(" += ");
-			this.visit(step, " += ", ")");
-		}else{
-			this.visit(i, "", "++)");
-		}
-		this.generateBlock(node.get(4));
-		if(!isNullOrEmpty(node, 5)){
-			this.currentBuilder.appendNewLine();
-			this.visit(node.get(5));
-		}
-	}
-	
-	//none
-	public void visitForeach(ParsingObject node) {
-		this.visit(node.get(1));
-		this.visit(node.get(0), ".forEach(function(", ")");
-		this.generateBlock(node.get(2));
-		this.currentBuilder.append(")");
-		if(!isNullOrEmpty(node, 3)){
-			this.currentBuilder.appendNewLine();
-			this.visit(node.get(3));
 		}
 	}
 	
@@ -1465,12 +1536,10 @@ public class FSharpGenerator extends SourceGenerator {
 	}
 
 	public void visitReturn(ParsingObject node) {
-		//this.generateJump(node, "return");
 		this.assignFlag = true;
 		this.formatRightSide(node.get(0));
 		this.visit(node.get(0), "ref(", ")");
 		this.assignFlag = false;
-		//this.currentBuilder.append(node.get(0).getText());
 	}
 
 	public void visitBreak(ParsingObject node) {
@@ -1510,7 +1579,7 @@ public class FSharpGenerator extends SourceGenerator {
 			this.visit(node.get(1));
 		}
 		if(this.checkReturn(node, false)){
-			this.currentBuilder.appendNewLine("printfn " + this.currentBuilder.quoteString + "dammy" + this.currentBuilder.quoteString);
+			this.currentBuilder.appendNewLine(this.currentBuilder.indentString + "ref(new fsLib.fl.Void(0))");
 		}
 		this.currentBuilder.unIndent();
 	}
@@ -1550,11 +1619,6 @@ public class FSharpGenerator extends SourceGenerator {
 		try{
 			ParsingObject varStmtNode = varDeclNode.get(1);
 			if(!varStmtNode.is(MillionTag.TAG_FUNC_DECL) && !varStmtNode.is(MillionTag.TAG_OBJECT)){
-//				if(!objFlag){
-//					this.currentBuilder.append("let ");
-//				} else {
-//					this.currentBuilder.append("val ");
-//				}
 				this.currentBuilder.append("let ");
 				this.objFlag = false;
 				this.visit(listNode);
@@ -1603,93 +1667,91 @@ public class FSharpGenerator extends SourceGenerator {
 	
 	public void visitFuncDecl(ParsingObject node) {
 		//boolean mustWrap = this.currentBuilder.isStartOfLine();
-		boolean mustWrap = false;
-		boolean notLamda = node.get(2).is(MillionTag.TAG_NAME);
-		boolean memberFlag = objFlag;
-		
-		this.funcList.add(new FSharpFunc(node.get(2).getText(), this.prefixName, memberFlag, node));		
-		
-		if(mustWrap){
-			this.currentBuilder.appendChar('(');
-		}
-		if(notLamda && !objFlag){
-			this.currentBuilder.append("let");
-			if(this.isRecursiveFunc(node.get(6), this.prefixName + node.get(2).getText(), false)){
-				this.currentBuilder.append(" rec");
-			}
-		} else if(!notLamda && !objFlag){
-			this.currentBuilder.append("fun");
-		} else if(objFlag){
-			this.currentBuilder.append("member");
-		}
-		String addName = node.get(2).getText() + ".";
-		this.prefixName += addName;
-		if(!isNullOrEmpty(node, 2)){
-			this.currentBuilder.appendSpace();
-			if(this.objFlag){
-				this.currentBuilder.append("this.");
-			}
-			this.visit(node.get(2));
-		}
-		
-		ParsingObject parameters = node.get(4);
-		boolean containsVariadicParameter = false;
-		boolean isFirst = true;
-		int sizeOfParametersBeforeValiadic = 0;
-		int sizeOfParametersAfterValiadic = 0;
-		
-		this.currentBuilder.appendChar(' ');
-		//this.prefixName = this.nameList.get(this.nameList.size() - 1);
-		
-		for(ParsingObject param : parameters){
-			if(param.is(MillionTag.TAG_VARIADIC_PARAMETER)){
-				containsVariadicParameter = true;
-				sizeOfParametersAfterValiadic = 0;
-				continue;
-			}
-			if(containsVariadicParameter){
-				sizeOfParametersAfterValiadic++;
-			}else{
-				sizeOfParametersBeforeValiadic++;
-			}
-			if(!isFirst){
-				this.currentBuilder.append(" ");
-			}
-			this.varList.add(new FSharpVar(param.getText(), this.prefixName));
-			this.visit(param);
-			isFirst = false;
-		}
-		this.currentBuilder.appendChar(' ');
-		
-		if(notLamda){
-			this.currentBuilder.appendChar('=');
-		} else {
-			this.currentBuilder.append("->");
-		}
-		this.currentBuilder.indent();
-		if(containsVariadicParameter){
-			this.currentBuilder.appendNewLine("var __variadicParams = __markAsVariadic([]);");
-			this.currentBuilder.appendNewLine("for (var _i = ");
-			this.currentBuilder.appendNumber(sizeOfParametersBeforeValiadic);
-			this.currentBuilder.append(", _n = arguments.length - ");
-			this.currentBuilder.appendNumber(sizeOfParametersAfterValiadic);
-			this.currentBuilder.append("; _i < _n; ++_i){ __variadicParams.push(arguments[_i]); }");
-		}
-		this.objFlag = false;
-		this.visit(node.get(6));
-		if(!checkReturn(node.get(6), false)){
-			if(!memberFlag){
-				this.currentBuilder.appendNewLine("printfn " + this.currentBuilder.quoteString + "dammy" + this.currentBuilder.quoteString);
-			} else {
-				this.currentBuilder.appendNewLine("new fsLib.fl.Void(0)");
-			}
-		}
-		this.currentBuilder.unIndent();
-		if(mustWrap){
-			this.currentBuilder.appendChar(')');
-		}
-		
-		this.prefixName = this.prefixName.substring(0, this.prefixName.length() - addName.length());
+//		boolean mustWrap = false;
+//		boolean notLambda = node.get(2).is(MillionTag.TAG_NAME);
+//		boolean memberFlag = objFlag;	
+//		
+//		if(mustWrap){
+//			this.currentBuilder.appendChar('(');
+//		}
+//		if(notLambda && !objFlag){
+//			this.currentBuilder.append("let");
+//			if(this.isRecursiveFunc(node.get(6), this.prefixName + node.get(2).getText(), false)){
+//				this.currentBuilder.append(" rec");
+//			}
+//		} else if(!notLambda && !objFlag){
+//			this.currentBuilder.append("fun");
+//		} else if(objFlag){
+//			this.currentBuilder.append("member");
+//		}
+//		String addName = node.get(2).getText() + ".";
+//		this.prefixName += addName;
+//		if(!isNullOrEmpty(node, 2)){
+//			this.currentBuilder.appendSpace();
+//			if(this.objFlag){
+//				this.currentBuilder.append("this.");
+//			}
+//			this.visit(node.get(2));
+//		}
+//		
+//		ParsingObject parameters = node.get(4);
+//		boolean containsVariadicParameter = false;
+//		boolean isFirst = true;
+//		int sizeOfParametersBeforeValiadic = 0;
+//		int sizeOfParametersAfterValiadic = 0;
+//		
+//		this.currentBuilder.appendChar(' ');
+//		//this.prefixName = this.nameList.get(this.nameList.size() - 1);
+//		
+//		for(ParsingObject param : parameters){
+//			if(param.is(MillionTag.TAG_VARIADIC_PARAMETER)){
+//				containsVariadicParameter = true;
+//				sizeOfParametersAfterValiadic = 0;
+//				continue;
+//			}
+//			if(containsVariadicParameter){
+//				sizeOfParametersAfterValiadic++;
+//			}else{
+//				sizeOfParametersBeforeValiadic++;
+//			}
+//			if(!isFirst){
+//				this.currentBuilder.append(" ");
+//			}
+//			this.varList.add(new FSharpVar(param.getText(), this.prefixName));
+//			this.visit(param);
+//			isFirst = false;
+//		}
+//		this.currentBuilder.appendChar(' ');
+//		
+//		if(notLambda){
+//			this.currentBuilder.appendChar('=');
+//		} else {
+//			this.currentBuilder.append("->");
+//		}
+//		this.currentBuilder.indent();
+//		if(containsVariadicParameter){
+//			this.currentBuilder.appendNewLine("var __variadicParams = __markAsVariadic([]);");
+//			this.currentBuilder.appendNewLine("for (var _i = ");
+//			this.currentBuilder.appendNumber(sizeOfParametersBeforeValiadic);
+//			this.currentBuilder.append(", _n = arguments.length - ");
+//			this.currentBuilder.appendNumber(sizeOfParametersAfterValiadic);
+//			this.currentBuilder.append("; _i < _n; ++_i){ __variadicParams.push(arguments[_i]); }");
+//		}
+//		this.objFlag = false;
+//		this.visit(node.get(6));
+//		if(!checkReturn(node.get(6), false)){
+//			if(!memberFlag){
+//				this.currentBuilder.appendNewLine(this.currentBuilder.indentString + "new fsLib.fl.Void(0)");
+//			} else {
+//				this.currentBuilder.appendNewLine("new fsLib.fl.Void(0)");
+//			}
+//		}
+//		this.currentBuilder.unIndent();
+//		if(mustWrap){
+//			this.currentBuilder.appendChar(')');
+//		}
+//		
+//		this.prefixName = this.prefixName.substring(0, this.prefixName.length() - addName.length());
 	}
 	
 	public void visitDeleteProperty(ParsingObject node) {

@@ -16,7 +16,6 @@ public class FSharpWriter extends ParsingWriter {
 		SourceGenerator generator = new FSharpGenerator();
 		generator.visit(po);
 		this.out.println(generator.toString());
-
 	}
 
 }
