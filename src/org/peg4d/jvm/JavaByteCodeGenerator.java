@@ -814,23 +814,6 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		this.mBuilder.callInvocationTarget(this.target_markLogStack);
 		VarEntry entry_mark = this.mBuilder.createNewVarAndStore(int.class);
 
-//		// new parsingObject
-//		Type parsingObjectTypeDesc = Type.getType(ParsingObject.class);
-//		this.mBuilder.newInstance(parsingObjectTypeDesc);
-//		this.mBuilder.dup();
-//		this.newParsingTag("Text");
-//		this.getFieldOfContext("source", ParsingSource.class);
-//		
-//		// call objectId
-//		this.mBuilder.loadFromVar(entry_startIndex);
-//		this.mBuilder.push(e.internId);
-//		this.mBuilder.callStaticMethod(ParsingUtils.class, 
-//				long.class, "objectId", long.class, short.class);
-//
-//		this.mBuilder.invokeConstructor(parsingObjectTypeDesc, 
-//				Methods.constructor(ParsingTag.class, ParsingSource.class, long.class));
-//		VarEntry entry_newnode = this.mBuilder.createNewVarAndStore(ParsingTree.class);
-		
 		// new ParsingTree
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.loadFromVar(entry_startIndex);
@@ -842,7 +825,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.getFieldOfContext("left", ParsingTree.class);
 			this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "lazyJoin", ParsingTree.class);
-	
+
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.mBuilder.loadFromVar(entry_newnode);
 			this.mBuilder.push(0);
@@ -869,10 +852,6 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.callInvocationTarget(this.target_getPosition);
-//		this.mBuilder.loadFromVar(entry_startIndex);
-//		this.mBuilder.math(GeneratorAdapter.SUB, Type.LONG_TYPE);
-//		this.mBuilder.cast(Type.LONG_TYPE, Type.INT_TYPE);
-
 		this.mBuilder.callInterfaceMethod(ParsingTree.class, void.class, "setEndingPosition", long.class);
 
 		// put to context.left
