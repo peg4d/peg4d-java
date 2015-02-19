@@ -60,7 +60,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	boolean O_FusionOperand = false;
 	boolean O_StackCaching = false;
 	
-	boolean PatternMatching = true;
+	boolean PatternMatching = false;
 	
 	int codeIndex = 0;
 	boolean backTrackFlag = false;
@@ -77,17 +77,26 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			O_Inlining = true;
 			break;
 		case 2:
+			O_FusionInstruction = true;
+			break;
+		case 3:
+			O_StackCaching = true;
+			break;
+		case 4:
+			O_MappedChoice = true;
+			break;
+		case 5:
 			O_Inlining = true;
 			O_FusionInstruction = true;
 			O_FusionOperand = true;
 			break;
-		case 3:
+		case 6:
 			O_Inlining = true;
 			O_FusionInstruction = true;
 			O_FusionOperand = true;
 			O_StackCaching = true;
 			break;
-		case 4:
+		case 7:
 			O_Inlining = true;
 			O_FusionInstruction = true;
 			O_MappedChoice = true;
@@ -709,7 +718,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			e = getNonTerminalRule(e);
 		}
 		if (e instanceof ParsingRepetition) {
-			if (checkOptRepetition((ParsingRepetition)e)) {
+			if (checkOptRepetition((ParsingRepetition)e) && O_FusionInstruction) {
 				return true;
 			}
 			return false;
@@ -722,11 +731,14 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			return false;
 		}
 		if(e instanceof ParsingList) {
-			for(int i = 0; i < e.size(); i++) {
-				if (!checkSCRepetition(e.get(i))) {
-					return false;
+			if (depth++ < 3) {
+				for(int i = 0; i < e.size(); i++) {
+					if (!checkSCRepetition(e.get(i))) {
+						return false;
+					}
 				}
 			}
+			depth = 0;
 			return true;
 		}
 		return true;
@@ -737,7 +749,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			e = getNonTerminalRule(e);
 		}
 		if (e instanceof ParsingNot) {
-			if (checkOptNot((ParsingNot)e)) {
+			if (checkOptNot((ParsingNot)e) && O_FusionInstruction) {
 				return true;
 			}
 			return false;
@@ -765,7 +777,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			e = getNonTerminalRule(e);
 		}
 		if (e instanceof ParsingOption) {
-			if (checkOptOptional((ParsingOption)e)) {
+			if (checkOptOptional((ParsingOption)e) && O_FusionInstruction) {
 				return true;
 			}
 			return false;
@@ -1136,6 +1148,10 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 				writeNotCode(e);
 			}
 		}
+		else if (O_StackCaching && checkSCNot(e.inner)) {
+			writeSCNotCode(e);
+			return;
+		}
 		else {
 			writeNotCode(e);
 		}
@@ -1157,6 +1173,10 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 				writeOptionalCode(e);
 			}
 		}
+		else if (O_StackCaching && checkSCOptional(e.inner)) {
+			writeSCOptionalCode(e);
+			return;
+		}
 		else {
 			writeOptionalCode(e);
 		}
@@ -1172,6 +1192,10 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 				}
 				writeRepetitionCode(e);
 			}
+		}
+		else if (O_StackCaching && checkSCRepetition(e.inner)) {
+			writeSCRepetitionCode(e);
+			return;
 		}
 		else {
 			writeRepetitionCode(e);

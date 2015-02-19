@@ -525,9 +525,13 @@ void nez_ParseStat(ParsingContext context, Instruction *inst) {
 }
 
 void nez_Match(ParsingContext context, Instruction *inst) {
+  uint64_t start, end;
+  start = timer();
   if (nez_VM_Execute(context, inst)) {
     nez_PrintErrorInfo("parse error");
   }
+  end = timer();
+  fprintf(stderr, "ErapsedTime: %llu msec\n", end - start);
   fprintf(stdout, "match\n\n");
   nez_DisposeObject(&context->left);
 }
