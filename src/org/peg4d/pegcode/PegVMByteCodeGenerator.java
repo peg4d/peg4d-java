@@ -103,6 +103,14 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			O_FusionOperand = true;
 			O_StackCaching = true;
 			break;
+		case 8:
+			O_Inlining = true;
+			O_FusionInstruction = true;
+			O_MappedChoice = true;
+			O_FusionOperand = true;
+			O_StackCaching = true;
+			PatternMatching = true;
+			break;
 		default:
 			break;
 		}
