@@ -10,11 +10,10 @@ import org.objectweb.asm.commons.Method;
 import org.peg4d.Grammar;
 import org.peg4d.PEG4d;
 import org.peg4d.ParsingContext;
-import org.peg4d.ParsingObject;
 import org.peg4d.ParsingRule;
 import org.peg4d.ParsingSource;
 import org.peg4d.ParsingTag;
-import org.peg4d.ParsingUtils;
+import org.peg4d.ParsingTree;
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.ParsingAnd;
 import org.peg4d.expression.ParsingAny;
@@ -85,7 +84,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 	private InvocationTarget target_rememberFailure = newVirtualTarget(ParsingContext.class, long.class, "rememberFailure");
 	private InvocationTarget target_forgetFailure   = newVirtualTarget(ParsingContext.class, void.class, "forgetFailure", long.class);
 	private InvocationTarget target_lazyLink = 
-			newVirtualTarget(ParsingContext.class, void.class, "lazyLink", ParsingObject.class, int.class, ParsingObject.class);
+			newVirtualTarget(ParsingContext.class, void.class, "lazyLink", ParsingTree.class, int.class, ParsingTree.class);
 	private InvocationTarget target_setFlag = 
 			newVirtualTarget(ParsingContext.class, void.class, "setFlag", String.class, boolean.class);
 	private InvocationTarget target_getFlag         = newVirtualTarget(ParsingContext.class, boolean.class, "getFlag", String.class);
@@ -400,18 +399,18 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 
 	@Override
 	public void visitTagging(ParsingTagging e) {
-		this.getFieldOfContext("left", ParsingObject.class);
+		this.getFieldOfContext("left", ParsingTree.class);
 		this.newParsingTag(e.tag.toString());
-		this.mBuilder.callInstanceMethod(ParsingObject.class, void.class, "setTag", ParsingTag.class);
+		this.mBuilder.callInterfaceMethod(ParsingTree.class, void.class, "setTag", ParsingTag.class);
 		this.mBuilder.push(true);
 	}
 
 	@Override
 	public void visitValue(ParsingValue e) {
-		this.getFieldOfContext("left", ParsingObject.class);
+		this.getFieldOfContext("left", ParsingTree.class);
 
 		this.mBuilder.push(e.value);
-		this.mBuilder.callInstanceMethod(ParsingObject.class, void.class, "setValue", Object.class);
+		this.mBuilder.callInterfaceMethod(ParsingTree.class, void.class, "setValue", Object.class);
 		this.mBuilder.push(true);
 	}
 
@@ -436,8 +435,8 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		this.mBuilder.callInvocationTarget(this.target_rememberFailure);
 		VarEntry entry_f = this.mBuilder.createNewVarAndStore(long.class);
 
-		this.getFieldOfContext("left", ParsingObject.class);
-		VarEntry entry_left = this.mBuilder.createNewVarAndStore(ParsingObject.class);
+		this.getFieldOfContext("left", ParsingTree.class);
+		VarEntry entry_left = this.mBuilder.createNewVarAndStore(ParsingTree.class);
 
 		// if cond
 		Label thenLabel = this.mBuilder.newLabel();
@@ -458,7 +457,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 
 		this.mBuilder.loadFromVar(entry_context);
 		this.mBuilder.loadFromVar(entry_left);
-		this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingObject.class));
+		this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingTree.class));
 //		this.mBuilder.pushNull();
 //		this.mBuilder.storeToVar(entry_left);
 		this.mBuilder.push(true);
@@ -515,8 +514,8 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		this.mBuilder.callInvocationTarget(this.target_rememberFailure);
 		VarEntry entry_f = this.mBuilder.createNewVarAndStore(long.class);
 
-		this.getFieldOfContext("left", ParsingObject.class);
-		VarEntry entry_left = this.mBuilder.createNewVarAndStore(ParsingObject.class);
+		this.getFieldOfContext("left", ParsingTree.class);
+		VarEntry entry_left = this.mBuilder.createNewVarAndStore(ParsingTree.class);
 
 		// if cond
 		Label thenLabel = this.mBuilder.newLabel();
@@ -533,7 +532,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		this.mBuilder.mark(thenLabel);
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.loadFromVar(entry_left);
-		this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingObject.class));
+		this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingTree.class));
 
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.loadFromVar(entry_f);
@@ -576,8 +575,8 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 			this.mBuilder.mark(whileBlockLabel);
 			this.mBuilder.enterScope();
 
-			this.getFieldOfContext("left", ParsingObject.class);
-			VarEntry entry_left = this.mBuilder.createNewVarAndStore(ParsingObject.class);
+			this.getFieldOfContext("left", ParsingTree.class);
+			VarEntry entry_left = this.mBuilder.createNewVarAndStore(ParsingTree.class);
 
 			Label thenLabel = this.mBuilder.newLabel();
 			Label mergeLabel = this.mBuilder.newLabel();
@@ -591,7 +590,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 			this.mBuilder.mark(thenLabel);
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.mBuilder.loadFromVar(entry_left);
-			this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingObject.class));
+			this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingTree.class));
 
 			this.mBuilder.pushNull();
 			this.mBuilder.storeToVar(entry_left);
@@ -624,8 +623,8 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		this.mBuilder.enterScope();
 
 		// variable
-		this.getFieldOfContext("left", ParsingObject.class);
-		VarEntry entry_left = this.mBuilder.createNewVarAndStore(ParsingObject.class);
+		this.getFieldOfContext("left", ParsingTree.class);
+		VarEntry entry_left = this.mBuilder.createNewVarAndStore(ParsingTree.class);
 
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.callInvocationTarget(this.target_markLogStack);
@@ -655,7 +654,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 			Label thenLabel2 = this.mBuilder.newLabel();
 			Label mergeLabel2 = this.mBuilder.newLabel();
 
-			this.getFieldOfContext("left", ParsingObject.class);
+			this.getFieldOfContext("left", ParsingTree.class);
 			this.mBuilder.loadFromVar(entry_left);
 			this.mBuilder.ifCmp(Type.getType(Object.class), GeneratorAdapter.NE, thenLabel2);
 			this.mBuilder.goTo(mergeLabel2);
@@ -664,20 +663,20 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 			this.mBuilder.mark(thenLabel2);
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.mBuilder.loadFromVar(entry_mark);
-			this.getFieldOfContext("left", ParsingObject.class);
-			this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "commitLog", int.class, ParsingObject.class);
+			this.getFieldOfContext("left", ParsingTree.class);
+			this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "commitLog", int.class, ParsingTree.class);
 
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.mBuilder.loadFromVar(entry_left);
 			this.mBuilder.push(e.index);
-			this.getFieldOfContext("left", ParsingObject.class);
+			this.getFieldOfContext("left", ParsingTree.class);
 			this.mBuilder.callInvocationTarget(this.target_lazyLink);
 
 			// merge2
 			this.mBuilder.mark(mergeLabel2);
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.mBuilder.loadFromVar(entry_left);
-			this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingObject.class));
+			this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingTree.class));
 //			this.mBuilder.pushNull();
 //			this.mBuilder.storeToVar(entry_left);
 			this.mBuilder.push(true);
@@ -765,8 +764,8 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		VarEntry entry_f = this.mBuilder.createNewVarAndStore(long.class);
 
 		// generate context.left and store to left
-		this.getFieldOfContext("left", ParsingObject.class);
-		VarEntry entry_left = this.mBuilder.createNewVarAndStore(ParsingObject.class);
+		this.getFieldOfContext("left", ParsingTree.class);
+		VarEntry entry_left = this.mBuilder.createNewVarAndStore(ParsingTree.class);
 
 		Label thenLabel = this.mBuilder.newLabel();
 		Label mergeLabel = this.mBuilder.newLabel();
@@ -775,7 +774,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 			// store to context.left
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.mBuilder.loadFromVar(entry_left);
-			this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingObject.class));
+			this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingTree.class));
 
 //			e.get(i).visit(this);
 			this.optimizeAlternative(e.get(i));
@@ -815,39 +814,29 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		this.mBuilder.callInvocationTarget(this.target_markLogStack);
 		VarEntry entry_mark = this.mBuilder.createNewVarAndStore(int.class);
 
-		// new parsingObject
-		Type parsingObjectTypeDesc = Type.getType(ParsingObject.class);
-		this.mBuilder.newInstance(parsingObjectTypeDesc);
-		this.mBuilder.dup();
-		this.newParsingTag("Text");
-		this.getFieldOfContext("source", ParsingSource.class);
-		
-		// call objectId
+		// new ParsingTree
+		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.loadFromVar(entry_startIndex);
-		this.mBuilder.push(e.internId);
-		this.mBuilder.callStaticMethod(ParsingUtils.class, 
-				long.class, "objectId", long.class, short.class);
-
-		this.mBuilder.invokeConstructor(parsingObjectTypeDesc, 
-				Methods.constructor(ParsingTag.class, ParsingSource.class, long.class));
-		VarEntry entry_newnode = this.mBuilder.createNewVarAndStore(ParsingObject.class);
+		this.mBuilder.pushNull();
+		this.mBuilder.callInstanceMethod(ParsingContext.class, ParsingTree.class, "newParsingTree", long.class, ParsingConstructor.class);
+		VarEntry entry_newnode = this.mBuilder.createNewVarAndStore(ParsingTree.class);
 
 		if(e.leftJoin) {
 			this.mBuilder.loadFromVar(this.entry_context);
-			this.getFieldOfContext("left", ParsingObject.class);
-			this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "lazyJoin", ParsingObject.class);
-	
+			this.getFieldOfContext("left", ParsingTree.class);
+			this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "lazyJoin", ParsingTree.class);
+
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.mBuilder.loadFromVar(entry_newnode);
 			this.mBuilder.push(0);
-			this.getFieldOfContext("left", ParsingObject.class);
+			this.getFieldOfContext("left", ParsingTree.class);
 			this.mBuilder.callInvocationTarget(this.target_lazyLink);
 		}
 
 		// put to context.left
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.loadFromVar(entry_newnode);
-		this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingObject.class));
+		this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingTree.class));
 
 
 		Label thenLabel = this.mBuilder.newLabel();
@@ -863,16 +852,12 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.callInvocationTarget(this.target_getPosition);
-		this.mBuilder.loadFromVar(entry_startIndex);
-		this.mBuilder.math(GeneratorAdapter.SUB, Type.LONG_TYPE);
-		this.mBuilder.cast(Type.LONG_TYPE, Type.INT_TYPE);
-
-		this.mBuilder.callInstanceMethod(ParsingObject.class, void.class, "setLength", int.class);
+		this.mBuilder.callInterfaceMethod(ParsingTree.class, void.class, "setEndingPosition", long.class);
 
 		// put to context.left
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.loadFromVar(entry_newnode);
-		this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingObject.class));
+		this.mBuilder.putField(Type.getType(ParsingContext.class), "left", Type.getType(ParsingTree.class));
 //		this.mBuilder.pushNull();
 //		this.mBuilder.storeToVar(entry_newnode);
 		this.mBuilder.push(true);
@@ -1027,6 +1012,9 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 	public void visitBlock(ParsingBlock e) {
 		this.mBuilder.enterScope();
 
+		this.getFieldOfContext("stateValue", int.class);
+		VarEntry entry_stateValue = this.mBuilder.createNewVarAndStore(int.class);
+
 		this.getFieldOfContext("source", ParsingSource.class);
 		this.getFieldOfContext("pos", long.class);
 		this.mBuilder.callInstanceMethod(ParsingSource.class, String.class, "getIndentText", long.class);
@@ -1044,6 +1032,10 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.loadFromVar(entry_stackTop);
 		this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "popSymbolTable", int.class);
+
+		this.mBuilder.loadFromVar(this.entry_context);
+		this.mBuilder.loadFromVar(entry_stateValue);
+		this.mBuilder.putField(Type.getType(ParsingContext.class), "stateValue", Type.getType(int.class));
 
 		this.mBuilder.loadFromVar(entry_b);
 
