@@ -524,15 +524,45 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	}
 	
 	private void writeSCNotCode(ParsingNot e) {
-		this.pushFailureJumpPoint();
-		writeCode(Instruction.LOADnp);
-		e.inner.visit(this);
-		writeCode(Instruction.STOREnp);
-		writeCode(Instruction.STOREflag, 1);
-		writeJumpCode(Instruction.JUMP, this.jumpPrevFailureJump());
-		this.popFailureJumpPoint(e);
-		writeCode(Instruction.STOREflag, 0);
-		writeCode(Instruction.STOREnp);
+		if (this.depth == 0) {
+			this.pushFailureJumpPoint();
+			writeCode(Instruction.LOADp1);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			writeCode(Instruction.STOREp1);
+			writeCode(Instruction.STOREflag, 1);
+			writeJumpCode(Instruction.JUMP, this.jumpPrevFailureJump());
+			this.popFailureJumpPoint(e);
+			writeCode(Instruction.STOREflag, 0);
+			writeCode(Instruction.STOREp1);
+		}
+		else if (depth == 1) {
+			this.pushFailureJumpPoint();
+			writeCode(Instruction.LOADp2);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			writeCode(Instruction.STOREp2);
+			writeCode(Instruction.STOREflag, 1);
+			writeJumpCode(Instruction.JUMP, this.jumpPrevFailureJump());
+			this.popFailureJumpPoint(e);
+			writeCode(Instruction.STOREflag, 0);
+			writeCode(Instruction.STOREp2);
+		}
+		else {
+			this.pushFailureJumpPoint();
+			writeCode(Instruction.LOADp3);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			writeCode(Instruction.STOREp3);
+			writeCode(Instruction.STOREflag, 1);
+			writeJumpCode(Instruction.JUMP, this.jumpPrevFailureJump());
+			this.popFailureJumpPoint(e);
+			writeCode(Instruction.STOREflag, 0);
+			writeCode(Instruction.STOREp3);
+		}
 	}
 	
 	private void writeNotCharsetCode(ParsingChoice e) {
@@ -582,13 +612,39 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	private void writeSCOptionalCode(ParsingOption e) {
 		int label = newLabel();
 		this.pushFailureJumpPoint();
-		writeCode(Instruction.LOADop);
-		e.inner.visit(this);
-		writeJumpCode(Instruction.JUMP, label);
-		this.popFailureJumpPoint(e);
-		writeCode(Instruction.STOREflag, 0);
-		writeCode(Instruction.STOREop);
-		writeLabel(label);
+		if (this.depth == 0) {
+			writeCode(Instruction.LOADp1);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			writeJumpCode(Instruction.JUMP, label);
+			this.popFailureJumpPoint(e);
+			writeCode(Instruction.STOREflag, 0);
+			writeCode(Instruction.STOREp1);
+			writeLabel(label);
+		}
+		else if (this.depth == 1){
+			writeCode(Instruction.LOADp2);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			writeJumpCode(Instruction.JUMP, label);
+			this.popFailureJumpPoint(e);
+			writeCode(Instruction.STOREflag, 0);
+			writeCode(Instruction.STOREp2);
+			writeLabel(label);
+		}
+		else {
+			writeCode(Instruction.LOADp3);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			writeJumpCode(Instruction.JUMP, label);
+			this.popFailureJumpPoint(e);
+			writeCode(Instruction.STOREflag, 0);
+			writeCode(Instruction.STOREp3);
+			writeLabel(label);
+		}
 	}
 	
 	private void writeOptionalByteRangeCode(ParsingByteRange e) {
@@ -637,16 +693,38 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	
 	private void writeSCRepetitionCode(ParsingRepetition e) {
 		int label = newLabel();
-		int end = newLabel();
 		this.pushFailureJumpPoint();
 		writeLabel(label);
-		writeCode(Instruction.LOADrp);
-		e.inner.visit(this);
-		writeJumpCode(Instruction.JUMP, label);
-		this.popFailureJumpPoint(e);
-		writeCode(Instruction.STOREflag, 0);
-		writeCode(Instruction.STORErp);
-		writeLabel(end);
+		if (this.depth == 0) {
+			writeCode(Instruction.LOADp1);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			writeJumpCode(Instruction.JUMP, label);
+			this.popFailureJumpPoint(e);
+			writeCode(Instruction.STOREflag, 0);
+			writeCode(Instruction.STOREp1);
+		}
+		else if (this.depth == 1) {
+			writeCode(Instruction.LOADp2);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			writeJumpCode(Instruction.JUMP, label);
+			this.popFailureJumpPoint(e);
+			writeCode(Instruction.STOREflag, 0);
+			writeCode(Instruction.STOREp2);
+		}
+		else {
+			writeCode(Instruction.LOADp3);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			writeJumpCode(Instruction.JUMP, label);
+			this.popFailureJumpPoint(e);
+			writeCode(Instruction.STOREflag, 0);
+			writeCode(Instruction.STOREp3);
+		}
 	}
 	
 	private void writeZeroMoreByteRangeCode(ParsingByteRange e) {
@@ -734,33 +812,50 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	// The depth to control the stack caching optimization
 	int depth = 0;
 	
-	private boolean checkSCRepetition(ParsingExpression e) {
+	private boolean checkSC(ParsingExpression e) {
+		int depth = this.depth;
 		if (e instanceof NonTerminal) {
 			e = getNonTerminalRule(e);
 		}
-		if (e instanceof ParsingRepetition) {
-			if (checkOptRepetition((ParsingRepetition)e) && O_FusionInstruction) {
-				return true;
-			}
-			return false;
-		}
 		if (e instanceof ParsingUnary) {
-			if (depth++ < 3) {
-				return checkSCRepetition(((ParsingUnary) e).inner);
+			if (this.depth++ < 2) {
+				if (O_FusionInstruction) {
+					if (e instanceof ParsingNot) {
+						if (checkOptNot((ParsingNot)e)) {
+							this.depth = depth;
+							return true;
+						}
+					}
+					else if (e instanceof ParsingRepetition) {
+						if (checkOptRepetition((ParsingRepetition)e)) {
+							this.depth = depth;
+							return true;
+						}
+					}
+					else if (e instanceof ParsingOption) {
+						if (checkOptOptional((ParsingOption)e)) {
+							this.depth = depth;
+							return true;
+						}
+					}
+				}
+				boolean check = checkSC(((ParsingUnary) e).inner);
+				this.depth = depth;
+				return check;
 			}
-			depth = 0;
+			this.depth = depth;
 			return false;
 		}
 		if(e instanceof ParsingList) {
-			if (depth++ < 3) {
+			if (depth < 2) {
 				for(int i = 0; i < e.size(); i++) {
-					if (!checkSCRepetition(e.get(i))) {
+					if (!checkSC(e.get(i))) {
 						return false;
 					}
 				}
+				return true;
 			}
-			depth = 0;
-			return true;
+			return false;
 		}
 		return true;
 	}
@@ -1162,14 +1257,14 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	public void visitNot(ParsingNot e) {
 		if (O_FusionInstruction) {
 			if (!optimizeNot(e)) {
-				if (O_StackCaching && checkSCNot(e.inner)) {
+				if (O_StackCaching && checkSC(e.inner)) {
 					writeSCNotCode(e);
 					return;
 				}
 				writeNotCode(e);
 			}
 		}
-		else if (O_StackCaching && checkSCNot(e.inner)) {
+		else if (O_StackCaching && checkSC(e.inner)) {
 			writeSCNotCode(e);
 			return;
 		}
@@ -1187,14 +1282,14 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	public void visitOptional(ParsingOption e) {
 		if (O_FusionInstruction) {
 			if (!optimizeOptional(e)) {
-				if (O_StackCaching && checkSCOptional(e.inner)) {
+				if (O_StackCaching && checkSC(e.inner)) {
 					writeSCOptionalCode(e);
 					return;
 				}
 				writeOptionalCode(e);
 			}
 		}
-		else if (O_StackCaching && checkSCOptional(e.inner)) {
+		else if (O_StackCaching && checkSC(e.inner)) {
 			writeSCOptionalCode(e);
 			return;
 		}
@@ -1207,14 +1302,14 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	public void visitRepetition(ParsingRepetition e) {
 		if (O_FusionInstruction) {
 			if (!optimizeRepetition(e)) {
-				if (O_StackCaching && checkSCRepetition(e.inner)) {
+				if (O_StackCaching && checkSC(e.inner)) {
 					writeSCRepetitionCode(e);
 					return;
 				}
 				writeRepetitionCode(e);
 			}
 		}
-		else if (O_StackCaching && checkSCRepetition(e.inner)) {
+		else if (O_StackCaching && checkSC(e.inner)) {
 			writeSCRepetitionCode(e);
 			return;
 		}
