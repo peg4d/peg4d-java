@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.peg4d.Grammar;
-import org.peg4d.Main;
 import org.peg4d.PEG4d;
 import org.peg4d.ParsingRule;
 import org.peg4d.UList;
@@ -856,62 +855,6 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 				return true;
 			}
 			return false;
-		}
-		return true;
-	}
-
-	private boolean checkSCNot(ParsingExpression e) {
-		if (e instanceof NonTerminal) {
-			e = getNonTerminalRule(e);
-		}
-		if (e instanceof ParsingNot) {
-			if (checkOptNot((ParsingNot)e) && O_FusionInstruction) {
-				return true;
-			}
-			return false;
-		}
-		if (e instanceof ParsingUnary) {
-			if (depth++ < 3) {
-				return checkSCNot(((ParsingUnary) e).inner);
-			}
-			depth = 0;
-			return false;
-		}
-		if(e instanceof ParsingList) {
-			for(int i = 0; i < e.size(); i++) {
-				if (!checkSCNot(e.get(i))) {
-					return false;
-				}
-			}
-			return true;
-		}
-		return true;
-	}
-
-	private boolean checkSCOptional(ParsingExpression e) {
-		if (e instanceof NonTerminal) {
-			e = getNonTerminalRule(e);
-		}
-		if (e instanceof ParsingOption) {
-			if (checkOptOptional((ParsingOption)e) && O_FusionInstruction) {
-				return true;
-			}
-			return false;
-		}
-		if (e instanceof ParsingUnary) {
-			if (depth++ < 3) {
-				return checkSCOptional(((ParsingUnary) e).inner);
-			}
-			depth = 0;
-			return false;
-		}
-		if(e instanceof ParsingList) {
-			for(int i = 0; i < e.size(); i++) {
-				if (!checkSCOptional(e.get(i))) {
-					return false;
-				}
-			}
-			return true;
 		}
 		return true;
 	}
