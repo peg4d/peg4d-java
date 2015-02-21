@@ -88,6 +88,7 @@ static inline ParsingLog MemoryPool_AllocParsingLog(MemoryPool mpool) {
 }
 
 ParsingObject P4D_newObject(ParsingContext ctx, const char *start, MemoryPool pool);
+ParsingObject P4D_setObject_(ParsingContext, ParsingObject, ParsingObject);
 void P4D_setObject(ParsingContext ctx, ParsingObject *var, ParsingObject o);
 void nez_DisposeObject(ParsingObject pego);
 

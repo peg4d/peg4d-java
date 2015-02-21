@@ -116,17 +116,22 @@ void P4D_unusedObject(ParsingContext ctx, ParsingObject o) {
   }
 }
 
-void P4D_setObject(ParsingContext ctx, ParsingObject *var, ParsingObject o) {
-  if (var[0] != NULL) {
-    var[0]->refc -= 1;
-    if (var[0]->refc == 0) {
-      P4D_unusedObject(ctx, var[0]);
+ParsingObject P4D_setObject_(ParsingContext ctx, ParsingObject var, ParsingObject o) {
+  if (var != NULL) {
+    var->refc -= 1;
+    if (var->refc == 0) {
+      P4D_unusedObject(ctx, var);
     }
   }
-  var[0] = o;
   if (o != NULL) {
     o->refc += 1;
   }
+  return o;
+}
+
+void P4D_setObject(ParsingContext ctx, ParsingObject *var, ParsingObject o) {
+  P4D_setObject_(ctx, *var, o);
+  *var = o;
 }
 
 void nez_newSymbolTableEntry(SymbolTableEntry ste, int tableType, int len,
