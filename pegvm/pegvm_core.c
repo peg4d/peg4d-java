@@ -254,14 +254,14 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(COMMIT) {
     ICOMMIT *inst = (ICOMMIT *)pc;
-    P4D_commitLog(context, (int)POP_SP(), LEFT, MPOOL);
+    P4D_commitLog(context, (int)(long)POP_SP(), LEFT, MPOOL);
     ParsingObject parent = (ParsingObject)POP_OSP();
     P4D_lazyLink(context, parent, inst->ndata, LEFT, MPOOL);
     P4D_setObject(context, &LEFT, parent);
     DISPATCH_NEXT;
   }
   OP(ABORT) {
-    P4D_abortLog(context, (int)POP_SP());
+    P4D_abortLog(context, (int)(long)POP_SP());
     DISPATCH_NEXT;
   }
   OP(LINK) {
@@ -352,8 +352,8 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(BLOCKEND) {
-    popSymbolTable(context, (int)POP_SP());
-    context->stateValue = (int)POP_SP();
+    popSymbolTable(context, (int)(long)POP_SP());
+    context->stateValue = (int)(long)POP_SP();
     DISPATCH_NEXT;
   }
   OP(INDENT) {
