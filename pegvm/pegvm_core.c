@@ -207,7 +207,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(POPp) {
-    POP_SP();
+    (void)POP_SP();
     DISPATCH_NEXT;
   }
   OP(POPo) {

@@ -73,9 +73,9 @@ static const char *get_opname(uint8_t opcode) {
 }
 
 static void dump_PegVMInstructions(PegVMInstruction *inst, uint64_t size) {
-  uint64_t i;
-  for (i = 0; i < size; i++) {
-    fprintf(stderr, "[%llu] %s ", i, get_opname(inst[i].base.opcode));
+  int i;
+  for (i = 0; i < (int)size; i++) {
+    fprintf(stderr, "[%d] %s ", i, get_opname(inst[i].base.opcode));
     switch (inst[i].base.opcode) {
 #define OP_DUMPCASE(OP) case PEGVM_OP_##OP:
       OP_DUMPCASE(CHARRANGE) {
@@ -358,7 +358,7 @@ void nez_ParseStat(ParsingContext context, PegVMInstruction *inst) {
       nez_PrintErrorInfo("parse error");
     }
     end = timer();
-    fprintf(stderr, "ErapsedTime: %llu msec\n", end - start);
+    fprintf(stderr, "ErapsedTime: %llu msec\n", (unsigned long long)end - start);
     nez_DisposeObject(context->left);
     context->pos = 0;
   }
@@ -371,7 +371,7 @@ void nez_Match(ParsingContext context, PegVMInstruction *inst) {
     nez_PrintErrorInfo("parse error");
   }
   end = timer();
-  fprintf(stderr, "ErapsedTime: %llu msec\n", end - start);
+  fprintf(stderr, "ErapsedTime: %llu msec\n", (unsigned long long)end - start);
   fprintf(stdout, "match\n\n");
   nez_DisposeObject(context->left);
 }
