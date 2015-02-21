@@ -136,7 +136,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   OP(CHARRANGE) {
     char ch = *cur++;
     ICHARRANGE *inst = (ICHARRANGE *)pc;
-    if (inst->cdata.c1 <= ch && ch <= inst->cdata.c2) {
+    if (inst->c1 <= ch && ch <= inst->c2) {
       DISPATCH_NEXT;
     } else {
       --cur;
@@ -398,8 +398,8 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(NOTBYTERANGE) {
     INOTBYTERANGE *inst = (INOTBYTERANGE *)pc;
-    if (!(*cur >= inst->cdata.c1 &&
-          *cur <= inst->cdata.c2)) {
+    if (!(*cur >= inst->c1 &&
+          *cur <= inst->c2)) {
       DISPATCH_NEXT;
     }
     else {
@@ -431,8 +431,8 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(OPTIONALBYTERANGE) {
     IOPTIONALBYTERANGE *inst = (IOPTIONALBYTERANGE *)pc;
-    if (*cur >= inst->cdata.c1 &&
-        *cur <= inst->cdata.c2) {
+    if (*cur >= inst->c1 &&
+        *cur <= inst->c2) {
       ++cur;
     }
     DISPATCH_NEXT;
@@ -446,8 +446,8 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   OP(ZEROMOREBYTERANGE) {
     IZEROMOREBYTERANGE *inst = (IZEROMOREBYTERANGE *)pc;
     while (1) {
-      if (!(*cur >= inst->cdata.c1 &&
-            *cur <= inst->cdata.c2)) {
+      if (!(*cur >= inst->c1 &&
+            *cur <= inst->c2)) {
         DISPATCH_NEXT;
       }
       ++cur;

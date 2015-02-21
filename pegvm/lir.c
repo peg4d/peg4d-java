@@ -13,11 +13,6 @@ typedef struct ByteCodeLoader {
   PegVMInstruction *head;
 } ByteCodeLoader;
 
-typedef struct charpair {
-  char c1;
-  char c2;
-} __attribute__((packed)) charpair;
-
 typedef struct pegvm_string {
   unsigned len;
   char text[1];
@@ -205,15 +200,16 @@ static void Emit_REPCOND(PegVMInstruction *inst, ByteCodeLoader *loader) {
 typedef struct ICHARRANGE {
   PegVMInstructionBase base;
   PegVMInstruction *jump;
-  charpair cdata;
+  char c1;
+  char c2;
 } ICHARRANGE;
 
 static void Emit_CHARRANGE(PegVMInstruction *inst, ByteCodeLoader *loader) {
   ICHARRANGE *ir = (ICHARRANGE *)inst;
   ir->base.opcode = OPCODE_ICHARRANGE;
   ir->jump = Loader_GetJumpAddr(loader, inst);
-  ir->cdata.c1 = Loader_Read32(loader);
-  ir->cdata.c2 = Loader_Read32(loader);
+  ir->c1 = Loader_Read32(loader);
+  ir->c2 = Loader_Read32(loader);
 }
 #define OPCODE_ICHARSET 9
 typedef struct ICHARSET {
@@ -719,15 +715,16 @@ static void Emit_NOTCHARSET(PegVMInstruction *inst, ByteCodeLoader *loader) {
 #define OPCODE_INOTBYTERANGE 51
 typedef struct INOTBYTERANGE {
   PegVMInstructionBase base;
-  charpair cdata;
+  char c1;
+  char c2;
   PegVMInstruction *jump;
 } INOTBYTERANGE;
 
 static void Emit_NOTBYTERANGE(PegVMInstruction *inst, ByteCodeLoader *loader) {
   INOTBYTERANGE *ir = (INOTBYTERANGE *)inst;
   ir->base.opcode = OPCODE_INOTBYTERANGE;
-  ir->cdata.c1 = Loader_Read32(loader);
-  ir->cdata.c2 = Loader_Read32(loader);
+  ir->c1 = Loader_Read32(loader);
+  ir->c2 = Loader_Read32(loader);
   ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_INOTSTRING 52
@@ -774,15 +771,16 @@ static void Emit_OPTIONALCHARSET(PegVMInstruction *inst,
 #define OPCODE_IOPTIONALBYTERANGE 55
 typedef struct IOPTIONALBYTERANGE {
   PegVMInstructionBase base;
-  charpair cdata;
+  char c1;
+  char c2;
 } IOPTIONALBYTERANGE;
 
 static void Emit_OPTIONALBYTERANGE(PegVMInstruction *inst,
                                    ByteCodeLoader *loader) {
   IOPTIONALBYTERANGE *ir = (IOPTIONALBYTERANGE *)inst;
   ir->base.opcode = OPCODE_IOPTIONALBYTERANGE;
-  ir->cdata.c1 = Loader_Read32(loader);
-  ir->cdata.c2 = Loader_Read32(loader);
+  ir->c1 = Loader_Read32(loader);
+  ir->c2 = Loader_Read32(loader);
 }
 #define OPCODE_IOPTIONALSTRING 56
 typedef struct IOPTIONALSTRING {
@@ -799,15 +797,16 @@ static void Emit_OPTIONALSTRING(PegVMInstruction *inst,
 #define OPCODE_IZEROMOREBYTERANGE 57
 typedef struct IZEROMOREBYTERANGE {
   PegVMInstructionBase base;
-  charpair cdata;
+  char c1;
+  char c2;
 } IZEROMOREBYTERANGE;
 
 static void Emit_ZEROMOREBYTERANGE(PegVMInstruction *inst,
                                    ByteCodeLoader *loader) {
   IZEROMOREBYTERANGE *ir = (IZEROMOREBYTERANGE *)inst;
   ir->base.opcode = OPCODE_IZEROMOREBYTERANGE;
-  ir->cdata.c1 = Loader_Read32(loader);
-  ir->cdata.c2 = Loader_Read32(loader);
+  ir->c1 = Loader_Read32(loader);
+  ir->c2 = Loader_Read32(loader);
 }
 #define OPCODE_IZEROMORECHARSET 58
 typedef struct IZEROMORECHARSET {

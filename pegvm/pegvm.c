@@ -80,8 +80,8 @@ static void dump_PegVMInstructions(PegVMInstruction *inst, uint64_t size) {
 #define OP_DUMPCASE(OP) case PEGVM_OP_##OP:
       OP_DUMPCASE(CHARRANGE) {
         ICHARRANGE *ir = (ICHARRANGE *)inst + i;
-        fprintf(stderr, "[%d-", ir->cdata.c1);
-        fprintf(stderr, "%d] ", ir->cdata.c2);
+        fprintf(stderr, "[%d-", ir->c1);
+        fprintf(stderr, "%d] ", ir->c2);
         // fprintf(stderr, "%d ", inst[i].jump);
       }
       OP_DUMPCASE(CHARSET) {
