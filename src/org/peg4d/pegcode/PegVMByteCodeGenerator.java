@@ -190,52 +190,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		
 		// byte code (m byte)
 		for(int i = 0; i < codeList.size(); i++) {
-			Opcode code = codeList.ArrayValues[i];
-			byteCode[pos] = (byte) code.inst.ordinal();
-			pos++;
-			if (code.inst == Instruction.CALL) {
-				byteCode[pos] = 0;
-				pos++;
-				byteCode[pos] = 0;
-				pos++;
-//				byteCode[pos] = 1;
-//				pos++;
-//				byteCode[pos] = 0;
-//				pos++;
-//				int ndata = ruleMap.get(code.name);
-//				pos = write32(byteCode, ndata, pos);
-			}
-			else if (code.ndata != null) {
-				byteCode[pos] = (byte) (0x000000ff & (code.ndata.size()));
-				pos++;
-				byteCode[pos] = (byte) (0x000000ff & (code.ndata.size() >> 8));
-				pos++;
-				for(int j = 0; j < code.ndata.size(); j++){
-					pos = write32(byteCode, code.ndata.get(j), pos);
-				}
-			}
-			else {
-				byteCode[pos] = 0;
-				pos++;
-				byteCode[pos] = 0;
-				pos++;
-			}
-			pos = write32(byteCode, code.jump, pos);
-			if(code.name != null) {
-				int j = 0;
-				byteCode[pos] = (byte) code.name.length();
-				pos++;
-				byte[] nameByte = code.name.getBytes();
-				while (j < code.name.length()) {
-					byteCode[pos] = nameByte[j];
-					j++;
-					pos++;
-				}
-			}
-			else {
-				byteCode[pos] = 0;
-				pos++;
-			}
+			pos = writeOpcode(codeList.ArrayValues[i], byteCode, pos, i);
 		}
 		// Length of byte code (8 byte) 
 		long byteCodelength = codeList.size();
@@ -259,6 +214,14 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		} 
 	}
 	
+	private int write16(byte[] byteCode, long num, int pos) {
+		byteCode[pos] = (byte) (0x000000ff & num);
+		pos++;
+		byteCode[pos] = (byte) (0x000000ff & (num >> 8));
+		pos++;
+		return pos;
+	}
+
 	private int write32(byte[] byteCode, long num, int pos) {
 		byteCode[pos] = (byte) (0x000000ff & (num));
 		pos++;
@@ -276,7 +239,171 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		pos = write32(byteCode, num >> 32, pos);
 		return pos;
 	}
-	
+
+	private int writeCdataByteCode(byte[] byteCode, String cdata, int pos) {
+		int j = 0;
+		pos = write16(byteCode, cdata.length(), pos);
+		byte[] nameByte = cdata.getBytes();
+		while (j < cdata.length()) {
+			byteCode[pos] = nameByte[j];
+			j++;
+			pos++;
+		}
+		return pos;
+	}
+
+	private int writeOpcode(Opcode code, byte[] byteCode, int pos, int index) {
+		byteCode[pos] = (byte)code.inst.ordinal();
+		pos++;
+		switch (code.inst) {
+		case JUMP:
+			pos = write32(byteCode, code.jump-index, pos);
+			break;
+		case CALL:
+			pos = write32(byteCode, code.jump-index, pos);
+			break;
+		case CONDBRANCH:
+			pos = write32(byteCode, code.get(0), pos);
+			pos = write32(byteCode, code.jump-index, pos);
+			break;
+		case REPCOND:
+			pos = write32(byteCode, code.jump-index, pos);
+			break;
+		case CHARRANGE:
+			pos = write32(byteCode, code.jump-index, pos);
+			if (code.ndata.size() == 1) {
+				pos = write32(byteCode, code.get(0), pos);
+				pos = write32(byteCode, 0, pos);
+			}
+			else {
+				pos = write32(byteCode, code.get(0), pos);
+				pos = write32(byteCode, code.get(1), pos);
+			}
+			break;
+		case CHARSET:
+			pos = write16(byteCode, code.ndata.size(), pos);
+			for(int j = 0; j < code.ndata.size(); j++){
+				pos = write32(byteCode, code.ndata.get(j), pos);
+			}
+			pos = write32(byteCode, code.jump-index, pos);
+			break;
+		case STRING:
+			pos = write32(byteCode, code.jump-index, pos);
+			pos = write16(byteCode, code.ndata.size(), pos);
+			for(int j = 0; j < code.ndata.size(); j++){
+				pos = write32(byteCode, code.ndata.get(j), pos);
+			}
+			break;
+		case ANY:
+			pos = write32(byteCode, code.jump-index, pos);
+			break;
+		case STOREflag:
+			pos = write32(byteCode, code.ndata.get(0), pos);
+			break;
+		case NEWJOIN:
+			pos = write32(byteCode, code.ndata.get(0), pos);
+			break;
+		case COMMIT:
+			pos = write32(byteCode, code.ndata.get(0), pos);
+			break;
+		case TAG:
+			pos = writeCdataByteCode(byteCode, code.name, pos);
+			break;
+		case VALUE:
+			pos = writeCdataByteCode(byteCode, code.name, pos);
+			break;
+		case MAPPEDCHOICE:
+			for(int j = 0; j < 256; j++){
+				pos = write32(byteCode, code.ndata.get(j)-index, pos);
+			}
+			break;
+		case SCAN:
+			pos = write32(byteCode, code.get(0), pos);
+			pos = write32(byteCode, code.get(1), pos);
+			break;
+		case CHECKEND:
+			pos = write32(byteCode, code.get(0), pos);
+			pos = write32(byteCode, code.jump-index, pos);
+			break;
+		case DEF:
+			pos = write32(byteCode, code.get(0), pos);
+			break;
+		case IS:
+			pos = write32(byteCode, code.get(0), pos);
+			break;
+		case ISA:
+			pos = write32(byteCode, code.get(0), pos);
+			break;
+		case BLOCKSTART:
+			pos = write32(byteCode, code.get(0), pos);
+			break;
+		case INDENT:
+			pos = write32(byteCode, code.get(0), pos);
+			break;
+		case NOTBYTE:
+			pos = write32(byteCode, code.get(0), pos);
+			pos = write32(byteCode, code.jump-index, pos);
+			break;
+		case NOTANY:
+			pos = write32(byteCode, code.jump-index, pos);
+			break;
+		case NOTCHARSET:
+			pos = write16(byteCode, code.ndata.size(), pos);
+			for(int j = 0; j < code.ndata.size(); j++){
+				pos = write32(byteCode, code.ndata.get(j), pos);
+			}
+			pos = write32(byteCode, code.jump-index, pos);
+			break;
+		case NOTBYTERANGE:
+			pos = write32(byteCode, code.get(0), pos);
+			pos = write32(byteCode, code.get(1), pos);
+			pos = write32(byteCode, code.jump-index, pos);
+			break;
+		case NOTSTRING:
+			pos = write32(byteCode, code.jump-index, pos);
+			pos = write16(byteCode, code.ndata.size(), pos);
+			for(int j = 0; j < code.ndata.size(); j++){
+				pos = write32(byteCode, code.ndata.get(j), pos);
+			}
+			break;
+		case OPTIONALBYTE:
+			pos = write32(byteCode, code.get(0), pos);
+			break;
+		case OPTIONALCHARSET:
+			pos = write16(byteCode, code.ndata.size(), pos);
+			for(int j = 0; j < code.ndata.size(); j++){
+				pos = write32(byteCode, code.ndata.get(j), pos);
+			}
+			break;
+		case OPTIONALBYTERANGE:
+			pos = write32(byteCode, code.get(0), pos);
+			pos = write32(byteCode, code.get(1), pos);
+			break;
+		case OPTIONALSTRING:
+			pos = write16(byteCode, code.ndata.size(), pos);
+			for(int j = 0; j < code.ndata.size(); j++){
+				pos = write32(byteCode, code.ndata.get(j), pos);
+			}
+			break;
+		case ZEROMOREBYTERANGE:
+			pos = write32(byteCode, code.get(0), pos);
+			pos = write32(byteCode, code.get(1), pos);
+			break;
+		case ZEROMORECHARSET:
+			pos = write16(byteCode, code.ndata.size(), pos);
+			for(int j = 0; j < code.ndata.size(); j++){
+				pos = write32(byteCode, code.ndata.get(j), pos);
+			}
+			break;
+		case REPEATANY:
+			pos = write32(byteCode, code.get(0), pos);
+			break;
+		default:
+			break;
+		}
+		return pos;
+	}
+
 	private void generateProfileCode(Grammar peg) {
 		int count = 0;
 		String grammerName = peg.getName();

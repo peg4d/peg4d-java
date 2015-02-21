@@ -4,43 +4,42 @@
 #include <stdlib.h>
 
 typedef struct ByteCodeLoader {
-    char *input;
-    byteCodeInfo *info;
+  char *input;
+  byteCodeInfo *info;
 } ByteCodeLoader;
 
 typedef struct charpair {
-    char c1;
-    char c2;
-} __attribute__ ((packed)) charpair;
+  char c1;
+  char c2;
+} __attribute__((packed)) charpair;
 
 typedef struct string {
-    unsigned len;
-    char text[1];
+  unsigned len;
+  char text[1];
 } string, *string_ptr_t;
 
 typedef struct int_table_t {
-    int table[256];
+  int table[256];
 } *int_table_t;
 
 typedef struct short_table_t {
-    short table[256];
+  short table[256];
 } *short_table_t;
 
 typedef struct char_table_t {
-    char table[256];
+  char table[256];
 } *char_table_t;
 
 typedef struct bit_table_t {
-    char table[32];
+  char table[32];
 } *bit_table_t;
 
 typedef union PegVMInstructionBase {
-    int opcode;
-    const void *addr;
+  int opcode;
+  const void *addr;
 } PegVMInstructionBase;
 
-static uint16_t read16(char *inputs, byteCodeInfo *info)
-{
+static uint16_t read16(char *inputs, byteCodeInfo *info) {
   uint16_t value = (uint8_t)inputs[info->pos++];
   value = (value) | ((uint8_t)inputs[info->pos++] << 8);
   return value;
@@ -61,25 +60,32 @@ static uint64_t read64(char *inputs, byteCodeInfo *info) {
   return value2 << 32 | value1;
 }
 
-static uint32_t Loader_Read32(ByteCodeLoader *loader)
-{
-    return read32(loader->input, loader->info);
+static uint32_t Loader_Read32(ByteCodeLoader *loader) {
+  return read32(loader->input, loader->info);
 }
 
-static uint16_t Loader_Read16(ByteCodeLoader *loader)
-{
-    return read16(loader->input, loader->info);
+static uint16_t Loader_Read16(ByteCodeLoader *loader) {
+  return read16(loader->input, loader->info);
 }
 
-static string_ptr_t Loader_ReadString(ByteCodeLoader *loader)
-{
-    uint32_t len = Loader_Read16(loader);
-    string_ptr_t str = (string_ptr_t)malloc(sizeof(*str) - 1 + len);
-    str->len = len;
-    for (uint32_t i = 0; i < len; i++) {
-        str->text[i] = Loader_Read32(loader);
-    }
-    return str;
+static string_ptr_t Loader_ReadString(ByteCodeLoader *loader) {
+  uint32_t len = Loader_Read16(loader);
+  string_ptr_t str = (string_ptr_t)malloc(sizeof(*str) - 1 + len);
+  str->len = len;
+  for (uint32_t i = 0; i < len; i++) {
+    str->text[i] = Loader_Read32(loader);
+  }
+  return str;
+}
+
+static string_ptr_t Loader_ReadName(ByteCodeLoader *loader) {
+  uint32_t len = Loader_Read16(loader);
+  string_ptr_t str = (string_ptr_t)malloc(sizeof(*str) - 1 + len);
+  str->len = len;
+  for (uint32_t i = 0; i < len; i++) {
+    str->text[i] = loader->input[loader->info->pos++];
+  }
+  return str;
 }
 
 #define OPCODE_IEXIT 0
@@ -87,9 +93,8 @@ typedef struct IEXIT {
   PegVMInstructionBase base;
 } IEXIT;
 
-static void Emit_EXIT(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IEXIT *ir = (IEXIT *) inst;
+static void Emit_EXIT(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IEXIT *ir = (IEXIT *)inst;
   ir->base.opcode = OPCODE_IEXIT;
 }
 #define OPCODE_IJUMP 1
@@ -98,9 +103,8 @@ typedef struct IJUMP {
   int jump;
 } IJUMP;
 
-static void Emit_JUMP(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IJUMP *ir = (IJUMP *) inst;
+static void Emit_JUMP(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IJUMP *ir = (IJUMP *)inst;
   ir->base.opcode = OPCODE_IJUMP;
   ir->jump = Loader_Read32(loader);
 }
@@ -110,9 +114,8 @@ typedef struct ICALL {
   int jump;
 } ICALL;
 
-static void Emit_CALL(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ICALL *ir = (ICALL *) inst;
+static void Emit_CALL(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ICALL *ir = (ICALL *)inst;
   ir->base.opcode = OPCODE_ICALL;
   ir->jump = Loader_Read32(loader);
 }
@@ -121,9 +124,8 @@ typedef struct IRET {
   PegVMInstructionBase base;
 } IRET;
 
-static void Emit_RET(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IRET *ir = (IRET *) inst;
+static void Emit_RET(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IRET *ir = (IRET *)inst;
   ir->base.opcode = OPCODE_IRET;
 }
 #define OPCODE_ICONDBRANCH 4
@@ -135,16 +137,14 @@ typedef struct ICONDBRANCH {
 
 static void Emit_CONDTRUE(PegVMInstruction *inst, ByteCodeLoader *loader);
 static void Emit_CONDFALSE(PegVMInstruction *inst, ByteCodeLoader *loader);
-static void Emit_CONDBRANCH(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ICONDBRANCH *ir = (ICONDBRANCH *) inst;
+static void Emit_CONDBRANCH(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ICONDBRANCH *ir = (ICONDBRANCH *)inst;
   ir->base.opcode = OPCODE_ICONDBRANCH;
   ir->val = Loader_Read32(loader);
   if (ir->val) {
-      Emit_CONDTRUE(inst, loader);
-  }
-  else {
-      Emit_CONDFALSE(inst, loader);
+    Emit_CONDTRUE(inst, loader);
+  } else {
+    Emit_CONDFALSE(inst, loader);
   }
   // ir->jump = Loader_Read32(loader);
 }
@@ -155,9 +155,8 @@ typedef struct ICONDTRUE {
   bool val;
 } ICONDTRUE;
 
-static void Emit_CONDTRUE(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ICONDTRUE *ir = (ICONDTRUE *) inst;
+static void Emit_CONDTRUE(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ICONDTRUE *ir = (ICONDTRUE *)inst;
   ir->base.opcode = OPCODE_ICONDTRUE;
   // ir->val = Loader_Read32(loader);
   ir->jump = Loader_Read32(loader);
@@ -169,9 +168,8 @@ typedef struct ICONDFALSE {
   bool val;
 } ICONDFALSE;
 
-static void Emit_CONDFALSE(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ICONDFALSE *ir = (ICONDFALSE *) inst;
+static void Emit_CONDFALSE(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ICONDFALSE *ir = (ICONDFALSE *)inst;
   ir->base.opcode = OPCODE_ICONDFALSE;
   // ir->val = Loader_Read32(loader);
   ir->jump = Loader_Read32(loader);
@@ -182,9 +180,8 @@ typedef struct IREPCOND {
   int jump;
 } IREPCOND;
 
-static void Emit_REPCOND(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IREPCOND *ir = (IREPCOND *) inst;
+static void Emit_REPCOND(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IREPCOND *ir = (IREPCOND *)inst;
   ir->base.opcode = OPCODE_IREPCOND;
   ir->jump = Loader_Read32(loader);
 }
@@ -195,9 +192,8 @@ typedef struct ICHARRANGE {
   charpair cdata;
 } ICHARRANGE;
 
-static void Emit_CHARRANGE(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ICHARRANGE *ir = (ICHARRANGE *) inst;
+static void Emit_CHARRANGE(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ICHARRANGE *ir = (ICHARRANGE *)inst;
   ir->base.opcode = OPCODE_ICHARRANGE;
   ir->jump = Loader_Read32(loader);
   ir->cdata.c1 = Loader_Read32(loader);
@@ -210,15 +206,14 @@ typedef struct ICHARSET {
   bit_table_t set;
 } ICHARSET;
 
-static void Emit_CHARSET(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
+static void Emit_CHARSET(PegVMInstruction *inst, ByteCodeLoader *loader) {
   int len = Loader_Read16(loader);
-  ICHARSET *ir = (ICHARSET *) inst;
+  ICHARSET *ir = (ICHARSET *)inst;
   ir->base.opcode = OPCODE_ICHARSET;
-  ir->set = (bit_table_t) malloc(sizeof(struct bit_table_t));
+  ir->set = (bit_table_t)malloc(sizeof(struct bit_table_t));
   for (int i = 0; i < len; i++) {
-      char c = Loader_Read32(loader);
-      ir->set->table[c / 8] |= 1 << (c % 8);
+    char c = Loader_Read32(loader);
+    ir->set->table[c / 8] |= 1 << (c % 8);
   }
   ir->jump = Loader_Read32(loader);
 }
@@ -229,9 +224,8 @@ typedef struct ISTRING {
   string_ptr_t chardata;
 } ISTRING;
 
-static void Emit_STRING(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ISTRING *ir = (ISTRING *) inst;
+static void Emit_STRING(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ISTRING *ir = (ISTRING *)inst;
   ir->base.opcode = OPCODE_ISTRING;
   ir->jump = Loader_Read32(loader);
   ir->chardata = Loader_ReadString(loader);
@@ -287,9 +281,8 @@ typedef struct IANY {
   int jump;
 } IANY;
 
-static void Emit_ANY(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IANY *ir = (IANY *) inst;
+static void Emit_ANY(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IANY *ir = (IANY *)inst;
   ir->base.opcode = OPCODE_IANY;
   ir->jump = Loader_Read32(loader);
 }
@@ -298,9 +291,8 @@ typedef struct IPUSHo {
   PegVMInstructionBase base;
 } IPUSHo;
 
-static void Emit_PUSHo(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IPUSHo *ir = (IPUSHo *) inst;
+static void Emit_PUSHo(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IPUSHo *ir = (IPUSHo *)inst;
   ir->base.opcode = OPCODE_IPUSHo;
 }
 #define OPCODE_IPUSHconnect 16
@@ -308,9 +300,8 @@ typedef struct IPUSHconnect {
   PegVMInstructionBase base;
 } IPUSHconnect;
 
-static void Emit_PUSHconnect(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IPUSHconnect *ir = (IPUSHconnect *) inst;
+static void Emit_PUSHconnect(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IPUSHconnect *ir = (IPUSHconnect *)inst;
   ir->base.opcode = OPCODE_IPUSHconnect;
 }
 #define OPCODE_IPUSHp1 17
@@ -318,9 +309,8 @@ typedef struct IPUSHp1 {
   PegVMInstructionBase base;
 } IPUSHp1;
 
-static void Emit_PUSHp1(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IPUSHp1 *ir = (IPUSHp1 *) inst;
+static void Emit_PUSHp1(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IPUSHp1 *ir = (IPUSHp1 *)inst;
   ir->base.opcode = OPCODE_IPUSHp1;
 }
 #define OPCODE_ILOADp1 18
@@ -328,9 +318,8 @@ typedef struct ILOADp1 {
   PegVMInstructionBase base;
 } ILOADp1;
 
-static void Emit_LOADp1(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ILOADp1 *ir = (ILOADp1 *) inst;
+static void Emit_LOADp1(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ILOADp1 *ir = (ILOADp1 *)inst;
   ir->base.opcode = OPCODE_ILOADp1;
 }
 #define OPCODE_ILOADp2 19
@@ -338,9 +327,8 @@ typedef struct ILOADp2 {
   PegVMInstructionBase base;
 } ILOADp2;
 
-static void Emit_LOADp2(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ILOADp2 *ir = (ILOADp2 *) inst;
+static void Emit_LOADp2(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ILOADp2 *ir = (ILOADp2 *)inst;
   ir->base.opcode = OPCODE_ILOADp2;
 }
 #define OPCODE_ILOADp3 20
@@ -348,9 +336,8 @@ typedef struct ILOADp3 {
   PegVMInstructionBase base;
 } ILOADp3;
 
-static void Emit_LOADp3(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ILOADp3 *ir = (ILOADp3 *) inst;
+static void Emit_LOADp3(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ILOADp3 *ir = (ILOADp3 *)inst;
   ir->base.opcode = OPCODE_ILOADp3;
 }
 #define OPCODE_IPOPp 21
@@ -358,9 +345,8 @@ typedef struct IPOPp {
   PegVMInstructionBase base;
 } IPOPp;
 
-static void Emit_POPp(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IPOPp *ir = (IPOPp *) inst;
+static void Emit_POPp(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IPOPp *ir = (IPOPp *)inst;
   ir->base.opcode = OPCODE_IPOPp;
 }
 #define OPCODE_IPOPo 22
@@ -368,9 +354,8 @@ typedef struct IPOPo {
   PegVMInstructionBase base;
 } IPOPo;
 
-static void Emit_POPo(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IPOPo *ir = (IPOPo *) inst;
+static void Emit_POPo(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IPOPo *ir = (IPOPo *)inst;
   ir->base.opcode = OPCODE_IPOPo;
 }
 #define OPCODE_ISTOREo 23
@@ -378,9 +363,8 @@ typedef struct ISTOREo {
   PegVMInstructionBase base;
 } ISTOREo;
 
-static void Emit_STOREo(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ISTOREo *ir = (ISTOREo *) inst;
+static void Emit_STOREo(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ISTOREo *ir = (ISTOREo *)inst;
   ir->base.opcode = OPCODE_ISTOREo;
 }
 #define OPCODE_ISTOREp 24
@@ -388,9 +372,8 @@ typedef struct ISTOREp {
   PegVMInstructionBase base;
 } ISTOREp;
 
-static void Emit_STOREp(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ISTOREp *ir = (ISTOREp *) inst;
+static void Emit_STOREp(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ISTOREp *ir = (ISTOREp *)inst;
   ir->base.opcode = OPCODE_ISTOREp;
 }
 #define OPCODE_ISTOREp1 25
@@ -398,9 +381,8 @@ typedef struct ISTOREp1 {
   PegVMInstructionBase base;
 } ISTOREp1;
 
-static void Emit_STOREp1(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ISTOREp1 *ir = (ISTOREp1 *) inst;
+static void Emit_STOREp1(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ISTOREp1 *ir = (ISTOREp1 *)inst;
   ir->base.opcode = OPCODE_ISTOREp1;
 }
 #define OPCODE_ISTOREp2 26
@@ -408,9 +390,8 @@ typedef struct ISTOREp2 {
   PegVMInstructionBase base;
 } ISTOREp2;
 
-static void Emit_STOREp2(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ISTOREp2 *ir = (ISTOREp2 *) inst;
+static void Emit_STOREp2(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ISTOREp2 *ir = (ISTOREp2 *)inst;
   ir->base.opcode = OPCODE_ISTOREp2;
 }
 #define OPCODE_ISTOREp3 27
@@ -418,9 +399,8 @@ typedef struct ISTOREp3 {
   PegVMInstructionBase base;
 } ISTOREp3;
 
-static void Emit_STOREp3(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ISTOREp3 *ir = (ISTOREp3 *) inst;
+static void Emit_STOREp3(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ISTOREp3 *ir = (ISTOREp3 *)inst;
   ir->base.opcode = OPCODE_ISTOREp3;
 }
 #define OPCODE_ISTOREflag 28
@@ -429,9 +409,8 @@ typedef struct ISTOREflag {
   bool val;
 } ISTOREflag;
 
-static void Emit_STOREflag(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ISTOREflag *ir = (ISTOREflag *) inst;
+static void Emit_STOREflag(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ISTOREflag *ir = (ISTOREflag *)inst;
   ir->base.opcode = OPCODE_ISTOREflag;
   ir->val = Loader_Read32(loader);
 }
@@ -440,9 +419,8 @@ typedef struct INEW {
   PegVMInstructionBase base;
 } INEW;
 
-static void Emit_NEW(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  INEW *ir = (INEW *) inst;
+static void Emit_NEW(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  INEW *ir = (INEW *)inst;
   ir->base.opcode = OPCODE_INEW;
 }
 #define OPCODE_INEWJOIN 30
@@ -451,9 +429,8 @@ typedef struct INEWJOIN {
   int ndata;
 } INEWJOIN;
 
-static void Emit_NEWJOIN(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  INEWJOIN *ir = (INEWJOIN *) inst;
+static void Emit_NEWJOIN(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  INEWJOIN *ir = (INEWJOIN *)inst;
   ir->base.opcode = OPCODE_INEWJOIN;
   ir->ndata = Loader_Read32(loader);
 }
@@ -463,9 +440,8 @@ typedef struct ICOMMIT {
   int ndata;
 } ICOMMIT;
 
-static void Emit_COMMIT(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ICOMMIT *ir = (ICOMMIT *) inst;
+static void Emit_COMMIT(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ICOMMIT *ir = (ICOMMIT *)inst;
   ir->base.opcode = OPCODE_ICOMMIT;
   ir->ndata = Loader_Read32(loader);
 }
@@ -474,9 +450,8 @@ typedef struct IABORT {
   PegVMInstructionBase base;
 } IABORT;
 
-static void Emit_ABORT(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IABORT *ir = (IABORT *) inst;
+static void Emit_ABORT(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IABORT *ir = (IABORT *)inst;
   ir->base.opcode = OPCODE_IABORT;
 }
 #define OPCODE_ILINK 33
@@ -485,9 +460,8 @@ typedef struct ILINK {
   int ndata;
 } ILINK;
 
-static void Emit_LINK(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ILINK *ir = (ILINK *) inst;
+static void Emit_LINK(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ILINK *ir = (ILINK *)inst;
   ir->base.opcode = OPCODE_ILINK;
   ir->ndata = Loader_Read32(loader);
 }
@@ -496,9 +470,8 @@ typedef struct ISETendp {
   PegVMInstructionBase base;
 } ISETendp;
 
-static void Emit_SETendp(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ISETendp *ir = (ISETendp *) inst;
+static void Emit_SETendp(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ISETendp *ir = (ISETendp *)inst;
   ir->base.opcode = OPCODE_ISETendp;
 }
 #define OPCODE_ITAG 35
@@ -507,11 +480,10 @@ typedef struct ITAG {
   string_ptr_t chardata;
 } ITAG;
 
-static void Emit_TAG(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ITAG *ir = (ITAG *) inst;
+static void Emit_TAG(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ITAG *ir = (ITAG *)inst;
   ir->base.opcode = OPCODE_ITAG;
-  ir->chardata = Loader_ReadString(loader);
+  ir->chardata = Loader_ReadName(loader);
 }
 #define OPCODE_IVALUE 36
 typedef struct IVALUE {
@@ -519,11 +491,10 @@ typedef struct IVALUE {
   string_ptr_t chardata;
 } IVALUE;
 
-static void Emit_VALUE(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IVALUE *ir = (IVALUE *) inst;
+static void Emit_VALUE(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IVALUE *ir = (IVALUE *)inst;
   ir->base.opcode = OPCODE_IVALUE;
-  ir->chardata = Loader_ReadString(loader);
+  ir->chardata = Loader_ReadName(loader);
 }
 #define OPCODE_IMAPPEDCHOICE 37
 typedef struct IMAPPEDCHOICE {
@@ -531,13 +502,12 @@ typedef struct IMAPPEDCHOICE {
   int_table_t ndata;
 } IMAPPEDCHOICE;
 
-static void Emit_MAPPEDCHOICE(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IMAPPEDCHOICE *ir = (IMAPPEDCHOICE *) inst;
+static void Emit_MAPPEDCHOICE(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IMAPPEDCHOICE *ir = (IMAPPEDCHOICE *)inst;
   ir->base.opcode = OPCODE_IMAPPEDCHOICE;
-  ir->ndata =  (int_table_t) malloc(sizeof(struct int_table_t));
+  ir->ndata = (int_table_t)malloc(sizeof(struct int_table_t));
   for (int i = 0; i < 256; i++) {
-      ir->ndata->table[i] = Loader_Read32(loader);
+    ir->ndata->table[i] = Loader_Read32(loader);
   }
 }
 #define OPCODE_IMAPPEDCHOICE_8 38
@@ -546,7 +516,8 @@ typedef struct IMAPPEDCHOICE_8 {
   char_table_t ndata;
 } IMAPPEDCHOICE_8;
 
-// static void Emit_MAPPEDCHOICE_8(PegVMInstruction *inst, ByteCodeLoader *loader)
+// static void Emit_MAPPEDCHOICE_8(PegVMInstruction *inst, ByteCodeLoader
+// *loader)
 // {
 //   IMAPPEDCHOICE_8 *ir = (IMAPPEDCHOICE_8 *) inst;
 //   ir->base.opcode = OPCODE_IMAPPEDCHOICE_8;
@@ -561,7 +532,8 @@ typedef struct IMAPPEDCHOICE_16 {
   short_table_t ndata;
 } IMAPPEDCHOICE_16;
 
-// static void Emit_MAPPEDCHOICE_16(PegVMInstruction *inst, ByteCodeLoader *loader)
+// static void Emit_MAPPEDCHOICE_16(PegVMInstruction *inst, ByteCodeLoader
+// *loader)
 // {
 //   IMAPPEDCHOICE_16 *ir = (IMAPPEDCHOICE_16 *) inst;
 //   ir->base.opcode = OPCODE_IMAPPEDCHOICE_16;
@@ -577,9 +549,8 @@ typedef struct ISCAN {
   int offset;
 } ISCAN;
 
-static void Emit_SCAN(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ISCAN *ir = (ISCAN *) inst;
+static void Emit_SCAN(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ISCAN *ir = (ISCAN *)inst;
   ir->base.opcode = OPCODE_ISCAN;
   ir->cardinals = Loader_Read32(loader);
   ir->offset = Loader_Read32(loader);
@@ -591,9 +562,8 @@ typedef struct ICHECKEND {
   int jump;
 } ICHECKEND;
 
-static void Emit_CHECKEND(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  ICHECKEND *ir = (ICHECKEND *) inst;
+static void Emit_CHECKEND(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ICHECKEND *ir = (ICHECKEND *)inst;
   ir->base.opcode = OPCODE_ICHECKEND;
   ir->ndata = Loader_Read32(loader);
   ir->jump = Loader_Read32(loader);
@@ -604,9 +574,8 @@ typedef struct IDEF {
   int ndata;
 } IDEF;
 
-static void Emit_DEF(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IDEF *ir = (IDEF *) inst;
+static void Emit_DEF(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IDEF *ir = (IDEF *)inst;
   ir->base.opcode = OPCODE_IDEF;
   ir->ndata = Loader_Read32(loader);
 }
@@ -616,9 +585,8 @@ typedef struct IIS {
   int ndata;
 } IIS;
 
-static void Emit_IS(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IIS *ir = (IIS *) inst;
+static void Emit_IS(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IIS *ir = (IIS *)inst;
   ir->base.opcode = OPCODE_IIS;
   ir->ndata = Loader_Read32(loader);
 }
@@ -628,9 +596,8 @@ typedef struct IISA {
   int ndata;
 } IISA;
 
-static void Emit_ISA(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IISA *ir = (IISA *) inst;
+static void Emit_ISA(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IISA *ir = (IISA *)inst;
   ir->base.opcode = OPCODE_IISA;
   ir->ndata = Loader_Read32(loader);
 }
@@ -640,9 +607,8 @@ typedef struct IBLOCKSTART {
   int ndata;
 } IBLOCKSTART;
 
-static void Emit_BLOCKSTART(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IBLOCKSTART *ir = (IBLOCKSTART *) inst;
+static void Emit_BLOCKSTART(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IBLOCKSTART *ir = (IBLOCKSTART *)inst;
   ir->base.opcode = OPCODE_IBLOCKSTART;
   ir->ndata = Loader_Read32(loader);
 }
@@ -651,9 +617,8 @@ typedef struct IBLOCKEND {
   PegVMInstructionBase base;
 } IBLOCKEND;
 
-static void Emit_BLOCKEND(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IBLOCKEND *ir = (IBLOCKEND *) inst;
+static void Emit_BLOCKEND(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IBLOCKEND *ir = (IBLOCKEND *)inst;
   ir->base.opcode = OPCODE_IBLOCKEND;
 }
 #define OPCODE_IINDENT 47
@@ -662,9 +627,8 @@ typedef struct IINDENT {
   int ndata;
 } IINDENT;
 
-static void Emit_INDENT(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IINDENT *ir = (IINDENT *) inst;
+static void Emit_INDENT(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IINDENT *ir = (IINDENT *)inst;
   ir->base.opcode = OPCODE_IINDENT;
   ir->ndata = Loader_Read32(loader);
 }
@@ -675,9 +639,8 @@ typedef struct INOTBYTE {
   int jump;
 } INOTBYTE;
 
-static void Emit_NOTBYTE(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  INOTBYTE *ir = (INOTBYTE *) inst;
+static void Emit_NOTBYTE(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  INOTBYTE *ir = (INOTBYTE *)inst;
   ir->base.opcode = OPCODE_INOTBYTE;
   ir->cdata = Loader_Read32(loader);
   ir->jump = Loader_Read32(loader);
@@ -688,9 +651,8 @@ typedef struct INOTANY {
   int jump;
 } INOTANY;
 
-static void Emit_NOTANY(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  INOTANY *ir = (INOTANY *) inst;
+static void Emit_NOTANY(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  INOTANY *ir = (INOTANY *)inst;
   ir->base.opcode = OPCODE_INOTANY;
   ir->jump = Loader_Read32(loader);
 }
@@ -701,18 +663,16 @@ typedef struct INOTCHARSET {
   bit_table_t set;
 } INOTCHARSET;
 
-static void Emit_NOTCHARSET(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
+static void Emit_NOTCHARSET(PegVMInstruction *inst, ByteCodeLoader *loader) {
   int len = Loader_Read16(loader);
-  INOTCHARSET *ir = (INOTCHARSET *) inst;
+  INOTCHARSET *ir = (INOTCHARSET *)inst;
   ir->base.opcode = OPCODE_INOTCHARSET;
-  ir->set = (bit_table_t) malloc(sizeof(struct bit_table_t));
+  ir->set = (bit_table_t)malloc(sizeof(struct bit_table_t));
   for (int i = 0; i < len; i++) {
-      char c = Loader_Read32(loader);
-      ir->set->table[c / 8] |= 1 << (c % 8);
+    char c = Loader_Read32(loader);
+    ir->set->table[c / 8] |= 1 << (c % 8);
   }
   ir->jump = Loader_Read32(loader);
-
 }
 #define OPCODE_INOTBYTERANGE 51
 typedef struct INOTBYTERANGE {
@@ -721,9 +681,8 @@ typedef struct INOTBYTERANGE {
   int jump;
 } INOTBYTERANGE;
 
-static void Emit_NOTBYTERANGE(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  INOTBYTERANGE *ir = (INOTBYTERANGE *) inst;
+static void Emit_NOTBYTERANGE(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  INOTBYTERANGE *ir = (INOTBYTERANGE *)inst;
   ir->base.opcode = OPCODE_INOTBYTERANGE;
   ir->cdata.c1 = Loader_Read32(loader);
   ir->cdata.c2 = Loader_Read32(loader);
@@ -736,9 +695,8 @@ typedef struct INOTSTRING {
   string_ptr_t cdata;
 } INOTSTRING;
 
-static void Emit_NOTSTRING(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  INOTSTRING *ir = (INOTSTRING *) inst;
+static void Emit_NOTSTRING(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  INOTSTRING *ir = (INOTSTRING *)inst;
   ir->base.opcode = OPCODE_INOTSTRING;
   ir->jump = Loader_Read32(loader);
   ir->cdata = Loader_ReadString(loader);
@@ -749,9 +707,8 @@ typedef struct IOPTIONALBYTE {
   char cdata;
 } IOPTIONALBYTE;
 
-static void Emit_OPTIONALBYTE(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IOPTIONALBYTE *ir = (IOPTIONALBYTE *) inst;
+static void Emit_OPTIONALBYTE(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IOPTIONALBYTE *ir = (IOPTIONALBYTE *)inst;
   ir->base.opcode = OPCODE_IOPTIONALBYTE;
   ir->cdata = Loader_Read32(loader);
 }
@@ -761,15 +718,15 @@ typedef struct IOPTIONALCHARSET {
   bit_table_t set;
 } IOPTIONALCHARSET;
 
-static void Emit_OPTIONALCHARSET(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
+static void Emit_OPTIONALCHARSET(PegVMInstruction *inst,
+                                 ByteCodeLoader *loader) {
   int len = Loader_Read16(loader);
-  IOPTIONALCHARSET *ir = (IOPTIONALCHARSET *) inst;
+  IOPTIONALCHARSET *ir = (IOPTIONALCHARSET *)inst;
   ir->base.opcode = OPCODE_IOPTIONALCHARSET;
-  ir->set = (bit_table_t) malloc(sizeof(struct bit_table_t));
+  ir->set = (bit_table_t)malloc(sizeof(struct bit_table_t));
   for (int i = 0; i < len; i++) {
-      char c = Loader_Read32(loader);
-      ir->set->table[c / 8] |= 1 << (c % 8);
+    char c = Loader_Read32(loader);
+    ir->set->table[c / 8] |= 1 << (c % 8);
   }
 }
 #define OPCODE_IOPTIONALBYTERANGE 55
@@ -778,9 +735,9 @@ typedef struct IOPTIONALBYTERANGE {
   charpair cdata;
 } IOPTIONALBYTERANGE;
 
-static void Emit_OPTIONALBYTERANGE(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IOPTIONALBYTERANGE *ir = (IOPTIONALBYTERANGE *) inst;
+static void Emit_OPTIONALBYTERANGE(PegVMInstruction *inst,
+                                   ByteCodeLoader *loader) {
+  IOPTIONALBYTERANGE *ir = (IOPTIONALBYTERANGE *)inst;
   ir->base.opcode = OPCODE_IOPTIONALBYTERANGE;
   ir->cdata.c1 = Loader_Read32(loader);
   ir->cdata.c2 = Loader_Read32(loader);
@@ -791,9 +748,9 @@ typedef struct IOPTIONALSTRING {
   string_ptr_t cdata;
 } IOPTIONALSTRING;
 
-static void Emit_OPTIONALSTRING(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IOPTIONALSTRING *ir = (IOPTIONALSTRING *) inst;
+static void Emit_OPTIONALSTRING(PegVMInstruction *inst,
+                                ByteCodeLoader *loader) {
+  IOPTIONALSTRING *ir = (IOPTIONALSTRING *)inst;
   ir->base.opcode = OPCODE_IOPTIONALSTRING;
   ir->cdata = Loader_ReadString(loader);
 }
@@ -803,9 +760,9 @@ typedef struct IZEROMOREBYTERANGE {
   charpair cdata;
 } IZEROMOREBYTERANGE;
 
-static void Emit_ZEROMOREBYTERANGE(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IZEROMOREBYTERANGE *ir = (IZEROMOREBYTERANGE *) inst;
+static void Emit_ZEROMOREBYTERANGE(PegVMInstruction *inst,
+                                   ByteCodeLoader *loader) {
+  IZEROMOREBYTERANGE *ir = (IZEROMOREBYTERANGE *)inst;
   ir->base.opcode = OPCODE_IZEROMOREBYTERANGE;
   ir->cdata.c1 = Loader_Read32(loader);
   ir->cdata.c2 = Loader_Read32(loader);
@@ -816,15 +773,15 @@ typedef struct IZEROMORECHARSET {
   bit_table_t set;
 } IZEROMORECHARSET;
 
-static void Emit_ZEROMORECHARSET(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
+static void Emit_ZEROMORECHARSET(PegVMInstruction *inst,
+                                 ByteCodeLoader *loader) {
   int len = Loader_Read16(loader);
-  IZEROMORECHARSET *ir = (IZEROMORECHARSET *) inst;
+  IZEROMORECHARSET *ir = (IZEROMORECHARSET *)inst;
   ir->base.opcode = OPCODE_IZEROMORECHARSET;
-  ir->set = (bit_table_t) malloc(sizeof(struct bit_table_t));
+  ir->set = (bit_table_t)malloc(sizeof(struct bit_table_t));
   for (int i = 0; i < len; i++) {
-      char c = Loader_Read32(loader);
-      ir->set->table[c / 8] |= 1 << (c % 8);
+    char c = Loader_Read32(loader);
+    ir->set->table[c / 8] |= 1 << (c % 8);
   }
 }
 #define OPCODE_IZEROMOREWS 59
@@ -832,9 +789,8 @@ typedef struct IZEROMOREWS {
   PegVMInstructionBase base;
 } IZEROMOREWS;
 
-static void Emit_ZEROMOREWS(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IZEROMOREWS *ir = (IZEROMOREWS *) inst;
+static void Emit_ZEROMOREWS(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IZEROMOREWS *ir = (IZEROMOREWS *)inst;
   ir->base.opcode = OPCODE_IZEROMOREWS;
 }
 #define OPCODE_IREPEATANY 60
@@ -843,81 +799,31 @@ typedef struct IREPEATANY {
   int ndata;
 } IREPEATANY;
 
-static void Emit_REPEATANY(PegVMInstruction *inst, ByteCodeLoader *loader)
-{
-  IREPEATANY *ir = (IREPEATANY *) inst;
+static void Emit_REPEATANY(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  IREPEATANY *ir = (IREPEATANY *)inst;
   ir->base.opcode = OPCODE_IREPEATANY;
   ir->ndata = Loader_Read32(loader);
 }
 #define LIR_MAX_OPCODE 61
-#define LIR_EACH(OP) \
-  OP(EXIT)\
-  OP(JUMP)\
-  OP(CALL)\
-  OP(RET)\
-  OP(CONDBRANCH)\
-  OP(CONDTRUE)\
-  OP(CONDFALSE)\
-  OP(REPCOND)\
-  OP(CHARRANGE)\
-  OP(CHARSET)\
-  OP(STRING)\
-  OP(STRING1)\
-  OP(STRING2)\
-  OP(STRING4)\
-  OP(ANY)\
-  OP(PUSHo)\
-  OP(PUSHconnect)\
-  OP(PUSHp1)\
-  OP(LOADp1)\
-  OP(LOADp2)\
-  OP(LOADp3)\
-  OP(POPp)\
-  OP(POPo)\
-  OP(STOREo)\
-  OP(STOREp)\
-  OP(STOREp1)\
-  OP(STOREp2)\
-  OP(STOREp3)\
-  OP(STOREflag)\
-  OP(NEW)\
-  OP(NEWJOIN)\
-  OP(COMMIT)\
-  OP(ABORT)\
-  OP(LINK)\
-  OP(SETendp)\
-  OP(TAG)\
-  OP(VALUE)\
-  OP(MAPPEDCHOICE)\
-  OP(MAPPEDCHOICE_8)\
-  OP(MAPPEDCHOICE_16)\
-  OP(SCAN)\
-  OP(CHECKEND)\
-  OP(DEF)\
-  OP(IS)\
-  OP(ISA)\
-  OP(BLOCKSTART)\
-  OP(BLOCKEND)\
-  OP(INDENT)\
-  OP(NOTBYTE)\
-  OP(NOTANY)\
-  OP(NOTCHARSET)\
-  OP(NOTBYTERANGE)\
-  OP(NOTSTRING)\
-  OP(OPTIONALBYTE)\
-  OP(OPTIONALCHARSET)\
-  OP(OPTIONALBYTERANGE)\
-  OP(OPTIONALSTRING)\
-  OP(ZEROMOREBYTERANGE)\
-  OP(ZEROMORECHARSET)\
-  OP(ZEROMOREWS)\
-  OP(REPEATANY)\
+#define LIR_EACH(OP)                                                           \
+  OP(EXIT) OP(JUMP) OP(CALL) OP(RET) OP(CONDBRANCH) OP(CONDTRUE) OP(CONDFALSE) \
+      OP(REPCOND) OP(CHARRANGE) OP(CHARSET) OP(STRING) OP(STRING1) OP(STRING2) \
+      OP(STRING4) OP(ANY) OP(PUSHo) OP(PUSHconnect) OP(PUSHp1) OP(LOADp1)      \
+      OP(LOADp2) OP(LOADp3) OP(POPp) OP(POPo) OP(STOREo) OP(STOREp)            \
+      OP(STOREp1) OP(STOREp2) OP(STOREp3) OP(STOREflag) OP(NEW) OP(NEWJOIN)    \
+      OP(COMMIT) OP(ABORT) OP(LINK) OP(SETendp) OP(TAG) OP(VALUE)              \
+      OP(MAPPEDCHOICE) OP(MAPPEDCHOICE_8) OP(MAPPEDCHOICE_16) OP(SCAN)         \
+      OP(CHECKEND) OP(DEF) OP(IS) OP(ISA) OP(BLOCKSTART) OP(BLOCKEND)          \
+      OP(INDENT) OP(NOTBYTE) OP(NOTANY) OP(NOTCHARSET) OP(NOTBYTERANGE)        \
+      OP(NOTSTRING) OP(OPTIONALBYTE) OP(OPTIONALCHARSET) OP(OPTIONALBYTERANGE) \
+      OP(OPTIONALSTRING) OP(ZEROMOREBYTERANGE) OP(ZEROMORECHARSET)             \
+      OP(ZEROMOREWS) OP(REPEATANY)
 
 union PegVMInstruction {
 #define DEF_PEGVM_INST_UNION(OP) I##OP _##OP;
-    LIR_EACH(DEF_PEGVM_INST_UNION);
-#undef  DEF_PEGVM_INST_UNION
-    PegVMInstructionBase base;
+  LIR_EACH(DEF_PEGVM_INST_UNION);
+#undef DEF_PEGVM_INST_UNION
+  PegVMInstructionBase base;
 };
 
 #if 0
