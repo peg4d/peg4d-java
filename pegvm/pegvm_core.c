@@ -49,13 +49,19 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   };
 
   int failflag = 0;
+#if 1
+#define LEFT left
+  ParsingObject left = context->left;
+#else
 #define LEFT context->left
-  // ParsingObject left = context->left;
-  // long pos = context->pos;
+#endif
   const char *cur = context->inputs + context->pos;
-  // const char *inputs = context->inputs;
+#if 0
+#define MPOOL pool
+  MemoryPool pool = context->mpool;
+#else
 #define MPOOL context->mpool
-  // MemoryPool pool = context->mpool;
+#endif
 
   const char *Reg1 = 0;
   const char *Reg2 = 0;
@@ -79,17 +85,18 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   goto *GET_ADDR(pc);
 
   OP(EXIT) {
+    // __asm__ volatile("int3");
     P4D_commitLog(context, 0, LEFT, MPOOL);
     context->left = LEFT;
     context->pos = cur - context->inputs;
     return failflag;
   }
   OP(JUMP) {
-    PegVMInstruction *dst =((IJUMP *)pc)->jump;
+    PegVMInstruction *dst = ((IJUMP *)pc)->jump;
     JUMP(dst);
   }
   OP(CALL) {
-    PegVMInstruction *dst =((ICALL *)pc)->jump;
+    PegVMInstruction *dst = ((ICALL *)pc)->jump;
     PUSH_IP(pc + 1);
     JUMP(dst);
   }
@@ -97,17 +104,19 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     RET;
   }
   OP(CONDBRANCH) {
-    PegVMInstruction *dst =((ICONDBRANCH *)pc)->jump;
+#ifdef PEGVM_USE_CONDBRANCH
+    PegVMInstruction *dst = ((ICONDBRANCH *)pc)->jump;
     if (failflag == ((ICONDBRANCH *)pc)->val) {
       JUMP(dst);
     }
     else {
       DISPATCH_NEXT;
     }
+#endif
   }
 
   OP(CONDTRUE) {
-    PegVMInstruction *dst =((ICONDBRANCH *)pc)->jump;
+    PegVMInstruction *dst = ((ICONDBRANCH *)pc)->jump;
     if (failflag == 1) {
       JUMP(dst);
     }
@@ -116,7 +125,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     }
   }
   OP(CONDFALSE) {
-    PegVMInstruction *dst =((ICONDBRANCH *)pc)->jump;
+    PegVMInstruction *dst = ((ICONDBRANCH *)pc)->jump;
     if (failflag == 0) {
       JUMP(dst);
     }
@@ -125,7 +134,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     }
   }
   OP(REPCOND) {
-    PegVMInstruction *dst =((IREPCOND *)pc)->jump;
+    PegVMInstruction *dst = ((IREPCOND *)pc)->jump;
     if (cur != POP_SP()) {
       DISPATCH_NEXT;
     }
@@ -134,6 +143,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     }
   }
   OP(CHARRANGE) {
+#ifdef PEGVM_USE_CHARRANGE
     char ch = *cur++;
     ICHARRANGE *inst = (ICHARRANGE *)pc;
     if (inst->c1 <= ch && ch <= inst->c2) {
@@ -143,6 +153,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
       failflag = 1;
       JUMP(inst->jump);
     }
+#endif
   }
   OP(CHARSET) {
     ICHARSET *inst = (ICHARSET *)pc;
@@ -397,6 +408,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(NOTBYTERANGE) {
+#ifdef PEGVM_USE_CHARRANGE
     INOTBYTERANGE *inst = (INOTBYTERANGE *)pc;
     if (!(*cur >= inst->c1 &&
           *cur <= inst->c2)) {
@@ -406,6 +418,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
       failflag = 1;
       JUMP(inst->jump);
     }
+#endif
   }
   OP(NOTSTRING) {
     INOTSTRING *inst = (INOTSTRING *)pc;
@@ -430,12 +443,14 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(OPTIONALBYTERANGE) {
+#ifdef PEGVM_USE_CHARRANGE
     IOPTIONALBYTERANGE *inst = (IOPTIONALBYTERANGE *)pc;
     if (*cur >= inst->c1 &&
         *cur <= inst->c2) {
       ++cur;
     }
     DISPATCH_NEXT;
+#endif
   }
 
   OP(OPTIONALSTRING) {
@@ -444,6 +459,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(ZEROMOREBYTERANGE) {
+#ifdef PEGVM_USE_CHARRANGE
     IZEROMOREBYTERANGE *inst = (IZEROMOREBYTERANGE *)pc;
     while (1) {
       if (!(*cur >= inst->c1 &&
@@ -452,6 +468,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
       }
       ++cur;
     }
+#endif
     DISPATCH_NEXT; // FIXME
   }
   OP(ZEROMORECHARSET) {

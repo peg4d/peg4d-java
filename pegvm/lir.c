@@ -5,6 +5,9 @@
 #include <limits.h>
 #include "bitset.c"
 
+// #define PEGVM_USE_CONDBRANCH
+#define PEGVM_USE_CHARRANGE
+
 typedef bitset_t *bitset_ptr_t;
 
 typedef struct ByteCodeLoader {
@@ -93,9 +96,8 @@ static pegvm_string_ptr_t Loader_ReadName(ByteCodeLoader *loader) {
   uint32_t len = Loader_Read16(loader);
   pegvm_string_ptr_t str = (pegvm_string_ptr_t)__malloc(sizeof(*str) - 1 + len);
   str->len = len;
-  for (uint32_t i = 0; i < len; i++) {
-    str->text[i] = loader->input[loader->info->pos++];
-  }
+  memcpy(str->text, loader->input+loader->info->pos, len);
+  loader->info->pos += len;
   return str;
 }
 
@@ -111,7 +113,7 @@ static void Emit_EXIT(PegVMInstruction *inst, ByteCodeLoader *loader) {
 #define OPCODE_IJUMP 1
 typedef struct IJUMP {
   PegVMInstructionBase base;
-  PegVMInstruction * jump;
+  PegVMInstruction *jump;
 } IJUMP;
 
 static void Emit_JUMP(PegVMInstruction *inst, ByteCodeLoader *loader) {
@@ -152,12 +154,15 @@ static void Emit_CONDBRANCH(PegVMInstruction *inst, ByteCodeLoader *loader) {
   ICONDBRANCH *ir = (ICONDBRANCH *)inst;
   ir->base.opcode = OPCODE_ICONDBRANCH;
   ir->val = Loader_Read32(loader);
+#ifdef PEGVM_USE_CONDBRANCH
+  ir->jump = Loader_GetJumpAddr(loader, inst);
+#else
   if (ir->val) {
     Emit_CONDTRUE(inst, loader);
   } else {
     Emit_CONDFALSE(inst, loader);
   }
-  // ir->jump = Loader_GetJumpAddr(loader, inst);
+#endif
 }
 #define OPCODE_ICONDTRUE 5
 typedef struct ICONDTRUE {
@@ -204,13 +209,6 @@ typedef struct ICHARRANGE {
   char c2;
 } ICHARRANGE;
 
-static void Emit_CHARRANGE(PegVMInstruction *inst, ByteCodeLoader *loader) {
-  ICHARRANGE *ir = (ICHARRANGE *)inst;
-  ir->base.opcode = OPCODE_ICHARRANGE;
-  ir->jump = Loader_GetJumpAddr(loader, inst);
-  ir->c1 = Loader_Read32(loader);
-  ir->c2 = Loader_Read32(loader);
-}
 #define OPCODE_ICHARSET 9
 typedef struct ICHARSET {
   PegVMInstructionBase base;
@@ -229,6 +227,28 @@ static void Emit_CHARSET(PegVMInstruction *inst, ByteCodeLoader *loader) {
   }
   ir->jump = Loader_GetJumpAddr(loader, inst);
 }
+
+static void Emit_CHARRANGE(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  ICHARRANGE *ir = (ICHARRANGE *)inst;
+  ir->base.opcode = OPCODE_ICHARRANGE;
+  ir->jump = Loader_GetJumpAddr(loader, inst);
+  unsigned begin = Loader_Read32(loader);
+  unsigned end = Loader_Read32(loader);
+#ifdef PEGVM_USE_CHARRANGE
+  ir->c1 = begin;
+  ir->c2 = end;
+#else
+  {
+    ICHARSET *ir2 = (ICHARSET *)ir;
+    ir2->base.opcode = OPCODE_ICHARSET;
+    ir2->set = (bitset_ptr_t)__malloc(sizeof(bitset_t));
+    for (unsigned i = begin; i <= end; i++) {
+      bitset_set(ir2->set, i);
+    }
+  }
+#endif
+}
+
 #define OPCODE_ISTRING 10
 typedef struct ISTRING {
   PegVMInstructionBase base;
@@ -723,9 +743,22 @@ typedef struct INOTBYTERANGE {
 static void Emit_NOTBYTERANGE(PegVMInstruction *inst, ByteCodeLoader *loader) {
   INOTBYTERANGE *ir = (INOTBYTERANGE *)inst;
   ir->base.opcode = OPCODE_INOTBYTERANGE;
-  ir->c1 = Loader_Read32(loader);
-  ir->c2 = Loader_Read32(loader);
+  unsigned begin = Loader_Read32(loader);
+  unsigned end = Loader_Read32(loader);
   ir->jump = Loader_GetJumpAddr(loader, inst);
+#ifdef PEGVM_USE_CHARRANGE
+  ir->c1 = begin;
+  ir->c2 = end;
+#else
+  {
+    INOTCHARSET *ir2 = (INOTCHARSET *)ir;
+    ir2->base.opcode = OPCODE_INOTCHARSET;
+    ir2->set = (bitset_ptr_t)__malloc(sizeof(bitset_t));
+    for (unsigned i = begin; i <= end; i++) {
+      bitset_set(ir2->set, i);
+    }
+  }
+#endif
 }
 #define OPCODE_INOTSTRING 52
 typedef struct INOTSTRING {
@@ -779,8 +812,22 @@ static void Emit_OPTIONALBYTERANGE(PegVMInstruction *inst,
                                    ByteCodeLoader *loader) {
   IOPTIONALBYTERANGE *ir = (IOPTIONALBYTERANGE *)inst;
   ir->base.opcode = OPCODE_IOPTIONALBYTERANGE;
-  ir->c1 = Loader_Read32(loader);
-  ir->c2 = Loader_Read32(loader);
+  unsigned begin = Loader_Read32(loader);
+  unsigned end = Loader_Read32(loader);
+#ifdef PEGVM_USE_CHARRANGE
+  ir->c1 = begin;
+  ir->c2 = end;
+#else
+  {
+    IOPTIONALCHARSET *ir2 = (IOPTIONALCHARSET *)ir;
+    ir2->base.opcode = OPCODE_IOPTIONALCHARSET;
+    ir2->set = (bitset_ptr_t)__malloc(sizeof(bitset_t));
+    for (unsigned i = begin; i <= end; i++) {
+      bitset_set(ir2->set, i);
+    }
+  }
+#endif
+
 }
 #define OPCODE_IOPTIONALSTRING 56
 typedef struct IOPTIONALSTRING {
