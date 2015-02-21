@@ -11,6 +11,13 @@ static int pegvm_string_equal(pegvm_string_ptr_t str, const char *t) {
   return str->len;
 }
 
+static ParsingObject P4D_newObject2(ParsingContext context, const char *cur, MemoryPool mpool, ParsingObject left)
+{
+    ParsingObject po = P4D_newObject(context, cur, mpool);
+    *po = *left;
+    return po;
+}
+
 #if __GNUC__ >= 3
 # define likely(x) __builtin_expect(!!(x), 1)
 # define unlikely(x) __builtin_expect(!!(x), 0)
@@ -164,15 +171,17 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(ANY) {
     IANY *inst = (IANY *)pc;
-    if (unlikely(*cur++ == 0)) {
-      --cur;
+    if (unlikely(*cur == 0)) {
       failflag = 1;
       JUMP(inst->jump);
     }
-    DISPATCH_NEXT;
+    else {
+      ++cur;
+      DISPATCH_NEXT;
+    }
   }
   OP(PUSHo) {
-    ParsingObject po = P4D_newObject(context, cur, MPOOL);
+    ParsingObject po = P4D_newObject2(context, cur, MPOOL, LEFT);
     *po = *LEFT;
     po->refc = 1;
     PUSH_OSP(po);
@@ -288,8 +297,8 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(MAPPEDCHOICE) {
     IMAPPEDCHOICE *inst = (IMAPPEDCHOICE *)pc;
-    JUMP(inst->ndata->table[(unsigned char)*cur]);
-    // JUMP_REL(inst->ndata->table[(unsigned char)*cur]);
+    // JUMP(inst->ndata->table[(unsigned char)*cur]);
+    JUMP_REL(inst->ndata->table[(unsigned char)*cur]);
   }
   OP(MAPPEDCHOICE_8) {
     IMAPPEDCHOICE_8 *inst = (IMAPPEDCHOICE_8 *)pc;
@@ -366,11 +375,11 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(NOTBYTE) {
     INOTBYTE *inst = (INOTBYTE *)pc;
-    if (*cur != inst->cdata) {
-      DISPATCH_NEXT;
+    if (*cur == inst->cdata) {
+      failflag = 1;
+      JUMP(inst->jump);
     }
-    failflag = 1;
-    JUMP(inst->jump);
+    DISPATCH_NEXT;
   }
   OP(NOTANY) {
     INOTANY *inst = (INOTANY *)pc;
