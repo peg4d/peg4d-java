@@ -9,7 +9,7 @@
 #include "config.h"
 #endif
 
-uint64_t timer() {
+static uint64_t timer() {
   struct timeval tv;
   gettimeofday(&tv, NULL);
   return tv.tv_sec * 1000 + tv.tv_usec / 1000;
@@ -57,9 +57,7 @@ static const char *get_opname(uint8_t opcode) {
 
 static void dump_PegVMInstructions(PegVMInstruction *inst, uint64_t size) {
   uint64_t i;
-  int j;
   for (i = 0; i < size; i++) {
-    j = 0;
     fprintf(stderr, "[%llu] %s ", i, get_opname(inst[i].opcode));
     if (inst[i].ndata) {
       switch (inst->opcode) {
@@ -107,12 +105,11 @@ static uint64_t read64(char *inputs, byteCodeInfo *info) {
 }
 
 PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
-                                      PegVMInstruction *inst,
                                       const char *fileName,
                                       const char *nonTerminalName) {
+  PegVMInstruction *inst = NULL;
   size_t len;
   char *buf = loadFile(fileName, &len);
-  int j = 0;
   byteCodeInfo info;
   info.pos = 0;
 
@@ -156,6 +153,7 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
   for (int i = 0; i < ruleSize; i++) {
     free(ruleTable[i]);
   }
+  free(ruleTable);
 
   // memset(inst, 0, sizeof(*inst) * info.bytecode_length);
   inst = malloc(sizeof(*inst) * info.bytecode_length);
@@ -165,42 +163,37 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
     inst[i].opcode = buf[info.pos++];
     code_length = (uint8_t)buf[info.pos++];
     code_length = (code_length) | ((uint8_t)buf[info.pos++] << 8);
-    if (code_length != 0) {
-      if (code_length == 1) {
+    if (code_length == 0) {
+    }
+    else if (code_length == 1) {
         inst[i].ndata = malloc(sizeof(int));
         inst[i].ndata[0] = read32(buf, &info);
-      } else if (inst[i].opcode == PEGVM_OP_MAPPEDCHOICE) {
+    } else if (inst[i].opcode == PEGVM_OP_MAPPEDCHOICE) {
         inst[i].ndata = malloc(sizeof(int) * code_length);
-        while (j < code_length) {
-          inst[i].ndata[j] = read32(buf, &info);
-          j++;
+        for (int j = 0; j < code_length; j++) {
+            inst[i].ndata[j] = read32(buf, &info);
         }
-      } else if (inst[i].opcode == PEGVM_OP_SCAN) {
+    } else if (inst[i].opcode == PEGVM_OP_SCAN) {
         inst[i].ndata = malloc(sizeof(int) * 2);
         inst[i].ndata[0] = read32(buf, &info);
         inst[i].ndata[1] = read32(buf, &info);
-      } else {
+    } else {
         inst[i].ndata = malloc(sizeof(int));
         inst[i].ndata[0] = code_length;
         inst[i].chardata = malloc(sizeof(int) * code_length);
-        while (j < code_length) {
-          inst[i].chardata[j] = read32(buf, &info);
-          j++;
+        for (int j = 0; j < code_length; j++) {
+            inst[i].chardata[j] = read32(buf, &info);
         }
-      }
     }
-    j = 0;
     inst[i].jump = inst + read32(buf, &info);
     code_length = buf[info.pos++];
     if (code_length != 0) {
       inst[i].chardata = malloc(sizeof(char) * code_length + 1);
-      while (j < code_length) {
+      for (int j = 0; j < code_length; j++) {
         inst[i].chardata[j] = buf[info.pos++];
-        j++;
       }
       inst[i].chardata[code_length] = 0;
     }
-    j = 0;
   }
 
   if (PEGVM_DEBUG) {
@@ -209,14 +202,6 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
 
   context->bytecode_length = info.bytecode_length;
   context->pool_size = info.pool_size_info;
-
-  //    for (long i = 0; i < context->bytecode_length; i++) {
-  //        if((inst+i)->opcode < PEGVM_OP_ANDSTRING) {
-  //            (inst+i)->jump_inst = inst+(inst+i)->jump;
-  //        }
-  //    }
-
-  // free(buf);
   return inst;
 }
 
@@ -388,4 +373,3 @@ PegVMInstruction *nez_VM_Prepare(ParsingContext context, PegVMInstruction *inst)
   }
   return inst;
 }
-

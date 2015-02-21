@@ -8,17 +8,17 @@
 # define unlikely(x) (x)
 #endif
 
-#define PUSH_IP(context, PC) *cp++ = (PC)
-#define POP_IP(context) --cp
+#define PUSH_IP(PC) *cp++ = (PC)
+#define POP_IP() --cp
 #define SP_TOP(INST) (*sp)
 #define PUSH_SP(INST) (*sp++ = (INST))
 #define POP_SP(INST) (*--sp)
 #define PUSH_OSP(INST) (*osp++ = (INST))
 #define POP_OSP(INST) (*--osp)
 
-#define DISPATCH_NEXT goto *(++pc)->ptr;
-#define JUMP          goto *(pc = (pc)->jump)->ptr;
-#define RET           goto *(pc = *POP_IP(context))->ptr;
+#define DISPATCH_NEXT goto *(++pc)->ptr
+#define JUMP          goto *(pc = (pc)->jump)->ptr
+#define RET           goto *(pc = *POP_IP())->ptr
 
 #define OP(OP) PEGVM_OP_##OP:
 long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
@@ -38,16 +38,20 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   long Reg1 = 0;
   long Reg2 = 0;
   long Reg3 = 0;
-  PegVMInstruction *pc = inst + context->startPoint;
-  ParsingObject *osp = context->object_stack_pointer;
-  long *sp = context->stack_pointer;
-  PegVMInstruction **cp = context->call_stack_pointer;
+  PegVMInstruction *pc;
+  ParsingObject *osp;
+  PegVMInstruction **cp;
+  long *sp;
+  pc = inst + context->startPoint;
+  sp = context->stack_pointer;
+  osp = context->object_stack_pointer;
+  cp = context->call_stack_pointer;
 
   if (inst == NULL) {
     return (long)table;
   }
 
-  PUSH_IP(context, inst);
+  PUSH_IP(inst);
   P4D_setObject(context, &left, P4D_newObject(context, context->pos, pool));
 
   goto *(pc)->ptr;
@@ -62,7 +66,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
       JUMP;
   }
   OP(CALL) {
-    PUSH_IP(context, pc + 1);
+    PUSH_IP(pc + 1);
     JUMP;
   }
   OP(RET) {
@@ -72,13 +76,17 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     if (failflag == *pc->ndata) {
       JUMP;
     }
-    DISPATCH_NEXT;
+    else {
+      DISPATCH_NEXT;
+    }
   }
   OP(REPCOND) {
     if (pos != POP_SP()) {
       DISPATCH_NEXT;
     }
-    JUMP;
+    else {
+      JUMP;
+    }
   }
   OP(CHARRANGE) {
     char ch = inputs[pos];

@@ -57,7 +57,7 @@ int main(int argc, char *const argv[]) {
     nez_PrintErrorInfo("not input syntaxfile");
   }
   context = nez_CreateParsingContext(context, input_file);
-  inst = nez_LoadMachineCode(context, inst, syntax_file, "File");
+  inst = nez_LoadMachineCode(context, syntax_file, "File");
   nez_CreateMemoryPool(context->mpool,
                        context->pool_size * context->input_size / 100);
   inst = nez_VM_Prepare(context, inst);
