@@ -32,20 +32,21 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
 
   int failflag = 0;
   ParsingObject left = context->left;
-  long pos = context->pos;
-  const char *inputs = context->inputs;
+  // long pos = context->pos;
+  const char *cur = context->inputs + context->pos;
+  // const char *inputs = context->inputs;
 #define MPOOL context->mpool
   // MemoryPool pool = context->mpool;
 
-  long Reg1 = 0;
-  long Reg2 = 0;
-  long Reg3 = 0;
+  const char *Reg1 = 0;
+  const char *Reg2 = 0;
+  const char *Reg3 = 0;
   register PegVMInstruction *pc;
   ParsingObject *osp;
   PegVMInstruction **cp;
-  long *sp;
+  const char **sp;
   pc = inst + context->startPoint;
-  sp = context->stack_pointer;
+  sp = (const char **)context->stack_pointer;
   osp = context->object_stack_pointer;
   cp = context->call_stack_pointer;
 
@@ -54,14 +55,14 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
 
   PUSH_IP(inst);
-  P4D_setObject(context, &left, P4D_newObject(context, context->pos, MPOOL));
+  P4D_setObject(context, &left, P4D_newObject(context, cur, MPOOL));
 
   goto *GET_ADDR(pc);
 
   OP(EXIT) {
     P4D_commitLog(context, 0, left, MPOOL);
     context->left = left;
-    context->pos = pos;
+    context->pos = cur - context->inputs;
     return failflag;
   }
   OP(JUMP) {
@@ -106,7 +107,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(REPCOND) {
     PegVMInstruction *dst =((IREPCOND *)pc)->jump;
-    if (pos != POP_SP()) {
+    if (cur != POP_SP()) {
       DISPATCH_NEXT;
     }
     else {
@@ -114,21 +115,21 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     }
   }
   OP(CHARRANGE) {
-    char ch = inputs[pos++];
+    char ch = *cur++;
     ICHARRANGE *inst = (ICHARRANGE *)pc;
     if (inst->cdata.c1 <= ch && ch <= inst->cdata.c2) {
       DISPATCH_NEXT;
     } else {
-      pos--;
+      --cur;
       failflag = 1;
       JUMP(inst->jump);
     }
   }
   OP(CHARSET) {
     ICHARSET *inst = (ICHARSET *)pc;
-    unsigned c = inputs[pos];
+    unsigned c = *cur;
     if (inst->set->table[c / 8] & (1 << (c % 8))) {
-      pos++;
+      ++cur;
       DISPATCH_NEXT;
     }
     failflag = 1;
@@ -143,8 +144,8 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     char *p = &str->text[0];
     char *pend = &str->text[0] + str->len;
     while (p < pend) {
-      if (inputs[pos++] != *p++) {
-        --pos;
+      if (*cur++ != *p++) {
+        --cur;
         failflag = 1;
         JUMP(inst->jump);
       }
@@ -152,16 +153,16 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(ANY) {
-      IANY *inst = (IANY *)pc;
-    if (unlikely(inputs[pos++] == 0)) {
-      pos--;
+    IANY *inst = (IANY *)pc;
+    if (unlikely(*cur++ == 0)) {
+      --cur;
       failflag = 1;
       JUMP(inst->jump);
     }
     DISPATCH_NEXT;
   }
   OP(PUSHo) {
-    ParsingObject po = P4D_newObject(context, pos, MPOOL);
+    ParsingObject po = P4D_newObject(context, cur, MPOOL);
     *po = *left;
     po->refc = 1;
     PUSH_OSP(po);
@@ -171,39 +172,39 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     ParsingObject po = left;
     left->refc++;
     PUSH_OSP(po);
-    PUSH_SP(P4D_markLogStack(context));
+    PUSH_SP((const char *)(long)P4D_markLogStack(context)); // FIXME
     DISPATCH_NEXT;
   }
   OP(PUSHp1) {
-    PUSH_SP(pos);
+    PUSH_SP(cur);
     DISPATCH_NEXT;
   }
   OP(LOADp1) {
-    Reg1 = pos;
+    Reg1 = cur;
     DISPATCH_NEXT;
   }
   OP(LOADp2) {
-    Reg2 = pos;
+    Reg2 = cur;
     DISPATCH_NEXT;
   }
   OP(LOADp3) {
-    Reg3 = pos;
+    Reg3 = cur;
     DISPATCH_NEXT;
   }
   OP(STOREp) {
-    pos = POP_SP();
+    cur = POP_SP();
     DISPATCH_NEXT;
   }
   OP(STOREp1) {
-    pos = Reg1;
+    cur = Reg1;
     DISPATCH_NEXT;
   }
   OP(STOREp2) {
-    pos = Reg2;
+    cur = Reg2;
     DISPATCH_NEXT;
   }
   OP(STOREp3) {
-    pos = Reg3;
+    cur = Reg3;
     DISPATCH_NEXT;
   }
   OP(POPp) {
@@ -226,8 +227,8 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(NEW) {
-    PUSH_SP(P4D_markLogStack(context));
-    P4D_setObject(context, &left, P4D_newObject(context, pos, MPOOL));
+    PUSH_SP((char *)(long)P4D_markLogStack(context)); // FIXME
+    P4D_setObject(context, &left, P4D_newObject(context, cur, MPOOL));
     // PUSH_SP(P4D_markLogStack(context));
     DISPATCH_NEXT;
   }
@@ -235,7 +236,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     INEWJOIN *inst = (INEWJOIN *)pc;
     ParsingObject po = NULL;
     P4D_setObject(context, &po, left);
-    P4D_setObject(context, &left, P4D_newObject(context, pos, MPOOL));
+    P4D_setObject(context, &left, P4D_newObject(context, cur, MPOOL));
     // PUSH_SP(P4D_markLogStack(context));
     P4D_lazyJoin(context, po, MPOOL);
     P4D_lazyLink(context, left, inst->ndata, po, MPOOL);
@@ -262,7 +263,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     //DISPATCH_NEXT;
   }
   OP(SETendp) {
-    left->end_pos = pos;
+    left->end_pos = cur - context->inputs;
     DISPATCH_NEXT;
   }
   OP(TAG) {
@@ -277,22 +278,22 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(MAPPEDCHOICE) {
     IMAPPEDCHOICE *inst = (IMAPPEDCHOICE *)pc;
-    JUMP_REL(inst->ndata->table[(int)inputs[pos]]);
+    JUMP_REL(inst->ndata->table[(int)*cur]);
   }
   OP(MAPPEDCHOICE_16) {
     IMAPPEDCHOICE_16 *inst = (IMAPPEDCHOICE_16 *)pc;
-    JUMP_REL(inst->ndata->table[(int)inputs[pos]]);
+    JUMP_REL(inst->ndata->table[(int)*cur]);
   }
   OP(MAPPEDCHOICE_8) {
     IMAPPEDCHOICE_8 *inst = (IMAPPEDCHOICE_8 *)pc;
-    JUMP_REL(inst->ndata->table[(int)inputs[pos]]);
+    JUMP_REL(inst->ndata->table[(int)*cur]);
   }
 
   OP(SCAN) {
     ISCAN *inst = (ISCAN *)pc;
-    long start = POP_SP();
-    char *s = (char *)inputs + start;
-    char *e = (char *)&inputs[pos];
+    const char *start = POP_SP();
+    char *s = (char *)start;
+    char *e = (char *)cur;
     long num = strtol(s, &e, inst->cardinals);
     context->repeat_table[inst->offset] = (int)num;
     DISPATCH_NEXT;
@@ -306,37 +307,37 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(DEF) {
     IDEF *inst = (IDEF *)pc;
-    long start = POP_SP();
-    int len = pos - start;
+    const char *start = POP_SP();
+    int len = cur - start;
     char *value = malloc(len);
-    memcpy(value, inputs + start, len);
+    memcpy(value, start, len);
     pushSymbolTable(context, inst->ndata, len, value);
     DISPATCH_NEXT;
   }
   OP(IS) {
     IIS *inst = (IIS *)pc;
-    long offset = matchSymbolTableTop(context, pos, inst->ndata);
+    long offset = matchSymbolTableTop(context, cur, inst->ndata);
     failflag = offset >= 0;
     if (offset) {
-        pos += offset;
+        cur += offset;
     }
     DISPATCH_NEXT;
   }
   OP(ISA) {
     IISA *inst = (IISA *)pc;
-    long offset = matchSymbolTable(context, pos, inst->ndata);
+    long offset = matchSymbolTable(context, cur, inst->ndata);
     failflag = offset >= 0;
     if (offset) {
-        pos += offset;
+        cur += offset;
     }
     DISPATCH_NEXT;
   }
   OP(BLOCKSTART) {
     IBLOCKSTART *inst = (IBLOCKSTART *)pc;
     long len;
-    PUSH_SP(context->stateValue);
-    char *value = getIndentText(context, inputs, pos, &len);
-    PUSH_SP(pushSymbolTable(context, inst->ndata, (int)len, value));
+    PUSH_SP((const char *)(long)context->stateValue); // FIXME
+    char *value = getIndentText(context, cur, &len);
+    PUSH_SP((const char *)(long)pushSymbolTable(context, inst->ndata, (int)len, value)); // FIXME
     DISPATCH_NEXT;
   }
   OP(BLOCKEND) {
@@ -346,15 +347,15 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(INDENT) {
     IINDENT *inst = (IINDENT *)pc;
-    long offset = matchSymbolTableTop(context, pos, inst->ndata);
+    long offset = matchSymbolTableTop(context, cur, inst->ndata);
     if (offset >= 0) {
-        pos += offset;
+        cur += offset;
     }
     DISPATCH_NEXT;
   }
   OP(NOTBYTE) {
     INOTBYTE *inst = (INOTBYTE *)pc;
-    if (inputs[pos] != inst->cdata) {
+    if (*cur != inst->cdata) {
       DISPATCH_NEXT;
     }
     failflag = 1;
@@ -362,7 +363,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(NOTANY) {
     INOTANY *inst = (INOTANY *)pc;
-    if (inputs[pos] != 0) {
+    if (*cur != 0) {
       failflag = 1;
       JUMP(inst->jump);
     }
@@ -370,7 +371,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(NOTCHARSET) {
     INOTCHARSET *inst = (INOTCHARSET *)pc;
-    unsigned c = inputs[pos];
+    unsigned c = *cur;
     if (inst->set->table[c / 8] & (1 << (c % 8))) {
       failflag = 1;
       JUMP(inst->jump);
@@ -379,8 +380,8 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(NOTBYTERANGE) {
     INOTBYTERANGE *inst = (INOTBYTERANGE *)pc;
-    if (!(inputs[pos] >= inst->cdata.c1 &&
-          inputs[pos] <= inst->cdata.c2)) {
+    if (!(*cur >= inst->cdata.c1 &&
+          *cur <= inst->cdata.c2)) {
       DISPATCH_NEXT;
     }
     else {
@@ -393,38 +394,38 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     string_ptr_t str = inst->cdata;
     char *p = &str->text[0];
     char *pend = &str->text[0] + str->len;
-    long backtrack_pos = pos;
+    const char *backtrack_pos = cur;
     while (p < pend) {
-      if (inputs[pos] != *p++) {
-        pos = backtrack_pos;
+      if (*cur != *p++) {
+        cur = backtrack_pos;
         DISPATCH_NEXT;
       }
-      pos++;
+      ++cur;
     }
-    pos = backtrack_pos;
+    cur = backtrack_pos;
     failflag = 1;
     JUMP(inst->jump);
   }
   OP(OPTIONALBYTE) {
     IOPTIONALBYTE *inst = (IOPTIONALBYTE *)pc;
-    if (inputs[pos] == inst->cdata) {
-      pos++;
+    if (*cur == inst->cdata) {
+      ++cur;
     }
     DISPATCH_NEXT;
   }
   OP(OPTIONALCHARSET) {
     IOPTIONALCHARSET *inst = (IOPTIONALCHARSET *)pc;
-    unsigned c = inputs[pos];
+    unsigned c = *cur;
     if (inst->set->table[c / 8] & (1 << (c % 8))) {
-      pos++;
+      ++cur;
     }
     DISPATCH_NEXT;
   }
   OP(OPTIONALBYTERANGE) {
     IOPTIONALBYTERANGE *inst = (IOPTIONALBYTERANGE *)pc;
-    if (inputs[pos] >= inst->cdata.c1 &&
-        inputs[pos] <= inst->cdata.c2) {
-      pos++;
+    if (*cur >= inst->cdata.c1 &&
+        *cur <= inst->cdata.c2) {
+      ++cur;
     }
     DISPATCH_NEXT;
   }
@@ -433,24 +434,24 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     string_ptr_t str = inst->cdata;
     char *p = &str->text[0];
     char *pend = &str->text[0] + str->len;
-    long backtrack_pos = pos;
+    const char *backtrack_pos = cur;
     while (p < pend) {
-      if (inputs[pos] != *p++) {
-        pos = backtrack_pos;
+      if (*cur != *p++) {
+        cur = backtrack_pos;
         DISPATCH_NEXT;
       }
-      pos++;
+      ++cur;
     }
     DISPATCH_NEXT;
   }
   OP(ZEROMOREBYTERANGE) {
     IZEROMOREBYTERANGE *inst = (IZEROMOREBYTERANGE *)pc;
     while (1) {
-      if (!(inputs[pos] >= inst->cdata.c1 &&
-            inputs[pos] <= inst->cdata.c2)) {
+      if (!(*cur >= inst->cdata.c1 &&
+            *cur <= inst->cdata.c2)) {
         DISPATCH_NEXT;
       }
-      pos++;
+      ++cur;
     }
     DISPATCH_NEXT; // FIXME
   }
@@ -458,30 +459,28 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     IZEROMORECHARSET *inst = (IZEROMORECHARSET *)pc;
     unsigned c;
 L_head:;
-    c = inputs[pos];
+    c = *cur;
     if (inst->set->table[c / 8] & (1 << (c % 8))) {
-      pos++;
+      cur++;
       goto L_head;
     }
     DISPATCH_NEXT;
   }
   OP(ZEROMOREWS) {
-    while (1) {
-      char c = inputs[pos];
-      if (c == 32 || c == 9 || c == 10 || c == 13) {
-        pos++;
-      } else {
-        break;
-      }
+    char c;
+L_head2:
+    c = *cur;
+    if (c == 32 || c == 9 || c == 10 || c == 13) {
+      ++cur;
+      goto L_head2;
     }
     DISPATCH_NEXT;
   }
   OP(REPEATANY) {
     IREPEATANY *inst = (IREPEATANY *)pc;
-    long back = pos;
-    pos = pos + context->repeat_table[inst->ndata];
-    if (pos - 1 > (long)context->input_size) {
-      pos = back;
+    const char *end = context->inputs + context->input_size;
+    if (cur + context->repeat_table[inst->ndata] < end) {
+        cur += context->repeat_table[inst->ndata];
     }
     DISPATCH_NEXT;
   }

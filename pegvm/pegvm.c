@@ -266,7 +266,7 @@ ParsingContext nez_CreateParsingContext(const char *filename) {
   ctx->inputs = loadFile(filename, &ctx->input_size);
   ctx->stackedSymbolTable =
       (SymbolTableEntry)malloc(sizeof(struct SymbolTableEntry) * 256);
-  // P4D_setObject(ctx, &ctx->left, P4D_newObject(ctx, ctx->pos));
+  // P4D_setObject(ctx, &ctx->left, P4D_newObject(ctx, ctx->inputs + ctx->pos));
   ctx->stack_pointer_base =
       (long *)malloc(sizeof(long) * PARSING_CONTEXT_MAX_STACK_LENGTH);
   ctx->object_stack_pointer_base = (ParsingObject *)malloc(

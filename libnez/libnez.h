@@ -87,7 +87,7 @@ static inline ParsingLog MemoryPool_AllocParsingLog(MemoryPool mpool) {
   return &mpool->log_pool[mpool->lidx++];
 }
 
-ParsingObject P4D_newObject(ParsingContext ctx, long start, MemoryPool pool);
+ParsingObject P4D_newObject(ParsingContext ctx, const char *start, MemoryPool pool);
 void P4D_setObject(ParsingContext ctx, ParsingObject *var, ParsingObject o);
 void nez_DisposeObject(ParsingObject pego);
 
@@ -106,7 +106,6 @@ void P4D_abortLog(ParsingContext ctx, int mark);
 void P4D_lazyLink(ParsingContext ctx, ParsingObject parent, int index,
                   ParsingObject child, MemoryPool pool);
 void P4D_lazyJoin(ParsingContext ctx, ParsingObject left, MemoryPool pool);
-ParsingObject P4D_newObject(ParsingContext ctx, long start, MemoryPool pool);
 void P4D_unusedObject(ParsingContext ctx, ParsingObject o);
 void P4D_setObject(ParsingContext ctx, ParsingObject *var, ParsingObject o);
 
@@ -114,13 +113,11 @@ void nez_newSymbolTableEntry(SymbolTableEntry ste, int tableType, int len,
                              char **indent);
 int pushSymbolTable(ParsingContext ctx, int tableType, int len, char *s);
 void popSymbolTable(ParsingContext ctx, int stackTop);
-int match(ParsingContext ctx, long pos, char *utf8, int utf8_length);
-long matchSymbolTableTop(ParsingContext ctx, long pos, int tableType);
-long matchSymbolTable(ParsingContext ctx, long pos, int tableType);
+long matchSymbolTableTop(ParsingContext ctx, const char *cur, int tableType);
+long matchSymbolTable(ParsingContext ctx, const char *cur, int tableType);
 
-char *getIndentText(ParsingContext ctx, const char *inputs, long from,
-                    long *len);
-long getLineStartPosition(ParsingContext ctx, const char *inputs, long from);
+char *getIndentText(ParsingContext ctx, const char *cur, long *len);
+long getLineStartPosition(ParsingContext ctx, const char *cur);
 // static void P4D_consume(long *pos, long length)
 // {
 //     *pos += length;

@@ -76,7 +76,7 @@ void P4D_commitLog(ParsingContext ctx, int mark, ParsingObject newnode,
     }
     for (int i = 0; i < objectSize; i++) {
       if (newnode->child[i] == NULL) {
-        P4D_setObject(ctx, &newnode->child[i], P4D_newObject(ctx, 0, pool));
+        P4D_setObject(ctx, &newnode->child[i], P4D_newObject(ctx, ctx->inputs, pool));
       }
     }
   }
@@ -91,11 +91,11 @@ void P4D_abortLog(ParsingContext ctx, int mark) {
   }
 }
 
-ParsingObject P4D_newObject(ParsingContext ctx, long start, MemoryPool pool) {
+ParsingObject P4D_newObject(ParsingContext ctx, const char *start, MemoryPool pool) {
   ParsingObject o = MemoryPool_AllocParsingObject(pool);
   o->refc = 0;
-  o->start_pos = start;
-  o->end_pos = start;
+  o->start_pos = start - ctx->inputs;
+  o->end_pos = o->start_pos;
   o->tag = "#empty"; // default
   o->value = NULL;
   o->parent = NULL;
@@ -150,10 +150,10 @@ void popSymbolTable(ParsingContext ctx, int stackTop) {
   ctx->symbolTableSize = stackTop;
 }
 
-int match(ParsingContext ctx, long pos, char *utf8, int utf8_length) {
-  char *inputs = &ctx->inputs[pos];
-  char *p = utf8;
-  char *pend = utf8 + utf8_length;
+static int match(ParsingContext ctx, const char *cur, char *utf8, int utf8_length) {
+  const char *inputs = cur;
+  const char *p = (const char *)utf8;
+  const char *pend = p + utf8_length;
   while (p < pend) {
     if (*inputs++ != *p++) {
       return 0;
@@ -162,11 +162,11 @@ int match(ParsingContext ctx, long pos, char *utf8, int utf8_length) {
   return 1;
 }
 
-long matchSymbolTableTop(ParsingContext ctx, long pos, int tableType) {
+long matchSymbolTableTop(ParsingContext ctx, const char *cur, int tableType) {
   for (int i = ctx->symbolTableSize - 1; i >= 0; i--) {
     struct SymbolTableEntry s = ctx->stackedSymbolTable[i];
     if (s.tableType == tableType) {
-      if (match(ctx, pos, s.utf8, s.utf8_length)) {
+      if (match(ctx, cur, s.utf8, s.utf8_length)) {
         return s.utf8_length;
         return 0;
       }
@@ -176,11 +176,11 @@ long matchSymbolTableTop(ParsingContext ctx, long pos, int tableType) {
   return 1;
 }
 
-long matchSymbolTable(ParsingContext ctx, long pos, int tableType) {
+long matchSymbolTable(ParsingContext ctx, const char *cur, int tableType) {
   for (int i = ctx->symbolTableSize - 1; i >= 0; i--) {
     struct SymbolTableEntry s = ctx->stackedSymbolTable[i];
     if (s.tableType == tableType) {
-      if (match(ctx, pos, s.utf8, s.utf8_length)) {
+      if (match(ctx, cur, s.utf8, s.utf8_length)) {
         return s.utf8_length;
       }
     }
@@ -188,15 +188,34 @@ long matchSymbolTable(ParsingContext ctx, long pos, int tableType) {
   return 1;
 }
 
-char *getIndentText(ParsingContext ctx, const char *inputs, long from,
-                    long *len) {
-  long start = getLineStartPosition(ctx, inputs, from);
+long getLineStartPosition(ParsingContext ctx, const char *cur) {
+  long startIndex = cur - ctx->inputs;
+  if (!(startIndex < (long)ctx->input_size)) {
+    startIndex = ctx->input_size - 1;
+  }
+  if (startIndex < 0) {
+    startIndex = 0;
+  }
+  while (startIndex > 0) {
+    char ch = cur[startIndex];
+    if (ch == '\n') {
+      startIndex = startIndex + 1;
+      break;
+    }
+    startIndex = startIndex - 1;
+  }
+  return startIndex;
+}
+
+char *getIndentText(ParsingContext ctx, const char *cur, long *len) {
+  long from = cur - ctx->inputs;
+  long start = getLineStartPosition(ctx, cur);
   long i = start;
   int pos = 0;
   *len = from - start;
   char *indent = (char *)malloc(*len);
   for (; i < from; i++) {
-    char ch = inputs[i];
+    char ch = cur[i];
     if (ch != ' ' && ch != '\t') {
       if (i + 1 != from) {
         for (long j = i; j < from; j++) {
@@ -205,27 +224,8 @@ char *getIndentText(ParsingContext ctx, const char *inputs, long from,
         break;
       }
     } else {
-      indent[pos++] = inputs[i];
+      indent[pos++] = cur[i];
     }
   }
   return indent;
-}
-
-long getLineStartPosition(ParsingContext ctx, const char *inputs, long from) {
-  long startIndex = from;
-  if (!(startIndex < (long)ctx->input_size)) {
-    startIndex = ctx->input_size - 1;
-  }
-  if (startIndex < 0) {
-    startIndex = 0;
-  }
-  while (startIndex > 0) {
-    char ch = inputs[startIndex];
-    if (ch == '\n') {
-      startIndex = startIndex + 1;
-      break;
-    }
-    startIndex = startIndex - 1;
-  }
-  return startIndex;
 }
