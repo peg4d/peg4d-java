@@ -101,7 +101,7 @@ static void dump_PegVMInstructions(PegVMInstruction *inst, uint64_t size) {
 static void dump_byteCodeInfo(byteCodeInfo *info) {
   fprintf(stderr, "ByteCodeVersion:%u.%u\n", info->version0, info->version1);
   fprintf(stderr, "PEGFile:%s\n", info->filename);
-  fprintf(stderr, "LengthOfByteCode:%llu\n", info->bytecode_length);
+  fprintf(stderr, "LengthOfByteCode:%zd\n", (size_t)info->bytecode_length);
   fprintf(stderr, "\n");
 }
 

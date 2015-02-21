@@ -39,7 +39,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   long Reg1 = 0;
   long Reg2 = 0;
   long Reg3 = 0;
-  PegVMInstruction *pc;
+  register PegVMInstruction *pc;
   ParsingObject *osp;
   PegVMInstruction **cp;
   long *sp;
@@ -118,10 +118,9 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     if (inst->cdata.c1 <= ch && ch <= inst->cdata.c2) {
       DISPATCH_NEXT;
     } else {
-      long dst = inst->jump;
       pos--;
       failflag = 1;
-      JUMP(dst);
+      JUMP(inst->jump);
     }
   }
   OP(CHARSET) {
