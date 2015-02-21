@@ -9,6 +9,17 @@
 void dump_json_file(FILE *file, ParsingObject *pego, char *source, int level);
 void dump_pego_file(FILE *file, ParsingObject *pego, char *source, int level);
 
+static void nez_ShowUsage(const char *file) {
+  // fprintf(stderr, "Usage: %s -f peg_bytecode target_file\n", file);
+  fprintf(stderr, "\npegvm <command> optional files\n");
+  fprintf(stderr, "  -p <filename> Specify an PEGs grammar bytecode file\n");
+  fprintf(stderr, "  -i <filename> Specify an input file\n");
+  fprintf(stderr, "  -o <filename> Specify an output file\n");
+  fprintf(stderr, "  -t <type>     Specify an output type\n");
+  fprintf(stderr, "  -h            Display this help and exit\n\n");
+  exit(EXIT_FAILURE);
+}
+
 int main(int argc, char *const argv[]) {
   ParsingContext context = NULL;
   struct Instruction *inst = NULL;

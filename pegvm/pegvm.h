@@ -120,7 +120,6 @@ enum pegvm_c99_rule {
 };
 
 uint64_t timer();
-void nez_ShowUsage(const char *file);
 void nez_PrintErrorInfo(const char *errmsg);
 void dump_pego(ParsingObject *pego, char *source, int level);
 PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
@@ -132,7 +131,6 @@ int ParserContext_Execute(ParsingContext context, PegVMInstruction *inst);
 extern ParsingObject nez_Parse(ParsingContext context, Instruction *inst);
 extern void nez_ParseStat(ParsingContext context, Instruction *inst);
 extern void nez_Match(ParsingContext context, Instruction *inst);
-extern long nez_VM_Execute(ParsingContext context, Instruction *inst);
 extern Instruction *nez_VM_Prepare(ParsingContext context, Instruction *inst);
 extern void nez_VM_PrintProfile(const char *file_type);
 #endif
