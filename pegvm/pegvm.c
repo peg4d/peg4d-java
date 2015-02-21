@@ -25,6 +25,7 @@ static char *loadFile(const char *filename, size_t *length) {
   FILE *fp = fopen(filename, "rb");
   char *source;
   if (!fp) {
+    nez_PrintErrorInfo("fopen error: cannot open file");
     return NULL;
   }
   fseek(fp, 0, SEEK_END);
@@ -32,8 +33,7 @@ static char *loadFile(const char *filename, size_t *length) {
   fseek(fp, 0, SEEK_SET);
   source = (char *)malloc(len + 1);
   if (len != fread(source, 1, len, fp)) {
-    fprintf(stderr, "fread error\n");
-    exit(EXIT_FAILURE);
+    nez_PrintErrorInfo("fread error: cannot read file collectly");
   }
   source[len] = '\0';
   fclose(fp);
