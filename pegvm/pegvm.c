@@ -113,6 +113,7 @@ static uint64_t read64(char *inputs, byteCodeInfo *info) {
 
 static PegVMInstruction *nez_VM_Prepare(ParsingContext, PegVMInstruction *);
 
+#define PEGVM_COUNT_BYTECODE_MALLOCED_SIZE 1
 #if defined(PEGVM_COUNT_BYTECODE_MALLOCED_SIZE)
 static size_t bytecode_malloced_size = 0;
 #endif
@@ -223,9 +224,9 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
   context->pool_size = info.pool_size_info;
   inst = nez_VM_Prepare(context, inst);
 #if defined(PEGVM_COUNT_BYTECODE_MALLOCED_SIZE)
-  fprintf(stderr, "malloced_size=%fKB, %fKB\n",
-          (sizeof(*inst) * info.bytecode_length)/1024.0,
-          bytecode_malloced_size/1024.0);
+  fprintf(stderr, "malloced_size=%zdKB, %zdKB\n",
+          (sizeof(*inst) * info.bytecode_length)/1024,
+          bytecode_malloced_size/1024);
 #endif
   return inst;
 }

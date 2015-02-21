@@ -33,7 +33,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   long pos = context->pos;
   const char *inputs = context->inputs;
 #define MPOOL context->mpool
-  MemoryPool pool = context->mpool;
+  // MemoryPool pool = context->mpool;
 
   long Reg1 = 0;
   long Reg2 = 0;
@@ -52,12 +52,12 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
 
   PUSH_IP(inst);
-  P4D_setObject(context, &left, P4D_newObject(context, context->pos, pool));
+  P4D_setObject(context, &left, P4D_newObject(context, context->pos, MPOOL));
 
   goto *(pc)->ptr;
 
   OP(EXIT) {
-    P4D_commitLog(context, 0, left, pool);
+    P4D_commitLog(context, 0, left, MPOOL);
     context->left = left;
     context->pos = pos;
     return failflag;
@@ -125,7 +125,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(ANY) {
-    if (inputs[pos++] == 0) {
+    if (unlikely(inputs[pos++] == 0)) {
       pos--;
       failflag = 1;
       JUMP;
@@ -133,7 +133,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(PUSHo) {
-    ParsingObject po = P4D_newObject(context, pos, pool);
+    ParsingObject po = P4D_newObject(context, pos, MPOOL);
     *po = *left;
     po->refc = 1;
     PUSH_OSP(po);
@@ -198,23 +198,23 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(NEW) {
     PUSH_SP(P4D_markLogStack(context));
-    P4D_setObject(context, &left, P4D_newObject(context, pos, pool));
+    P4D_setObject(context, &left, P4D_newObject(context, pos, MPOOL));
     // PUSH_SP(P4D_markLogStack(context));
     DISPATCH_NEXT;
   }
   OP(NEWJOIN) {
     ParsingObject po = NULL;
     P4D_setObject(context, &po, left);
-    P4D_setObject(context, &left, P4D_newObject(context, pos, pool));
+    P4D_setObject(context, &left, P4D_newObject(context, pos, MPOOL));
     // PUSH_SP(P4D_markLogStack(context));
-    P4D_lazyJoin(context, po, pool);
-    P4D_lazyLink(context, left, *(pc)->ndata, po, pool);
+    P4D_lazyJoin(context, po, MPOOL);
+    P4D_lazyLink(context, left, *(pc)->ndata, po, MPOOL);
     DISPATCH_NEXT;
   }
   OP(COMMIT) {
-    P4D_commitLog(context, (int)POP_SP(), left, pool);
+    P4D_commitLog(context, (int)POP_SP(), left, MPOOL);
     ParsingObject parent = (ParsingObject)POP_OSP();
-    P4D_lazyLink(context, parent, *(pc)->ndata, left, pool);
+    P4D_lazyLink(context, parent, *(pc)->ndata, left, MPOOL);
     P4D_setObject(context, &left, parent);
     DISPATCH_NEXT;
   }
@@ -224,7 +224,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(LINK) {
     ParsingObject parent = (ParsingObject)POP_OSP();
-    P4D_lazyLink(context, parent, *(pc)->ndata, left, pool);
+    P4D_lazyLink(context, parent, *(pc)->ndata, left, MPOOL);
     // P4D_setObject(context, &left, parent);
     PUSH_OSP(parent);
     DISPATCH_NEXT;
