@@ -55,7 +55,7 @@ static const char *get_opname(uint8_t opcode) {
   return "";
 }
 
-static void dump_PegVMInstructions(Instruction *inst, uint64_t size) {
+static void dump_PegVMInstructions(PegVMInstruction *inst, uint64_t size) {
   uint64_t i;
   int j;
   for (i = 0; i < size; i++) {
@@ -220,7 +220,7 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
   return inst;
 }
 
-void nez_DisposeInstruction(Instruction *inst, long length) {
+void nez_DisposeInstruction(PegVMInstruction *inst, long length) {
   for (long i = 0; i < length; i++) {
     if (inst[i].ndata != NULL) {
       free(inst[i].ndata);
@@ -249,8 +249,8 @@ ParsingContext nez_CreateParsingContext(ParsingContext ctx,
       (long *)malloc(sizeof(long) * PARSING_CONTEXT_MAX_STACK_LENGTH);
   ctx->object_stack_pointer_base = (ParsingObject *)malloc(
       sizeof(ParsingObject) * PARSING_CONTEXT_MAX_STACK_LENGTH);
-  ctx->call_stack_pointer_base = (Instruction **)malloc(
-      sizeof(Instruction *) * PARSING_CONTEXT_MAX_STACK_LENGTH);
+  ctx->call_stack_pointer_base = (PegVMInstruction **)malloc(
+      sizeof(PegVMInstruction *) * PARSING_CONTEXT_MAX_STACK_LENGTH);
   ctx->stack_pointer = &ctx->stack_pointer_base[0];
   ctx->object_stack_pointer = &ctx->object_stack_pointer_base[0];
   ctx->call_stack_pointer = &ctx->call_stack_pointer_base[0];
@@ -343,7 +343,7 @@ void nez_VM_PrintProfile(const char *file_type) {
 
 #include "pegvm_core.c"
 
-ParsingObject nez_Parse(ParsingContext context, Instruction *inst) {
+ParsingObject nez_Parse(ParsingContext context, PegVMInstruction *inst) {
   if (nez_VM_Execute(context, inst)) {
     nez_PrintErrorInfo("parse error");
   }
@@ -351,7 +351,7 @@ ParsingObject nez_Parse(ParsingContext context, Instruction *inst) {
   return context->left;
 }
 
-void nez_ParseStat(ParsingContext context, Instruction *inst) {
+void nez_ParseStat(ParsingContext context, PegVMInstruction *inst) {
   for (int i = 0; i < 5; i++) {
     uint64_t start, end;
     MemoryPool_Reset(context->mpool);
@@ -366,7 +366,7 @@ void nez_ParseStat(ParsingContext context, Instruction *inst) {
   }
 }
 
-void nez_Match(ParsingContext context, Instruction *inst) {
+void nez_Match(ParsingContext context, PegVMInstruction *inst) {
   uint64_t start, end;
   start = timer();
   if (nez_VM_Execute(context, inst)) {
@@ -378,10 +378,10 @@ void nez_Match(ParsingContext context, Instruction *inst) {
   nez_DisposeObject(&context->left);
 }
 
-Instruction *nez_VM_Prepare(ParsingContext context, Instruction *inst) {
+PegVMInstruction *nez_VM_Prepare(ParsingContext context, PegVMInstruction *inst) {
   long i;
   const void **table = (const void **)nez_VM_Execute(context, NULL);
-  Instruction *ip = inst;
+  PegVMInstruction *ip = inst;
   for (i = 0; i < context->bytecode_length; i++) {
     ip->ptr = table[ip->opcode];
     ++ip;

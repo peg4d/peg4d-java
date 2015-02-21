@@ -59,10 +59,10 @@ struct ParsingContext {
 
   long *stack_pointer;
   struct ParsingObject **object_stack_pointer;
-  struct Instruction **call_stack_pointer;
+  struct PegVMInstruction **call_stack_pointer;
   long *stack_pointer_base;
   struct ParsingObject **object_stack_pointer_base;
-  struct Instruction **call_stack_pointer_base;
+  struct PegVMInstruction **call_stack_pointer_base;
   int repeat_table[256];
 };
 

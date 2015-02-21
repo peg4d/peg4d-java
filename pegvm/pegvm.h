@@ -17,17 +17,17 @@ typedef struct byteCodeInfo {
   uint64_t bytecode_length;
 } byteCodeInfo;
 
-typedef struct Instruction {
+typedef struct PegVMInstruction {
   union {
     long opcode;
     const void *ptr;
   };
   //  union {
+  struct PegVMInstruction *jump;
   int *ndata;
   char *chardata;
-  struct Instruction *jump;
   //  };
-} PegVMInstruction, Instruction;
+} PegVMInstruction;
 
 #define PEGVM_OP_EACH(OP)                                                      \
   OP(EXIT) OP(JUMP) OP(CALL) OP(RET) OP(CONDBRANCH) OP(REPCOND) OP(CHARRANGE)  \
@@ -126,11 +126,11 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
                                       PegVMInstruction *inst,
                                       const char *fileName,
                                       const char *nonTerminalName);
-void nez_DisposeInstruction(Instruction *inst, long length);
+void nez_DisposeInstruction(PegVMInstruction *inst, long length);
 int ParserContext_Execute(ParsingContext context, PegVMInstruction *inst);
-extern ParsingObject nez_Parse(ParsingContext context, Instruction *inst);
-extern void nez_ParseStat(ParsingContext context, Instruction *inst);
-extern void nez_Match(ParsingContext context, Instruction *inst);
-extern Instruction *nez_VM_Prepare(ParsingContext context, Instruction *inst);
+extern ParsingObject nez_Parse(ParsingContext context, PegVMInstruction *inst);
+extern void nez_ParseStat(ParsingContext context, PegVMInstruction *inst);
+extern void nez_Match(ParsingContext context, PegVMInstruction *inst);
+extern PegVMInstruction *nez_VM_Prepare(ParsingContext context, PegVMInstruction *inst);
 extern void nez_VM_PrintProfile(const char *file_type);
 #endif

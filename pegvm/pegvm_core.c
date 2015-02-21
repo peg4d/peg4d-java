@@ -1,5 +1,13 @@
 /* pegvm.c */
 
+#if __GNUC__ >= 3
+# define likely(x) __builtin_expect(!!(x), 1)
+# define unlikely(x) __builtin_expect(!!(x), 0)
+#else
+# define likely(x) (x)
+# define unlikely(x) (x)
+#endif
+
 #define PUSH_IP(context, PC) *cp++ = (PC)
 #define POP_IP(context) --cp
 #define SP_TOP(INST) (*sp)
@@ -13,7 +21,7 @@
 #define RET           goto *(pc = *POP_IP(context))->ptr;
 
 #define OP(OP) PEGVM_OP_##OP:
-long nez_VM_Execute(ParsingContext context, Instruction *inst) {
+long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   static const void *table[] = {
 #define DEFINE_TABLE(NAME) &&PEGVM_OP_##NAME,
     PEGVM_OP_EACH(DEFINE_TABLE)
@@ -23,16 +31,17 @@ long nez_VM_Execute(ParsingContext context, Instruction *inst) {
   int failflag = 0;
   ParsingObject left = context->left;
   long pos = context->pos;
-  Instruction *pc = inst + context->startPoint;
   const char *inputs = context->inputs;
+#define MPOOL context->mpool
   MemoryPool pool = context->mpool;
 
   long Reg1 = 0;
   long Reg2 = 0;
   long Reg3 = 0;
+  PegVMInstruction *pc = inst + context->startPoint;
   ParsingObject *osp = context->object_stack_pointer;
   long *sp = context->stack_pointer;
-  Instruction **cp = context->call_stack_pointer;
+  PegVMInstruction **cp = context->call_stack_pointer;
 
   if (inst == NULL) {
     return (long)table;
@@ -54,9 +63,6 @@ long nez_VM_Execute(ParsingContext context, Instruction *inst) {
   }
   OP(CALL) {
     PUSH_IP(context, pc + 1);
-#if PEGVM_PROFILE
-    rule_count[pc->ndata[0]]++;
-#endif
     JUMP;
   }
   OP(RET) {
