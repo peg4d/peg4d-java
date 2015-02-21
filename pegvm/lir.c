@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <limits.h>
 
 typedef struct ByteCodeLoader {
   char *input;
@@ -70,7 +71,7 @@ static uint16_t Loader_Read16(ByteCodeLoader *loader) {
 
 static string_ptr_t Loader_ReadString(ByteCodeLoader *loader) {
   uint32_t len = Loader_Read16(loader);
-  string_ptr_t str = (string_ptr_t)malloc(sizeof(*str) - 1 + len);
+  string_ptr_t str = (string_ptr_t)__malloc(sizeof(*str) - 1 + len);
   str->len = len;
   for (uint32_t i = 0; i < len; i++) {
     str->text[i] = Loader_Read32(loader);
@@ -80,7 +81,7 @@ static string_ptr_t Loader_ReadString(ByteCodeLoader *loader) {
 
 static string_ptr_t Loader_ReadName(ByteCodeLoader *loader) {
   uint32_t len = Loader_Read16(loader);
-  string_ptr_t str = (string_ptr_t)malloc(sizeof(*str) - 1 + len);
+  string_ptr_t str = (string_ptr_t)__malloc(sizeof(*str) - 1 + len);
   str->len = len;
   for (uint32_t i = 0; i < len; i++) {
     str->text[i] = loader->input[loader->info->pos++];
@@ -210,7 +211,7 @@ static void Emit_CHARSET(PegVMInstruction *inst, ByteCodeLoader *loader) {
   int len = Loader_Read16(loader);
   ICHARSET *ir = (ICHARSET *)inst;
   ir->base.opcode = OPCODE_ICHARSET;
-  ir->set = (bit_table_t)malloc(sizeof(struct bit_table_t));
+  ir->set = (bit_table_t)__malloc(sizeof(struct bit_table_t));
   for (int i = 0; i < len; i++) {
     char c = Loader_Read32(loader);
     ir->set->table[c / 8] |= 1 << (c % 8);
@@ -502,26 +503,17 @@ typedef struct IMAPPEDCHOICE {
   int_table_t ndata;
 } IMAPPEDCHOICE;
 
-static void Emit_MAPPEDCHOICE(PegVMInstruction *inst, ByteCodeLoader *loader) {
-  IMAPPEDCHOICE *ir = (IMAPPEDCHOICE *)inst;
-  ir->base.opcode = OPCODE_IMAPPEDCHOICE;
-  ir->ndata = (int_table_t)malloc(sizeof(struct int_table_t));
-  for (int i = 0; i < 256; i++) {
-    ir->ndata->table[i] = Loader_Read32(loader);
-  }
-}
 #define OPCODE_IMAPPEDCHOICE_8 38
 typedef struct IMAPPEDCHOICE_8 {
   PegVMInstructionBase base;
   char_table_t ndata;
 } IMAPPEDCHOICE_8;
 
-// static void Emit_MAPPEDCHOICE_8(PegVMInstruction *inst, ByteCodeLoader
-// *loader)
+// static void Emit_MAPPEDCHOICE_8(PegVMInstruction *inst, ByteCodeLoader*loader)
 // {
 //   IMAPPEDCHOICE_8 *ir = (IMAPPEDCHOICE_8 *) inst;
 //   ir->base.opcode = OPCODE_IMAPPEDCHOICE_8;
-//   ir->ndata =  (char_table_t) malloc(sizeof(struct char_table_t));
+//   ir->ndata =  (char_table_t) __malloc(sizeof(struct char_table_t));
 //   for (int i = 0; i < 256; i++) {
 //       ir->ndata->table[i] = (char)Loader_Read32(loader);
 //   }
@@ -532,16 +524,51 @@ typedef struct IMAPPEDCHOICE_16 {
   short_table_t ndata;
 } IMAPPEDCHOICE_16;
 
-// static void Emit_MAPPEDCHOICE_16(PegVMInstruction *inst, ByteCodeLoader
-// *loader)
+// static void Emit_MAPPEDCHOICE_16(PegVMInstruction *inst, ByteCodeLoader*loader)
 // {
 //   IMAPPEDCHOICE_16 *ir = (IMAPPEDCHOICE_16 *) inst;
 //   ir->base.opcode = OPCODE_IMAPPEDCHOICE_16;
-//   ir->ndata =  (short_table_t) malloc(sizeof(struct short_table_t));
+//   ir->ndata =  (short_table_t) __malloc(sizeof(struct short_table_t));
 //   for (int i = 0; i < 256; i++) {
 //       ir->ndata->table[i] = (short)Loader_Read32(loader);
 //   }
 // }
+
+#define MAX(a, b) ((a) < (b) ? (b) : (a))
+static void Emit_MAPPEDCHOICE(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  struct int_table_t table = {};
+  int max_offset = 0;
+  IMAPPEDCHOICE *ir = (IMAPPEDCHOICE *)inst;
+  ir->base.opcode = OPCODE_IMAPPEDCHOICE;
+  for (int i = 0; i < 256; i++) {
+    int offset = Loader_Read32(loader);
+    max_offset = MAX(max_offset, offset);
+    table.table[i] = offset;
+  }
+  if (max_offset < CHAR_MAX) {
+    IMAPPEDCHOICE_8 *ir2 = (IMAPPEDCHOICE_8 *) ir;
+    ir2->base.opcode = OPCODE_IMAPPEDCHOICE_8;
+    ir2->ndata = (char_table_t) __malloc(sizeof(struct char_table_t));
+    for (int i = 0; i < 256; i++) {
+      ir2->ndata->table[i] = (char)table.table[i];
+    }
+    return;
+  }
+  if (max_offset < SHRT_MAX) {
+    IMAPPEDCHOICE_16 *ir2 = (IMAPPEDCHOICE_16 *) ir;
+    ir2->base.opcode = OPCODE_IMAPPEDCHOICE_16;
+    ir2->ndata =  (short_table_t) __malloc(sizeof(struct short_table_t));
+    for (int i = 0; i < 256; i++) {
+      ir2->ndata->table[i] = (short)table.table[i];
+    }
+    return;
+  }
+  ir->ndata = (int_table_t)__malloc(sizeof(struct int_table_t));
+  for (int i = 0; i < 256; i++) {
+      ir->ndata->table[i] = table.table[i];
+  }
+}
+
 #define OPCODE_ISCAN 40
 typedef struct ISCAN {
   PegVMInstructionBase base;
@@ -667,7 +694,7 @@ static void Emit_NOTCHARSET(PegVMInstruction *inst, ByteCodeLoader *loader) {
   int len = Loader_Read16(loader);
   INOTCHARSET *ir = (INOTCHARSET *)inst;
   ir->base.opcode = OPCODE_INOTCHARSET;
-  ir->set = (bit_table_t)malloc(sizeof(struct bit_table_t));
+  ir->set = (bit_table_t)__malloc(sizeof(struct bit_table_t));
   for (int i = 0; i < len; i++) {
     char c = Loader_Read32(loader);
     ir->set->table[c / 8] |= 1 << (c % 8);
@@ -723,7 +750,7 @@ static void Emit_OPTIONALCHARSET(PegVMInstruction *inst,
   int len = Loader_Read16(loader);
   IOPTIONALCHARSET *ir = (IOPTIONALCHARSET *)inst;
   ir->base.opcode = OPCODE_IOPTIONALCHARSET;
-  ir->set = (bit_table_t)malloc(sizeof(struct bit_table_t));
+  ir->set = (bit_table_t)__malloc(sizeof(struct bit_table_t));
   for (int i = 0; i < len; i++) {
     char c = Loader_Read32(loader);
     ir->set->table[c / 8] |= 1 << (c % 8);
@@ -778,7 +805,7 @@ static void Emit_ZEROMORECHARSET(PegVMInstruction *inst,
   int len = Loader_Read16(loader);
   IZEROMORECHARSET *ir = (IZEROMORECHARSET *)inst;
   ir->base.opcode = OPCODE_IZEROMORECHARSET;
-  ir->set = (bit_table_t)malloc(sizeof(struct bit_table_t));
+  ir->set = (bit_table_t)__malloc(sizeof(struct bit_table_t));
   for (int i = 0; i < len; i++) {
     char c = Loader_Read32(loader);
     ir->set->table[c / 8] |= 1 << (c % 8);

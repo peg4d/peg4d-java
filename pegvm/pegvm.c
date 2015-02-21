@@ -13,6 +13,17 @@
 #include "config.h"
 #endif
 
+#define PEGVM_COUNT_BYTECODE_MALLOCED_SIZE 1
+#if defined(PEGVM_COUNT_BYTECODE_MALLOCED_SIZE)
+static size_t bytecode_malloced_size = 0;
+#endif
+static void *__malloc(size_t size) {
+#if defined(PEGVM_COUNT_BYTECODE_MALLOCED_SIZE)
+  bytecode_malloced_size += size;
+#endif
+  return malloc(size);
+}
+
 #include "lir.c"
 
 static uint64_t timer() {
@@ -96,17 +107,6 @@ static void dump_byteCodeInfo(byteCodeInfo *info) {
 
 static PegVMInstruction *nez_VM_Prepare(ParsingContext, PegVMInstruction *);
 
-#define PEGVM_COUNT_BYTECODE_MALLOCED_SIZE 1
-#if defined(PEGVM_COUNT_BYTECODE_MALLOCED_SIZE)
-static size_t bytecode_malloced_size = 0;
-#endif
-static void *__malloc(size_t size) {
-#if defined(PEGVM_COUNT_BYTECODE_MALLOCED_SIZE)
-  bytecode_malloced_size += size;
-#endif
-  return malloc(size);
-}
-
 typedef void (*convert_to_lir_func_t)(PegVMInstruction *, ByteCodeLoader *);
 static convert_to_lir_func_t f_convert[] = {
 #define DEFINE_CONVERT_FUNC(OP) Emit_##OP,
@@ -117,7 +117,7 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
                                       const char *fileName,
                                       const char *nonTerminalName) {
   PegVMInstruction *inst = NULL;
-  PegVMInstruction *tmp = NULL;
+  PegVMInstruction *head = NULL;
   size_t len;
   char *buf = loadFile(fileName, &len);
   byteCodeInfo info;
@@ -165,58 +165,18 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
   }
   free(ruleTable);
 
-  inst = __malloc(sizeof(*inst) * info.bytecode_length);
+  head = inst = __malloc(sizeof(*inst) * info.bytecode_length);
   memset(inst, 0, sizeof(*inst) * info.bytecode_length);
 
   ByteCodeLoader loader;
   loader.input = buf;
   loader.info = &info;
 
-  tmp = inst;
-
   for (uint64_t i = 0; i < info.bytecode_length; i++) {
     int opcode = buf[info.pos++];
     f_convert[opcode](inst, &loader);
-    //    fprintf(stderr, "[%llu]", i);
-    //    fprintf(stderr, " %s ", get_opname(opcode));
-    //    fprintf(stderr, "\n");
     inst++;
-    // int code_length;
-    // code_length = read16(buf, &info);
-    // if (code_length == 0) {
-    // }
-    // else if (code_length == 1) {
-    //     inst[i].ndata = __malloc(sizeof(int));
-    //     inst[i].ndata[0] = read32(buf, &info);
-    // } else if (inst[i].opcode == PEGVM_OP_MAPPEDCHOICE) {
-    //     inst[i].ndata = __malloc(sizeof(int) * code_length);
-    //     for (int j = 0; j < code_length; j++) {
-    //         inst[i].ndata[j] = read32(buf, &info);
-    //     }
-    // } else if (inst[i].opcode == PEGVM_OP_SCAN) {
-    //     inst[i].ndata = __malloc(sizeof(int) * 2);
-    //     inst[i].ndata[0] = read32(buf, &info);
-    //     inst[i].ndata[1] = read32(buf, &info);
-    // } else {
-    //     inst[i].ndata = __malloc(sizeof(int));
-    //     inst[i].ndata[0] = code_length;
-    //     inst[i].chardata = __malloc(sizeof(int) * code_length);
-    //     for (int j = 0; j < code_length; j++) {
-    //         inst[i].chardata[j] = read32(buf, &info);
-    //     }
-    // }
-    // inst[i].jump = inst + read32(buf, &info);
-    // code_length = buf[info.pos++];
-    // if (code_length != 0) {
-    //   inst[i].chardata = __malloc(sizeof(char) * code_length + 1);
-    //   for (int j = 0; j < code_length; j++) {
-    //     inst[i].chardata[j] = buf[info.pos++];
-    //   }
-    //   inst[i].chardata[code_length] = 0;
-    // }
   }
-
-  inst = tmp;
 
   if (PEGVM_DEBUG) {
     dump_PegVMInstructions(inst, info.bytecode_length);
@@ -224,13 +184,13 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
 
   context->bytecode_length = info.bytecode_length;
   context->pool_size = info.pool_size_info;
-  inst = nez_VM_Prepare(context, inst);
 #if defined(PEGVM_COUNT_BYTECODE_MALLOCED_SIZE)
   fprintf(stderr, "malloced_size=%zdKB, %zdKB\n",
           (sizeof(*inst) * info.bytecode_length) / 1024,
           bytecode_malloced_size / 1024);
 #endif
-  return inst;
+  free(buf);
+  return nez_VM_Prepare(context, head);
 }
 
 void nez_DisposeInstruction(PegVMInstruction *inst, long length) {
