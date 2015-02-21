@@ -220,9 +220,8 @@ void nez_DisposeInstruction(PegVMInstruction *inst, long length) {
   inst = NULL;
 }
 
-ParsingContext nez_CreateParsingContext(ParsingContext ctx,
-                                        const char *filename) {
-  ctx = (ParsingContext)malloc(sizeof(struct ParsingContext));
+ParsingContext nez_CreateParsingContext(const char *filename) {
+  ParsingContext ctx = (ParsingContext)malloc(sizeof(struct ParsingContext));
   ctx->pos = ctx->input_size = 0;
   ctx->startPoint = 0;
   ctx->mpool = (MemoryPool)malloc(sizeof(struct MemoryPool));
@@ -242,17 +241,17 @@ ParsingContext nez_CreateParsingContext(ParsingContext ctx,
   return ctx;
 }
 
-void nez_DisposeObject(ParsingObject *pego) {
-  if (pego[0] != NULL) {
-    if (pego[0]->child_size != 0) {
-      for (int i = 0; i < pego[0]->child_size; i++) {
-        nez_DisposeObject(&pego[0]->child[i]);
+void nez_DisposeObject(ParsingObject pego) {
+  if (pego != NULL) {
+    int i, child_size = pego->child_size;
+    ParsingObject *child = pego->child;
+    pego->child = NULL;
+    if (child_size != 0) {
+      for (i = 0; i < child_size; i++) {
+        nez_DisposeObject(child[i]);
       }
-      free(pego[0]->child);
-      pego[0]->child = NULL;
+      free(child);
     }
-    // free(pego[0]);
-    // pego[0] = NULL;
   }
 }
 
@@ -270,7 +269,6 @@ void nez_DisposeParsingContext(ParsingContext ctx) {
   free(ctx->object_stack_pointer_base);
   ctx->object_stack_pointer_base = NULL;
   free(ctx);
-  ctx = NULL;
   // dispose_pego(&ctx->unusedObject);
 }
 
@@ -346,7 +344,7 @@ void nez_ParseStat(ParsingContext context, PegVMInstruction *inst) {
     }
     end = timer();
     fprintf(stderr, "ErapsedTime: %llu msec\n", end - start);
-    nez_DisposeObject(&context->left);
+    nez_DisposeObject(context->left);
     context->pos = 0;
   }
 }
@@ -360,7 +358,7 @@ void nez_Match(ParsingContext context, PegVMInstruction *inst) {
   end = timer();
   fprintf(stderr, "ErapsedTime: %llu msec\n", end - start);
   fprintf(stdout, "match\n\n");
-  nez_DisposeObject(&context->left);
+  nez_DisposeObject(context->left);
 }
 
 PegVMInstruction *nez_VM_Prepare(ParsingContext context, PegVMInstruction *inst) {

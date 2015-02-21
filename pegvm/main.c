@@ -57,13 +57,13 @@ int main(int argc, char *const argv[]) {
   if (syntax_file == NULL) {
     nez_PrintErrorInfo("not input syntaxfile");
   }
-  context = nez_CreateParsingContext(context, input_file);
+  context = nez_CreateParsingContext(input_file);
   inst = nez_LoadMachineCode(context, syntax_file, "File");
   nez_CreateMemoryPool(context->mpool, 128*1024*1024);
   inst = nez_VM_Prepare(context, inst);
   if (output_type == NULL || !strcmp(output_type, "pego")) {
     ParsingObject po = nez_Parse(context, inst);
-    nez_DisposeObject(&po);
+    nez_DisposeObject(po);
   } else if (!strcmp(output_type, "match")) {
     nez_Match(context, inst);
   } else if (!strcmp(output_type, "stat")) {
@@ -79,7 +79,7 @@ int main(int argc, char *const argv[]) {
       assert(0 && "can not open file");
     }
     dump_pego_file(file, &context->left, context->inputs, 0);
-    nez_DisposeObject(&context->left);
+    nez_DisposeObject(context->left);
     fclose(file);
   } else if (!strcmp(output_type, "json")) {
     if (output_file == NULL) {
@@ -92,7 +92,7 @@ int main(int argc, char *const argv[]) {
       assert(0 && "can not open file");
     }
     dump_json_file(file, &context->left, context->inputs, 0);
-    nez_DisposeObject(&context->left);
+    nez_DisposeObject(context->left);
     fclose(file);
   }
   nez_VM_PrintProfile(file_type);

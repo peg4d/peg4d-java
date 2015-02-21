@@ -89,13 +89,12 @@ static inline ParsingLog MemoryPool_AllocParsingLog(MemoryPool mpool) {
 
 ParsingObject P4D_newObject(ParsingContext ctx, long start, MemoryPool pool);
 void P4D_setObject(ParsingContext ctx, ParsingObject *var, ParsingObject o);
-void nez_DisposeObject(ParsingObject *pego);
+void nez_DisposeObject(ParsingObject pego);
 
 #define PARSING_CONTEXT_MAX_ERROR_LENGTH 256
 #define PARSING_CONTEXT_MAX_STACK_LENGTH 1024
 
-ParsingContext nez_CreateParsingContext(ParsingContext ctx,
-                                        const char *filename);
+ParsingContext nez_CreateParsingContext(const char *filename);
 void nez_DisposeParsingContext(ParsingContext ctx);
 
 ParsingLog P4D_newLog(ParsingContext ctx, MemoryPool pool);
