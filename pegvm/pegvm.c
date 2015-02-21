@@ -155,8 +155,8 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
   }
   free(ruleTable);
 
-  // memset(inst, 0, sizeof(*inst) * info.bytecode_length);
   inst = malloc(sizeof(*inst) * info.bytecode_length);
+  memset(inst, 0, sizeof(*inst) * info.bytecode_length);
 
   for (uint64_t i = 0; i < info.bytecode_length; i++) {
     int code_length;
