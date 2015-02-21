@@ -83,10 +83,11 @@ void P4D_commitLog(ParsingContext ctx, int mark, ParsingObject newnode,
 }
 
 void P4D_abortLog(ParsingContext ctx, int mark) {
-  while (mark < ctx->logStackSize) {
+  int size = ctx->logStackSize;
+  ctx->logStackSize = mark;
+  while (mark < size--) {
     ParsingLog l = ctx->logStack;
     ctx->logStack = ctx->logStack->next;
-    ctx->logStackSize--;
     P4D_unuseLog(ctx, l);
   }
 }
@@ -183,10 +184,10 @@ long matchSymbolTableTop(ParsingContext ctx, const char *cur, int tableType) {
 
 long matchSymbolTable(ParsingContext ctx, const char *cur, int tableType) {
   for (int i = ctx->symbolTableSize - 1; i >= 0; i--) {
-    struct SymbolTableEntry s = ctx->stackedSymbolTable[i];
-    if (s.tableType == tableType) {
-      if (match(ctx, cur, s.utf8, s.utf8_length)) {
-        return s.utf8_length;
+    struct SymbolTableEntry *s = &ctx->stackedSymbolTable[i];
+    if (s->tableType == tableType) {
+      if (match(ctx, cur, s->utf8, s->utf8_length)) {
+        return s->utf8_length;
       }
     }
   }

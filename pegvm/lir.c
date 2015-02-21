@@ -7,7 +7,7 @@
 
 // #define PEGVM_USE_CONDBRANCH
 #define PEGVM_USE_CHARRANGE
-#define PEGVM_USE_MAPPEDCHOISE_DIRECT_JMP
+// #define PEGVM_USE_MAPPEDCHOISE_DIRECT_JMP
 
 typedef bitset_t *bitset_ptr_t;
 
@@ -172,12 +172,14 @@ typedef struct ICONDTRUE {
   int val;
 } ICONDTRUE;
 
+#ifndef PEGVM_USE_CONDBRANCH
 static void Emit_CONDTRUE(PegVMInstruction *inst, ByteCodeLoader *loader) {
   ICONDTRUE *ir = (ICONDTRUE *)inst;
   ir->base.opcode = OPCODE_ICONDTRUE;
   // ir->val = Loader_Read32(loader);
   ir->jump = Loader_GetJumpAddr(loader, inst);
 }
+#endif
 #define OPCODE_ICONDFALSE 6
 typedef struct ICONDFALSE {
   PegVMInstructionBase base;
@@ -185,12 +187,14 @@ typedef struct ICONDFALSE {
   int val;
 } ICONDFALSE;
 
+#ifndef PEGVM_USE_CONDBRANCH
 static void Emit_CONDFALSE(PegVMInstruction *inst, ByteCodeLoader *loader) {
   ICONDFALSE *ir = (ICONDFALSE *)inst;
   ir->base.opcode = OPCODE_ICONDFALSE;
   // ir->val = Loader_Read32(loader);
   ir->jump = Loader_GetJumpAddr(loader, inst);
 }
+#endif
 #define OPCODE_IREPCOND 7
 typedef struct IREPCOND {
   PegVMInstructionBase base;
