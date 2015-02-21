@@ -16,9 +16,10 @@
 #define PUSH_OSP(INST) (*osp++ = (INST))
 #define POP_OSP(INST) (*--osp)
 
-#define GET_ADDR(PC) ((PegVMInstructionBase *)(PC))->addr
+#define GET_ADDR(PC) ((PC)->base).addr
 #define DISPATCH_NEXT goto *GET_ADDR(++pc)
 #define JUMP(dst)     goto *GET_ADDR(pc += dst)
+#define JUMP_REL(dst) goto *GET_ADDR(pc += dst)
 #define RET           goto *GET_ADDR(pc = *POP_IP())
 
 #define OP(OP) PEGVM_OP_##OP:
@@ -276,15 +277,15 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(MAPPEDCHOICE) {
     IMAPPEDCHOICE *inst = (IMAPPEDCHOICE *)pc;
-    JUMP(inst->ndata->table[(int)inputs[pos]]);
+    JUMP_REL(inst->ndata->table[(int)inputs[pos]]);
   }
   OP(MAPPEDCHOICE_16) {
     IMAPPEDCHOICE_16 *inst = (IMAPPEDCHOICE_16 *)pc;
-    JUMP(inst->ndata->table[(int)inputs[pos]]);
+    JUMP_REL(inst->ndata->table[(int)inputs[pos]]);
   }
   OP(MAPPEDCHOICE_8) {
     IMAPPEDCHOICE_8 *inst = (IMAPPEDCHOICE_8 *)pc;
-    JUMP(inst->ndata->table[(int)inputs[pos]]);
+    JUMP_REL(inst->ndata->table[(int)inputs[pos]]);
   }
 
   OP(SCAN) {
