@@ -1,9 +1,9 @@
 /* pegvm.c */
 
 static int pegvm_string_equal(pegvm_string_ptr_t str, const char *t) {
-  const char *p = &str->text[0];
-  const char *end = &str->text[0] + str->len;
   int len = str->len;
+  const char *p = str->text;
+  const char *end = p + len;
 #if 0
   return (strncmp(p, t, len) == 0) ? len : 0;
 #else
@@ -75,14 +75,14 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   const char *Reg2 = 0;
   const char *Reg3 = 0;
   register int failflag = 0;
-  register PegVMInstruction *pc;
+  register const PegVMInstruction *pc;
   ParsingObject *osp;
-  PegVMInstruction **cp;
+  const PegVMInstruction **cp;
   const char **sp;
   pc = inst + context->startPoint;
   sp = (const char **)context->stack_pointer;
   osp = context->object_stack_pointer;
-  cp = context->call_stack_pointer;
+  cp = (const PegVMInstruction **) context->call_stack_pointer;
 
   if (inst == NULL) {
     return (long)table;
@@ -315,16 +315,25 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(MAPPEDCHOICE) {
     IMAPPEDCHOICE *inst = (IMAPPEDCHOICE *)pc;
-    // JUMP(inst->ndata->table[(unsigned char)*cur]);
+#ifdef PEGVM_USE_MAPPEDCHOISE_DIRECT_JMP
+    JUMP(inst->ndata->table[(unsigned char)*cur]);
+#else
     JUMP_REL(inst->ndata->table[(unsigned char)*cur]);
+#endif
   }
   OP(MAPPEDCHOICE_8) {
+#ifndef PEGVM_USE_MAPPEDCHOISE_DIRECT_JMP
     IMAPPEDCHOICE_8 *inst = (IMAPPEDCHOICE_8 *)pc;
-    JUMP_REL(inst->ndata->table[(unsigned char)*cur]);
+    unsigned char ch = (unsigned char) *cur;
+    char_table_t table = inst->ndata;
+    JUMP_REL(table->table[ch]);
+#endif
   }
   OP(MAPPEDCHOICE_16) {
+#ifndef PEGVM_USE_MAPPEDCHOISE_DIRECT_JMP
     IMAPPEDCHOICE_16 *inst = (IMAPPEDCHOICE_16 *)pc;
     JUMP_REL(inst->ndata->table[(unsigned char)*cur]);
+#endif
   }
 
   OP(SCAN) {
