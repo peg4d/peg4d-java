@@ -1,6 +1,6 @@
 #!/bin/sh
-DATADIR=../benchNEZVM/input
-BYTECODE=../benchNEZVM/bytecodeFast
+DATADIR=../benchNezVM/input
+BYTECODE=../benchNezVM/bytecodeFast
 BUILD=./vm/
 make clean -C $BUILD
 make -C $BUILD

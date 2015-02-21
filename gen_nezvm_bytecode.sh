@@ -1,7 +1,7 @@
 #!/bin/sh
-PEGDIR=../benchNEZVM/peg
-BYTECODE=../benchNEZVM/bytecodeFast
-DUMP=../benchNEZVM/dump_bytecodeFast
+PEGDIR=../benchNezVM/peg
+BYTECODE=../benchNezVM/bytecodeFast
+DUMP=../benchNezVM/dump_bytecodeFast
 
 ant clean
 ant
