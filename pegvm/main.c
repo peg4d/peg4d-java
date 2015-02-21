@@ -23,7 +23,7 @@ static void nez_ShowUsage(const char *file) {
 
 int main(int argc, char *const argv[]) {
   ParsingContext context = NULL;
-  struct PegVMInstruction *inst = NULL;
+  PegVMInstruction *inst = NULL;
   const char *syntax_file = NULL;
   const char *input_file = NULL;
   const char *output_type = NULL;

@@ -18,6 +18,9 @@ typedef struct byteCodeInfo {
   uint64_t bytecode_length;
 } byteCodeInfo;
 
+union PegVMInstruction;
+typedef union PegVMInstruction PegVMInstruction;
+#if 0
 typedef struct PegVMInstruction {
   union {
     long opcode;
@@ -29,6 +32,7 @@ typedef struct PegVMInstruction {
   char *chardata;
   //  };
 } PegVMInstruction;
+#endif
 
 #define PEGVM_OP_EACH(OP)                                                      \
   OP(EXIT) OP(JUMP) OP(CALL) OP(RET) OP(CONDBRANCH) OP(REPCOND) OP(CHARRANGE)  \

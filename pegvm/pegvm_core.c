@@ -16,15 +16,16 @@
 #define PUSH_OSP(INST) (*osp++ = (INST))
 #define POP_OSP(INST) (*--osp)
 
-#define DISPATCH_NEXT goto *(++pc)->ptr
-#define JUMP          goto *(pc = (pc)->jump)->ptr
-#define RET           goto *(pc = *POP_IP())->ptr
+#define GET_ADDR(PC) ((PegVMInstructionBase *)(PC))->addr
+#define DISPATCH_NEXT goto *GET_ADDR(++pc)
+#define JUMP(dst)     goto *GET_ADDR(pc += dst)
+#define RET           goto *GET_ADDR(pc = *POP_IP())
 
 #define OP(OP) PEGVM_OP_##OP:
 long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   static const void *table[] = {
 #define DEFINE_TABLE(NAME) &&PEGVM_OP_##NAME,
-    PEGVM_OP_EACH(DEFINE_TABLE)
+    LIR_EACH(DEFINE_TABLE)
 #undef DEFINE_TABLE
   };
 
@@ -54,7 +55,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   PUSH_IP(inst);
   P4D_setObject(context, &left, P4D_newObject(context, context->pos, MPOOL));
 
-  goto *(pc)->ptr;
+  goto *GET_ADDR(pc);
 
   OP(EXIT) {
     P4D_commitLog(context, 0, left, MPOOL);
@@ -63,72 +64,82 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     return failflag;
   }
   OP(JUMP) {
-      JUMP;
+    long dst = ((IJUMP *)pc)->jump;
+    JUMP(dst);
   }
   OP(CALL) {
+    long dst = ((ICALL *)pc)->jump;
     PUSH_IP(pc + 1);
-    JUMP;
+    JUMP(dst);
   }
   OP(RET) {
-      RET;
+    RET;
   }
-  OP(CONDBRANCH) {
-    if (failflag == *pc->ndata) {
-      JUMP;
+  OP(CONDBRANCH);
+  OP(CONDTRUE);
+  OP(CONDFALSE) {
+    long dst = ((ICONDBRANCH *)pc)->jump;
+    if (failflag == ((ICONDBRANCH *)pc)->val) {
+      JUMP(dst);
     }
     else {
       DISPATCH_NEXT;
     }
   }
   OP(REPCOND) {
+    long dst = ((IREPCOND *)pc)->jump;
     if (pos != POP_SP()) {
       DISPATCH_NEXT;
     }
     else {
-      JUMP;
+      JUMP(dst);
     }
   }
   OP(CHARRANGE) {
-    char ch = inputs[pos];
-    if ((pc)->chardata[0] <= ch && ch <= (pc)->chardata[1]) {
-      pos++;
+    char ch = inputs[pos++];
+    ICHARRANGE *inst = (ICHARRANGE *)pc;
+    if (inst->cdata.c1 <= ch && ch <= inst->cdata.c2) {
       DISPATCH_NEXT;
     } else {
+      long dst = inst->jump;
+      pos--;
       failflag = 1;
-      JUMP;
+      JUMP(dst);
     }
   }
   OP(CHARSET) {
-    int j = 0;
-    int len = *(pc)->ndata;
-    while (j < len) {
-      if (inputs[pos] == (pc)->chardata[j]) {
-        pos++;
-        DISPATCH_NEXT;
-      }
-      j++;
+    ICHARSET *inst = (ICHARSET *)pc;
+    unsigned c = inputs[pos];
+    if (inst->set->table[c / 8] & (1 << (c % 8))) {
+      pos++;
+      DISPATCH_NEXT;
     }
     failflag = 1;
-    JUMP;
+    JUMP(inst->jump);
   }
-  OP(STRING) {
-    char *p = pc->chardata;
-    int len = *pc->ndata;
-    char *pend = pc->chardata + len;
+  OP(STRING);
+  OP(STRING1);
+  OP(STRING2);
+  OP(STRING4) {
+    ISTRING *inst = (ISTRING *)pc;
+    string_ptr_t str = inst->chardata;
+    char *p = &str->text[0];
+    char *pend = &str->text[0] + str->len;
     while (p < pend) {
-      if (inputs[pos] != *p++) {
+      if (inputs[pos++] != *p++) {
+        --pos;
         failflag = 1;
-        JUMP;
+        JUMP(inst->jump);
       }
-      pos++;
     }
     DISPATCH_NEXT;
   }
   OP(ANY) {
+      IANY *inst = (IANY *)pc;
     if (unlikely(inputs[pos++] == 0)) {
       pos--;
       failflag = 1;
-      JUMP;
+      JUMP(inst->jump);
     }
     DISPATCH_NEXT;
   }
@@ -193,7 +204,8 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(STOREflag) {
-    failflag = pc->ndata[0];
+    ISTOREflag *inst = (ISTOREflag *)pc;
+    failflag = inst->val;
     DISPATCH_NEXT;
   }
   OP(NEW) {
@@ -203,18 +215,20 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(NEWJOIN) {
+    INEWJOIN *inst = (INEWJOIN *)pc;
     ParsingObject po = NULL;
     P4D_setObject(context, &po, left);
     P4D_setObject(context, &left, P4D_newObject(context, pos, MPOOL));
     // PUSH_SP(P4D_markLogStack(context));
     P4D_lazyJoin(context, po, MPOOL);
-    P4D_lazyLink(context, left, *(pc)->ndata, po, MPOOL);
+    P4D_lazyLink(context, left, inst->ndata, po, MPOOL);
     DISPATCH_NEXT;
   }
   OP(COMMIT) {
+    ICOMMIT *inst = (ICOMMIT *)pc;
     P4D_commitLog(context, (int)POP_SP(), left, MPOOL);
     ParsingObject parent = (ParsingObject)POP_OSP();
-    P4D_lazyLink(context, parent, *(pc)->ndata, left, MPOOL);
+    P4D_lazyLink(context, parent, inst->ndata, left, MPOOL);
     P4D_setObject(context, &left, parent);
     DISPATCH_NEXT;
   }
@@ -223,76 +237,81 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(LINK) {
-    ParsingObject parent = (ParsingObject)POP_OSP();
-    P4D_lazyLink(context, parent, *(pc)->ndata, left, MPOOL);
-    // P4D_setObject(context, &left, parent);
-    PUSH_OSP(parent);
-    DISPATCH_NEXT;
+    //ILINK *inst = (ILINK *)pc;
+    //ParsingObject parent = (ParsingObject)POP_OSP();
+    //P4D_lazyLink(context, parent, inst->ndata, left, MPOOL);
+    //// P4D_setObject(context, &left, parent);
+    //PUSH_OSP(parent);
+    //DISPATCH_NEXT;
   }
   OP(SETendp) {
     left->end_pos = pos;
     DISPATCH_NEXT;
   }
   OP(TAG) {
-    left->tag = (pc)->chardata;
+    ITAG *inst = (ITAG *)pc;
+    left->tag = (const char *)&inst->chardata->text;
     DISPATCH_NEXT;
   }
   OP(VALUE) {
-    left->value = (pc)->chardata;
+    ITAG *inst = (ITAG *)pc;
+    left->value = (const char *)&inst->chardata->text;
     DISPATCH_NEXT;
   }
   OP(MAPPEDCHOICE) {
-    pc = inst + (pc)->ndata[(int)inputs[pos]];
-    goto *(pc)->ptr;
+    IMAPPEDCHOICE *inst = (IMAPPEDCHOICE *)pc;
+    JUMP(inst->ndata->table[(int)inputs[pos]]);
   }
+  OP(MAPPEDCHOICE_16) {
+    IMAPPEDCHOICE_16 *inst = (IMAPPEDCHOICE_16 *)pc;
+    JUMP(inst->ndata->table[(int)inputs[pos]]);
+  }
+  OP(MAPPEDCHOICE_8) {
+    IMAPPEDCHOICE_8 *inst = (IMAPPEDCHOICE_8 *)pc;
+    JUMP(inst->ndata->table[(int)inputs[pos]]);
+  }
+
   OP(SCAN) {
+    ISCAN *inst = (ISCAN *)pc;
     long start = POP_SP();
-    long len = pos - start;
-    char value[len];
-    int j = 0;
-    for (long i = start; i < pos; i++) {
-      value[j] = inputs[i];
-      j++;
-    }
-    if (pc->ndata[0] == 16) {
-      long num = strtol(value, NULL, 16);
-      context->repeat_table[pc->ndata[1]] = (int)num;
-      DISPATCH_NEXT;
-    }
-    context->repeat_table[pc->ndata[1]] = atoi(value);
+    char *s = (char *)inputs + start;
+    char *e = (char *)&inputs[pos];
+    long num = strtol(s, &e, inst->cardinals);
+    context->repeat_table[inst->offset] = (int)num;
     DISPATCH_NEXT;
   }
   OP(CHECKEND) {
-    if (context->repeat_table[pc->ndata[0]] == 0) {
+    ICHECKEND *inst = (ICHECKEND *)pc;
+    if (context->repeat_table[inst->ndata] == 0) {
       DISPATCH_NEXT;
     }
-    JUMP;
+    JUMP(inst->jump);
   }
   OP(DEF) {
+    IDEF *inst = (IDEF *)pc;
     long start = POP_SP();
-    int len = (int)(pos - start);
+    int len = pos - start;
     char *value = malloc(len);
-    int j = 0;
-    for (long i = start; i < pos; i++) {
-      value[j] = inputs[i];
-      j++;
-    }
-    pushSymbolTable(context, pc->ndata[0], len, value);
+    memcpy(value, inputs + start, len);
+    pushSymbolTable(context, inst->ndata, len, value);
     DISPATCH_NEXT;
   }
   OP(IS) {
-    failflag = matchSymbolTableTop(context, &pos, pc->ndata[0]);
+    IIS *inst = (IIS *)pc;
+    failflag = matchSymbolTableTop(context, &pos, inst->ndata); //FIXME
     DISPATCH_NEXT;
   }
   OP(ISA) {
-    failflag = matchSymbolTable(context, &pos, pc->ndata[0]);
+    IISA *inst = (IISA *)pc;
+    failflag = matchSymbolTable(context, &pos, inst->ndata); //FIXME
     DISPATCH_NEXT;
   }
   OP(BLOCKSTART) {
+    IBLOCKSTART *inst = (IBLOCKSTART *)pc;
     long len;
     PUSH_SP(context->stateValue);
     char *value = getIndentText(context, inputs, pos, &len);
-    PUSH_SP(pushSymbolTable(context, pc->ndata[0], (int)len, value));
+    PUSH_SP(pushSymbolTable(context, inst->ndata, (int)len, value));
     DISPATCH_NEXT;
   }
   OP(BLOCKEND) {
@@ -301,48 +320,52 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(INDENT) {
-    matchSymbolTableTop(context, &pos, pc->ndata[0]);
+    IINDENT *inst = (IINDENT *)pc;
+    matchSymbolTableTop(context, &pos, inst->ndata); //FIXME
     DISPATCH_NEXT;
   }
   OP(NOTBYTE) {
-    if (inputs[pos] != *(pc)->ndata) {
+    INOTBYTE *inst = (INOTBYTE *)pc;
+    if (inputs[pos] != inst->cdata) {
       DISPATCH_NEXT;
     }
     failflag = 1;
-    JUMP;
+    JUMP(inst->jump);
   }
   OP(NOTANY) {
+    INOTANY *inst = (INOTANY *)pc;
     if (inputs[pos] != 0) {
       failflag = 1;
-      JUMP;
+      JUMP(inst->jump);
     }
     DISPATCH_NEXT;
   }
   OP(NOTCHARSET) {
-    int j = 0;
-    int len = *(pc)->ndata;
-    while (j < len) {
-      if (inputs[pos] == (pc)->chardata[j]) {
-        failflag = 1;
-        JUMP;
-      }
-      j++;
+    INOTCHARSET *inst = (INOTCHARSET *)pc;
+    unsigned c = inputs[pos];
+    if (inst->set->table[c / 8] & (1 << (c % 8))) {
+      failflag = 1;
+      JUMP(inst->jump);
     }
     DISPATCH_NEXT;
   }
   OP(NOTBYTERANGE) {
-    if (!(inputs[pos] >= (pc)->chardata[0] &&
-          inputs[pos] <= (pc)->chardata[1])) {
+    INOTBYTERANGE *inst = (INOTBYTERANGE *)pc;
+    if (!(inputs[pos] >= inst->cdata.c1 &&
+          inputs[pos] <= inst->cdata.c2)) {
       DISPATCH_NEXT;
     }
-    failflag = 1;
-    JUMP;
+    else {
+      failflag = 1;
+      JUMP(inst->jump);
+    }
   }
   OP(NOTSTRING) {
-    char *p = pc->chardata;
-    int len = *pc->ndata;
+    INOTSTRING *inst = (INOTSTRING *)pc;
+    string_ptr_t str = inst->cdata;
+    char *p = &str->text[0];
+    char *pend = &str->text[0] + str->len;
     long backtrack_pos = pos;
-    char *pend = pc->chardata + len;
     while (p < pend) {
       if (inputs[pos] != *p++) {
         pos = backtrack_pos;
@@ -352,37 +375,37 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     }
     pos = backtrack_pos;
     failflag = 1;
-    JUMP;
+    JUMP(inst->jump);
   }
   OP(OPTIONALBYTE) {
-    if (inputs[pos] == *(pc)->ndata) {
+    IOPTIONALBYTE *inst = (IOPTIONALBYTE *)pc;
+    if (inputs[pos] == inst->cdata) {
       pos++;
     }
     DISPATCH_NEXT;
   }
   OP(OPTIONALCHARSET) {
-    int j = 0;
-    int len = *(pc)->ndata;
-    while (j < len) {
-      if (inputs[pos] == (pc)->chardata[j]) {
-        pos++;
-        DISPATCH_NEXT;
-      }
-      j++;
+    IOPTIONALCHARSET *inst = (IOPTIONALCHARSET *)pc;
+    unsigned c = inputs[pos];
+    if (inst->set->table[c / 8] & (1 << (c % 8))) {
+      pos++;
     }
     DISPATCH_NEXT;
   }
   OP(OPTIONALBYTERANGE) {
-    if (inputs[pos] >= (pc)->chardata[0] && inputs[pos] <= (pc)->chardata[1]) {
+    IOPTIONALBYTERANGE *inst = (IOPTIONALBYTERANGE *)pc;
+    if (inputs[pos] >= inst->cdata.c1 &&
+        inputs[pos] <= inst->cdata.c2) {
       pos++;
     }
     DISPATCH_NEXT;
   }
   OP(OPTIONALSTRING) {
-    char *p = pc->chardata;
-    int len = *pc->ndata;
+    IOPTIONALSTRING *inst = (IOPTIONALSTRING *)pc;
+    string_ptr_t str = inst->cdata;
+    char *p = &str->text[0];
+    char *pend = &str->text[0] + str->len;
     long backtrack_pos = pos;
-    char *pend = pc->chardata + len;
     while (p < pend) {
       if (inputs[pos] != *p++) {
         pos = backtrack_pos;
@@ -393,24 +416,25 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(ZEROMOREBYTERANGE) {
+    IZEROMOREBYTERANGE *inst = (IZEROMOREBYTERANGE *)pc;
     while (1) {
-      if (!(inputs[pos] >= (pc)->chardata[0] &&
-            inputs[pos] <= (pc)->chardata[1])) {
+      if (!(inputs[pos] >= inst->cdata.c1 &&
+            inputs[pos] <= inst->cdata.c2)) {
         DISPATCH_NEXT;
       }
       pos++;
     }
+    __asm__ volatile("int3"); // unreachable?
+    DISPATCH_NEXT; // FIXME
   }
   OP(ZEROMORECHARSET) {
-    int j = 0;
-    int len = *(pc)->ndata;
-    while (j < len) {
-      if (inputs[pos] == (pc)->chardata[j]) {
-        pos++;
-        j = 0;
-      } else {
-        j++;
-      }
+    IZEROMORECHARSET *inst = (IZEROMORECHARSET *)pc;
+    unsigned c;
+L_head:;
+    c = inputs[pos];
+    if (inst->set->table[c / 8] & (1 << (c % 8))) {
+      pos++;
+      goto L_head;
     }
     DISPATCH_NEXT;
   }
@@ -426,8 +450,9 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(REPEATANY) {
+    IREPEATANY *inst = (IREPEATANY *)pc;
     long back = pos;
-    pos = pos + context->repeat_table[pc->ndata[0]];
+    pos = pos + context->repeat_table[inst->ndata];
     if (pos - 1 > (long)context->input_size) {
       pos = back;
     }
