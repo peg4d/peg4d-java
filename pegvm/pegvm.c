@@ -67,18 +67,18 @@ static void dump_PegVMInstructions(PegVMInstruction *inst, uint64_t size) {
     fprintf(stderr, "[%llu] %s ", i, get_opname(inst[i].base.opcode));
     switch (inst[i].base.opcode) {
 #define OP_DUMPCASE(OP) case PEGVM_OP_##OP:
-        OP_DUMPCASE(CHARRANGE) {
-            ICHARRANGE *ir = (ICHARRANGE *)inst + i;
-            fprintf(stderr, "[%d-", ir->cdata.c1);
-            fprintf(stderr, "%d] ", ir->cdata.c2);
-            // fprintf(stderr, "%d ", inst[i].jump);
-        }
-        OP_DUMPCASE(CHARSET) {
-            // fprintf(stderr, "%d ", inst[i].jump);
-        }
-    default:
+      OP_DUMPCASE(CHARRANGE) {
+        ICHARRANGE *ir = (ICHARRANGE *)inst + i;
+        fprintf(stderr, "[%d-", ir->cdata.c1);
+        fprintf(stderr, "%d] ", ir->cdata.c2);
         // fprintf(stderr, "%d ", inst[i].jump);
-        break;
+      }
+      OP_DUMPCASE(CHARSET) {
+        // fprintf(stderr, "%d ", inst[i].jump);
+      }
+    default:
+      // fprintf(stderr, "%d ", inst[i].jump);
+      break;
     }
     // if (inst[i].chardata) {
     //   fprintf(stderr, "%s", inst[i].chardata);
@@ -100,24 +100,24 @@ static PegVMInstruction *nez_VM_Prepare(ParsingContext, PegVMInstruction *);
 #if defined(PEGVM_COUNT_BYTECODE_MALLOCED_SIZE)
 static size_t bytecode_malloced_size = 0;
 #endif
-static void *__malloc(size_t size)
-{
+static void *__malloc(size_t size) {
 #if defined(PEGVM_COUNT_BYTECODE_MALLOCED_SIZE)
-    bytecode_malloced_size += size;
+  bytecode_malloced_size += size;
 #endif
-    return malloc(size);
+  return malloc(size);
 }
 
 typedef void (*convert_to_lir_func_t)(PegVMInstruction *, ByteCodeLoader *);
 static convert_to_lir_func_t f_convert[] = {
 #define DEFINE_CONVERT_FUNC(OP) Emit_##OP,
-    PEGVM_OP_EACH(DEFINE_CONVERT_FUNC)
+  PEGVM_OP_EACH(DEFINE_CONVERT_FUNC)
 };
 
 PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
                                       const char *fileName,
                                       const char *nonTerminalName) {
   PegVMInstruction *inst = NULL;
+  PegVMInstruction *tmp = NULL;
   size_t len;
   char *buf = loadFile(fileName, &len);
   byteCodeInfo info;
@@ -170,11 +170,17 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
 
   ByteCodeLoader loader;
   loader.input = buf;
-  loader.info  = &info;
+  loader.info = &info;
+
+  tmp = inst;
 
   for (uint64_t i = 0; i < info.bytecode_length; i++) {
     int opcode = buf[info.pos++];
     f_convert[opcode](inst, &loader);
+    //    fprintf(stderr, "[%llu]", i);
+    //    fprintf(stderr, " %s ", get_opname(opcode));
+    //    fprintf(stderr, "\n");
+    inst++;
     // int code_length;
     // code_length = read16(buf, &info);
     // if (code_length == 0) {
@@ -210,6 +216,8 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
     // }
   }
 
+  inst = tmp;
+
   if (PEGVM_DEBUG) {
     dump_PegVMInstructions(inst, info.bytecode_length);
   }
@@ -219,8 +227,8 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
   inst = nez_VM_Prepare(context, inst);
 #if defined(PEGVM_COUNT_BYTECODE_MALLOCED_SIZE)
   fprintf(stderr, "malloced_size=%zdKB, %zdKB\n",
-          (sizeof(*inst) * info.bytecode_length)/1024,
-          bytecode_malloced_size/1024);
+          (sizeof(*inst) * info.bytecode_length) / 1024,
+          bytecode_malloced_size / 1024);
 #endif
   return inst;
 }
@@ -230,7 +238,7 @@ void nez_DisposeInstruction(PegVMInstruction *inst, long length) {
     int opcode = inst[i].base.opcode;
     switch (opcode) {
     case OPCODE_ICHARSET: {
-      ICHARSET *ir = (ICHARSET *) inst;
+      ICHARSET *ir = (ICHARSET *)inst;
       free(ir->set);
       break;
     }
@@ -238,49 +246,49 @@ void nez_DisposeInstruction(PegVMInstruction *inst, long length) {
     case OPCODE_ISTRING1:
     case OPCODE_ISTRING2:
     case OPCODE_ISTRING4: {
-      ISTRING4 *ir = (ISTRING4 *) inst;
+      ISTRING4 *ir = (ISTRING4 *)inst;
       free(ir->chardata);
       break;
     }
     case OPCODE_ITAG: {
-      ITAG *ir = (ITAG *) inst;
+      ITAG *ir = (ITAG *)inst;
       free(ir->chardata);
       break;
     }
     case OPCODE_IVALUE: {
-      IVALUE *ir = (IVALUE *) inst;
+      IVALUE *ir = (IVALUE *)inst;
       free(ir->chardata);
       break;
     }
     case OPCODE_IMAPPEDCHOICE:
     case OPCODE_IMAPPEDCHOICE_8:
     case OPCODE_IMAPPEDCHOICE_16: {
-      IMAPPEDCHOICE *ir = (IMAPPEDCHOICE *) inst;
+      IMAPPEDCHOICE *ir = (IMAPPEDCHOICE *)inst;
       free(ir->ndata);
       break;
     }
     case OPCODE_INOTCHARSET: {
-      INOTCHARSET *ir = (INOTCHARSET *) inst;
+      INOTCHARSET *ir = (INOTCHARSET *)inst;
       free(ir->set);
       break;
     }
     case OPCODE_INOTSTRING: {
-      INOTSTRING *ir = (INOTSTRING *) inst;
+      INOTSTRING *ir = (INOTSTRING *)inst;
       free(ir->cdata);
       break;
     }
     case OPCODE_IOPTIONALCHARSET: {
-      IOPTIONALCHARSET *ir = (IOPTIONALCHARSET *) inst;
+      IOPTIONALCHARSET *ir = (IOPTIONALCHARSET *)inst;
       free(ir->set);
       break;
     }
     case OPCODE_IOPTIONALSTRING: {
-      IOPTIONALSTRING *ir = (IOPTIONALSTRING *) inst;
+      IOPTIONALSTRING *ir = (IOPTIONALSTRING *)inst;
       free(ir->cdata);
       break;
     }
     case OPCODE_IZEROMORECHARSET: {
-      IZEROMORECHARSET *ir = (IZEROMORECHARSET *) inst;
+      IZEROMORECHARSET *ir = (IZEROMORECHARSET *)inst;
       free(ir->set);
       break;
     }
@@ -318,11 +326,11 @@ void nez_DisposeObject(ParsingObject pego) {
   child = pego->child;
   pego->child = NULL;
   if (child) {
-      int child_size = pego->child_size;
-      for (int i = 0; i < child_size; i++) {
-          nez_DisposeObject(child[i]);
-      }
-      free(child);
+    int child_size = pego->child_size;
+    for (int i = 0; i < child_size; i++) {
+      nez_DisposeObject(child[i]);
+    }
+    free(child);
   }
 }
 
@@ -408,7 +416,8 @@ void nez_Match(ParsingContext context, PegVMInstruction *inst) {
   nez_DisposeObject(context->left);
 }
 
-static PegVMInstruction *nez_VM_Prepare(ParsingContext context, PegVMInstruction *inst) {
+static PegVMInstruction *nez_VM_Prepare(ParsingContext context,
+                                        PegVMInstruction *inst) {
   long i;
   const void **table = (const void **)nez_VM_Execute(context, NULL);
   PegVMInstruction *ip = inst;
