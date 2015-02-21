@@ -75,11 +75,28 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   OP(RET) {
     RET;
   }
-  OP(CONDBRANCH);
-  OP(CONDTRUE);
-  OP(CONDFALSE) {
+  OP(CONDBRANCH) {
     long dst = ((ICONDBRANCH *)pc)->jump;
     if (failflag == ((ICONDBRANCH *)pc)->val) {
+      JUMP(dst);
+    }
+    else {
+      DISPATCH_NEXT;
+    }
+  }
+
+  OP(CONDTRUE) {
+    long dst = ((ICONDBRANCH *)pc)->jump;
+    if (failflag == 1) {
+      JUMP(dst);
+    }
+    else {
+      DISPATCH_NEXT;
+    }
+  }
+  OP(CONDFALSE) {
+    long dst = ((ICONDBRANCH *)pc)->jump;
+    if (failflag == 0) {
       JUMP(dst);
     }
     else {
@@ -298,12 +315,20 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(IS) {
     IIS *inst = (IIS *)pc;
-    failflag = matchSymbolTableTop(context, &pos, inst->ndata); //FIXME
+    long offset = matchSymbolTableTop(context, pos, inst->ndata);
+    failflag = offset >= 0;
+    if (offset) {
+        pos += offset;
+    }
     DISPATCH_NEXT;
   }
   OP(ISA) {
     IISA *inst = (IISA *)pc;
-    failflag = matchSymbolTable(context, &pos, inst->ndata); //FIXME
+    long offset = matchSymbolTable(context, pos, inst->ndata);
+    failflag = offset >= 0;
+    if (offset) {
+        pos += offset;
+    }
     DISPATCH_NEXT;
   }
   OP(BLOCKSTART) {
@@ -321,7 +346,10 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(INDENT) {
     IINDENT *inst = (IINDENT *)pc;
-    matchSymbolTableTop(context, &pos, inst->ndata); //FIXME
+    long offset = matchSymbolTableTop(context, pos, inst->ndata);
+    if (offset >= 0) {
+        pos += offset;
+    }
     DISPATCH_NEXT;
   }
   OP(NOTBYTE) {
@@ -424,7 +452,6 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
       }
       pos++;
     }
-    __asm__ volatile("int3"); // unreachable?
     DISPATCH_NEXT; // FIXME
   }
   OP(ZEROMORECHARSET) {

@@ -115,8 +115,8 @@ void nez_newSymbolTableEntry(SymbolTableEntry ste, int tableType, int len,
 int pushSymbolTable(ParsingContext ctx, int tableType, int len, char *s);
 void popSymbolTable(ParsingContext ctx, int stackTop);
 int match(ParsingContext ctx, long pos, char *utf8, int utf8_length);
-int matchSymbolTableTop(ParsingContext ctx, long *pos, int tableType);
-int matchSymbolTable(ParsingContext ctx, long *pos, int tableType);
+long matchSymbolTableTop(ParsingContext ctx, long pos, int tableType);
+long matchSymbolTable(ParsingContext ctx, long pos, int tableType);
 
 char *getIndentText(ParsingContext ctx, const char *inputs, long from,
                     long *len);

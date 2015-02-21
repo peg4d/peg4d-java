@@ -162,12 +162,12 @@ int match(ParsingContext ctx, long pos, char *utf8, int utf8_length) {
   return 1;
 }
 
-int matchSymbolTableTop(ParsingContext ctx, long *pos, int tableType) {
+long matchSymbolTableTop(ParsingContext ctx, long pos, int tableType) {
   for (int i = ctx->symbolTableSize - 1; i >= 0; i--) {
     struct SymbolTableEntry s = ctx->stackedSymbolTable[i];
     if (s.tableType == tableType) {
-      if (match(ctx, *pos, s.utf8, s.utf8_length)) {
-        *pos += s.utf8_length;
+      if (match(ctx, pos, s.utf8, s.utf8_length)) {
+        return s.utf8_length;
         return 0;
       }
       break;
@@ -176,13 +176,12 @@ int matchSymbolTableTop(ParsingContext ctx, long *pos, int tableType) {
   return 1;
 }
 
-int matchSymbolTable(ParsingContext ctx, long *pos, int tableType) {
+long matchSymbolTable(ParsingContext ctx, long pos, int tableType) {
   for (int i = ctx->symbolTableSize - 1; i >= 0; i--) {
     struct SymbolTableEntry s = ctx->stackedSymbolTable[i];
     if (s.tableType == tableType) {
-      if (match(ctx, *pos, s.utf8, s.utf8_length)) {
-        *pos += s.utf8_length;
-        return 0;
+      if (match(ctx, pos, s.utf8, s.utf8_length)) {
+        return s.utf8_length;
       }
     }
   }
@@ -214,7 +213,7 @@ char *getIndentText(ParsingContext ctx, const char *inputs, long from,
 
 long getLineStartPosition(ParsingContext ctx, const char *inputs, long from) {
   long startIndex = from;
-  if (!(startIndex < ctx->input_size)) {
+  if (!(startIndex < (long)ctx->input_size)) {
     startIndex = ctx->input_size - 1;
   }
   if (startIndex < 0) {
