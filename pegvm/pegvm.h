@@ -60,7 +60,6 @@ int ParserContext_Execute(ParsingContext context, PegVMInstruction *inst);
 extern ParsingObject nez_Parse(ParsingContext context, PegVMInstruction *inst);
 extern void nez_ParseStat(ParsingContext context, PegVMInstruction *inst);
 extern void nez_Match(ParsingContext context, PegVMInstruction *inst);
-extern PegVMInstruction *nez_VM_Prepare(ParsingContext context, PegVMInstruction *inst);
 extern void nez_VM_PrintProfile(const char *file_type);
 
 #endif

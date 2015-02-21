@@ -60,7 +60,6 @@ int main(int argc, char *const argv[]) {
   context = nez_CreateParsingContext(input_file);
   inst = nez_LoadMachineCode(context, syntax_file, "File");
   nez_CreateMemoryPool(context->mpool, 128*1024*1024);
-  inst = nez_VM_Prepare(context, inst);
   if (output_type == NULL || !strcmp(output_type, "pego")) {
     ParsingObject po = nez_Parse(context, inst);
     nez_DisposeObject(po);
