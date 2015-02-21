@@ -1209,14 +1209,10 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitDef(ParsingDef e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
 	}
 
 	@Override
 	public void visitIs(ParsingIs e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
 	}
 
 }

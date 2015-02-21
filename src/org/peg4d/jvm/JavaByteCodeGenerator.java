@@ -1119,13 +1119,9 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 
 	@Override
 	public void visitScan(ParsingScan e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
 	}
 
 	@Override
 	public void visitRepeat(ParsingRepeat e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
 	}
 }
