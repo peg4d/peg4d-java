@@ -2,6 +2,7 @@
 #include <string.h>
 #include <assert.h>
 #include <unistd.h>
+#include <getopt.h>
 
 #include "libnez.h"
 #include "pegvm.h"

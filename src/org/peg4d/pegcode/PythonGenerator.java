@@ -48,7 +48,7 @@ public class PythonGenerator extends GrammarGenerator {
 	protected void writeLine(String s) {
 		formatString("\n" + indent + s);
 	}
-	
+
 	protected void openIndent() {
 		//writeLine("{");
 		indent = "  " + indent;
@@ -57,12 +57,12 @@ public class PythonGenerator extends GrammarGenerator {
 		indent = indent.substring(2);
 		//writeLine("}");
 	}
-	
+
 	@Override
 	public void formatHeader() {
 		writeLine("import \"libp4d/parsing.py\"");
 	}
-	
+
 	class FailurePoint {
 		int id;
 		FailurePoint prev;
@@ -108,13 +108,13 @@ public class PythonGenerator extends GrammarGenerator {
 		//writeLine("goto CATCH_FAILURE" + fLabel.prev.id + "");
 	}
 	void let(String type, String var, String expr) {
-		writeLine("" + var + " = " + expr);		
+		writeLine("" + var + " = " + expr);
 	}
 
 	String funcName(String symbol) {
 		return "p" + symbol;
 	}
-	
+
 	@Override
 	public void visitRule(ParsingRule e) {
 		this.initFailureJumpPoint();
@@ -123,10 +123,10 @@ public class PythonGenerator extends GrammarGenerator {
 		this.let("long", "pos", "c.pos");
 		this.pushFailureJumpPoint();
 		e.expr.visit(this);
-		
+
 		this.let(null, "c.pos", "pos");
 		writeLine("return True");
-		
+
 		this.popFailureJumpPoint(e);
 		writeLine("return False");
 		endFailureJumpPoint();
@@ -182,7 +182,7 @@ public class PythonGenerator extends GrammarGenerator {
 	@Override
 	public void visitString(ParsingString e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -325,97 +325,97 @@ public class PythonGenerator extends GrammarGenerator {
 	@Override
 	public void visitExport(ParsingExport e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitMatch(ParsingMatch e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitCatch(ParsingCatch e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitAssert(ParsingAssert e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitIfFlag(ParsingIf e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitWithFlag(ParsingWithFlag e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitWithoutFlag(ParsingWithoutFlag e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitBlock(ParsingBlock e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitIndent(ParsingIndent e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitDef(ParsingDef e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitIsa(ParsingIsa e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitApply(ParsingApply e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitPermutation(ParsingPermutation e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitIs(ParsingIs e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitScan(ParsingScan e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
+		// TODO Auto-generated method stub
+
 	}
 
 	@Override
 	public void visitRepeat(ParsingRepeat e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
+		// TODO Auto-generated method stub
+
 	}
 
 }
