@@ -171,6 +171,7 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
   ByteCodeLoader loader;
   loader.input = buf;
   loader.info = &info;
+  loader.head = head;
 
   for (uint64_t i = 0; i < info.bytecode_length; i++) {
     int opcode = buf[info.pos++];

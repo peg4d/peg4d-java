@@ -7,6 +7,7 @@
 typedef struct ByteCodeLoader {
   char *input;
   byteCodeInfo *info;
+  PegVMInstruction *head;
 } ByteCodeLoader;
 
 typedef struct charpair {
@@ -69,6 +70,7 @@ static uint16_t Loader_Read16(ByteCodeLoader *loader) {
   return read16(loader->input, loader->info);
 }
 
+static PegVMInstruction *Loader_GetJumpAddr(ByteCodeLoader *loader, PegVMInstruction *inst);
 static string_ptr_t Loader_ReadString(ByteCodeLoader *loader) {
   uint32_t len = Loader_Read16(loader);
   string_ptr_t str = (string_ptr_t)__malloc(sizeof(*str) - 1 + len);
@@ -101,24 +103,24 @@ static void Emit_EXIT(PegVMInstruction *inst, ByteCodeLoader *loader) {
 #define OPCODE_IJUMP 1
 typedef struct IJUMP {
   PegVMInstructionBase base;
-  int jump;
+  PegVMInstruction * jump;
 } IJUMP;
 
 static void Emit_JUMP(PegVMInstruction *inst, ByteCodeLoader *loader) {
   IJUMP *ir = (IJUMP *)inst;
   ir->base.opcode = OPCODE_IJUMP;
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_ICALL 2
 typedef struct ICALL {
   PegVMInstructionBase base;
-  int jump;
+  PegVMInstruction *jump;
 } ICALL;
 
 static void Emit_CALL(PegVMInstruction *inst, ByteCodeLoader *loader) {
   ICALL *ir = (ICALL *)inst;
   ir->base.opcode = OPCODE_ICALL;
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_IRET 3
 typedef struct IRET {
@@ -132,8 +134,8 @@ static void Emit_RET(PegVMInstruction *inst, ByteCodeLoader *loader) {
 #define OPCODE_ICONDBRANCH 4
 typedef struct ICONDBRANCH {
   PegVMInstructionBase base;
-  int jump;
-  bool val;
+  PegVMInstruction *jump;
+  int val;
 } ICONDBRANCH;
 
 static void Emit_CONDTRUE(PegVMInstruction *inst, ByteCodeLoader *loader);
@@ -147,63 +149,63 @@ static void Emit_CONDBRANCH(PegVMInstruction *inst, ByteCodeLoader *loader) {
   } else {
     Emit_CONDFALSE(inst, loader);
   }
-  // ir->jump = Loader_Read32(loader);
+  // ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_ICONDTRUE 5
 typedef struct ICONDTRUE {
   PegVMInstructionBase base;
-  int jump;
-  bool val;
+  PegVMInstruction *jump;
+  int val;
 } ICONDTRUE;
 
 static void Emit_CONDTRUE(PegVMInstruction *inst, ByteCodeLoader *loader) {
   ICONDTRUE *ir = (ICONDTRUE *)inst;
   ir->base.opcode = OPCODE_ICONDTRUE;
   // ir->val = Loader_Read32(loader);
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_ICONDFALSE 6
 typedef struct ICONDFALSE {
   PegVMInstructionBase base;
-  int jump;
-  bool val;
+  PegVMInstruction *jump;
+  int val;
 } ICONDFALSE;
 
 static void Emit_CONDFALSE(PegVMInstruction *inst, ByteCodeLoader *loader) {
   ICONDFALSE *ir = (ICONDFALSE *)inst;
   ir->base.opcode = OPCODE_ICONDFALSE;
   // ir->val = Loader_Read32(loader);
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_IREPCOND 7
 typedef struct IREPCOND {
   PegVMInstructionBase base;
-  int jump;
+  PegVMInstruction *jump;
 } IREPCOND;
 
 static void Emit_REPCOND(PegVMInstruction *inst, ByteCodeLoader *loader) {
   IREPCOND *ir = (IREPCOND *)inst;
   ir->base.opcode = OPCODE_IREPCOND;
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_ICHARRANGE 8
 typedef struct ICHARRANGE {
   PegVMInstructionBase base;
-  int jump;
+  PegVMInstruction *jump;
   charpair cdata;
 } ICHARRANGE;
 
 static void Emit_CHARRANGE(PegVMInstruction *inst, ByteCodeLoader *loader) {
   ICHARRANGE *ir = (ICHARRANGE *)inst;
   ir->base.opcode = OPCODE_ICHARRANGE;
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
   ir->cdata.c1 = Loader_Read32(loader);
   ir->cdata.c2 = Loader_Read32(loader);
 }
 #define OPCODE_ICHARSET 9
 typedef struct ICHARSET {
   PegVMInstructionBase base;
-  int jump;
+  PegVMInstruction *jump;
   bit_table_t set;
 } ICHARSET;
 
@@ -216,26 +218,26 @@ static void Emit_CHARSET(PegVMInstruction *inst, ByteCodeLoader *loader) {
     char c = Loader_Read32(loader);
     ir->set->table[c / 8] |= 1 << (c % 8);
   }
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_ISTRING 10
 typedef struct ISTRING {
   PegVMInstructionBase base;
-  int jump;
+  PegVMInstruction *jump;
   string_ptr_t chardata;
 } ISTRING;
 
 static void Emit_STRING(PegVMInstruction *inst, ByteCodeLoader *loader) {
   ISTRING *ir = (ISTRING *)inst;
   ir->base.opcode = OPCODE_ISTRING;
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
   ir->chardata = Loader_ReadString(loader);
 }
 #define OPCODE_ISTRING1 11
 /* optimized STRING(chardata.len == 1) */
 typedef struct ISTRING1 {
   PegVMInstructionBase base;
-  int jump;
+  PegVMInstruction *jump;
   string_ptr_t chardata;
 } ISTRING1;
 
@@ -243,14 +245,14 @@ typedef struct ISTRING1 {
 // {
 //   ISTRING1 *ir = (ISTRING1 *) inst;
 //   ir->base.opcode = OPCODE_ISTRING1;
-//   ir->jump = Loader_Read32(loader);
+//   ir->jump = Loader_GetJumpAddr(loader, inst);
 //   ir->chardata = Loader_ReadString(loader);
 // }
 #define OPCODE_ISTRING2 12
 /* optimized STRING(chardata.len == 2) */
 typedef struct ISTRING2 {
   PegVMInstructionBase base;
-  int jump;
+  PegVMInstruction *jump;
   string_ptr_t chardata;
 } ISTRING2;
 
@@ -258,14 +260,14 @@ typedef struct ISTRING2 {
 // {
 //   ISTRING2 *ir = (ISTRING2 *) inst;
 //   ir->base.opcode = OPCODE_ISTRING2;
-//   ir->jump = Loader_Read32(loader);
+//   ir->jump = Loader_GetJumpAddr(loader, inst);
 //   ir->chardata = Loader_ReadString(loader);
 // }
 #define OPCODE_ISTRING4 13
 /* optimized STRING(chardata.len == 4) */
 typedef struct ISTRING4 {
   PegVMInstructionBase base;
-  int jump;
+  PegVMInstruction *jump;
   string_ptr_t chardata;
 } ISTRING4;
 
@@ -273,19 +275,19 @@ typedef struct ISTRING4 {
 // {
 //   ISTRING4 *ir = (ISTRING4 *) inst;
 //   ir->base.opcode = OPCODE_ISTRING4;
-//   ir->jump = Loader_Read32(loader);
+//   ir->jump = Loader_GetJumpAddr(loader, inst);
 //   ir->chardata = Loader_ReadString(loader);
 // }
 #define OPCODE_IANY 14
 typedef struct IANY {
   PegVMInstructionBase base;
-  int jump;
+  PegVMInstruction *jump;
 } IANY;
 
 static void Emit_ANY(PegVMInstruction *inst, ByteCodeLoader *loader) {
   IANY *ir = (IANY *)inst;
   ir->base.opcode = OPCODE_IANY;
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_IPUSHo 15
 typedef struct IPUSHo {
@@ -407,7 +409,7 @@ static void Emit_STOREp3(PegVMInstruction *inst, ByteCodeLoader *loader) {
 #define OPCODE_ISTOREflag 28
 typedef struct ISTOREflag {
   PegVMInstructionBase base;
-  bool val;
+  int val;
 } ISTOREflag;
 
 static void Emit_STOREflag(PegVMInstruction *inst, ByteCodeLoader *loader) {
@@ -586,14 +588,14 @@ static void Emit_SCAN(PegVMInstruction *inst, ByteCodeLoader *loader) {
 typedef struct ICHECKEND {
   PegVMInstructionBase base;
   int ndata;
-  int jump;
+  PegVMInstruction *jump;
 } ICHECKEND;
 
 static void Emit_CHECKEND(PegVMInstruction *inst, ByteCodeLoader *loader) {
   ICHECKEND *ir = (ICHECKEND *)inst;
   ir->base.opcode = OPCODE_ICHECKEND;
   ir->ndata = Loader_Read32(loader);
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_IDEF 42
 typedef struct IDEF {
@@ -663,30 +665,30 @@ static void Emit_INDENT(PegVMInstruction *inst, ByteCodeLoader *loader) {
 typedef struct INOTBYTE {
   PegVMInstructionBase base;
   char cdata;
-  int jump;
+  PegVMInstruction *jump;
 } INOTBYTE;
 
 static void Emit_NOTBYTE(PegVMInstruction *inst, ByteCodeLoader *loader) {
   INOTBYTE *ir = (INOTBYTE *)inst;
   ir->base.opcode = OPCODE_INOTBYTE;
   ir->cdata = Loader_Read32(loader);
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_INOTANY 49
 typedef struct INOTANY {
   PegVMInstructionBase base;
-  int jump;
+  PegVMInstruction *jump;
 } INOTANY;
 
 static void Emit_NOTANY(PegVMInstruction *inst, ByteCodeLoader *loader) {
   INOTANY *ir = (INOTANY *)inst;
   ir->base.opcode = OPCODE_INOTANY;
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_INOTCHARSET 50
 typedef struct INOTCHARSET {
   PegVMInstructionBase base;
-  int jump;
+  PegVMInstruction *jump;
   bit_table_t set;
 } INOTCHARSET;
 
@@ -699,13 +701,13 @@ static void Emit_NOTCHARSET(PegVMInstruction *inst, ByteCodeLoader *loader) {
     char c = Loader_Read32(loader);
     ir->set->table[c / 8] |= 1 << (c % 8);
   }
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_INOTBYTERANGE 51
 typedef struct INOTBYTERANGE {
   PegVMInstructionBase base;
   charpair cdata;
-  int jump;
+  PegVMInstruction *jump;
 } INOTBYTERANGE;
 
 static void Emit_NOTBYTERANGE(PegVMInstruction *inst, ByteCodeLoader *loader) {
@@ -713,19 +715,19 @@ static void Emit_NOTBYTERANGE(PegVMInstruction *inst, ByteCodeLoader *loader) {
   ir->base.opcode = OPCODE_INOTBYTERANGE;
   ir->cdata.c1 = Loader_Read32(loader);
   ir->cdata.c2 = Loader_Read32(loader);
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
 }
 #define OPCODE_INOTSTRING 52
 typedef struct INOTSTRING {
   PegVMInstructionBase base;
-  int jump;
+  PegVMInstruction *jump;
   string_ptr_t cdata;
 } INOTSTRING;
 
 static void Emit_NOTSTRING(PegVMInstruction *inst, ByteCodeLoader *loader) {
   INOTSTRING *ir = (INOTSTRING *)inst;
   ir->base.opcode = OPCODE_INOTSTRING;
-  ir->jump = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
   ir->cdata = Loader_ReadString(loader);
 }
 #define OPCODE_IOPTIONALBYTE 53
@@ -853,6 +855,14 @@ union PegVMInstruction {
   PegVMInstructionBase base;
 };
 
+static PegVMInstruction *Loader_GetJumpAddr(ByteCodeLoader *loader, PegVMInstruction *inst) {
+    int dst = Loader_Read32(loader);
+#if 0
+    return loader->head + dst;
+#else
+    return inst + dst;
+#endif
+}
 #if 0
 int main(int argc, char const* argv[])
 {

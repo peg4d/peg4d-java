@@ -18,7 +18,7 @@
 
 #define GET_ADDR(PC) ((PC)->base).addr
 #define DISPATCH_NEXT goto *GET_ADDR(++pc)
-#define JUMP(dst)     goto *GET_ADDR(pc += dst)
+#define JUMP(dst)     goto *GET_ADDR(pc = dst)
 #define JUMP_REL(dst) goto *GET_ADDR(pc += dst)
 #define RET           goto *GET_ADDR(pc = *POP_IP())
 
@@ -65,11 +65,11 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     return failflag;
   }
   OP(JUMP) {
-    long dst = ((IJUMP *)pc)->jump;
+    PegVMInstruction *dst =((IJUMP *)pc)->jump;
     JUMP(dst);
   }
   OP(CALL) {
-    long dst = ((ICALL *)pc)->jump;
+    PegVMInstruction *dst =((ICALL *)pc)->jump;
     PUSH_IP(pc + 1);
     JUMP(dst);
   }
@@ -77,7 +77,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     RET;
   }
   OP(CONDBRANCH) {
-    long dst = ((ICONDBRANCH *)pc)->jump;
+    PegVMInstruction *dst =((ICONDBRANCH *)pc)->jump;
     if (failflag == ((ICONDBRANCH *)pc)->val) {
       JUMP(dst);
     }
@@ -87,7 +87,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
 
   OP(CONDTRUE) {
-    long dst = ((ICONDBRANCH *)pc)->jump;
+    PegVMInstruction *dst =((ICONDBRANCH *)pc)->jump;
     if (failflag == 1) {
       JUMP(dst);
     }
@@ -96,7 +96,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     }
   }
   OP(CONDFALSE) {
-    long dst = ((ICONDBRANCH *)pc)->jump;
+    PegVMInstruction *dst =((ICONDBRANCH *)pc)->jump;
     if (failflag == 0) {
       JUMP(dst);
     }
@@ -105,7 +105,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     }
   }
   OP(REPCOND) {
-    long dst = ((IREPCOND *)pc)->jump;
+    PegVMInstruction *dst =((IREPCOND *)pc)->jump;
     if (pos != POP_SP()) {
       DISPATCH_NEXT;
     }
