@@ -394,20 +394,14 @@ public class PythonGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitIs(ParsingIs e) {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void visitScan(ParsingScan e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
 	}
 
 	@Override
 	public void visitRepeat(ParsingRepeat e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
 	}
 
 }
