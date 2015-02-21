@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <limits.h>
+#include "bitset.c"
+
+typedef bitset_t *bitset_ptr_t;
 
 typedef struct ByteCodeLoader {
   char *input;
@@ -35,10 +38,6 @@ typedef struct short_table_t {
 typedef struct char_table_t {
   char table[256];
 } *char_table_t;
-
-typedef struct bit_table_t {
-  char table[32];
-} *bit_table_t;
 
 typedef union PegVMInstructionBase {
   int opcode;
@@ -220,17 +219,17 @@ static void Emit_CHARRANGE(PegVMInstruction *inst, ByteCodeLoader *loader) {
 typedef struct ICHARSET {
   PegVMInstructionBase base;
   PegVMInstruction *jump;
-  bit_table_t set;
+  bitset_ptr_t set;
 } ICHARSET;
 
 static void Emit_CHARSET(PegVMInstruction *inst, ByteCodeLoader *loader) {
   int len = Loader_Read16(loader);
   ICHARSET *ir = (ICHARSET *)inst;
   ir->base.opcode = OPCODE_ICHARSET;
-  ir->set = (bit_table_t)__malloc(sizeof(struct bit_table_t));
+  ir->set = (bitset_ptr_t)__malloc(sizeof(bitset_t));
   for (int i = 0; i < len; i++) {
-    char c = Loader_Read32(loader);
-    ir->set->table[c / 8] |= 1 << (c % 8);
+    unsigned c = Loader_Read32(loader);
+    bitset_set(ir->set, c);
   }
   ir->jump = Loader_GetJumpAddr(loader, inst);
 }
@@ -703,17 +702,17 @@ static void Emit_NOTANY(PegVMInstruction *inst, ByteCodeLoader *loader) {
 typedef struct INOTCHARSET {
   PegVMInstructionBase base;
   PegVMInstruction *jump;
-  bit_table_t set;
+  bitset_ptr_t set;
 } INOTCHARSET;
 
 static void Emit_NOTCHARSET(PegVMInstruction *inst, ByteCodeLoader *loader) {
   int len = Loader_Read16(loader);
   INOTCHARSET *ir = (INOTCHARSET *)inst;
   ir->base.opcode = OPCODE_INOTCHARSET;
-  ir->set = (bit_table_t)__malloc(sizeof(struct bit_table_t));
+  ir->set = (bitset_ptr_t)__malloc(sizeof(bitset_t));
   for (int i = 0; i < len; i++) {
-    char c = Loader_Read32(loader);
-    ir->set->table[c / 8] |= 1 << (c % 8);
+    unsigned c = Loader_Read32(loader);
+    bitset_set(ir->set, c);
   }
   ir->jump = Loader_GetJumpAddr(loader, inst);
 }
@@ -758,7 +757,7 @@ static void Emit_OPTIONALBYTE(PegVMInstruction *inst, ByteCodeLoader *loader) {
 #define OPCODE_IOPTIONALCHARSET 54
 typedef struct IOPTIONALCHARSET {
   PegVMInstructionBase base;
-  bit_table_t set;
+  bitset_ptr_t set;
 } IOPTIONALCHARSET;
 
 static void Emit_OPTIONALCHARSET(PegVMInstruction *inst,
@@ -766,10 +765,10 @@ static void Emit_OPTIONALCHARSET(PegVMInstruction *inst,
   int len = Loader_Read16(loader);
   IOPTIONALCHARSET *ir = (IOPTIONALCHARSET *)inst;
   ir->base.opcode = OPCODE_IOPTIONALCHARSET;
-  ir->set = (bit_table_t)__malloc(sizeof(struct bit_table_t));
+  ir->set = (bitset_ptr_t)__malloc(sizeof(bitset_t));
   for (int i = 0; i < len; i++) {
-    char c = Loader_Read32(loader);
-    ir->set->table[c / 8] |= 1 << (c % 8);
+    unsigned c = Loader_Read32(loader);
+    bitset_set(ir->set, c);
   }
 }
 #define OPCODE_IOPTIONALBYTERANGE 55
@@ -813,7 +812,7 @@ static void Emit_ZEROMOREBYTERANGE(PegVMInstruction *inst,
 #define OPCODE_IZEROMORECHARSET 58
 typedef struct IZEROMORECHARSET {
   PegVMInstructionBase base;
-  bit_table_t set;
+  bitset_ptr_t set;
 } IZEROMORECHARSET;
 
 static void Emit_ZEROMORECHARSET(PegVMInstruction *inst,
@@ -821,10 +820,10 @@ static void Emit_ZEROMORECHARSET(PegVMInstruction *inst,
   int len = Loader_Read16(loader);
   IZEROMORECHARSET *ir = (IZEROMORECHARSET *)inst;
   ir->base.opcode = OPCODE_IZEROMORECHARSET;
-  ir->set = (bit_table_t)__malloc(sizeof(struct bit_table_t));
+  ir->set = (bitset_ptr_t)__malloc(sizeof(bitset_t));
   for (int i = 0; i < len; i++) {
-    char c = Loader_Read32(loader);
-    ir->set->table[c / 8] |= 1 << (c % 8);
+    unsigned c = Loader_Read32(loader);
+    bitset_set(ir->set, c);
   }
 }
 #define OPCODE_IZEROMOREWS 59

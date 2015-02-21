@@ -146,8 +146,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(CHARSET) {
     ICHARSET *inst = (ICHARSET *)pc;
-    unsigned c = *cur;
-    if (inst->set->table[c / 8] & (1 << (c % 8))) {
+    if (bitset_get(inst->set, *cur)) {
       ++cur;
       DISPATCH_NEXT;
     }
@@ -391,8 +390,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(NOTCHARSET) {
     INOTCHARSET *inst = (INOTCHARSET *)pc;
-    unsigned c = *cur;
-    if (inst->set->table[c / 8] & (1 << (c % 8))) {
+    if (bitset_get(inst->set, *cur)) {
       failflag = 1;
       JUMP(inst->jump);
     }
@@ -426,8 +424,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(OPTIONALCHARSET) {
     IOPTIONALCHARSET *inst = (IOPTIONALCHARSET *)pc;
-    unsigned c = *cur;
-    if (inst->set->table[c / 8] & (1 << (c % 8))) {
+    if (bitset_get(inst->set, *cur)) {
       ++cur;
     }
     DISPATCH_NEXT;
@@ -459,10 +456,8 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(ZEROMORECHARSET) {
     IZEROMORECHARSET *inst = (IZEROMORECHARSET *)pc;
-    unsigned c;
 L_head:;
-    c = *cur;
-    if (inst->set->table[c / 8] & (1 << (c % 8))) {
+    if (bitset_get(inst->set, *cur)) {
       cur++;
       goto L_head;
     }
