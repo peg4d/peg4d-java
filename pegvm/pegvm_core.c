@@ -1,5 +1,16 @@
 /* pegvm.c */
 
+static int pegvm_string_equal(pegvm_string_ptr_t str, const char *t) {
+  const char *p = &str->text[0];
+  const char *pend = &str->text[0] + str->len;
+  while (p < pend) {
+    if (*t++ != *p++) {
+      return 0;
+    }
+  }
+  return str->len;
+}
+
 #if __GNUC__ >= 3
 # define likely(x) __builtin_expect(!!(x), 1)
 # define unlikely(x) __builtin_expect(!!(x), 0)
@@ -31,7 +42,8 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   };
 
   int failflag = 0;
-  ParsingObject left = context->left;
+#define LEFT context->left
+  // ParsingObject left = context->left;
   // long pos = context->pos;
   const char *cur = context->inputs + context->pos;
   // const char *inputs = context->inputs;
@@ -55,13 +67,13 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
 
   PUSH_IP(inst);
-  P4D_setObject(context, &left, P4D_newObject(context, cur, MPOOL));
+  P4D_setObject(context, &LEFT, P4D_newObject(context, cur, MPOOL));
 
   goto *GET_ADDR(pc);
 
   OP(EXIT) {
-    P4D_commitLog(context, 0, left, MPOOL);
-    context->left = left;
+    P4D_commitLog(context, 0, LEFT, MPOOL);
+    context->left = LEFT;
     context->pos = cur - context->inputs;
     return failflag;
   }
@@ -140,15 +152,13 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   OP(STRING2);
   OP(STRING4) {
     ISTRING *inst = (ISTRING *)pc;
-    string_ptr_t str = inst->chardata;
-    char *p = &str->text[0];
-    char *pend = &str->text[0] + str->len;
-    while (p < pend) {
-      if (*cur++ != *p++) {
-        --cur;
-        failflag = 1;
-        JUMP(inst->jump);
-      }
+    int next;
+    if ((next = pegvm_string_equal(inst->chardata, cur)) > 0) {
+      cur += next;
+    }
+    else {
+      failflag = 1;
+      JUMP(inst->jump);
     }
     DISPATCH_NEXT;
   }
@@ -163,14 +173,14 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(PUSHo) {
     ParsingObject po = P4D_newObject(context, cur, MPOOL);
-    *po = *left;
+    *po = *LEFT;
     po->refc = 1;
     PUSH_OSP(po);
     DISPATCH_NEXT;
   }
   OP(PUSHconnect) {
-    ParsingObject po = left;
-    left->refc++;
+    ParsingObject po = LEFT;
+    LEFT->refc++;
     PUSH_OSP(po);
     PUSH_SP((const char *)(long)P4D_markLogStack(context)); // FIXME
     DISPATCH_NEXT;
@@ -218,7 +228,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(STOREo) {
     ParsingObject po = POP_OSP();
-    P4D_setObject(context, &left, po);
+    P4D_setObject(context, &LEFT, po);
     DISPATCH_NEXT;
   }
   OP(STOREflag) {
@@ -228,26 +238,26 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(NEW) {
     PUSH_SP((char *)(long)P4D_markLogStack(context)); // FIXME
-    P4D_setObject(context, &left, P4D_newObject(context, cur, MPOOL));
+    P4D_setObject(context, &LEFT, P4D_newObject(context, cur, MPOOL));
     // PUSH_SP(P4D_markLogStack(context));
     DISPATCH_NEXT;
   }
   OP(NEWJOIN) {
     INEWJOIN *inst = (INEWJOIN *)pc;
     ParsingObject po = NULL;
-    P4D_setObject(context, &po, left);
-    P4D_setObject(context, &left, P4D_newObject(context, cur, MPOOL));
+    P4D_setObject(context, &po, LEFT);
+    P4D_setObject(context, &LEFT, P4D_newObject(context, cur, MPOOL));
     // PUSH_SP(P4D_markLogStack(context));
     P4D_lazyJoin(context, po, MPOOL);
-    P4D_lazyLink(context, left, inst->ndata, po, MPOOL);
+    P4D_lazyLink(context, LEFT, inst->ndata, po, MPOOL);
     DISPATCH_NEXT;
   }
   OP(COMMIT) {
     ICOMMIT *inst = (ICOMMIT *)pc;
-    P4D_commitLog(context, (int)POP_SP(), left, MPOOL);
+    P4D_commitLog(context, (int)POP_SP(), LEFT, MPOOL);
     ParsingObject parent = (ParsingObject)POP_OSP();
-    P4D_lazyLink(context, parent, inst->ndata, left, MPOOL);
-    P4D_setObject(context, &left, parent);
+    P4D_lazyLink(context, parent, inst->ndata, LEFT, MPOOL);
+    P4D_setObject(context, &LEFT, parent);
     DISPATCH_NEXT;
   }
   OP(ABORT) {
@@ -255,38 +265,39 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     DISPATCH_NEXT;
   }
   OP(LINK) {
-    //ILINK *inst = (ILINK *)pc;
-    //ParsingObject parent = (ParsingObject)POP_OSP();
-    //P4D_lazyLink(context, parent, inst->ndata, left, MPOOL);
-    //// P4D_setObject(context, &left, parent);
-    //PUSH_OSP(parent);
-    //DISPATCH_NEXT;
+    ILINK *inst = (ILINK *)pc;
+    ParsingObject parent = (ParsingObject)POP_OSP();
+    P4D_lazyLink(context, parent, inst->ndata, LEFT, MPOOL);
+    // P4D_setObject(context, &LEFT, parent);
+    PUSH_OSP(parent);
+    DISPATCH_NEXT;
   }
   OP(SETendp) {
-    left->end_pos = cur - context->inputs;
+    LEFT->end_pos = cur - context->inputs;
     DISPATCH_NEXT;
   }
   OP(TAG) {
     ITAG *inst = (ITAG *)pc;
-    left->tag = (const char *)&inst->chardata->text;
+    LEFT->tag = (const char *)&inst->chardata->text;
     DISPATCH_NEXT;
   }
   OP(VALUE) {
     ITAG *inst = (ITAG *)pc;
-    left->value = (const char *)&inst->chardata->text;
+    LEFT->value = (const char *)&inst->chardata->text;
     DISPATCH_NEXT;
   }
   OP(MAPPEDCHOICE) {
     IMAPPEDCHOICE *inst = (IMAPPEDCHOICE *)pc;
-    JUMP_REL(inst->ndata->table[(int)*cur]);
-  }
-  OP(MAPPEDCHOICE_16) {
-    IMAPPEDCHOICE_16 *inst = (IMAPPEDCHOICE_16 *)pc;
-    JUMP_REL(inst->ndata->table[(int)*cur]);
+    JUMP(inst->ndata->table[(unsigned char)*cur]);
+    // JUMP_REL(inst->ndata->table[(unsigned char)*cur]);
   }
   OP(MAPPEDCHOICE_8) {
     IMAPPEDCHOICE_8 *inst = (IMAPPEDCHOICE_8 *)pc;
-    JUMP_REL(inst->ndata->table[(int)*cur]);
+    JUMP_REL(inst->ndata->table[(unsigned char)*cur]);
+  }
+  OP(MAPPEDCHOICE_16) {
+    IMAPPEDCHOICE_16 *inst = (IMAPPEDCHOICE_16 *)pc;
+    JUMP_REL(inst->ndata->table[(unsigned char)*cur]);
   }
 
   OP(SCAN) {
@@ -391,20 +402,11 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(NOTSTRING) {
     INOTSTRING *inst = (INOTSTRING *)pc;
-    string_ptr_t str = inst->cdata;
-    char *p = &str->text[0];
-    char *pend = &str->text[0] + str->len;
-    const char *backtrack_pos = cur;
-    while (p < pend) {
-      if (*cur != *p++) {
-        cur = backtrack_pos;
-        DISPATCH_NEXT;
-      }
-      ++cur;
+    if (pegvm_string_equal(inst->cdata, cur) > 0) {
+      failflag = 1;
+      JUMP(inst->jump);
     }
-    cur = backtrack_pos;
-    failflag = 1;
-    JUMP(inst->jump);
+    DISPATCH_NEXT;
   }
   OP(OPTIONALBYTE) {
     IOPTIONALBYTE *inst = (IOPTIONALBYTE *)pc;
@@ -429,19 +431,10 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     }
     DISPATCH_NEXT;
   }
+
   OP(OPTIONALSTRING) {
     IOPTIONALSTRING *inst = (IOPTIONALSTRING *)pc;
-    string_ptr_t str = inst->cdata;
-    char *p = &str->text[0];
-    char *pend = &str->text[0] + str->len;
-    const char *backtrack_pos = cur;
-    while (p < pend) {
-      if (*cur != *p++) {
-        cur = backtrack_pos;
-        DISPATCH_NEXT;
-      }
-      ++cur;
-    }
+    cur += pegvm_string_equal(inst->cdata, cur);
     DISPATCH_NEXT;
   }
   OP(ZEROMOREBYTERANGE) {

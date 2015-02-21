@@ -15,10 +15,14 @@ typedef struct charpair {
   char c2;
 } __attribute__((packed)) charpair;
 
-typedef struct string {
+typedef struct pegvm_string {
   unsigned len;
   char text[1];
-} string, *string_ptr_t;
+} *pegvm_string_ptr_t;
+
+typedef struct inst_table_t {
+  PegVMInstruction *table[256];
+} *inst_table_t;
 
 typedef struct int_table_t {
   int table[256];
@@ -70,10 +74,20 @@ static uint16_t Loader_Read16(ByteCodeLoader *loader) {
   return read16(loader->input, loader->info);
 }
 
-static PegVMInstruction *Loader_GetJumpAddr(ByteCodeLoader *loader, PegVMInstruction *inst);
-static string_ptr_t Loader_ReadString(ByteCodeLoader *loader) {
+static PegVMInstruction *GetJumpAddr(PegVMInstruction *inst, int offset);
+
+static PegVMInstruction *Loader_GetJumpAddr(ByteCodeLoader *loader, PegVMInstruction *inst) {
+    int dst = Loader_Read32(loader);
+#if 0
+    return GetJumpAddr(loader->head, dst);
+#else
+    return GetJumpAddr(inst, dst);
+#endif
+}
+
+static pegvm_string_ptr_t Loader_ReadString(ByteCodeLoader *loader) {
   uint32_t len = Loader_Read16(loader);
-  string_ptr_t str = (string_ptr_t)__malloc(sizeof(*str) - 1 + len);
+  pegvm_string_ptr_t str = (pegvm_string_ptr_t)__malloc(sizeof(*str) - 1 + len);
   str->len = len;
   for (uint32_t i = 0; i < len; i++) {
     str->text[i] = Loader_Read32(loader);
@@ -81,9 +95,9 @@ static string_ptr_t Loader_ReadString(ByteCodeLoader *loader) {
   return str;
 }
 
-static string_ptr_t Loader_ReadName(ByteCodeLoader *loader) {
+static pegvm_string_ptr_t Loader_ReadName(ByteCodeLoader *loader) {
   uint32_t len = Loader_Read16(loader);
-  string_ptr_t str = (string_ptr_t)__malloc(sizeof(*str) - 1 + len);
+  pegvm_string_ptr_t str = (pegvm_string_ptr_t)__malloc(sizeof(*str) - 1 + len);
   str->len = len;
   for (uint32_t i = 0; i < len; i++) {
     str->text[i] = loader->input[loader->info->pos++];
@@ -224,7 +238,7 @@ static void Emit_CHARSET(PegVMInstruction *inst, ByteCodeLoader *loader) {
 typedef struct ISTRING {
   PegVMInstructionBase base;
   PegVMInstruction *jump;
-  string_ptr_t chardata;
+  pegvm_string_ptr_t chardata;
 } ISTRING;
 
 static void Emit_STRING(PegVMInstruction *inst, ByteCodeLoader *loader) {
@@ -238,7 +252,7 @@ static void Emit_STRING(PegVMInstruction *inst, ByteCodeLoader *loader) {
 typedef struct ISTRING1 {
   PegVMInstructionBase base;
   PegVMInstruction *jump;
-  string_ptr_t chardata;
+  pegvm_string_ptr_t chardata;
 } ISTRING1;
 
 // static void Emit_STRING1(PegVMInstruction *inst, ByteCodeLoader *loader)
@@ -253,7 +267,7 @@ typedef struct ISTRING1 {
 typedef struct ISTRING2 {
   PegVMInstructionBase base;
   PegVMInstruction *jump;
-  string_ptr_t chardata;
+  pegvm_string_ptr_t chardata;
 } ISTRING2;
 
 // static void Emit_STRING2(PegVMInstruction *inst, ByteCodeLoader *loader)
@@ -268,7 +282,7 @@ typedef struct ISTRING2 {
 typedef struct ISTRING4 {
   PegVMInstructionBase base;
   PegVMInstruction *jump;
-  string_ptr_t chardata;
+  pegvm_string_ptr_t chardata;
 } ISTRING4;
 
 // static void Emit_STRING4(PegVMInstruction *inst, ByteCodeLoader *loader)
@@ -480,7 +494,7 @@ static void Emit_SETendp(PegVMInstruction *inst, ByteCodeLoader *loader) {
 #define OPCODE_ITAG 35
 typedef struct ITAG {
   PegVMInstructionBase base;
-  string_ptr_t chardata;
+  pegvm_string_ptr_t chardata;
 } ITAG;
 
 static void Emit_TAG(PegVMInstruction *inst, ByteCodeLoader *loader) {
@@ -491,7 +505,7 @@ static void Emit_TAG(PegVMInstruction *inst, ByteCodeLoader *loader) {
 #define OPCODE_IVALUE 36
 typedef struct IVALUE {
   PegVMInstructionBase base;
-  string_ptr_t chardata;
+  pegvm_string_ptr_t chardata;
 } IVALUE;
 
 static void Emit_VALUE(PegVMInstruction *inst, ByteCodeLoader *loader) {
@@ -502,7 +516,11 @@ static void Emit_VALUE(PegVMInstruction *inst, ByteCodeLoader *loader) {
 #define OPCODE_IMAPPEDCHOICE 37
 typedef struct IMAPPEDCHOICE {
   PegVMInstructionBase base;
+#if 0
   int_table_t ndata;
+#else
+  inst_table_t ndata;
+#endif
 } IMAPPEDCHOICE;
 
 #define OPCODE_IMAPPEDCHOICE_8 38
@@ -547,7 +565,7 @@ static void Emit_MAPPEDCHOICE(PegVMInstruction *inst, ByteCodeLoader *loader) {
     max_offset = MAX(max_offset, offset);
     table.table[i] = offset;
   }
-  if (max_offset < CHAR_MAX) {
+  if (max_offset < CHAR_MAX && 0) {
     IMAPPEDCHOICE_8 *ir2 = (IMAPPEDCHOICE_8 *) ir;
     ir2->base.opcode = OPCODE_IMAPPEDCHOICE_8;
     ir2->ndata = (char_table_t) __malloc(sizeof(struct char_table_t));
@@ -556,7 +574,7 @@ static void Emit_MAPPEDCHOICE(PegVMInstruction *inst, ByteCodeLoader *loader) {
     }
     return;
   }
-  if (max_offset < SHRT_MAX) {
+  if (max_offset < SHRT_MAX && 0) {
     IMAPPEDCHOICE_16 *ir2 = (IMAPPEDCHOICE_16 *) ir;
     ir2->base.opcode = OPCODE_IMAPPEDCHOICE_16;
     ir2->ndata =  (short_table_t) __malloc(sizeof(struct short_table_t));
@@ -565,10 +583,17 @@ static void Emit_MAPPEDCHOICE(PegVMInstruction *inst, ByteCodeLoader *loader) {
     }
     return;
   }
+#if 0
   ir->ndata = (int_table_t)__malloc(sizeof(struct int_table_t));
   for (int i = 0; i < 256; i++) {
       ir->ndata->table[i] = table.table[i];
   }
+#else
+  ir->ndata = (inst_table_t)__malloc(sizeof(struct inst_table_t));
+  for (int i = 0; i < 256; i++) {
+      ir->ndata->table[i] = GetJumpAddr(inst, table.table[i]);
+  }
+#endif
 }
 
 #define OPCODE_ISCAN 40
@@ -721,7 +746,7 @@ static void Emit_NOTBYTERANGE(PegVMInstruction *inst, ByteCodeLoader *loader) {
 typedef struct INOTSTRING {
   PegVMInstructionBase base;
   PegVMInstruction *jump;
-  string_ptr_t cdata;
+  pegvm_string_ptr_t cdata;
 } INOTSTRING;
 
 static void Emit_NOTSTRING(PegVMInstruction *inst, ByteCodeLoader *loader) {
@@ -774,7 +799,7 @@ static void Emit_OPTIONALBYTERANGE(PegVMInstruction *inst,
 #define OPCODE_IOPTIONALSTRING 56
 typedef struct IOPTIONALSTRING {
   PegVMInstructionBase base;
-  string_ptr_t cdata;
+  pegvm_string_ptr_t cdata;
 } IOPTIONALSTRING;
 
 static void Emit_OPTIONALSTRING(PegVMInstruction *inst,
@@ -855,14 +880,10 @@ union PegVMInstruction {
   PegVMInstructionBase base;
 };
 
-static PegVMInstruction *Loader_GetJumpAddr(ByteCodeLoader *loader, PegVMInstruction *inst) {
-    int dst = Loader_Read32(loader);
-#if 0
-    return loader->head + dst;
-#else
-    return inst + dst;
-#endif
+static PegVMInstruction *GetJumpAddr(PegVMInstruction *inst, int offset) {
+  return inst + offset;
 }
+
 #if 0
 int main(int argc, char const* argv[])
 {
