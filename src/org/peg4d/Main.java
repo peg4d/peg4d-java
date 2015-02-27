@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.jvm.JavaByteCodeGenerator;
+import org.peg4d.pegcode.Compiler;
 import org.peg4d.pegcode.GrammarGenerator;
 import org.peg4d.pegcode.PegVMByteCodeGenerator;
 import org.peg4d.regex.RegexObject;
@@ -82,6 +83,11 @@ public class Main {
 	public static boolean PegVMByteCodeGeneration = false;
 	
 	public static int PegVMByteCodeOptimizedLevel = 0;
+	
+	// --nezvm
+	public static boolean NEZVMByteCodeGeneration = false;
+	
+	public static int NEZVMByteCodeOptimizationLevel = 0;
 
 	// -O
 	public static int OptimizationLevel = 2;
@@ -208,6 +214,11 @@ public class Main {
 				PegVMByteCodeOptimizedLevel = Utils.parseInt(args[index], 0);
 				index = index + 1;
 			}
+			else if (argument.equals("--nezvm")) {
+				NEZVMByteCodeGeneration = true;
+				NEZVMByteCodeOptimizationLevel = Utils.parseInt(args[index], 0);
+				index = index + 1;
+			}
 			else {
 				showUsage("unknown option: " + argument);
 			}
@@ -221,7 +232,7 @@ public class Main {
 				GrammarFile = guessGrammarFile(InputFileName);
 			}
 		}
-		if(InputFileName == null && InputString == null && !PegVMByteCodeGeneration) {
+		if(InputFileName == null && InputString == null && !PegVMByteCodeGeneration && !NEZVMByteCodeGeneration) {
 			System.out.println("unspecified inputs: invoking interactive shell");
 			Command = "shell";
 		}
@@ -403,6 +414,11 @@ public class Main {
 			PegVMByteCodeGenerator g = new PegVMByteCodeGenerator(Main.PegVMByteCodeOptimizedLevel);
 			g.formatGrammar(peg, null);
 			g.writeByteCode(GrammarFile, OutputFileName, peg);
+		}
+		else if (NEZVMByteCodeGeneration) {
+			Compiler c = new Compiler();
+			c.formatGrammar(peg, new StringBuilder());
+			c.writeByteCode(GrammarFile, OutputFileName, peg);
 		}
 	}
 

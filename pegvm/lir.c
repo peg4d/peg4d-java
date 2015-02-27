@@ -74,12 +74,13 @@ static uint16_t Loader_Read16(ByteCodeLoader *loader) {
 
 static PegVMInstruction *GetJumpAddr(PegVMInstruction *inst, int offset);
 
-static PegVMInstruction *Loader_GetJumpAddr(ByteCodeLoader *loader, PegVMInstruction *inst) {
-    int dst = Loader_Read32(loader);
+static PegVMInstruction *Loader_GetJumpAddr(ByteCodeLoader *loader,
+                                            PegVMInstruction *inst) {
+  int dst = Loader_Read32(loader);
 #if 0
     return GetJumpAddr(loader->head, dst);
 #else
-    return GetJumpAddr(inst, dst);
+  return GetJumpAddr(inst, dst);
 #endif
 }
 
@@ -95,9 +96,10 @@ static pegvm_string_ptr_t Loader_ReadString(ByteCodeLoader *loader) {
 
 static pegvm_string_ptr_t Loader_ReadName(ByteCodeLoader *loader) {
   uint32_t len = Loader_Read16(loader);
-  pegvm_string_ptr_t str = (pegvm_string_ptr_t)__malloc(sizeof(*str) - 1 + len);
+  pegvm_string_ptr_t str = (pegvm_string_ptr_t)__malloc(sizeof(*str) + len);
   str->len = len;
-  memcpy(str->text, loader->input+loader->info->pos, len);
+  memcpy(str->text, loader->input + loader->info->pos, len);
+  str->text[len] = 0;
   loader->info->pos += len;
   return str;
 }
@@ -549,7 +551,8 @@ typedef struct IMAPPEDCHOICE_8 {
   char_table_t ndata;
 } IMAPPEDCHOICE_8;
 
-// static void Emit_MAPPEDCHOICE_8(PegVMInstruction *inst, ByteCodeLoader*loader)
+// static void Emit_MAPPEDCHOICE_8(PegVMInstruction *inst,
+// ByteCodeLoader*loader)
 // {
 //   IMAPPEDCHOICE_8 *ir = (IMAPPEDCHOICE_8 *) inst;
 //   ir->base.opcode = OPCODE_IMAPPEDCHOICE_8;
@@ -564,7 +567,8 @@ typedef struct IMAPPEDCHOICE_16 {
   short_table_t ndata;
 } IMAPPEDCHOICE_16;
 
-// static void Emit_MAPPEDCHOICE_16(PegVMInstruction *inst, ByteCodeLoader*loader)
+// static void Emit_MAPPEDCHOICE_16(PegVMInstruction *inst,
+// ByteCodeLoader*loader)
 // {
 //   IMAPPEDCHOICE_16 *ir = (IMAPPEDCHOICE_16 *) inst;
 //   ir->base.opcode = OPCODE_IMAPPEDCHOICE_16;
@@ -587,18 +591,18 @@ static void Emit_MAPPEDCHOICE(PegVMInstruction *inst, ByteCodeLoader *loader) {
   }
 #ifndef PEGVM_USE_MAPPEDCHOISE_DIRECT_JMP
   if (max_offset < CHAR_MAX && 0) {
-    IMAPPEDCHOICE_8 *ir2 = (IMAPPEDCHOICE_8 *) ir;
+    IMAPPEDCHOICE_8 *ir2 = (IMAPPEDCHOICE_8 *)ir;
     ir2->base.opcode = OPCODE_IMAPPEDCHOICE_8;
-    ir2->ndata = (char_table_t) __malloc(sizeof(struct char_table_t));
+    ir2->ndata = (char_table_t)__malloc(sizeof(struct char_table_t));
     for (int i = 0; i < 256; i++) {
       ir2->ndata->table[i] = (char)table.table[i];
     }
     return;
   }
   if (max_offset < SHRT_MAX && 0) {
-    IMAPPEDCHOICE_16 *ir2 = (IMAPPEDCHOICE_16 *) ir;
+    IMAPPEDCHOICE_16 *ir2 = (IMAPPEDCHOICE_16 *)ir;
     ir2->base.opcode = OPCODE_IMAPPEDCHOICE_16;
-    ir2->ndata =  (short_table_t) __malloc(sizeof(struct short_table_t));
+    ir2->ndata = (short_table_t)__malloc(sizeof(struct short_table_t));
     for (int i = 0; i < 256; i++) {
       ir2->ndata->table[i] = (short)table.table[i];
     }
@@ -606,12 +610,12 @@ static void Emit_MAPPEDCHOICE(PegVMInstruction *inst, ByteCodeLoader *loader) {
   }
   ir->ndata = (int_table_t)__malloc(sizeof(struct int_table_t));
   for (int i = 0; i < 256; i++) {
-      ir->ndata->table[i] = table.table[i];
+    ir->ndata->table[i] = table.table[i];
   }
 #else
   ir->ndata = (inst_table_t)__malloc(sizeof(struct inst_table_t));
   for (int i = 0; i < 256; i++) {
-      ir->ndata->table[i] = GetJumpAddr(inst, table.table[i]);
+    ir->ndata->table[i] = GetJumpAddr(inst, table.table[i]);
   }
 #endif
 }
@@ -843,7 +847,6 @@ static void Emit_OPTIONALBYTERANGE(PegVMInstruction *inst,
     }
   }
 #endif
-
 }
 #define OPCODE_IOPTIONALSTRING 56
 typedef struct IOPTIONALSTRING {
