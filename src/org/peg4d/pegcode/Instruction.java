@@ -154,6 +154,11 @@ abstract class MatchingInstruction extends Instruction {
 		}
 	}
 	
+	public MatchingInstruction(ParsingExpression expr, BasicBlock bb) {
+		super(expr, bb);
+		this.cdata = new ArrayList<Integer>(); 
+	}
+	
 	public int size() {
 		return this.cdata.size();
 	}
@@ -171,6 +176,11 @@ abstract class JumpMatchingInstruction extends MatchingInstruction {
 	BasicBlock jump;
 	public JumpMatchingInstruction(ParsingExpression expr, BasicBlock bb, BasicBlock jump, int ...cdata ) {
 		super(expr, bb, cdata);
+		this.jump = jump;
+	}
+	
+	public JumpMatchingInstruction(ParsingExpression expr, BasicBlock bb, BasicBlock jump) {
+		super(expr, bb);
 		this.jump = jump;
 	}
 	
@@ -207,8 +217,8 @@ class CHARRANGE extends JumpMatchingInstruction {
 }
 
 class CHARSET extends JumpMatchingInstruction {
-	public CHARSET(ParsingExpression expr, BasicBlock bb, BasicBlock jump, int ...cdata) {
-		super(expr, bb, jump, cdata);
+	public CHARSET(ParsingExpression expr, BasicBlock bb, BasicBlock jump) {
+		super(expr, bb, jump);
 		this.op = Opcode.CHARSET;
 	}
 
@@ -533,4 +543,29 @@ class VALUE extends Instruction {
 	public String toString() {
 		return "VALUE " + this.cdata;
 	}
+}
+
+class MAPPEDCHOICE extends Instruction {
+	List<BasicBlock> jumpList;
+	public MAPPEDCHOICE(ParsingExpression expr, BasicBlock bb) {
+		super(expr, bb);
+		this.op = Opcode.MAPPEDCHOICE;
+		this.jumpList = new ArrayList<BasicBlock>();
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  MAPPEDCHOICE");
+	}
+
+	@Override
+	public String toString() {
+		return "MAPPEDCHOICE";
+	}
+	
+	public MAPPEDCHOICE append(BasicBlock bb) {
+		this.jumpList.add(bb);
+		return this;
+	}
+	
 }

@@ -9,6 +9,7 @@ import java.util.Stack;
 
 import org.peg4d.Grammar;
 import org.peg4d.ParsingRule;
+import org.peg4d.UList;
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.ParsingAnd;
 import org.peg4d.expression.ParsingAny;
@@ -46,12 +47,81 @@ import org.peg4d.expression.ParsingWithoutFlag;
 
 public class Compiler extends GrammarGenerator {
 	
+	// Kind of optimize
+	boolean O_Inlining = false;
+	boolean O_MappedChoice = false;
+	boolean O_FusionInstruction = false;
+	boolean O_FusionOperand = false;
+	boolean O_StackCaching = false;
+	Optimizer optimizer;
+	
+	boolean optChoiceMode = true;
+	
+	boolean PatternMatching = false;
+	
 	Grammar peg;
 	Module module;
 	Function func;
 	BasicBlock currentBB;
 	
-	Stack<BasicBlock> bbStack = new Stack<BasicBlock>();
+	public Compiler(int level) {
+		this.optimizer = new Optimizer(O_Inlining, O_MappedChoice, O_FusionInstruction, O_FusionOperand, O_StackCaching);
+		switch (level) {
+		case 1:
+			O_Inlining = true;
+			break;
+		case 2:
+			O_FusionInstruction = true;
+			break;
+		case 3:
+			O_StackCaching = true;
+			break;
+		case 4:
+			O_MappedChoice = true;
+			break;
+		case 5:
+			O_Inlining = true;
+			O_FusionInstruction = true;
+			O_FusionOperand = true;
+			break;
+		case 6:
+			O_Inlining = true;
+			O_FusionInstruction = true;
+			O_FusionOperand = true;
+			O_StackCaching = true;
+			break;
+		case 7:
+			O_Inlining = true;
+			O_FusionInstruction = true;
+			O_MappedChoice = true;
+			O_FusionOperand = true;
+			O_StackCaching = true;
+			break;
+		case 8:
+			O_Inlining = true;
+			O_FusionInstruction = true;
+			O_MappedChoice = true;
+			O_FusionOperand = true;
+			O_StackCaching = true;
+			PatternMatching = true;
+			break;
+		case 9:
+			O_FusionInstruction = true;
+			O_MappedChoice = true;
+			O_FusionOperand = true;
+			O_StackCaching = true;
+			break;
+		case 10:
+			O_FusionInstruction = true;
+			O_MappedChoice = true;
+			O_FusionOperand = true;
+			O_StackCaching = true;
+			PatternMatching = true;
+			break;
+		default:
+			break;
+		}
+	}
 	
 	int codeIndex;
 	
@@ -231,11 +301,11 @@ public class Compiler extends GrammarGenerator {
 		case VALUE:
 			pos = writeCdataByteCode(byteCode, ((VALUE)code).cdata, pos);
 			break;
-//		case MAPPEDCHOICE:
-//			for(int j = 0; j < 256; j++){
-//				pos = write32(byteCode, code.ndata.get(j)-index, pos);
-//			}
-//			break;
+		case MAPPEDCHOICE:
+			for(int j = 0; j < 256; j++){
+				pos = write32(byteCode, ((MAPPEDCHOICE)code).jumpList.get(j).codeIndex-index, pos);
+			}
+			break;
 //		case SCAN:
 //			pos = write32(byteCode, code.get(0), pos);
 //			pos = write32(byteCode, code.get(1), pos);
@@ -391,8 +461,7 @@ public class Compiler extends GrammarGenerator {
 	@Override
 	public void formatFooter() {
 		System.out.println(this.module.stringfy(this.sb));
-		Optimizer o = new Optimizer();
-		o.optimize(this.module);
+		this.optimizer.optimize(this.module);
 		this.labeling();
 		this.dumpLastestCode();
 	}
@@ -476,8 +545,8 @@ public class Compiler extends GrammarGenerator {
 		return new CHARRANGE(e, bb, jump, cdata);
 	}
 	
-	private Instruction createCHARSET(ParsingExpression e, BasicBlock bb, BasicBlock jump, int ...cdata) {
-		return new CHARSET(e, bb, jump, cdata);
+	private CHARSET createCHARSET(ParsingExpression e, BasicBlock bb, BasicBlock jump) {
+		return new CHARSET(e, bb, jump);
 	}
 	
 	private Instruction createSTRING(ParsingExpression e, BasicBlock bb, BasicBlock jump, int ...cdata) {
@@ -541,6 +610,122 @@ public class Compiler extends GrammarGenerator {
 	
 	private Instruction createVALUE(ParsingExpression e, BasicBlock bb, String name) {
 		return new VALUE(e, bb, name);
+	}
+	
+	public MAPPEDCHOICE createMAPPEDCHOICE(ParsingExpression e, BasicBlock bb) {
+		return new MAPPEDCHOICE(e, bb);
+	}
+	
+	boolean isWS;
+	private boolean checkCharset(ParsingChoice e) {
+		isWS = true;
+		for (int i = 0; i < e.size(); i++) {
+			ParsingExpression inner = e.get(i);
+			if (!(inner instanceof ParsingByte)) {
+				isWS = false;
+				return false;
+			}
+			if (isWS) {
+				if (!checkWS(((ParsingByte)inner).byteChar)) {
+					isWS = false;
+				}
+			}
+		}
+		return true;
+	}
+	
+	private boolean checkWS(int byteChar) {
+		if (byteChar == 32 || byteChar == 9 || byteChar == 10 || byteChar == 13) {
+			return true;
+		}
+		return false;
+	}
+	
+	private ParsingExpression checkChoice(ParsingChoice e, int c, ParsingExpression failed) {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[2]);
+		checkChoice(e, c, l);
+		if(l.size() == 0) {
+			l.add(failed);
+		}
+		return ParsingExpression.newChoice(l).uniquefy();
+	}
+	
+	private void checkChoice(ParsingChoice choice, int c, UList<ParsingExpression> l) {
+		for(int i = 0; i < choice.size(); i++) {
+			ParsingExpression e = choice.get(i);
+			if (e instanceof ParsingChoice) {
+				checkChoice((ParsingChoice)e, c, l);
+			}
+			else {
+				short r = e.acceptByte(c);
+				if(r != ParsingExpression.Reject) {
+					l.add(e);
+				}
+			}
+		}
+	}
+	
+	private void writeCharsetCode(ParsingExpression e, int index, int charCount) {
+		CHARSET inst = this.createCHARSET(e, this.getCurrentBasicBlock(), this.jumpFailureJump());
+		for(int i = index; i < index + charCount; i++) {
+			inst.append(((ParsingByte)e.get(i)).byteChar);
+		}
+	}
+	
+	private void optimizeChoice(ParsingChoice e) {
+		if (this.checkCharset(e)) {
+			writeCharsetCode(e, 0, e.size());
+		}
+		else {
+			ParsingExpression[] matchCase = new ParsingExpression[257];
+			UList<ParsingExpression> caseList = new UList<ParsingExpression>(new ParsingExpression[257]);
+			ParsingExpression fails = new ParsingFailure(e);
+			for(int i = 0; i < 257; i++) {
+				boolean isNotGenerated = true;
+				matchCase[i] = checkChoice(e, i, fails);
+				for(int j = 0; j < caseList.size(); j++) {
+					if (matchCase[i] == caseList.get(j)) {
+						isNotGenerated = false;
+					}
+				}
+				if (isNotGenerated) {
+					caseList.add(matchCase[i]);
+				}
+			}
+			BasicBlock bb = this.getCurrentBasicBlock();
+			BasicBlock fbb = new BasicBlock();
+			BasicBlock end = new BasicBlock();
+			this.pushFailureJumpPoint(fbb);
+			this.createPUSHp(e, bb);
+			MAPPEDCHOICE inst = this.createMAPPEDCHOICE(e, bb);
+			HashMap<Integer, BasicBlock> choiceMap = new HashMap<Integer, BasicBlock>();
+			this.optChoiceMode = false;
+			for(int i = 0; i < caseList.size(); i++) {
+				bb = new BasicBlock(this.func);
+				this.setCurrentBasicBlock(bb);
+				ParsingExpression caseElement = caseList.get(i);
+				choiceMap.put(caseElement.uniqueId, bb);
+				caseElement.visit(this);
+				bb = this.getCurrentBasicBlock();
+				if (caseElement instanceof ParsingFailure) {
+					this.createJUMP(caseElement, bb, this.jumpFailureJump());
+				}
+				else {
+					this.createJUMP(caseElement, bb, end);
+				}
+			}
+			this.optChoiceMode = true;
+			this.popFailureJumpPoint(e);
+			fbb.setInsertPoint(this.func);
+			this.createSTOREp(e, fbb);
+			this.createJUMP(e, fbb, this.jumpFailureJump());
+			end.setInsertPoint(this.func);
+			this.setCurrentBasicBlock(end);
+			this.createPOPp(e, end);
+			for(int i = 0; i < matchCase.length; i++) {
+				inst.append(choiceMap.get(matchCase[i].uniqueId));
+			}
+		}
 	}
 
 	@Override
@@ -675,29 +860,37 @@ public class Compiler extends GrammarGenerator {
 
 	@Override
 	public void visitChoice(ParsingChoice e) {
-		BasicBlock bb = null;
-		BasicBlock fbb = null;
-		BasicBlock endbb = new BasicBlock();
-		for(int i = 0; i < e.size(); i++) {
-			bb = this.getCurrentBasicBlock();
-			fbb =  new BasicBlock();
-			this.pushFailureJumpPoint(fbb);
-			this.createPUSHp(e, bb);
-			e.get(i).visit(this);
-			bb = getCurrentBasicBlock();
-			this.createJUMP(e, bb, endbb);
-			this.popFailureJumpPoint(e.get(i));
-			fbb.setInsertPoint(this.func);
-			if (i != e.size() - 1) {
-				this.createSTOREflag(e, fbb, 0);
-			}
-			this.createSTOREp(e, fbb);
-			this.setCurrentBasicBlock(fbb);
+		if (O_MappedChoice && optChoiceMode) {
+			this.optimizeChoice(e);
 		}
-		this.createJUMP(e, fbb, this.jumpFailureJump());
-		endbb.setInsertPoint(this.func);
-		this.createPOPp(e, endbb);
-		this.setCurrentBasicBlock(endbb);
+//		else if (O_FusionInstruction) {
+//			
+//		}
+		else {
+			BasicBlock bb = null;
+			BasicBlock fbb = null;
+			BasicBlock endbb = new BasicBlock();
+			for(int i = 0; i < e.size(); i++) {
+				bb = this.getCurrentBasicBlock();
+				fbb =  new BasicBlock();
+				this.pushFailureJumpPoint(fbb);
+				this.createPUSHp(e, bb);
+				e.get(i).visit(this);
+				bb = getCurrentBasicBlock();
+				this.createJUMP(e, bb, endbb);
+				this.popFailureJumpPoint(e.get(i));
+				fbb.setInsertPoint(this.func);
+				if (i != e.size() - 1) {
+					this.createSTOREflag(e, fbb, 0);
+				}
+				this.createSTOREp(e, fbb);
+				this.setCurrentBasicBlock(fbb);
+			}
+			this.createJUMP(e, fbb, this.jumpFailureJump());
+			endbb.setInsertPoint(this.func);
+			this.createPOPp(e, endbb);
+			this.setCurrentBasicBlock(endbb);
+		}
 	}
 
 	@Override

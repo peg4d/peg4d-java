@@ -416,7 +416,7 @@ public class Main {
 			g.writeByteCode(GrammarFile, OutputFileName, peg);
 		}
 		else if (NEZVMByteCodeGeneration) {
-			Compiler c = new Compiler();
+			Compiler c = new Compiler(Main.NEZVMByteCodeOptimizationLevel);
 			c.formatGrammar(peg, new StringBuilder());
 			c.writeByteCode(GrammarFile, OutputFileName, peg);
 		}
