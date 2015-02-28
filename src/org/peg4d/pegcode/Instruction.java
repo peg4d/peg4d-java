@@ -115,6 +115,9 @@ class CONDBRANCH extends JumpInstruction {
 
 	@Override
 	protected void stringfy(StringBuilder sb) {
+		if (this.bb.func.funcName.equals("ATTRIBUTECONTENT")) {
+			System.out.println(this.bb.func.indexOf(this.bb));
+		}
 		sb.append("  CONDBRANCH ");
 		sb.append(this.val + " ");
 		sb.append("jump:" + this.jump.getBBName());
@@ -228,6 +231,7 @@ class CHARSET extends JumpMatchingInstruction {
 		for(int i = 0; i < this.size(); i++) {
 			sb.append(this.getc(i) + " ");
 		}
+		sb.append(this.jump.getBBName());
 	}
 
 	@Override
@@ -567,5 +571,247 @@ class MAPPEDCHOICE extends Instruction {
 		this.jumpList.add(bb);
 		return this;
 	}
-	
+}
+
+class NOTCHAR extends JumpMatchingInstruction {
+	public NOTCHAR(ParsingExpression expr, BasicBlock bb, BasicBlock jump,
+			int... cdata) {
+		super(expr, bb, jump, cdata);
+		this.op = Opcode.NOTBYTE;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  NOTCHAR ");
+		sb.append(this.getc(0));
+		sb.append(" jump:" + this.jump.getBBName());
+	}
+
+	@Override
+	public String toString() {
+		return "NOTCHAR " + this.getc(0) + " " + this.jump.codeIndex;
+	}
+}
+
+class NOTCHARRANGE extends JumpMatchingInstruction {
+	public NOTCHARRANGE(ParsingExpression expr, BasicBlock bb, BasicBlock jump,
+			int... cdata) {
+		super(expr, bb, jump, cdata);
+		this.op = Opcode.NOTBYTERANGE;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  NOTCHARRANGE ");
+		sb.append(this.getc(0) + " ");
+		sb.append(this.getc(1) + " ");
+		sb.append("jump:" + this.jump.getBBName());
+	}
+
+	@Override
+	public String toString() {
+		return "NOTCHARRANGE " + this.getc(0) + " " + this.getc(1) + " " + this.jump.codeIndex;
+	}
+}
+
+class NOTCHARSET extends JumpMatchingInstruction {
+	public NOTCHARSET(ParsingExpression expr, BasicBlock bb, BasicBlock jump) {
+		super(expr, bb, jump);
+		this.op = Opcode.NOTCHARSET;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  NOTCHARSET ");
+		for(int i = 0; i < this.size(); i++) {
+			sb.append(this.getc(i) + " ");
+		}
+		sb.append(this.jump.getBBName());
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("NOTCHARSET ");
+		for(int i = 0; i < this.size(); i++) {
+			sb.append(this.getc(i) + " ");
+		}
+		sb.append(this.jump.codeIndex);
+		return sb.toString();
+	}
+}
+
+class NOTSTRING extends JumpMatchingInstruction {
+	public NOTSTRING(ParsingExpression expr, BasicBlock bb, BasicBlock jump) {
+		super(expr, bb, jump);
+		this.op = Opcode.NOTSTRING;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  NOTSTRING ");
+		for(int i = 0; i < this.size(); i++) {
+			sb.append(this.getc(i) + " ");
+		}
+		sb.append(this.jump.getBBName());
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("NOTSTRING ");
+		for(int i = 0; i < this.size(); i++) {
+			sb.append(this.getc(i) + " ");
+		}
+		sb.append(this.jump.codeIndex);
+		return sb.toString();
+	}
+}
+
+class OPTIONALCHAR extends MatchingInstruction {
+	public OPTIONALCHAR(ParsingExpression expr, BasicBlock bb, int[] cdata) {
+		super(expr, bb, cdata);
+		this.op = Opcode.OPTIONALBYTE;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  OPTIONALCHAR ");
+		sb.append(this.getc(0));
+	}
+
+	@Override
+	public String toString() {
+		return "OPTIONALCHAR " + this.getc(0);
+	}
+}
+
+class OPTIONALCHARRANGE extends MatchingInstruction {
+	public OPTIONALCHARRANGE(ParsingExpression expr, BasicBlock bb, int[] cdata) {
+		super(expr, bb, cdata);
+		this.op = Opcode.OPTIONALBYTERANGE;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  OPTIONALCHARRANGE ");
+		sb.append(this.getc(0) + " ");
+		sb.append(this.getc(1));
+	}
+
+	@Override
+	public String toString() {
+		return "OPTIONALCHARRANGE " + this.getc(0) + " " + this.getc(1);
+	}
+}
+
+class OPTIONALCHARSET extends MatchingInstruction {
+	public OPTIONALCHARSET(ParsingExpression expr, BasicBlock bb) {
+		super(expr, bb);
+		this.op = Opcode.OPTIONALCHARSET;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  OPTIONALCHARSET ");
+		for(int i = 0; i < this.size(); i++) {
+			sb.append(this.getc(i) + " ");
+		}
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("OPTIONALCHARSET ");
+		for(int i = 0; i < this.size(); i++) {
+			sb.append(this.getc(i) + " ");
+		}
+		return sb.toString();
+	}
+}
+
+class OPTIONALSTRING extends MatchingInstruction {
+	public OPTIONALSTRING(ParsingExpression expr, BasicBlock bb) {
+		super(expr, bb);
+		this.op = Opcode.OPTIONALSTRING;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  OPTIONALSTRING ");
+		for(int i = 0; i < this.size(); i++) {
+			sb.append(this.getc(i) + " ");
+		}
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("OPTIONALSTRING ");
+		for(int i = 0; i < this.size(); i++) {
+			sb.append(this.getc(i) + " ");
+		}
+		return sb.toString();
+	}
+}
+
+class ZEROMORECHARRANGE extends MatchingInstruction {
+	public ZEROMORECHARRANGE(ParsingExpression expr, BasicBlock bb, int[] cdata) {
+		super(expr, bb, cdata);
+		this.op = Opcode.ZEROMOREBYTERANGE;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  ZEROMORECHARRANGE ");
+		sb.append(this.getc(0) + " ");
+		sb.append(this.getc(1));
+	}
+
+	@Override
+	public String toString() {
+		return "ZEROMORECHARRANGE " + this.getc(0) + " " + this.getc(1);
+	}
+}
+
+class ZEROMORECHARSET extends MatchingInstruction {
+	public ZEROMORECHARSET(ParsingExpression expr, BasicBlock bb) {
+		super(expr, bb);
+		this.op = Opcode.ZEROMORECHARSET;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  ZEROMORECHARSET ");
+		for(int i = 0; i < this.size(); i++) {
+			sb.append(this.getc(i) + " ");
+		}
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("ZEROMORECHARSET ");
+		for(int i = 0; i < this.size(); i++) {
+			sb.append(this.getc(i) + " ");
+		}
+		return sb.toString();
+	}
+}
+
+class ZEROMOREWS extends Instruction {
+	public ZEROMOREWS(ParsingExpression expr, BasicBlock bb) {
+		super(expr, bb);
+		this.op = Opcode.ZEROMOREWS;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  ZEROMOREWS");
+	}
+
+	@Override
+	public String toString() {
+		return "ZEROMOREWS";
+	}
 }

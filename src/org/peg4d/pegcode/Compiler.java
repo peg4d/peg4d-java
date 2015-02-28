@@ -5,7 +5,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Stack;
 
 import org.peg4d.Grammar;
 import org.peg4d.ParsingRule;
@@ -128,7 +127,7 @@ public class Compiler extends GrammarGenerator {
 	public void writeByteCode(String grammerfileName, String outputFileName, Grammar peg) {
 		//generateProfileCode(peg);
 		//System.out.println("choiceCase: " + choiceCaseCount + "\nconstructor: " + constructorCount);
-		byte[] byteCode = new byte[this.codeIndex * 64];
+		byte[] byteCode = new byte[this.codeIndex * 256];
 		int pos = 0;
 		// Version of the specification (2 byte)
 		byte[] version = new byte[2];
@@ -270,11 +269,12 @@ public class Compiler extends GrammarGenerator {
 			pos = write32(byteCode, ((CHARRANGE)code).getc(1), pos);
 			break;
 		case CHARSET:
-			pos = write16(byteCode, ((CHARSET)code).size(), pos);
-			for(int j = 0; j < ((CHARSET)code).size(); j++){
-				pos = write32(byteCode, ((CHARSET)code).getc(j), pos);
+			CHARSET charset = (CHARSET)code;
+			pos = write16(byteCode, charset.size(), pos);
+			for(int j = 0; j < charset.size(); j++){
+				pos = write32(byteCode, charset.getc(j), pos);
 			}
-			pos = write32(byteCode, ((CHARSET)code).jump.codeIndex-index, pos);
+			pos = write32(byteCode, charset.jump.codeIndex-index, pos);
 			break;
 		case STRING:
 			pos = write32(byteCode, ((STRING)code).jump.codeIndex-index, pos);
@@ -302,8 +302,9 @@ public class Compiler extends GrammarGenerator {
 			pos = writeCdataByteCode(byteCode, ((VALUE)code).cdata, pos);
 			break;
 		case MAPPEDCHOICE:
+			MAPPEDCHOICE m = (MAPPEDCHOICE)code;
 			for(int j = 0; j < 256; j++){
-				pos = write32(byteCode, ((MAPPEDCHOICE)code).jumpList.get(j).codeIndex-index, pos);
+				pos = write32(byteCode, m.jumpList.get(j).codeIndex-index, pos);
 			}
 			break;
 //		case SCAN:
@@ -329,61 +330,67 @@ public class Compiler extends GrammarGenerator {
 //		case INDENT:
 //			pos = write32(byteCode, code.get(0), pos);
 //			break;
-//		case NOTBYTE:
-//			pos = write32(byteCode, code.get(0), pos);
-//			pos = write32(byteCode, code.jump-index, pos);
-//			break;
-//		case NOTANY:
-//			pos = write32(byteCode, code.jump-index, pos);
-//			break;
-//		case NOTCHARSET:
-//			pos = write16(byteCode, code.ndata.size(), pos);
-//			for(int j = 0; j < code.ndata.size(); j++){
-//				pos = write32(byteCode, code.ndata.get(j), pos);
-//			}
-//			pos = write32(byteCode, code.jump-index, pos);
-//			break;
-//		case NOTBYTERANGE:
-//			pos = write32(byteCode, code.get(0), pos);
-//			pos = write32(byteCode, code.get(1), pos);
-//			pos = write32(byteCode, code.jump-index, pos);
-//			break;
-//		case NOTSTRING:
-//			pos = write32(byteCode, code.jump-index, pos);
-//			pos = write16(byteCode, code.ndata.size(), pos);
-//			for(int j = 0; j < code.ndata.size(); j++){
-//				pos = write32(byteCode, code.ndata.get(j), pos);
-//			}
-//			break;
-//		case OPTIONALBYTE:
-//			pos = write32(byteCode, code.get(0), pos);
-//			break;
-//		case OPTIONALCHARSET:
-//			pos = write16(byteCode, code.ndata.size(), pos);
-//			for(int j = 0; j < code.ndata.size(); j++){
-//				pos = write32(byteCode, code.ndata.get(j), pos);
-//			}
-//			break;
-//		case OPTIONALBYTERANGE:
-//			pos = write32(byteCode, code.get(0), pos);
-//			pos = write32(byteCode, code.get(1), pos);
-//			break;
-//		case OPTIONALSTRING:
-//			pos = write16(byteCode, code.ndata.size(), pos);
-//			for(int j = 0; j < code.ndata.size(); j++){
-//				pos = write32(byteCode, code.ndata.get(j), pos);
-//			}
-//			break;
-//		case ZEROMOREBYTERANGE:
-//			pos = write32(byteCode, code.get(0), pos);
-//			pos = write32(byteCode, code.get(1), pos);
-//			break;
-//		case ZEROMORECHARSET:
-//			pos = write16(byteCode, code.ndata.size(), pos);
-//			for(int j = 0; j < code.ndata.size(); j++){
-//				pos = write32(byteCode, code.ndata.get(j), pos);
-//			}
-//			break;
+		case NOTBYTE:
+			NOTCHAR nc = (NOTCHAR)code;
+			pos = write32(byteCode, nc.getc(0), pos);
+			pos = write32(byteCode, nc.jump.codeIndex-index, pos);
+			break;
+		case NOTCHARSET:
+			NOTCHARSET ncs = (NOTCHARSET)code;
+			pos = write16(byteCode, ncs.size(), pos);
+			for(int j = 0; j < ncs.size(); j++){
+				pos = write32(byteCode, ncs.getc(j), pos);
+			}
+			pos = write32(byteCode, ncs.jump.codeIndex-index, pos);
+			break;
+		case NOTBYTERANGE:
+			NOTCHARRANGE ncr = (NOTCHARRANGE)code;
+			pos = write32(byteCode, ncr.getc(0), pos);
+			pos = write32(byteCode, ncr.getc(1), pos);
+			pos = write32(byteCode, ncr.jump.codeIndex-index, pos);
+			break;
+		case NOTSTRING:
+			NOTSTRING ns = (NOTSTRING)code;
+			pos = write32(byteCode, ns.jump.codeIndex-index, pos);
+			pos = write16(byteCode, ns.size(), pos);
+			for(int j = 0; j < ns.size(); j++){
+				pos = write32(byteCode, ns.getc(j), pos);
+			}
+			break;
+		case OPTIONALBYTE:
+			pos = write32(byteCode, ((OPTIONALCHAR)code).getc(0), pos);
+			break;
+		case OPTIONALCHARSET:
+			OPTIONALCHARSET ocs = (OPTIONALCHARSET)code;
+			pos = write16(byteCode, ocs.size(), pos);
+			for(int j = 0; j < ocs.size(); j++){
+				pos = write32(byteCode, ocs.getc(j), pos);
+			}
+			break;
+		case OPTIONALBYTERANGE:
+			OPTIONALCHARRANGE ocr = (OPTIONALCHARRANGE)code;
+			pos = write32(byteCode, ocr.getc(0), pos);
+			pos = write32(byteCode, ocr.getc(1), pos);
+			break;
+		case OPTIONALSTRING:
+			OPTIONALSTRING os = (OPTIONALSTRING)code;
+			pos = write16(byteCode, os.size(), pos);
+			for(int j = 0; j < os.size(); j++){
+				pos = write32(byteCode, os.getc(j), pos);
+			}
+			break;
+		case ZEROMOREBYTERANGE:
+			ZEROMORECHARRANGE zcr = (ZEROMORECHARRANGE)code;
+			pos = write32(byteCode, zcr.getc(0), pos);
+			pos = write32(byteCode, zcr.getc(1), pos);
+			break;
+		case ZEROMORECHARSET:
+			ZEROMORECHARSET zcs = (ZEROMORECHARSET)code;
+			pos = write16(byteCode, zcs.size(), pos);
+			for(int j = 0; j < zcs.size(); j++){
+				pos = write32(byteCode, zcs.getc(j), pos);
+			}
+			break;
 //		case REPEATANY:
 //			pos = write32(byteCode, code.get(0), pos);
 //			break;
@@ -612,11 +619,44 @@ public class Compiler extends GrammarGenerator {
 		return new VALUE(e, bb, name);
 	}
 	
-	public MAPPEDCHOICE createMAPPEDCHOICE(ParsingExpression e, BasicBlock bb) {
+	private MAPPEDCHOICE createMAPPEDCHOICE(ParsingExpression e, BasicBlock bb) {
 		return new MAPPEDCHOICE(e, bb);
 	}
 	
-	boolean isWS;
+	private NOTCHAR createNOTCHAR(ParsingExpression e, BasicBlock bb, BasicBlock jump, int ...ndata) {
+		return new NOTCHAR(e, bb, jump, ndata);
+	}
+	private NOTCHARSET createNOTCHARSET(ParsingExpression e, BasicBlock bb, BasicBlock jump) {
+		return new NOTCHARSET(e, bb, jump);
+	}
+	private NOTCHARRANGE createNOTCHARRANGE(ParsingExpression e, BasicBlock bb, BasicBlock jump, int ...ndata) {
+		return new NOTCHARRANGE(e, bb, jump, ndata);
+	}
+	private NOTSTRING createNOTSTRING(ParsingExpression e, BasicBlock bb, BasicBlock jump) {
+		return new NOTSTRING(e, bb, jump);
+	}
+	private OPTIONALCHAR createOPTIONALCHAR(ParsingExpression e, BasicBlock bb, int ...ndata) {
+		return new OPTIONALCHAR(e, bb, ndata);
+	}
+	private OPTIONALCHARSET createOPTIONALCHARSET(ParsingExpression e, BasicBlock bb) {
+		return new OPTIONALCHARSET(e, bb);
+	}
+	private OPTIONALCHARRANGE createOPTIONALBYTERANGE(ParsingExpression e, BasicBlock bb, int ...ndata) {
+		return new OPTIONALCHARRANGE(e, bb, ndata);
+	}
+	private OPTIONALSTRING createOPTIONALSTRING(ParsingExpression e, BasicBlock bb) {
+		return new OPTIONALSTRING(e, bb);
+	}
+	private ZEROMORECHARRANGE createZEROMOREBYTERANGE(ParsingExpression e, BasicBlock bb, int ...ndata) {
+		return new ZEROMORECHARRANGE(e, bb, ndata);
+	}
+	private ZEROMORECHARSET createZEROMORECHARSET(ParsingExpression e, BasicBlock bb) {
+		return new ZEROMORECHARSET(e, bb);
+	}
+	private ZEROMOREWS createZEROMOREWS(ParsingExpression e, BasicBlock bb) {
+		return new ZEROMOREWS(e, bb);
+	}
+	
 	private boolean checkCharset(ParsingChoice e) {
 		isWS = true;
 		for (int i = 0; i < e.size(); i++) {
@@ -639,6 +679,48 @@ public class Compiler extends GrammarGenerator {
 			return true;
 		}
 		return false;
+	}
+	
+	private boolean checkString(ParsingSequence e) {
+		for(int i = 0; i < e.size(); i++) {
+			if (!(e.get(i) instanceof ParsingByte)) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	BasicBlock currentFailBB;
+	private int checkWriteChoiceCharset(ParsingChoice e, int index, BasicBlock bb, BasicBlock fbb) {
+		int charCount = 0;
+		for (int i = index; i < e.size(); i++) {
+			if (e.get(i) instanceof ParsingByte) {
+				charCount++;
+			}
+			else {
+				break;
+			}
+		}
+		if (charCount <= 1) {
+			bb = this.getCurrentBasicBlock();
+			fbb = new BasicBlock();
+			this.pushFailureJumpPoint(fbb);
+			this.createPUSHp(e, bb);
+			e.get(index).visit(this);
+			this.backTrackFlag = true;
+			this.currentFailBB = fbb;
+			return index++;
+		}
+		if (charCount != e.size()) {
+			backTrackFlag = true;
+			bb = this.getCurrentBasicBlock();
+			fbb = new BasicBlock();
+			this.currentFailBB = fbb;
+			this.pushFailureJumpPoint(fbb);
+			this.createPUSHp(e, bb);
+		}
+		writeCharsetCode(e, index, charCount);
+		return index + charCount - 1;
 	}
 	
 	private ParsingExpression checkChoice(ParsingChoice e, int c, ParsingExpression failed) {
@@ -727,9 +809,199 @@ public class Compiler extends GrammarGenerator {
 			}
 		}
 	}
+	
+	private ParsingExpression getNonTerminalRule(ParsingExpression e) {
+		while(e instanceof NonTerminal) {
+			NonTerminal nterm = (NonTerminal) e;
+			e = nterm.deReference();
+		}
+		return e;
+	}
+	
+	private void writeNotCode(ParsingNot e) {
+		BasicBlock bb = this.getCurrentBasicBlock();
+		BasicBlock fbb = new BasicBlock();
+		this.pushFailureJumpPoint(fbb);
+		this.createPUSHp(e, bb);
+		e.inner.visit(this);
+		bb = this.getCurrentBasicBlock();
+		this.createSTOREp(e, bb);
+		this.createSTOREflag(e, bb, 1);
+		this.createJUMP(e, bb, this.jumpPrevFailureJump());
+		this.popFailureJumpPoint(e);
+		fbb.setInsertPoint(this.func);
+		this.setCurrentBasicBlock(fbb);
+		this.createSTOREp(e, fbb);
+		this.createSTOREflag(e, fbb, 0);
+	}
+	
+	private void writeNotCharsetCode(ParsingChoice e) {
+		NOTCHARSET inst = this.createNOTCHARSET(e, this.getCurrentBasicBlock(), this.jumpFailureJump());
+		for(int i = 0; i < e.size(); i++) {
+			inst.append(((ParsingByte)e.get(i)).byteChar);
+		}
+	}
+	
+	private void writeNotStringCode(ParsingSequence e) {
+		NOTSTRING inst = this.createNOTSTRING(e, this.getCurrentBasicBlock(), this.jumpFailureJump());
+		for(int i = 0; i < e.size(); i++) {
+			inst.append(((ParsingByte)e.get(i)).byteChar);
+		}
+	}
+	
+	private boolean optimizeNot(ParsingNot e) {
+		ParsingExpression inner = e.inner;
+		if (inner instanceof NonTerminal) {
+			inner = getNonTerminalRule(inner);
+		}
+		if (inner instanceof ParsingByte) {
+			this.createNOTCHAR(inner, this.getCurrentBasicBlock(), this.jumpFailureJump(), ((ParsingByte)inner).byteChar);
+			return true;
+		}
+		if (inner instanceof ParsingByteRange) {
+			ParsingByteRange br = (ParsingByteRange)inner;
+			this.createNOTCHARRANGE(inner, this.getCurrentBasicBlock(), this.jumpFailureJump(), br.startByteChar, br.endByteChar);
+			return true;
+		}
+		if(inner instanceof ParsingChoice) {
+			if (checkCharset((ParsingChoice)inner)) {
+				writeNotCharsetCode((ParsingChoice)inner);
+				return true;
+			}
+		}
+		if (inner instanceof ParsingSequence) {
+			if (checkString((ParsingSequence)inner)) {
+				writeNotStringCode((ParsingSequence)inner);
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private void writeOptionalCode(ParsingOption e) {
+		BasicBlock bb = this.getCurrentBasicBlock();
+		BasicBlock fbb = new BasicBlock();
+		BasicBlock mergebb = new BasicBlock();
+		this.pushFailureJumpPoint(fbb);
+		this.createPUSHp(e, bb);
+		e.inner.visit(this);
+		bb = this.getCurrentBasicBlock();
+		this.createPOPp(e, bb);
+		this.createJUMP(e, bb, mergebb);
+		this.popFailureJumpPoint(e);
+		fbb.setInsertPoint(this.func);
+		this.createSTOREflag(e, fbb, 0);
+		this.createSTOREp(e, fbb);
+		this.setCurrentBasicBlock(mergebb);
+		mergebb.setInsertPoint(this.func);
+	}
+	
+	private void writeOptionalByteRangeCode(ParsingByteRange e) {
+		this.createOPTIONALBYTERANGE(e, this.getCurrentBasicBlock(), e.startByteChar, e.endByteChar);
+	}
+	
+	private void writeOptionalCharsetCode(ParsingChoice e) {
+		OPTIONALCHARSET inst = this.createOPTIONALCHARSET(e, this.getCurrentBasicBlock());
+		for(int i = 0; i < e.size(); i++) {
+			inst.append(((ParsingByte)e.get(i)).byteChar);
+		}
+	}
+	
+	private void writeOptionalStringCode(ParsingSequence e) {
+		OPTIONALSTRING inst = this.createOPTIONALSTRING(e, this.getCurrentBasicBlock());
+		for(int i = 0; i < e.size(); i++) {
+			inst.append(((ParsingByte)e.get(i)).byteChar);
+		}
+	}
+	
+	private boolean optimizeOptional(ParsingOption e) {
+		ParsingExpression inner = e.inner;
+		if (inner instanceof NonTerminal) {
+			inner = getNonTerminalRule(inner);
+		}
+		if (inner instanceof ParsingByte) {
+			this.createOPTIONALCHAR(inner, this.getCurrentBasicBlock(), ((ParsingByte)inner).byteChar);
+			return true;
+		}
+		if (inner instanceof ParsingByteRange) {
+			writeOptionalByteRangeCode((ParsingByteRange)inner);
+			return true;
+		}
+		if(inner instanceof ParsingChoice) {
+			if (checkCharset((ParsingChoice)inner)) {
+				writeOptionalCharsetCode((ParsingChoice)inner);
+				return true;
+			}
+		}
+		if (inner instanceof ParsingSequence) {
+			if (checkString((ParsingSequence)inner)) {
+				writeOptionalStringCode((ParsingSequence)inner);
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private void writeRepetitionCode(ParsingRepetition e) {
+		BasicBlock bb = new BasicBlock(this.func);
+		BasicBlock fbb = new BasicBlock();
+		BasicBlock mergebb = new BasicBlock();
+		this.pushFailureJumpPoint(fbb);
+		this.setCurrentBasicBlock(bb);
+		this.createPUSHp(e, bb);
+		e.inner.visit(this);
+		BasicBlock current = getCurrentBasicBlock();
+		this.createREPCOND(e, current, mergebb);
+		this.createJUMP(e, current, bb);
+		this.popFailureJumpPoint(e);
+		fbb.setInsertPoint(this.func);
+		this.createSTOREflag(e, fbb, 0);
+		this.createSTOREp(e, fbb);
+		mergebb.setInsertPoint(this.func);
+		this.setCurrentBasicBlock(mergebb);
+	}
+	
+	private void writeZeroMoreByteRangeCode(ParsingByteRange e) {
+		this.createZEROMOREBYTERANGE(e, this.getCurrentBasicBlock(), e.startByteChar, e.endByteChar);
+	}
+	
+	private void writeZeroMoreCharsetCode(ParsingChoice e) {
+		ZEROMORECHARSET inst = this.createZEROMORECHARSET(e, this.getCurrentBasicBlock());
+		for(int i = 0; i < e.size(); i++) {
+			inst.append(((ParsingByte)e.get(i)).byteChar);
+		}
+	}
+	
+	boolean isWS = false;
+	private boolean optimizeRepetition(ParsingRepetition e) {
+		ParsingExpression inner = e.inner;
+		if (inner instanceof NonTerminal) {
+			inner = getNonTerminalRule(inner);
+		}
+		if (inner instanceof ParsingByteRange) {
+			writeZeroMoreByteRangeCode((ParsingByteRange)inner);
+			return true;
+		}
+		if (inner instanceof ParsingChoice) {
+			if (checkCharset((ParsingChoice)inner)) {
+				if (isWS && O_FusionOperand) {
+					this.createZEROMOREWS(inner, this.getCurrentBasicBlock());
+					isWS = false;
+				}
+				else {
+					writeZeroMoreCharsetCode((ParsingChoice)inner);
+				}
+				return true;
+			}
+		}
+		return false;
+	}
 
 	@Override
 	public void visitRule(ParsingRule e) {
+		if (e.ruleName.equals("ATTRIBUTECONTENT")) {
+			System.out.println("error content");
+		}
 		this.func = new Function(this.module, e.ruleName);
 		this.setCurrentBasicBlock(new BasicBlock(this.func));
 		BasicBlock fbb = new BasicBlock();
@@ -737,7 +1009,7 @@ public class Compiler extends GrammarGenerator {
 		e.expr.visit(this);
 		this.popFailureJumpPoint(e);
 		fbb.setInsertPoint(func);
-		new RET(e.expr, fbb);
+		this.createRET(e.expr, fbb);
 	}
 
 	@Override
@@ -781,20 +1053,22 @@ public class Compiler extends GrammarGenerator {
 
 	@Override
 	public void visitNot(ParsingNot e) {
-		BasicBlock bb = this.getCurrentBasicBlock();
-		BasicBlock fbb = new BasicBlock();
-		this.pushFailureJumpPoint(fbb);
-		this.createPUSHp(e, bb);
-		e.inner.visit(this);
-		bb = this.getCurrentBasicBlock();
-		this.createSTOREp(e, bb);
-		this.createSTOREflag(e, bb, 1);
-		this.createJUMP(e, bb, this.jumpPrevFailureJump());
-		this.popFailureJumpPoint(e);
-		fbb.setInsertPoint(this.func);
-		this.setCurrentBasicBlock(fbb);
-		this.createSTOREp(e, fbb);
-		this.createSTOREflag(e, fbb, 0);
+		if (O_FusionInstruction) {
+			if (!optimizeNot(e)) {
+//				if (O_StackCaching && checkSC(e.inner)) {
+//					writeSCNotCode(e);
+//					return;
+//				}
+				writeNotCode(e);
+			}
+		}
+//		else if (O_StackCaching && checkSC(e.inner)) {
+//			writeSCNotCode(e);
+//			return;
+//		}
+		else {
+			writeNotCode(e);
+		}
 	}
 
 	@Override
@@ -814,41 +1088,42 @@ public class Compiler extends GrammarGenerator {
 
 	@Override
 	public void visitOptional(ParsingOption e) {
-		BasicBlock bb = this.getCurrentBasicBlock();
-		BasicBlock fbb = new BasicBlock();
-		BasicBlock mergebb = new BasicBlock();
-		this.pushFailureJumpPoint(fbb);
-		this.createPUSHp(e, bb);
-		e.inner.visit(this);
-		bb = this.getCurrentBasicBlock();
-		this.createPOPp(e, bb);
-		this.createJUMP(e, bb, mergebb);
-		this.popFailureJumpPoint(e);
-		fbb.setInsertPoint(this.func);
-		this.createSTOREflag(e, fbb, 0);
-		this.createSTOREp(e, fbb);
-		this.setCurrentBasicBlock(mergebb);
-		mergebb.setInsertPoint(this.func);
+		if (O_FusionInstruction) {
+			if (!optimizeOptional(e)) {
+//				if (O_StackCaching && checkSC(e.inner)) {
+//					writeSCOptionalCode(e);
+//					return;
+//				}
+				writeOptionalCode(e);
+			}
+		}
+//		else if (O_StackCaching && checkSC(e.inner)) {
+//			writeSCOptionalCode(e);
+//			return;
+//		}
+		else {
+			writeOptionalCode(e);
+		}
 	}
 
 	@Override
 	public void visitRepetition(ParsingRepetition e) {
-		BasicBlock bb = new BasicBlock(this.func);
-		BasicBlock fbb = new BasicBlock();
-		BasicBlock mergebb = new BasicBlock();
-		this.pushFailureJumpPoint(fbb);
-		this.setCurrentBasicBlock(bb);
-		this.createPUSHp(e, bb);
-		e.inner.visit(this);
-		BasicBlock current = getCurrentBasicBlock();
-		this.createREPCOND(e, current, mergebb);
-		this.createJUMP(e, current, bb);
-		this.popFailureJumpPoint(e);
-		fbb.setInsertPoint(this.func);
-		this.createSTOREflag(e, fbb, 0);
-		this.createSTOREp(e, fbb);
-		mergebb.setInsertPoint(this.func);
-		this.setCurrentBasicBlock(mergebb);
+		if (O_FusionInstruction) {
+			if (!optimizeRepetition(e)) {
+//				if (O_StackCaching && checkSC(e.inner)) {
+//					writeSCRepetitionCode(e);
+//					return;
+//				}
+				writeRepetitionCode(e);
+			}
+		}
+//		else if (O_StackCaching && checkSC(e.inner)) {
+//			writeSCRepetitionCode(e);
+//			return;
+//		}
+		else {
+			writeRepetitionCode(e);
+		}
 	}
 
 	@Override
@@ -858,14 +1133,42 @@ public class Compiler extends GrammarGenerator {
 		}
 	}
 
+	boolean backTrackFlag = false;
+	
 	@Override
 	public void visitChoice(ParsingChoice e) {
 		if (O_MappedChoice && optChoiceMode) {
 			this.optimizeChoice(e);
 		}
-//		else if (O_FusionInstruction) {
-//			
-//		}
+		else if (O_FusionInstruction) {
+			boolean backTrackFlag = this.backTrackFlag = false;
+			BasicBlock bb = null;
+			BasicBlock fbb = null;
+			BasicBlock endbb = new BasicBlock();
+			for(int i = 0; i < e.size(); i++) {
+				i = checkWriteChoiceCharset(e, i, bb, fbb);
+				backTrackFlag = this.backTrackFlag;
+				if (backTrackFlag) {
+					bb = this.getCurrentBasicBlock();
+					fbb = this.currentFailBB;
+					this.createJUMP(e, bb, endbb);
+					this.popFailureJumpPoint(e.get(i));
+					fbb.setInsertPoint(this.func);
+					if (i != e.size() - 1) {
+						this.createSTOREflag(e, fbb, 0);
+					}
+					this.createSTOREp(e, fbb);
+					this.setCurrentBasicBlock(fbb);
+				}
+			}
+			if (backTrackFlag) {
+				this.createJUMP(e, fbb, this.jumpFailureJump());
+				endbb.setInsertPoint(this.func);
+				this.createPOPp(e, endbb);
+				this.setCurrentBasicBlock(endbb);
+			}
+			this.backTrackFlag = false;
+		}
 		else {
 			BasicBlock bb = null;
 			BasicBlock fbb = null;
@@ -912,12 +1215,15 @@ public class Compiler extends GrammarGenerator {
 		bb = this.getCurrentBasicBlock();
 		createSETendp(e, bb);
 		createPOPp(e, bb);
+		if (e.leftJoin) {
+			this.createPOPo(e, bb);
+		}
 		createJUMP(e, bb, mergebb);
 		this.popFailureJumpPoint(e);
 		fbb.setInsertPoint(this.func);
 		createABORT(e, fbb);
 		if (e.leftJoin) {
-			this.createPOPo(e, fbb);
+			this.createSTOREo(e, fbb);
 		}
 		this.createJUMP(e, fbb, this.jumpFailureJump());
 		mergebb.setInsertPoint(this.func);

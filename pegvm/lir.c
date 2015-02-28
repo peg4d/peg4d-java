@@ -228,6 +228,7 @@ static void Emit_CHARSET(PegVMInstruction *inst, ByteCodeLoader *loader) {
   ICHARSET *ir = (ICHARSET *)inst;
   ir->base.opcode = OPCODE_ICHARSET;
   ir->set = (bitset_ptr_t)__malloc(sizeof(bitset_t));
+  memset(ir->set, 0, sizeof(bitset_t));
   for (int i = 0; i < len; i++) {
     unsigned c = Loader_Read32(loader);
     bitset_set(ir->set, c);
