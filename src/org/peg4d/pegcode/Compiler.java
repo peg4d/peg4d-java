@@ -30,6 +30,7 @@ import org.peg4d.expression.ParsingIf;
 import org.peg4d.expression.ParsingIndent;
 import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
+import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
@@ -40,6 +41,7 @@ import org.peg4d.expression.ParsingScan;
 import org.peg4d.expression.ParsingSequence;
 import org.peg4d.expression.ParsingString;
 import org.peg4d.expression.ParsingTagging;
+import org.peg4d.expression.ParsingUnary;
 import org.peg4d.expression.ParsingValue;
 import org.peg4d.expression.ParsingWithFlag;
 import org.peg4d.expression.ParsingWithoutFlag;
@@ -64,7 +66,7 @@ public class Compiler extends GrammarGenerator {
 	BasicBlock currentBB;
 	
 	public Compiler(int level) {
-		this.optimizer = new Optimizer(O_Inlining, O_MappedChoice, O_FusionInstruction, O_FusionOperand, O_StackCaching);
+		this.module = new Module();
 		switch (level) {
 		case 1:
 			O_Inlining = true;
@@ -120,6 +122,7 @@ public class Compiler extends GrammarGenerator {
 		default:
 			break;
 		}
+		this.optimizer = new Optimizer(this.module, O_Inlining, O_MappedChoice, O_FusionInstruction, O_FusionOperand, O_StackCaching);
 	}
 	
 	int codeIndex;
@@ -438,7 +441,6 @@ public class Compiler extends GrammarGenerator {
 	@Override
 	public void formatGrammar(Grammar peg, StringBuilder sb) {
 		this.peg = peg;
-		this.module = new Module();
 		this.formatHeader();
 		for(ParsingRule r: peg.getRuleList()) {
 			if (r.ruleName.equals("File")) {
@@ -468,7 +470,7 @@ public class Compiler extends GrammarGenerator {
 	@Override
 	public void formatFooter() {
 		System.out.println(this.module.stringfy(this.sb));
-		this.optimizer.optimize(this.module);
+		this.optimizer.optimize();
 		this.labeling();
 		this.dumpLastestCode();
 	}
@@ -656,6 +658,24 @@ public class Compiler extends GrammarGenerator {
 	private ZEROMOREWS createZEROMOREWS(ParsingExpression e, BasicBlock bb) {
 		return new ZEROMOREWS(e, bb);
 	}
+	private LOADp1 createLOADp1(ParsingExpression e, BasicBlock bb) {
+		return new LOADp1(e, bb);
+	}
+	private LOADp2 createLOADp2(ParsingExpression e, BasicBlock bb) {
+		return new LOADp2(e, bb);
+	}
+	private LOADp3 createLOADp3(ParsingExpression e, BasicBlock bb) {
+		return new LOADp3(e, bb);
+	}
+	private STOREp1 createSTOREp1(ParsingExpression e, BasicBlock bb) {
+		return new STOREp1(e, bb);
+	}
+	private STOREp2 createSTOREp2(ParsingExpression e, BasicBlock bb) {
+		return new STOREp2(e, bb);
+	}
+	private STOREp3 createSTOREp3(ParsingExpression e, BasicBlock bb) {
+		return new STOREp3(e, bb);
+	}
 	
 	private boolean checkCharset(ParsingChoice e) {
 		isWS = true;
@@ -747,6 +767,115 @@ public class Compiler extends GrammarGenerator {
 		}
 	}
 	
+	// The depth to control the stack caching optimization
+		int depth = 0;
+		
+		private boolean checkSC(ParsingExpression e) {
+			int depth = this.depth;
+			if (e instanceof NonTerminal) {
+				e = getNonTerminalRule(e);
+			}
+			if (e instanceof ParsingUnary) {
+				if (this.depth++ < 2) {
+					if (O_FusionInstruction) {
+						if (e instanceof ParsingNot) {
+							if (checkOptNot((ParsingNot)e)) {
+								this.depth = depth;
+								return true;
+							}
+						}
+						else if (e instanceof ParsingRepetition) {
+							if (checkOptRepetition((ParsingRepetition)e)) {
+								this.depth = depth;
+								return true;
+							}
+						}
+						else if (e instanceof ParsingOption) {
+							if (checkOptOptional((ParsingOption)e)) {
+								this.depth = depth;
+								return true;
+							}
+						}
+					}
+					boolean check = checkSC(((ParsingUnary) e).inner);
+					this.depth = depth;
+					return check;
+				}
+				this.depth = depth;
+				return false;
+			}
+			if(e instanceof ParsingList) {
+				if (depth < 2) {
+					for(int i = 0; i < e.size(); i++) {
+						if (!checkSC(e.get(i))) {
+							return false;
+						}
+					}
+					return true;
+				}
+				return false;
+			}
+			return true;
+		}
+
+		private boolean checkOptRepetition(ParsingRepetition e) {
+			ParsingExpression inner = e.inner;
+			if (inner instanceof NonTerminal) {
+				inner = getNonTerminalRule(inner);
+			}
+			if (inner instanceof ParsingByteRange) {
+				return true;
+			}
+			if (inner instanceof ParsingChoice) {
+				return checkCharset((ParsingChoice)inner);
+			}
+			return false;
+		}
+
+		private boolean checkOptNot(ParsingNot e) {
+			ParsingExpression inner = e.inner;
+			if (inner instanceof NonTerminal) {
+				inner = getNonTerminalRule(inner);
+			}
+			if (inner instanceof ParsingByte) {
+				return true;
+			}
+			if (inner instanceof ParsingByteRange) {
+				return true;
+			}
+			if(inner instanceof ParsingAny) {
+				return true;
+			}
+			if(inner instanceof ParsingChoice) {
+				return checkCharset((ParsingChoice)inner);
+			}
+			if (inner instanceof ParsingSequence) {
+				return checkString((ParsingSequence)inner);
+			}
+			return false;
+		}
+
+		private boolean checkOptOptional(ParsingOption e) {
+			ParsingExpression inner = e.inner;
+			if (inner instanceof NonTerminal) {
+				inner = getNonTerminalRule(inner);
+			}
+			if (inner instanceof ParsingByte) {
+				return true;
+			}
+			if (inner instanceof ParsingByteRange) {
+				return true;
+			}
+			if(inner instanceof ParsingChoice) {
+				return checkCharset((ParsingChoice)inner);
+			}
+			if (inner instanceof ParsingSequence) {
+				return checkString((ParsingSequence)inner);
+			}
+			return false;
+		}
+
+	
 	private void writeCharsetCode(ParsingExpression e, int index, int charCount) {
 		CHARSET inst = this.createCHARSET(e, this.getCurrentBasicBlock(), this.jumpFailureJump());
 		for(int i = index; i < index + charCount; i++) {
@@ -835,6 +964,63 @@ public class Compiler extends GrammarGenerator {
 		this.createSTOREflag(e, fbb, 0);
 	}
 	
+	private void writeSCNotCode(ParsingNot e) {
+		if (this.depth == 0) {
+			BasicBlock bb = this.getCurrentBasicBlock();
+			BasicBlock fbb = new BasicBlock();
+			this.pushFailureJumpPoint(fbb);
+			this.createLOADp1(e, bb);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			bb = this.getCurrentBasicBlock();
+			this.createSTOREp1(e, bb);
+			this.createSTOREflag(e, bb, 1);
+			this.createJUMP(e, bb, this.jumpPrevFailureJump());
+			this.popFailureJumpPoint(e);
+			fbb.setInsertPoint(this.func);
+			this.setCurrentBasicBlock(fbb);
+			this.createSTOREp1(e, fbb);
+			this.createSTOREflag(e, fbb, 0);
+		}
+		else if (depth == 1) {
+			BasicBlock bb = this.getCurrentBasicBlock();
+			BasicBlock fbb = new BasicBlock();
+			this.pushFailureJumpPoint(fbb);
+			this.createLOADp2(e, bb);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			bb = this.getCurrentBasicBlock();
+			this.createSTOREp2(e, bb);
+			this.createSTOREflag(e, bb, 1);
+			this.createJUMP(e, bb, this.jumpPrevFailureJump());
+			this.popFailureJumpPoint(e);
+			fbb.setInsertPoint(this.func);
+			this.setCurrentBasicBlock(fbb);
+			this.createSTOREp2(e, fbb);
+			this.createSTOREflag(e, fbb, 0);
+		}
+		else {
+			BasicBlock bb = this.getCurrentBasicBlock();
+			BasicBlock fbb = new BasicBlock();
+			this.pushFailureJumpPoint(fbb);
+			this.createLOADp3(e, bb);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			bb = this.getCurrentBasicBlock();
+			this.createSTOREp3(e, bb);
+			this.createSTOREflag(e, bb, 1);
+			this.createJUMP(e, bb, this.jumpPrevFailureJump());
+			this.popFailureJumpPoint(e);
+			fbb.setInsertPoint(this.func);
+			this.setCurrentBasicBlock(fbb);
+			this.createSTOREp3(e, fbb);
+			this.createSTOREflag(e, fbb, 0);
+		}
+	}
+	
 	private void writeNotCharsetCode(ParsingChoice e) {
 		NOTCHARSET inst = this.createNOTCHARSET(e, this.getCurrentBasicBlock(), this.jumpFailureJump());
 		for(int i = 0; i < e.size(); i++) {
@@ -894,6 +1080,55 @@ public class Compiler extends GrammarGenerator {
 		this.createSTOREp(e, fbb);
 		this.setCurrentBasicBlock(mergebb);
 		mergebb.setInsertPoint(this.func);
+	}
+	
+	private void writeSCOptionalCode(ParsingOption e) {
+		BasicBlock bb = this.getCurrentBasicBlock();
+		BasicBlock fbb = new BasicBlock();
+		BasicBlock mergebb = new BasicBlock();
+		this.pushFailureJumpPoint(fbb);
+		if (this.depth == 0) {
+			this.createLOADp1(e, bb);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			bb = this.getCurrentBasicBlock();
+			this.createJUMP(e, bb, mergebb);
+			this.popFailureJumpPoint(e);
+			fbb.setInsertPoint(this.func);
+			this.createSTOREflag(e, fbb, 0);
+			this.createSTOREp1(e, fbb);
+			this.setCurrentBasicBlock(mergebb);
+			mergebb.setInsertPoint(this.func);
+		}
+		else if (this.depth == 1){
+			this.createLOADp2(e, bb);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			bb = this.getCurrentBasicBlock();
+			this.createJUMP(e, bb, mergebb);
+			this.popFailureJumpPoint(e);
+			fbb.setInsertPoint(this.func);
+			this.createSTOREflag(e, fbb, 0);
+			this.createSTOREp2(e, fbb);
+			this.setCurrentBasicBlock(mergebb);
+			mergebb.setInsertPoint(this.func);
+		}
+		else {
+			this.createLOADp3(e, bb);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			bb = this.getCurrentBasicBlock();
+			this.createJUMP(e, bb, mergebb);
+			this.popFailureJumpPoint(e);
+			fbb.setInsertPoint(this.func);
+			this.createSTOREflag(e, fbb, 0);
+			this.createSTOREp3(e, fbb);
+			this.setCurrentBasicBlock(mergebb);
+			mergebb.setInsertPoint(this.func);
+		}
 	}
 	
 	private void writeOptionalByteRangeCode(ParsingByteRange e) {
@@ -959,6 +1194,56 @@ public class Compiler extends GrammarGenerator {
 		this.createSTOREp(e, fbb);
 		mergebb.setInsertPoint(this.func);
 		this.setCurrentBasicBlock(mergebb);
+	}
+	
+	private void writeSCRepetitionCode(ParsingRepetition e) {
+		BasicBlock bb = new BasicBlock(this.func);
+		BasicBlock fbb = new BasicBlock();
+		BasicBlock mergebb = new BasicBlock();
+		this.pushFailureJumpPoint(fbb);
+		this.setCurrentBasicBlock(bb);
+		if (this.depth == 0) {
+			this.createLOADp1(e, bb);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			BasicBlock current = getCurrentBasicBlock();
+			this.createJUMP(e, current, bb);
+			this.popFailureJumpPoint(e);
+			fbb.setInsertPoint(this.func);
+			this.createSTOREflag(e, fbb, 0);
+			this.createSTOREp1(e, fbb);
+			mergebb.setInsertPoint(this.func);
+			this.setCurrentBasicBlock(mergebb);
+		}
+		else if (this.depth == 1) {
+			this.createLOADp2(e, bb);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			BasicBlock current = getCurrentBasicBlock();
+			this.createJUMP(e, current, bb);
+			this.popFailureJumpPoint(e);
+			fbb.setInsertPoint(this.func);
+			this.createSTOREflag(e, fbb, 0);
+			this.createSTOREp2(e, fbb);
+			mergebb.setInsertPoint(this.func);
+			this.setCurrentBasicBlock(mergebb);
+		}
+		else {
+			this.createLOADp3(e, bb);
+			this.depth++;
+			e.inner.visit(this);
+			this.depth--;
+			BasicBlock current = getCurrentBasicBlock();
+			this.createJUMP(e, current, bb);
+			this.popFailureJumpPoint(e);
+			fbb.setInsertPoint(this.func);
+			this.createSTOREflag(e, fbb, 0);
+			this.createSTOREp3(e, fbb);
+			mergebb.setInsertPoint(this.func);
+			this.setCurrentBasicBlock(mergebb);
+		}
 	}
 	
 	private void writeZeroMoreByteRangeCode(ParsingByteRange e) {
@@ -1055,17 +1340,17 @@ public class Compiler extends GrammarGenerator {
 	public void visitNot(ParsingNot e) {
 		if (O_FusionInstruction) {
 			if (!optimizeNot(e)) {
-//				if (O_StackCaching && checkSC(e.inner)) {
-//					writeSCNotCode(e);
-//					return;
-//				}
+				if (O_StackCaching && checkSC(e.inner)) {
+					writeSCNotCode(e);
+					return;
+				}
 				writeNotCode(e);
 			}
 		}
-//		else if (O_StackCaching && checkSC(e.inner)) {
-//			writeSCNotCode(e);
-//			return;
-//		}
+		else if (O_StackCaching && checkSC(e.inner)) {
+			writeSCNotCode(e);
+			return;
+		}
 		else {
 			writeNotCode(e);
 		}
@@ -1090,17 +1375,17 @@ public class Compiler extends GrammarGenerator {
 	public void visitOptional(ParsingOption e) {
 		if (O_FusionInstruction) {
 			if (!optimizeOptional(e)) {
-//				if (O_StackCaching && checkSC(e.inner)) {
-//					writeSCOptionalCode(e);
-//					return;
-//				}
+				if (O_StackCaching && checkSC(e.inner)) {
+					writeSCOptionalCode(e);
+					return;
+				}
 				writeOptionalCode(e);
 			}
 		}
-//		else if (O_StackCaching && checkSC(e.inner)) {
-//			writeSCOptionalCode(e);
-//			return;
-//		}
+		else if (O_StackCaching && checkSC(e.inner)) {
+			writeSCOptionalCode(e);
+			return;
+		}
 		else {
 			writeOptionalCode(e);
 		}
@@ -1110,17 +1395,17 @@ public class Compiler extends GrammarGenerator {
 	public void visitRepetition(ParsingRepetition e) {
 		if (O_FusionInstruction) {
 			if (!optimizeRepetition(e)) {
-//				if (O_StackCaching && checkSC(e.inner)) {
-//					writeSCRepetitionCode(e);
-//					return;
-//				}
+				if (O_StackCaching && checkSC(e.inner)) {
+					writeSCRepetitionCode(e);
+					return;
+				}
 				writeRepetitionCode(e);
 			}
 		}
-//		else if (O_StackCaching && checkSC(e.inner)) {
-//			writeSCRepetitionCode(e);
-//			return;
-//		}
+		else if (O_StackCaching && checkSC(e.inner)) {
+			writeSCRepetitionCode(e);
+			return;
+		}
 		else {
 			writeRepetitionCode(e);
 		}

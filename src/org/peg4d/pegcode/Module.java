@@ -27,4 +27,15 @@ public class Module {
 		}
 		return sb.toString();
 	}
+	
+	public Function get(String funcName) {
+		for(int i = 0; i < this.size(); i++) {
+			if (this.get(i).funcName.equals(funcName)) {
+				return this.get(i);
+			}
+		}
+		System.out.println("Error: Nonterminal Rule not found " + funcName);
+		System.exit(0);
+		return null;
+	}
 }

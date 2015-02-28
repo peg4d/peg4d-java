@@ -23,8 +23,25 @@ public class Function {
 		return this;
 	}
 	
+	public Function add(int index, BasicBlock bb) {
+		this.bbList.add(index, bb);
+		return this;
+	}
+	
+	public BasicBlock remove(int index) {
+		return this.bbList.remove(index);
+	}
+	
 	public int size() {
 		return this.bbList.size();
+	}
+	
+	public int instSize() {
+		int size = 0;
+		for(int i = 0; i < this.size(); i++) {
+			size += this.get(i).size();
+		}
+		return size;
 	}
 	
 	public int indexOf(BasicBlock bb) {

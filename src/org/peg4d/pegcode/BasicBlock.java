@@ -44,6 +44,10 @@ public class BasicBlock {
 		return this.instList.size();
 	}
 	
+	public int indexOf(Instruction inst) {
+		return this.instList.indexOf(inst);
+	}
+	
 	public String getBBName() {
 		return "bb" + this.func.indexOf(this);
 	}

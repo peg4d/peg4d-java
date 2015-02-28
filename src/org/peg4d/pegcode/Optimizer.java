@@ -1,31 +1,16 @@
 package org.peg4d.pegcode;
 
-import java.util.HashMap;
-
-import org.peg4d.UList;
-import org.peg4d.expression.NonTerminal;
-import org.peg4d.expression.ParsingAny;
-import org.peg4d.expression.ParsingByte;
-import org.peg4d.expression.ParsingByteRange;
-import org.peg4d.expression.ParsingChoice;
-import org.peg4d.expression.ParsingExpression;
-import org.peg4d.expression.ParsingFailure;
-import org.peg4d.expression.ParsingList;
-import org.peg4d.expression.ParsingNot;
-import org.peg4d.expression.ParsingOption;
-import org.peg4d.expression.ParsingRepetition;
-import org.peg4d.expression.ParsingSequence;
-import org.peg4d.expression.ParsingUnary;
-
 public class Optimizer {
 	
+	Module module;
 	boolean O_Inlining = false;
 	boolean O_MappedChoice = false;
 	boolean O_FusionInstruction = false;
 	boolean O_FusionOperand = false;
 	boolean O_StackCaching = false;
 	
-	public Optimizer(boolean O_Inlining, boolean O_MappedChoice, boolean O_FusionInstruction, boolean O_FusionOperand, boolean O_StackCaching ) {
+	public Optimizer(Module module, boolean O_Inlining, boolean O_MappedChoice, boolean O_FusionInstruction, boolean O_FusionOperand, boolean O_StackCaching ) {
+		this.module = module;
 		this.O_Inlining = O_Inlining;
 		this.O_MappedChoice = O_MappedChoice;
 		this.O_FusionInstruction = O_FusionInstruction;
@@ -33,9 +18,9 @@ public class Optimizer {
 		this.O_StackCaching = O_StackCaching;
 	}
 	
-	public void optimize(Module module) {
-		for(int i = 0; i < module.size(); i++) {
-			this.optimizeFunction(module.get(i));
+	public void optimize() {
+		for(int i = 0; i < this.module.size(); i++) {
+			this.optimizeFunction(this.module.get(i));
 		}
 	}
 	

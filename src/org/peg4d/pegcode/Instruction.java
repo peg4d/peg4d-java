@@ -815,3 +815,105 @@ class ZEROMOREWS extends Instruction {
 		return "ZEROMOREWS";
 	}
 }
+
+class LOADp1 extends Instruction {
+	public LOADp1(ParsingExpression expr, BasicBlock bb) {
+		super(expr, bb);
+		this.op = Opcode.LOADp1;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  LOADp1");
+	}
+
+	@Override
+	public String toString() {
+		return "LOADp1";
+	}
+}
+
+class LOADp2 extends Instruction {
+	public LOADp2(ParsingExpression expr, BasicBlock bb) {
+		super(expr, bb);
+		this.op = Opcode.LOADp2;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  LOADp2");
+	}
+
+	@Override
+	public String toString() {
+		return "LOADp2";
+	}
+}
+
+class LOADp3 extends Instruction {
+	public LOADp3(ParsingExpression expr, BasicBlock bb) {
+		super(expr, bb);
+		this.op = Opcode.LOADp3;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  LOADp3");
+	}
+
+	@Override
+	public String toString() {
+		return "LOADp3";
+	}
+}
+
+class STOREp1 extends Instruction {
+	public STOREp1(ParsingExpression expr, BasicBlock bb) {
+		super(expr, bb);
+		this.op = Opcode.STOREp1;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  STOREp1");
+	}
+
+	@Override
+	public String toString() {
+		return "STOREp1";
+	}
+}
+
+class STOREp2 extends Instruction {
+	public STOREp2(ParsingExpression expr, BasicBlock bb) {
+		super(expr, bb);
+		this.op = Opcode.STOREp2;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  STOREp2");
+	}
+
+	@Override
+	public String toString() {
+		return "STOREp2";
+	}
+}
+
+class STOREp3 extends Instruction {
+	public STOREp3(ParsingExpression expr, BasicBlock bb) {
+		super(expr, bb);
+		this.op = Opcode.STOREp3;
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  STOREp3");
+	}
+
+	@Override
+	public String toString() {
+		return "STOREp3";
+	}
+}
