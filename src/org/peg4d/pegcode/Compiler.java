@@ -57,6 +57,7 @@ public class Compiler extends GrammarGenerator {
 	Optimizer optimizer;
 	
 	boolean optChoiceMode = true;
+	boolean inlining = false;
 	
 	boolean PatternMatching = false;
 	
@@ -558,8 +559,8 @@ public class Compiler extends GrammarGenerator {
 		return new CHARSET(e, bb, jump);
 	}
 	
-	private Instruction createSTRING(ParsingExpression e, BasicBlock bb, BasicBlock jump, int ...cdata) {
-		return new STRING(e, bb, jump, cdata);
+	private STRING createSTRING(ParsingExpression e, BasicBlock bb, BasicBlock jump) {
+		return new STRING(e, bb, jump);
 	}
 	
 	private Instruction createANY(ParsingExpression e, BasicBlock bb, BasicBlock jump) {
@@ -741,6 +742,27 @@ public class Compiler extends GrammarGenerator {
 		}
 		writeCharsetCode(e, index, charCount);
 		return index + charCount - 1;
+	}
+	
+	private final int writeSequenceCode(ParsingExpression e, int index, int size) {
+		int count = 0;
+		for (int i = index; i < size; i++) {
+			if (e.get(i) instanceof ParsingByte) {
+				count++;
+			}
+			else {
+				break;
+			}
+		}
+		if (count <= 1) {
+			e.get(index).visit(this);
+			return index++;
+		}
+		STRING str = this.createSTRING(e, this.getCurrentBasicBlock(), this.jumpFailureJump());
+		for(int i = index; i < index + count; i++) {
+			str.append(((ParsingByte)e.get(i)).byteChar);
+		}
+		return index + count - 1;
 	}
 	
 	private ParsingExpression checkChoice(ParsingChoice e, int c, ParsingExpression failed) {
@@ -1297,14 +1319,48 @@ public class Compiler extends GrammarGenerator {
 		this.createRET(e.expr, fbb);
 	}
 
+	
+	int ruleSize;
 	@Override
 	public void visitNonTerminal(NonTerminal e) {
-		BasicBlock rbb = new BasicBlock();
-		this.createCALL(e, this.getCurrentBasicBlock(), e.ruleName);
-		rbb.setInsertPoint(this.func);
-		this.createCONDBRANCH(e, rbb, this.jumpFailureJump(), 1);
-		BasicBlock bb = new BasicBlock(this.func);
-		this.setCurrentBasicBlock(bb);
+		if (inlining) {
+			if (this.func.instSize() - this.ruleSize <= 20) {
+				ParsingExpression ne = getNonTerminalRule(e);
+				ne.visit(this);
+			}
+		}
+		else if (O_Inlining) {
+			ParsingExpression ne = getNonTerminalRule(e);
+			int index = this.func.size();
+			this.ruleSize = this.func.instSize();
+			this.inlining = true;
+			BasicBlock currentBB = this.getCurrentBasicBlock();
+			this.setCurrentBasicBlock(new BasicBlock(func));
+			ne.visit(this);
+			this.inlining = false;
+			if (this.func.instSize() - this.ruleSize > 20) {
+				int size = this.func.size();
+				for(int i = index; i < size; i++) {
+					this.func.remove(index);
+				}
+				System.out.println("inlining miss: " + e.ruleName);
+				BasicBlock rbb = new BasicBlock();
+				this.setCurrentBasicBlock(currentBB);
+				this.createCALL(e, currentBB, e.ruleName);
+				rbb.setInsertPoint(this.func);
+				this.createCONDBRANCH(e, rbb, this.jumpFailureJump(), 1);
+				BasicBlock bb = new BasicBlock(this.func);
+				this.setCurrentBasicBlock(bb);
+			}
+		}
+		else {
+			BasicBlock rbb = new BasicBlock();
+			this.createCALL(e, this.getCurrentBasicBlock(), e.ruleName);
+			rbb.setInsertPoint(this.func);
+			this.createCONDBRANCH(e, rbb, this.jumpFailureJump(), 1);
+			BasicBlock bb = new BasicBlock(this.func);
+			this.setCurrentBasicBlock(bb);
+		}
 	}
 
 	@Override
@@ -1414,7 +1470,12 @@ public class Compiler extends GrammarGenerator {
 	@Override
 	public void visitSequence(ParsingSequence e) {
 		for(int i = 0; i < e.size(); i++) {
-			e.get(i).visit(this);
+			if (O_FusionInstruction) {
+				i = writeSequenceCode(e, i, e.size());
+			}
+			else {
+				e.get(i).visit(this);
+			}
 		}
 	}
 
@@ -1483,56 +1544,78 @@ public class Compiler extends GrammarGenerator {
 
 	@Override
 	public void visitConstructor(ParsingConstructor e) {
-		BasicBlock bb = this.getCurrentBasicBlock();
-		BasicBlock fbb = new BasicBlock();
-		BasicBlock mergebb = new BasicBlock();
-		this.pushFailureJumpPoint(fbb);
-		if (e.leftJoin) {
-			this.createPUSHo(e, bb);
-			this.createLEFTJOIN(e, bb, 0);
+		if (PatternMatching) {
+			for(int i = 0; i < e.size(); i++) {
+				if (O_FusionInstruction) {
+					i = writeSequenceCode(e, i, e.size());
+				}
+				else {
+					e.get(i).visit(this);
+				}
+			}
 		}
 		else {
-			this.createNEW(e, bb);
+			BasicBlock bb = this.getCurrentBasicBlock();
+			BasicBlock fbb = new BasicBlock();
+			BasicBlock mergebb = new BasicBlock();
+			this.pushFailureJumpPoint(fbb);
+			if (e.leftJoin) {
+				this.createPUSHo(e, bb);
+				this.createLEFTJOIN(e, bb, 0);
+			}
+			else {
+				this.createNEW(e, bb);
+			}
+			for(int i = 0; i < e.size(); i++) {
+				if (O_FusionInstruction) {
+					i = writeSequenceCode(e, i, e.size());
+				}
+				else {
+					e.get(i).visit(this);
+				}
+			}
+			bb = this.getCurrentBasicBlock();
+			createSETendp(e, bb);
+			createPOPp(e, bb);
+			if (e.leftJoin) {
+				this.createPOPo(e, bb);
+			}
+			createJUMP(e, bb, mergebb);
+			this.popFailureJumpPoint(e);
+			fbb.setInsertPoint(this.func);
+			createABORT(e, fbb);
+			if (e.leftJoin) {
+				this.createSTOREo(e, fbb);
+			}
+			this.createJUMP(e, fbb, this.jumpFailureJump());
+			mergebb.setInsertPoint(this.func);
+			this.setCurrentBasicBlock(mergebb);
 		}
-		for(int i = 0; i < e.size(); i++){
-			e.get(i).visit(this);
-		}
-		bb = this.getCurrentBasicBlock();
-		createSETendp(e, bb);
-		createPOPp(e, bb);
-		if (e.leftJoin) {
-			this.createPOPo(e, bb);
-		}
-		createJUMP(e, bb, mergebb);
-		this.popFailureJumpPoint(e);
-		fbb.setInsertPoint(this.func);
-		createABORT(e, fbb);
-		if (e.leftJoin) {
-			this.createSTOREo(e, fbb);
-		}
-		this.createJUMP(e, fbb, this.jumpFailureJump());
-		mergebb.setInsertPoint(this.func);
-		this.setCurrentBasicBlock(mergebb);
 	}
 
 	@Override
 	public void visitConnector(ParsingConnector e) {
-		BasicBlock bb = this.getCurrentBasicBlock();
-		BasicBlock fbb = new BasicBlock();
-		BasicBlock mergebb = new BasicBlock(); 
-		this.pushFailureJumpPoint(fbb);
-		this.createPUSHo(e, bb);
-		e.inner.visit(this);
-		bb = this.getCurrentBasicBlock();
-		this.createCOMMITLINK(e, bb, e.index);
-		this.createJUMP(e, bb, mergebb);
-		this.popFailureJumpPoint(e);
-		fbb.setInsertPoint(this.func);
-		this.createABORT(e, fbb);
-		this.createSTOREo(e, fbb);
-		this.createJUMP(e, fbb, this.jumpFailureJump());
-		mergebb.setInsertPoint(this.func);
-		this.setCurrentBasicBlock(mergebb);
+		if (PatternMatching) {
+			e.inner.visit(this);
+		}
+		else {
+			BasicBlock bb = this.getCurrentBasicBlock();
+			BasicBlock fbb = new BasicBlock();
+			BasicBlock mergebb = new BasicBlock(); 
+			this.pushFailureJumpPoint(fbb);
+			this.createPUSHo(e, bb);
+			e.inner.visit(this);
+			bb = this.getCurrentBasicBlock();
+			this.createCOMMITLINK(e, bb, e.index);
+			this.createJUMP(e, bb, mergebb);
+			this.popFailureJumpPoint(e);
+			fbb.setInsertPoint(this.func);
+			this.createABORT(e, fbb);
+			this.createSTOREo(e, fbb);
+			this.createJUMP(e, fbb, this.jumpFailureJump());
+			mergebb.setInsertPoint(this.func);
+			this.setCurrentBasicBlock(mergebb);
+		}
 	}
 
 	@Override

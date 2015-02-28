@@ -247,8 +247,8 @@ class CHARSET extends JumpMatchingInstruction {
 }
 
 class STRING extends JumpMatchingInstruction {
-	public STRING(ParsingExpression expr, BasicBlock bb,  BasicBlock jump, int ...cdata) {
-		super(expr, bb, jump, cdata);
+	public STRING(ParsingExpression expr, BasicBlock bb,  BasicBlock jump) {
+		super(expr, bb, jump);
 		this.op = Opcode.STRING;
 	}
 
