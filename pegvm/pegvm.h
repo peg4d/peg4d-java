@@ -4,7 +4,7 @@
 #define PEGVM_H
 
 #define PEGVM_DEBUG 0
-#define PEGVM_PROFILE 1
+#define PEGVM_PROFILE 0
 #define PEGVM_OP_MAX 46
 #define PEGVM_PROFILE_MAX 46
 

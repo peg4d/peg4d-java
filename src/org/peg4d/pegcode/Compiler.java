@@ -687,14 +687,19 @@ public class Compiler extends GrammarGenerator {
 		isWS = true;
 		for (int i = 0; i < e.size(); i++) {
 			ParsingExpression inner = e.get(i);
-			if (!(inner instanceof ParsingByte)) {
+			if (inner instanceof ParsingByte) {
+				if (isWS) {
+					if (!checkWS(((ParsingByte)inner).byteChar)) {
+						isWS = false;
+					}
+				}
+			}
+			else if (inner instanceof ParsingByteRange) {
+				isWS = false;
+			}
+			else {
 				isWS = false;
 				return false;
-			}
-			if (isWS) {
-				if (!checkWS(((ParsingByte)inner).byteChar)) {
-					isWS = false;
-				}
 			}
 		}
 		return true;
@@ -720,7 +725,7 @@ public class Compiler extends GrammarGenerator {
 	private int checkWriteChoiceCharset(ParsingChoice e, int index, BasicBlock bb, BasicBlock fbb) {
 		int charCount = 0;
 		for (int i = index; i < e.size(); i++) {
-			if (e.get(i) instanceof ParsingByte) {
+			if (e.get(i) instanceof ParsingByte || e.get(i) instanceof ParsingByteRange) {
 				charCount++;
 			}
 			else {
@@ -906,7 +911,18 @@ public class Compiler extends GrammarGenerator {
 	private void writeCharsetCode(ParsingExpression e, int index, int charCount) {
 		CHARSET inst = this.createCHARSET(e, this.getCurrentBasicBlock(), this.jumpFailureJump());
 		for(int i = index; i < index + charCount; i++) {
-			inst.append(((ParsingByte)e.get(i)).byteChar);
+			if (e.get(i) instanceof ParsingByte) {
+				inst.append(((ParsingByte)e.get(i)).byteChar);
+			}
+			else if (e.get(i) instanceof ParsingByteRange) {
+				ParsingByteRange br = (ParsingByteRange)e.get(i);
+				for(int j = br.startByteChar; j <= br.endByteChar; j++ ) {
+					inst.append(j);
+				}
+			}
+			else {
+				System.out.println("Error: Not Char Content in Charset");
+			}
 		}
 	}
 	
@@ -1051,7 +1067,18 @@ public class Compiler extends GrammarGenerator {
 	private void writeNotCharsetCode(ParsingChoice e) {
 		NOTCHARSET inst = this.createNOTCHARSET(e, this.getCurrentBasicBlock(), this.jumpFailureJump());
 		for(int i = 0; i < e.size(); i++) {
-			inst.append(((ParsingByte)e.get(i)).byteChar);
+			if (e.get(i) instanceof ParsingByte) {
+				inst.append(((ParsingByte)e.get(i)).byteChar);
+			}
+			else if (e.get(i) instanceof ParsingByteRange) {
+				ParsingByteRange br = (ParsingByteRange)e.get(i);
+				for(int j = br.startByteChar; j <= br.endByteChar; j++ ) {
+					inst.append(j);
+				}
+			}
+			else {
+				System.out.println("Error: Not Char Content in Charset");
+			}
 		}
 	}
 	
@@ -1165,7 +1192,18 @@ public class Compiler extends GrammarGenerator {
 	private void writeOptionalCharsetCode(ParsingChoice e) {
 		OPTIONALCHARSET inst = this.createOPTIONALCHARSET(e, this.getCurrentBasicBlock());
 		for(int i = 0; i < e.size(); i++) {
-			inst.append(((ParsingByte)e.get(i)).byteChar);
+			if (e.get(i) instanceof ParsingByte) {
+				inst.append(((ParsingByte)e.get(i)).byteChar);
+			}
+			else if (e.get(i) instanceof ParsingByteRange) {
+				ParsingByteRange br = (ParsingByteRange)e.get(i);
+				for(int j = br.startByteChar; j <= br.endByteChar; j++ ) {
+					inst.append(j);
+				}
+			}
+			else {
+				System.out.println("Error: Not Char Content in Charset");
+			}
 		}
 	}
 	
@@ -1280,7 +1318,18 @@ public class Compiler extends GrammarGenerator {
 	private void writeZeroMoreCharsetCode(ParsingChoice e) {
 		ZEROMORECHARSET inst = this.createZEROMORECHARSET(e, this.getCurrentBasicBlock());
 		for(int i = 0; i < e.size(); i++) {
-			inst.append(((ParsingByte)e.get(i)).byteChar);
+			if (e.get(i) instanceof ParsingByte) {
+				inst.append(((ParsingByte)e.get(i)).byteChar);
+			}
+			else if (e.get(i) instanceof ParsingByteRange) {
+				ParsingByteRange br = (ParsingByteRange)e.get(i);
+				for(int j = br.startByteChar; j <= br.endByteChar; j++ ) {
+					inst.append(j);
+				}
+			}
+			else {
+				System.out.println("Error: Not Char Content in Charset");
+			}
 		}
 	}
 	
@@ -1311,9 +1360,6 @@ public class Compiler extends GrammarGenerator {
 
 	@Override
 	public void visitRule(ParsingRule e) {
-		if (e.ruleName.equals("ATTRIBUTECONTENT")) {
-			System.out.println("error content");
-		}
 		this.func = new Function(this.module, e.ruleName);
 		this.setCurrentBasicBlock(new BasicBlock(this.func));
 		BasicBlock fbb = new BasicBlock();
