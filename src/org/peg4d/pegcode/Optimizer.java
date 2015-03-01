@@ -1,5 +1,9 @@
 package org.peg4d.pegcode;
 
+import java.util.List;
+
+import org.objectweb.asm.tree.IntInsnNode;
+
 public class Optimizer {
 	
 	Module module;
@@ -30,6 +34,15 @@ public class Optimizer {
 			
 			for(int j = 0; j < bb.size(); j++) {
 				Instruction inst = bb.get(j);
+				if (inst instanceof NOTCHAR) {
+					if (bb.get(j+1) instanceof ANY) {
+						NOTCHAR ir = (NOTCHAR)bb.remove(j);
+						bb.remove(j);
+						NOTCHARANY nca = new NOTCHARANY(ir.expr, ir.jump, ir.getc(0));
+						nca.addBasicBlock(j, bb);
+						inst = nca;
+					}
+				}
 				if (inst instanceof JumpInstruction) {
 					JumpInstruction jinst = (JumpInstruction)inst;
 					optimizeJump(func, bb, jinst.jump, jinst, j);
@@ -37,6 +50,11 @@ public class Optimizer {
 				else if (inst instanceof JumpMatchingInstruction) {
 					JumpMatchingInstruction jinst = (JumpMatchingInstruction)inst;
 					optimizeJumpMatching(func, bb, jinst.jump, jinst, j);
+				}
+				else if (inst instanceof PUSHp || inst instanceof LOADp1 || inst instanceof LOADp2 || inst instanceof LOADp3) {
+					if (j != bb.size()-1) {
+						optimizeStackOperation(func, bb, j+1);
+					}
 				}
 			}
 		}
@@ -77,6 +95,59 @@ public class Optimizer {
 			JUMP tmp = (JUMP)jump.get(0);
 			jinst.jump = tmp.jump;
 			optimizeJumpMatching(func, bb, tmp.jump, jinst, index);
+		}
+	}
+	
+	public void optimizeStackOperation(Function func, BasicBlock bb, int index) {
+		Instruction inst = bb.get(index);
+		if (inst instanceof PUSHp) {
+			List<Instruction> ilist = func.serchInst(inst.expr);
+			boolean isMappedChoiceExpr = false;
+			for(int i = 0; i < ilist.size(); i++) {
+				if (ilist.get(i) instanceof MAPPEDCHOICE) {
+					isMappedChoiceExpr = true;
+					bb.remove(index);
+					break;
+				}
+			}
+			if (isMappedChoiceExpr) {
+				for(int i = 0; i < ilist.size(); i++) {
+					Instruction ir = ilist.get(i);
+					if (ir instanceof POPp || ir instanceof STOREp) {
+						ir.bb.remove(ir.bb.indexOf(ir));
+					}
+				}
+			}
+		}
+		else if (inst instanceof LOADp1) {
+			bb.remove(index);
+			List<Instruction> ilist = func.serchInst(inst.expr);
+			for(int i = 0; i < ilist.size(); i++) {
+				Instruction ir = ilist.get(i);
+				if (ir instanceof STOREp1) {
+					ir.bb.remove(ir.bb.indexOf(ir));
+				}
+			}
+		}
+		else if (inst instanceof LOADp2) {
+			bb.remove(index);
+			List<Instruction> ilist = func.serchInst(inst.expr);
+			for(int i = 0; i < ilist.size(); i++) {
+				Instruction ir = ilist.get(i);
+				if (ir instanceof STOREp2) {
+					ir.bb.remove(ir.bb.indexOf(ir));
+				}
+			}
+		}
+		else if (inst instanceof LOADp3) {
+			bb.remove(index);
+			List<Instruction> ilist = func.serchInst(inst.expr);
+			for(int i = 0; i < ilist.size(); i++) {
+				Instruction ir = ilist.get(i);
+				if (ir instanceof STOREp3) {
+					ir.bb.remove(ir.bb.indexOf(ir));
+				}
+			}
 		}
 	}
 }

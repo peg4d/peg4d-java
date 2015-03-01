@@ -3,6 +3,8 @@ package org.peg4d.pegcode;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.peg4d.expression.ParsingExpression;
+
 public class Function {
 	Module module;
 	String funcName;
@@ -30,6 +32,20 @@ public class Function {
 	
 	public BasicBlock remove(int index) {
 		return this.bbList.remove(index);
+	}
+	
+	public List<Instruction> serchInst(ParsingExpression e) {
+		List<Instruction> ilist = new ArrayList<Instruction>();
+		for(int i = 0; i < this.size(); i++) {
+			BasicBlock bb = this.get(i);
+			for(int j = 0; j < bb.size(); j++) {
+				Instruction inst = bb.get(j);
+				if (inst.expr.equals(e)) {
+					ilist.add(inst);
+				}
+			}
+		}
+		return ilist;
 	}
 	
 	public int size() {

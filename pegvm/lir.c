@@ -912,6 +912,20 @@ static void Emit_REPEATANY(PegVMInstruction *inst, ByteCodeLoader *loader) {
   ir->base.opcode = OPCODE_IREPEATANY;
   ir->ndata = Loader_Read32(loader);
 }
+
+#define OPCODE_INOTCHARANY 61
+typedef struct INOTCHARANY {
+  PegVMInstructionBase base;
+  char cdata;
+  PegVMInstruction *jump;
+} INOTCHARANY;
+
+static void Emit_NOTCHARANY(PegVMInstruction *inst, ByteCodeLoader *loader) {
+  INOTCHARANY *ir = (INOTCHARANY *)inst;
+  ir->base.opcode = OPCODE_INOTCHARANY;
+  ir->cdata = Loader_Read32(loader);
+  ir->jump = Loader_GetJumpAddr(loader, inst);
+}
 #define LIR_MAX_OPCODE 61
 #define LIR_EACH(OP)                                                           \
   OP(EXIT) OP(JUMP) OP(CALL) OP(RET) OP(CONDBRANCH) OP(CONDTRUE) OP(CONDFALSE) \
@@ -925,7 +939,7 @@ static void Emit_REPEATANY(PegVMInstruction *inst, ByteCodeLoader *loader) {
       OP(INDENT) OP(NOTBYTE) OP(NOTANY) OP(NOTCHARSET) OP(NOTBYTERANGE)        \
       OP(NOTSTRING) OP(OPTIONALBYTE) OP(OPTIONALCHARSET) OP(OPTIONALBYTERANGE) \
       OP(OPTIONALSTRING) OP(ZEROMOREBYTERANGE) OP(ZEROMORECHARSET)             \
-      OP(ZEROMOREWS) OP(REPEATANY)
+      OP(ZEROMOREWS) OP(REPEATANY) OP(NOTCHARANY)
 
 union PegVMInstruction {
 #define DEF_PEGVM_INST_UNION(OP) I##OP _##OP;

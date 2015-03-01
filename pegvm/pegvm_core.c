@@ -509,6 +509,15 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     }
     DISPATCH_NEXT;
   }
+  OP(NOTCHARANY) {
+    INOTCHARANY *inst = (INOTCHARANY *)pc;
+    if (*cur++ == inst->cdata) {
+      --cur;
+      failflag = 1;
+      JUMP(inst->jump);
+    }
+    DISPATCH_NEXT;
+  }
 
   return failflag;
 }

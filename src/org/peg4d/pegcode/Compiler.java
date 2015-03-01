@@ -395,6 +395,11 @@ public class Compiler extends GrammarGenerator {
 				pos = write32(byteCode, zcs.getc(j), pos);
 			}
 			break;
+		case NOTCHARANY:
+			NOTCHARANY nca = (NOTCHARANY)code;
+			pos = write32(byteCode, nca.getc(0), pos);
+			pos = write32(byteCode, nca.jump.codeIndex-index, pos);
+			break;
 //		case REPEATANY:
 //			pos = write32(byteCode, code.get(0), pos);
 //			break;

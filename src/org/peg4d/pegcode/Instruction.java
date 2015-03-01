@@ -15,6 +15,10 @@ public abstract class Instruction {
 		this.bb.append(this);
 	}
 	
+	public Instruction(ParsingExpression expr) {
+		this.expr = expr;
+	}
+	
 	protected abstract void stringfy(StringBuilder sb);
 	
 	public abstract String toString();
@@ -157,6 +161,14 @@ abstract class MatchingInstruction extends Instruction {
 		}
 	}
 	
+	public MatchingInstruction(ParsingExpression expr, int ...cdata) {
+		super(expr);
+		this.cdata = new ArrayList<Integer>(); 
+		for(int i = 0; i < cdata.length; i++) {
+			this.cdata.add(cdata[i]);
+		}
+	}
+	
 	public MatchingInstruction(ParsingExpression expr, BasicBlock bb) {
 		super(expr, bb);
 		this.cdata = new ArrayList<Integer>(); 
@@ -179,6 +191,11 @@ abstract class JumpMatchingInstruction extends MatchingInstruction {
 	BasicBlock jump;
 	public JumpMatchingInstruction(ParsingExpression expr, BasicBlock bb, BasicBlock jump, int ...cdata ) {
 		super(expr, bb, cdata);
+		this.jump = jump;
+	}
+	
+	public JumpMatchingInstruction(ParsingExpression expr, BasicBlock jump, int ...cdata ) {
+		super(expr, cdata);
 		this.jump = jump;
 	}
 	
@@ -813,6 +830,31 @@ class ZEROMOREWS extends Instruction {
 	@Override
 	public String toString() {
 		return "ZEROMOREWS";
+	}
+}
+
+class NOTCHARANY extends JumpMatchingInstruction {
+	public NOTCHARANY(ParsingExpression expr, BasicBlock jump,
+			int... cdata) {
+		super(expr, jump, cdata);
+		this.op = Opcode.NOTCHARANY;
+	}
+	
+	public void addBasicBlock(int index, BasicBlock bb) {
+		this.bb = bb;
+		this.bb.add(index, this);
+	}
+
+	@Override
+	protected void stringfy(StringBuilder sb) {
+		sb.append("  NOTCHARANY ");
+		sb.append(this.getc(0));
+		sb.append(" jump:" + this.jump.getBBName());
+	}
+
+	@Override
+	public String toString() {
+		return "NOTCHARANY " + this.getc(0) + " " + this.jump.codeIndex;
 	}
 }
 
