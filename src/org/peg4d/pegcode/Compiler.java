@@ -556,8 +556,8 @@ public class Compiler extends GrammarGenerator {
 		return new REPCOND(e, bb, jump);
 	}
 	
-	private Instruction createCHARRANGE(ParsingExpression e, BasicBlock bb, BasicBlock jump, int ...cdata) {
-		return new CHARRANGE(e, bb, jump, cdata);
+	private CHARRANGE createCHARRANGE(ParsingExpression e, BasicBlock bb, BasicBlock jump) {
+		return new CHARRANGE(e, bb, jump);
 	}
 	
 	private CHARSET createCHARSET(ParsingExpression e, BasicBlock bb, BasicBlock jump) {
@@ -637,8 +637,8 @@ public class Compiler extends GrammarGenerator {
 	private NOTCHARSET createNOTCHARSET(ParsingExpression e, BasicBlock bb, BasicBlock jump) {
 		return new NOTCHARSET(e, bb, jump);
 	}
-	private NOTCHARRANGE createNOTCHARRANGE(ParsingExpression e, BasicBlock bb, BasicBlock jump, int ...ndata) {
-		return new NOTCHARRANGE(e, bb, jump, ndata);
+	private NOTCHARRANGE createNOTCHARRANGE(ParsingExpression e, BasicBlock bb, BasicBlock jump) {
+		return new NOTCHARRANGE(e, bb, jump);
 	}
 	private NOTSTRING createNOTSTRING(ParsingExpression e, BasicBlock bb, BasicBlock jump) {
 		return new NOTSTRING(e, bb, jump);
@@ -1100,7 +1100,10 @@ public class Compiler extends GrammarGenerator {
 		}
 		if (inner instanceof ParsingByteRange) {
 			ParsingByteRange br = (ParsingByteRange)inner;
-			this.createNOTCHARRANGE(inner, this.getCurrentBasicBlock(), this.jumpFailureJump(), br.startByteChar, br.endByteChar);
+			NOTCHARSET inst = this.createNOTCHARSET(inner, this.getCurrentBasicBlock(), this.jumpFailureJump());
+			for(int j = br.startByteChar; j <= br.endByteChar; j++ ) {
+				inst.append(j);
+			}
 			return true;
 		}
 		if(inner instanceof ParsingChoice) {
@@ -1186,7 +1189,10 @@ public class Compiler extends GrammarGenerator {
 	}
 	
 	private void writeOptionalByteRangeCode(ParsingByteRange e) {
-		this.createOPTIONALBYTERANGE(e, this.getCurrentBasicBlock(), e.startByteChar, e.endByteChar);
+		OPTIONALCHARSET inst = this.createOPTIONALCHARSET(e, this.getCurrentBasicBlock());
+		for(int j = e.startByteChar; j <= e.endByteChar; j++ ) {
+			inst.append(j);
+		}
 	}
 	
 	private void writeOptionalCharsetCode(ParsingChoice e) {
@@ -1312,7 +1318,10 @@ public class Compiler extends GrammarGenerator {
 	}
 	
 	private void writeZeroMoreByteRangeCode(ParsingByteRange e) {
-		this.createZEROMOREBYTERANGE(e, this.getCurrentBasicBlock(), e.startByteChar, e.endByteChar);
+		ZEROMORECHARSET inst = this.createZEROMORECHARSET(e, this.getCurrentBasicBlock());
+		for(int j = e.startByteChar; j <= e.endByteChar; j++ ) {
+			inst.append(j);
+		}
 	}
 	
 	private void writeZeroMoreCharsetCode(ParsingChoice e) {
@@ -1425,12 +1434,18 @@ public class Compiler extends GrammarGenerator {
 
 	@Override
 	public void visitByte(ParsingByte e) {
-		this.createCHARRANGE(e, this.getCurrentBasicBlock(), this.jumpFailureJump(), e.byteChar, e.byteChar);
+		CHARSET inst =  this.createCHARSET(e, this.getCurrentBasicBlock(), this.jumpFailureJump());
+		for(int j = e.byteChar; j <= e.byteChar; j++ ) {
+			inst.append(j);
+		}
 	}
 
 	@Override
 	public void visitByteRange(ParsingByteRange e) {
-		this.createCHARRANGE(e, this.getCurrentBasicBlock(), this.jumpFailureJump(), e.startByteChar, e.endByteChar);
+		CHARSET inst = this.createCHARSET(e, this.getCurrentBasicBlock(), this.jumpFailureJump());
+		for(int j = e.startByteChar; j <= e.endByteChar; j++ ) {
+			inst.append(j);
+		}
 	}
 
 	@Override

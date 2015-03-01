@@ -210,8 +210,8 @@ abstract class JumpMatchingInstruction extends MatchingInstruction {
 }
 
 class CHARRANGE extends JumpMatchingInstruction {
-	public CHARRANGE(ParsingExpression expr, BasicBlock bb, BasicBlock jump, int ...cdata) {
-		super(expr, bb, jump, cdata);
+	public CHARRANGE(ParsingExpression expr, BasicBlock bb, BasicBlock jump) {
+		super(expr, bb, jump);
 		this.op = Opcode.CHARRANGE;
 	}
 
@@ -611,9 +611,8 @@ class NOTCHAR extends JumpMatchingInstruction {
 }
 
 class NOTCHARRANGE extends JumpMatchingInstruction {
-	public NOTCHARRANGE(ParsingExpression expr, BasicBlock bb, BasicBlock jump,
-			int... cdata) {
-		super(expr, bb, jump, cdata);
+	public NOTCHARRANGE(ParsingExpression expr, BasicBlock bb, BasicBlock jump) {
+		super(expr, bb, jump);
 		this.op = Opcode.NOTBYTERANGE;
 	}
 
