@@ -113,6 +113,14 @@ static convert_to_lir_func_t f_convert[] = {
   PEGVM_OP_EACH(DEFINE_CONVERT_FUNC)
 };
 
+#if PEGVM_PROFILE
+profileInst *profile;
+char **rtable;
+long *itable;
+long ilength;
+int rlength;
+#endif
+
 PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
                                       const char *fileName,
                                       const char *nonTerminalName) {
@@ -135,6 +143,10 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
 
   int ruleSize = read32(buf, &info);
   char **ruleTable = (char **)malloc(sizeof(char *) * ruleSize);
+#if PEGVM_PROFILE
+  rlength = ruleSize;
+  itable = (long *)malloc(sizeof(long) * ruleSize);
+#endif
   for (int i = 0; i < ruleSize; i++) {
     int ruleNameLen = read32(buf, &info);
     ruleTable[i] = (char *)malloc(ruleNameLen);
@@ -142,6 +154,9 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
       ruleTable[i][j] = buf[info.pos++];
     }
     long index = read64(buf, &info);
+#if PEGVM_PROFILE
+    itable[i] = index;
+#endif
     if (nonTerminalName != NULL) {
       if (!strcmp(ruleTable[i], nonTerminalName)) {
         context->startPoint = index;
@@ -160,10 +175,27 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
 
   // free bytecode info
   free(info.filename);
+#if PEGVM_PROFILE
+  ilength = info.bytecode_length;
+  rtable = ruleTable;
+  profile = (profileInst *)malloc(sizeof(profileInst) * info.bytecode_length);
+  for (int i = 0; i < ruleSize; i++) {
+    if (i == ruleSize - 1) {
+      for (long j = itable[i]; j < info.bytecode_length; j++) {
+        profile[j].ruleName = ruleTable[i];
+      }
+    } else {
+      for (long j = itable[i]; j < itable[i + 1]; j++) {
+        profile[j].ruleName = ruleTable[i];
+      }
+    }
+  }
+#else
   for (int i = 0; i < ruleSize; i++) {
     free(ruleTable[i]);
   }
   free(ruleTable);
+#endif
 
   head = inst = __malloc(sizeof(*inst) * info.bytecode_length);
   memset(inst, 0, sizeof(*inst) * info.bytecode_length);
@@ -175,6 +207,10 @@ PegVMInstruction *nez_LoadMachineCode(ParsingContext context,
 
   for (uint64_t i = 0; i < info.bytecode_length; i++) {
     int opcode = buf[info.pos++];
+#if PEGVM_PROFILE
+    profile[i].opcode = opcode;
+    profile[i].count = 0;
+#endif
     f_convert[opcode](inst, &loader);
     inst++;
   }
@@ -308,35 +344,46 @@ void nez_DisposeParsingContext(ParsingContext ctx) {
 
 void nez_VM_PrintProfile(const char *file_type) {
 #if PEGVM_PROFILE
-  fprintf(stderr, "\ninstruction count \n");
-  for (int i = 0; i < PEGVM_PROFILE_MAX; i++) {
-    fprintf(stderr, "%llu %s\n", count[i], get_opname(i));
-    // fprintf(stderr, "%s: %llu (%0.2f%%)\n", get_opname(i), count[i],
-    // (double)count[i]*100/(double)count_all);
+  //  fprintf(stderr, "\ninstruction count \n");
+  //  for (int i = 0; i < PEGVM_PROFILE_MAX; i++) {
+  //    fprintf(stderr, "%llu %s\n", count[i], get_opname(i));
+  //    // fprintf(stderr, "%s: %llu (%0.2f%%)\n", get_opname(i), count[i],
+  //    // (double)count[i]*100/(double)count_all);
+  //  }
+  //  FILE *file;
+  //  file = fopen("pegvm_profile.csv", "w");
+  //  if (file == NULL) {
+  //    assert(0 && "can not open file");
+  //  }
+  //  fprintf(file, ",");
+  //  for (int i = 0; i < PEGVM_PROFILE_MAX; i++) {
+  //    fprintf(file, "%s", get_opname(i));
+  //    if (i != PEGVM_PROFILE_MAX - 1) {
+  //      fprintf(file, ",");
+  //    }
+  //  }
+  //  for (int i = 0; i < PEGVM_PROFILE_MAX; i++) {
+  //    fprintf(file, "%s,", get_opname(i));
+  //    for (int j = 0; j < PEGVM_PROFILE_MAX; j++) {
+  //      fprintf(file, "%llu", conbination_count[i][j]);
+  //      if (j != PEGVM_PROFILE_MAX - 1) {
+  //        fprintf(file, ",");
+  //      }
+  //    }
+  //    fprintf(file, "\n");
+  //  }
+  //  fclose(file);
+  fprintf(stderr, "Print Profile\n\n");
+  for (long i = 0; i < ilength; i++) {
+    fprintf(stderr, "%d [%ld] %s rule:%s\n", profile[i].count, i,
+            get_opname(profile[i].opcode), profile[i].ruleName);
   }
-  FILE *file;
-  file = fopen("pegvm_profile.csv", "w");
-  if (file == NULL) {
-    assert(0 && "can not open file");
+  for (int i = 0; i < rlength; i++) {
+    free(profile[itable[i]].ruleName);
   }
-  fprintf(file, ",");
-  for (int i = 0; i < PEGVM_PROFILE_MAX; i++) {
-    fprintf(file, "%s", get_opname(i));
-    if (i != PEGVM_PROFILE_MAX - 1) {
-      fprintf(file, ",");
-    }
-  }
-  for (int i = 0; i < PEGVM_PROFILE_MAX; i++) {
-    fprintf(file, "%s,", get_opname(i));
-    for (int j = 0; j < PEGVM_PROFILE_MAX; j++) {
-      fprintf(file, "%llu", conbination_count[i][j]);
-      if (j != PEGVM_PROFILE_MAX - 1) {
-        fprintf(file, ",");
-      }
-    }
-    fprintf(file, "\n");
-  }
-  fclose(file);
+  free(itable);
+  free(rtable);
+  free(profile);
 #endif
 }
 
@@ -359,7 +406,8 @@ void nez_ParseStat(ParsingContext context, PegVMInstruction *inst) {
       nez_PrintErrorInfo("parse error");
     }
     end = timer();
-    fprintf(stderr, "ErapsedTime: %llu msec\n", (unsigned long long)end - start);
+    fprintf(stderr, "ErapsedTime: %llu msec\n",
+            (unsigned long long)end - start);
     nez_DisposeObject(context->left);
     context->pos = 0;
   }

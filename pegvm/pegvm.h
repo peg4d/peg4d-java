@@ -4,7 +4,7 @@
 #define PEGVM_H
 
 #define PEGVM_DEBUG 0
-#define PEGVM_PROFILE 0
+#define PEGVM_PROFILE 1
 #define PEGVM_OP_MAX 46
 #define PEGVM_PROFILE_MAX 46
 
@@ -17,6 +17,14 @@ typedef struct byteCodeInfo {
   uint32_t pool_size_info;
   uint64_t bytecode_length;
 } byteCodeInfo;
+
+#if PEGVM_PROFILE
+typedef struct profileInst {
+  long opcode;
+  int count;
+  char *ruleName;
+} profileInst;
+#endif
 
 union PegVMInstruction;
 typedef union PegVMInstruction PegVMInstruction;

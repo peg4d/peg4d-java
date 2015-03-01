@@ -16,23 +16,23 @@ static int pegvm_string_equal(pegvm_string_ptr_t str, const char *t) {
 #endif
 }
 
-static ParsingObject P4D_newObject2(ParsingContext context, const char *cur, MemoryPool mpool, ParsingObject left)
-{
-    ParsingObject po = P4D_newObject(context, cur, mpool);
+static ParsingObject P4D_newObject2(ParsingContext context, const char *cur,
+                                    MemoryPool mpool, ParsingObject left) {
+  ParsingObject po = P4D_newObject(context, cur, mpool);
 #if 1
-    *po = *left;
+  *po = *left;
 #else
-    memcpy(po, left, sizeof(*po));
+  memcpy(po, left, sizeof(*po));
 #endif
-    return po;
+  return po;
 }
 
 #if __GNUC__ >= 3
-# define likely(x) __builtin_expect(!!(x), 1)
-# define unlikely(x) __builtin_expect(!!(x), 0)
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
 #else
-# define likely(x) (x)
-# define unlikely(x) (x)
+#define likely(x) (x)
+#define unlikely(x) (x)
 #endif
 
 #define PUSH_IP(PC) *cp++ = (PC)
@@ -45,11 +45,15 @@ static ParsingObject P4D_newObject2(ParsingContext context, const char *cur, Mem
 
 #define GET_ADDR(PC) ((PC)->base).addr
 #define DISPATCH_NEXT goto *GET_ADDR(++pc)
-#define JUMP(dst)     goto *GET_ADDR(pc = dst)
+#define JUMP(dst) goto *GET_ADDR(pc = dst)
 #define JUMP_REL(dst) goto *GET_ADDR(pc += dst)
-#define RET           goto *GET_ADDR(pc = *POP_IP())
+#define RET goto *GET_ADDR(pc = *POP_IP())
 
+#if PEGVM_PROFILE
+#define OP(OP) PEGVM_OP_##OP : profile[pc - inst].count++;
+#else
 #define OP(OP) PEGVM_OP_##OP:
+#endif
 long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   static const void *table[] = {
 #define DEFINE_TABLE(NAME) &&PEGVM_OP_##NAME,
@@ -82,7 +86,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   pc = inst + context->startPoint;
   sp = (const char **)context->stack_pointer;
   osp = context->object_stack_pointer;
-  cp = (const PegVMInstruction **) context->call_stack_pointer;
+  cp = (const PegVMInstruction **)context->call_stack_pointer;
 
   if (inst == NULL) {
     return (long)table;
@@ -108,16 +112,13 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     PUSH_IP(pc + 1);
     JUMP(dst);
   }
-  OP(RET) {
-    RET;
-  }
+  OP(RET) { RET; }
   OP(CONDBRANCH) {
 #ifdef PEGVM_USE_CONDBRANCH
     PegVMInstruction *dst = ((ICONDBRANCH *)pc)->jump;
     if (failflag == ((ICONDBRANCH *)pc)->val) {
       JUMP(dst);
-    }
-    else {
+    } else {
       DISPATCH_NEXT;
     }
 #endif
@@ -127,8 +128,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     PegVMInstruction *dst = ((ICONDBRANCH *)pc)->jump;
     if (failflag == 1) {
       JUMP(dst);
-    }
-    else {
+    } else {
       DISPATCH_NEXT;
     }
   }
@@ -136,8 +136,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     PegVMInstruction *dst = ((ICONDBRANCH *)pc)->jump;
     if (failflag == 0) {
       JUMP(dst);
-    }
-    else {
+    } else {
       DISPATCH_NEXT;
     }
   }
@@ -145,8 +144,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     PegVMInstruction *dst = ((IREPCOND *)pc)->jump;
     if (cur != POP_SP()) {
       DISPATCH_NEXT;
-    }
-    else {
+    } else {
       JUMP(dst);
     }
   }
@@ -167,8 +165,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     ICHARSET *inst = (ICHARSET *)pc;
     if (bitset_get(inst->set, *cur++)) {
       DISPATCH_NEXT;
-    }
-    else {
+    } else {
       --cur;
       failflag = 1;
       JUMP(inst->jump);
@@ -183,8 +180,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     if ((next = pegvm_string_equal(inst->chardata, cur)) > 0) {
       cur += next;
       DISPATCH_NEXT;
-    }
-    else {
+    } else {
       failflag = 1;
       JUMP(inst->jump);
     }
@@ -324,7 +320,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   OP(MAPPEDCHOICE_8) {
 #ifndef PEGVM_USE_MAPPEDCHOISE_DIRECT_JMP
     IMAPPEDCHOICE_8 *inst = (IMAPPEDCHOICE_8 *)pc;
-    unsigned char ch = (unsigned char) *cur;
+    unsigned char ch = (unsigned char)*cur;
     char_table_t table = inst->ndata;
     JUMP_REL(table->table[ch]);
 #endif
@@ -366,7 +362,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     long offset = matchSymbolTableTop(context, cur, inst->ndata);
     failflag = offset >= 0;
     if (offset) {
-        cur += offset;
+      cur += offset;
     }
     DISPATCH_NEXT;
   }
@@ -375,7 +371,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     long offset = matchSymbolTable(context, cur, inst->ndata);
     failflag = offset >= 0;
     if (offset) {
-        cur += offset;
+      cur += offset;
     }
     DISPATCH_NEXT;
   }
@@ -384,7 +380,8 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     long len;
     PUSH_SP((const char *)(long)context->stateValue); // FIXME
     char *value = getIndentText(context, cur, &len);
-    PUSH_SP((const char *)(long)pushSymbolTable(context, inst->ndata, (int)len, value)); // FIXME
+    PUSH_SP((const char *)(long)pushSymbolTable(context, inst->ndata, (int)len,
+                                                value)); // FIXME
     DISPATCH_NEXT;
   }
   OP(BLOCKEND) {
@@ -396,7 +393,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
     IINDENT *inst = (IINDENT *)pc;
     long offset = matchSymbolTableTop(context, cur, inst->ndata);
     if (offset >= 0) {
-        cur += offset;
+      cur += offset;
     }
     DISPATCH_NEXT;
   }
@@ -427,11 +424,9 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   OP(NOTBYTERANGE) {
 #ifdef PEGVM_USE_CHARRANGE
     INOTBYTERANGE *inst = (INOTBYTERANGE *)pc;
-    if (!(*cur >= inst->c1 &&
-          *cur <= inst->c2)) {
+    if (!(*cur >= inst->c1 && *cur <= inst->c2)) {
       DISPATCH_NEXT;
-    }
-    else {
+    } else {
       failflag = 1;
       JUMP(inst->jump);
     }
@@ -462,8 +457,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   OP(OPTIONALBYTERANGE) {
 #ifdef PEGVM_USE_CHARRANGE
     IOPTIONALBYTERANGE *inst = (IOPTIONALBYTERANGE *)pc;
-    if (*cur >= inst->c1 &&
-        *cur <= inst->c2) {
+    if (*cur >= inst->c1 && *cur <= inst->c2) {
       ++cur;
     }
     DISPATCH_NEXT;
@@ -479,8 +473,7 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
 #ifdef PEGVM_USE_CHARRANGE
     IZEROMOREBYTERANGE *inst = (IZEROMOREBYTERANGE *)pc;
     while (1) {
-      if (!(*cur >= inst->c1 &&
-            *cur <= inst->c2)) {
+      if (!(*cur >= inst->c1 && *cur <= inst->c2)) {
         DISPATCH_NEXT;
       }
       ++cur;
@@ -490,7 +483,8 @@ long nez_VM_Execute(ParsingContext context, PegVMInstruction *inst) {
   }
   OP(ZEROMORECHARSET) {
     IZEROMORECHARSET *inst = (IZEROMORECHARSET *)pc;
-L_head:;
+  L_head:
+    ;
     if (bitset_get(inst->set, *cur)) {
       cur++;
       goto L_head;
@@ -499,7 +493,7 @@ L_head:;
   }
   OP(ZEROMOREWS) {
     char c;
-L_head2:
+  L_head2:
     c = *cur;
     if (c == 32 || c == 9 || c == 10 || c == 13) {
       ++cur;
@@ -511,7 +505,7 @@ L_head2:
     IREPEATANY *inst = (IREPEATANY *)pc;
     const char *end = context->inputs + context->input_size;
     if (cur + context->repeat_table[inst->ndata] < end) {
-        cur += context->repeat_table[inst->ndata];
+      cur += context->repeat_table[inst->ndata];
     }
     DISPATCH_NEXT;
   }
