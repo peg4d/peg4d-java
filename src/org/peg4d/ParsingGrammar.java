@@ -3,6 +3,8 @@ package org.peg4d;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import nez.util.UList;
+
 import org.peg4d.expression.ParsingExpression;
 
 public class ParsingGrammar extends Grammar {

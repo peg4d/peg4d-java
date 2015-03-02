@@ -2,6 +2,11 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.ReportLevel;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTag;
 import org.peg4d.pegcode.GrammarVisitor;
@@ -14,16 +19,39 @@ public class ParsingTagging extends ParsingExpression {
 		this.minlen = 0;
 	}
 	@Override
-	public
-	boolean hasObjectOperation() {
+	public String getInterningKey() {
+		return "#" + this.tag.toString();
+	}
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return false;
+	}
+	@Override
+	public int inferNodeTransition(UMap<String> visited) {
+		return NodeTransition.OperationType;
+	}
+	@Override
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		if(c.required != NodeTransition.OperationType) {
+			this.report(ReportLevel.warning, "unexpected tagging");
+			return ParsingExpression.newEmpty();
+		}
+		return this;
+	}
+	@Override
+	public ParsingExpression removeNodeOperator() {
+		return ParsingExpression.newEmpty();
+	}
+	@Override
+	public ParsingExpression removeFlag(TreeMap<String, String> undefedFlags) {
+		return this;
+	}
+	@Override
+	public boolean hasObjectOperation() {
 		return true;
 	}
 	@Override
-	ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniqueExpression("#\b" + this.tag.key(), this);
-	}
-	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
 		if(lexOnly || this.isRemovedOperation()) {
 			return ParsingExpression.newEmpty();
 		}
@@ -31,10 +59,10 @@ public class ParsingTagging extends ParsingExpression {
 	}
 	@Override
 	public short acceptByte(int ch) {
-		return LazyAccept;
+		return Unconsumed;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		context.left.setTag(this.tag);
 		return true;
 	}

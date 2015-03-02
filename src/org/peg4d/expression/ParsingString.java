@@ -2,6 +2,10 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
 import org.peg4d.pegcode.GrammarVisitor;
 
@@ -15,11 +19,32 @@ public class ParsingString extends ParsingExpression {
 		this.minlen = utf8.length;
 	}
 	@Override
-	ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniqueExpression("''\b" + text, this);
+	public
+	String getInterningKey() { 
+		return "''" + text;
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return utf8.length > 0;
+	}
+	@Override
+	public int inferNodeTransition(UMap<String> visited) {
+		return NodeTransition.BooleanType;
+	}
+	@Override
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		return this;
+	}
+	@Override
+	public ParsingExpression removeNodeOperator() {
+		return this;
+	}
+	@Override
+	public ParsingExpression removeFlag(TreeMap<String, String> undefedFlags) {
+		return this;
+	}
+	@Override
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> undefedFlags) {
 		return this;
 	}
 	@Override
@@ -28,12 +53,12 @@ public class ParsingString extends ParsingExpression {
 	}
 	@Override public short acceptByte(int ch) {
 		if(this.utf8.length == 0) {
-			return LazyAccept;
+			return Unconsumed;
 		}
 		return ((this.utf8[0] & 0xff) == ch) ? Accept : Reject;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		if(context.source.match(context.pos, this.utf8)) {
 			context.consume(this.utf8.length);
 			return true;

@@ -1,7 +1,9 @@
-package org.peg4d;
+package nez.util;
 
 import java.lang.reflect.Array;
 import java.util.AbstractList;
+
+import org.peg4d.Utils;
 
 public class UList<T> extends AbstractList<T> {
 	private int    currentSize;

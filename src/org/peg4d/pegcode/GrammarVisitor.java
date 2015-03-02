@@ -13,18 +13,16 @@ import org.peg4d.expression.ParsingCatch;
 import org.peg4d.expression.ParsingChoice;
 import org.peg4d.expression.ParsingConnector;
 import org.peg4d.expression.ParsingConstructor;
+import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingEmpty;
-import org.peg4d.expression.ParsingExport;
 import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingIf;
 import org.peg4d.expression.ParsingIndent;
 import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingMatch;
-import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
-import org.peg4d.expression.ParsingPermutation;
 import org.peg4d.expression.ParsingRepeat;
 import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingScan;
@@ -84,8 +82,6 @@ public abstract class GrammarVisitor {
 	public abstract void visitConnector(ParsingConnector e);
 	public abstract void visitTagging(ParsingTagging e);
 	public abstract void visitValue(ParsingValue e);
-
-	public abstract void visitExport(ParsingExport e);
 	
 	public abstract void visitMatch(ParsingMatch e);
 	public abstract void visitCatch(ParsingCatch e);
@@ -103,7 +99,6 @@ public abstract class GrammarVisitor {
 
 	public abstract void visitApply(ParsingApply e);
 
-	public abstract void visitPermutation(ParsingPermutation e);
 	public abstract void visitScan(ParsingScan e);
 	public abstract void visitRepeat(ParsingRepeat e);
 

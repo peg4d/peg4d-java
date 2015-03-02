@@ -1,6 +1,6 @@
 package org.peg4d.expression;
 
-import org.peg4d.UList;
+import nez.util.UList;
 
 public abstract class ParsingList extends ParsingExpression {
 	//UList<ParsingExpression> inners;
@@ -26,15 +26,31 @@ public abstract class ParsingList extends ParsingExpression {
 		this.inners[index] = e;
 		return oldExpresion;
 	}
-	protected final String uniqueKey() {
-		StringBuilder sb = new StringBuilder();
-		for(int i = 0; i < this.size(); i++) {
-			ParsingExpression e = this.get(i).uniquefy();
-			set(i, e);
-			sb.append(e.uniqueId);
-			sb.append(":");
+	public final void swap(int i, int j) {
+		ParsingExpression e = this.inners[i];
+		this.inners[i] = this.inners[j];
+		this.inners[j] = e;
+	}
+	protected final UList<ParsingExpression> newList() {
+		return new UList<ParsingExpression>(new ParsingExpression[this.size()]);
+	}
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		for(ParsingExpression e: this) {
+			if(e.checkAlwaysConsumed(startNonTerminal, stack)) {
+				return true;
+			}
 		}
-		return sb.toString();
+		return false;
+	}
+
+	@Override
+	public ParsingExpression removeNodeOperator() {
+		UList<ParsingExpression> l = new UList<ParsingExpression>(new ParsingExpression[this.size()]);
+		for(ParsingExpression e : this) {
+			ParsingExpression.addSequence(l, e.removeNodeOperator());
+		}
+		return ParsingExpression.newSequence(l);
 	}
 	
 	@Override
@@ -58,9 +74,4 @@ public abstract class ParsingList extends ParsingExpression {
 		return false;
 	}
 	
-	public final void swap(int i, int j) {
-		ParsingExpression e = this.inners[i];
-		this.inners[i] = this.inners[j];
-		this.inners[j] = e;
-	}
 }

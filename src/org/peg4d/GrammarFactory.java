@@ -1,5 +1,7 @@
 package org.peg4d;
 
+import nez.util.UMap;
+
 public class GrammarFactory {
 
 	public GrammarFactory() {

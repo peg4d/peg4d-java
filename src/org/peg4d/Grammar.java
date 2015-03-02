@@ -2,6 +2,10 @@ package org.peg4d;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.Optimizer;
 import org.peg4d.expression.ParsingChoice;
@@ -14,7 +18,7 @@ import org.peg4d.pegcode.PEG4dFormatter;
 public class Grammar {
 	GrammarFactory       factory;
 	String               name;
-	public UList<String> nameList;
+	public UList<String> definedNameList;
 	UMap<ParsingRule>    ruleMap;
 
 	UList<ParsingRule>   exportedRuleList;
@@ -27,7 +31,7 @@ public class Grammar {
 		this.name = name;
 		this.factory = factory == null ? GrammarFactory.Grammar.factory : factory;
 		this.ruleMap  = new UMap<ParsingRule>();
-		this.nameList  = new UList<String>(new String[16]);
+		this.definedNameList  = new UList<String>(new String[16]);
 		this.optimizationLevel = Main.OptimizationLevel;
 	}
 
@@ -53,9 +57,6 @@ public class Grammar {
 		}
 		PEG4d builder = new PEG4d(this);
 		while(context.hasByteChar()) {
-			if (context.pos == 14381) {
-				context.pos = context.pos;
-			}
 			ParsingObject po = context.parse2(peg4d, "Chunk", new ParsingObject(), null);
 			if(context.isFailure()) {
 				String msg = context.source.formatPositionLine("error", context.fpos, context.getErrorMessage());
@@ -95,6 +96,13 @@ public class Grammar {
 		}
 	}
 	
+	public final ParsingRule newRule(String name, ParsingExpression e) {
+		ParsingRule r = new ParsingRule(this, name, null, e);
+		this.ruleMap.put(name, r);
+		//System.out.println("creating rule: " + name);
+		return r;
+	}
+	
 	public int getRuleSize() {
 		return this.ruleMap.size();
 	}
@@ -117,7 +125,7 @@ public class Grammar {
 		return this.getRule(lexName);
 	}
 
-	public void makeOptionRule(ParsingRule r, String optName, boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public void makeOptionRule(ParsingRule r, String optName, boolean lexOnly, TreeMap<String, String> undefedFlags) {
 		ParsingRule r2 = this.getRule(optName);
 		if(r2 == null) {
 			r2 = new ParsingRule(this, optName, null, null);
@@ -126,7 +134,7 @@ public class Grammar {
 			r2.baseName = r.baseName;  // important
 			r2.minlen = r.minlen;
 			r2.refc = r.refc;
-			r2.expr = r.expr.norm(lexOnly, withoutMap).uniquefy();
+			r2.expr = r.expr.norm(lexOnly, undefedFlags).intern();
 			Main.printVerbose("producing lexical rule", r2);
 		}
 	}
@@ -145,23 +153,23 @@ public class Grammar {
 
 	public final void setRule(String ruleName, ParsingRule rule) {
 		if(!this.hasRule(ruleName)) {
-			this.nameList.add(ruleName);
+			this.definedNameList.add(ruleName);
 		}
 		this.ruleMap.put(ruleName, rule);
 	}
 	
 	public final UList<ParsingRule> getRuleList() {
-		UList<ParsingRule> ruleList = new UList<ParsingRule>(new ParsingRule[nameList.size()]);
-		for(int i = 0; i < nameList.size(); i++) {
-			ruleList.add(getRule(nameList.ArrayValues[i]));
+		UList<ParsingRule> ruleList = new UList<ParsingRule>(new ParsingRule[definedNameList.size()]);
+		for(int i = 0; i < definedNameList.size(); i++) {
+			ruleList.add(getRule(definedNameList.ArrayValues[i]));
 		}
 		return ruleList;
 	}
 
 	public final UList<ParsingExpression> getExpressionList() {
-		UList<ParsingExpression> pegList = new UList<ParsingExpression>(new ParsingExpression[nameList.size()]);
-		for(int i = 0; i < nameList.size(); i++) {
-			String ruleName = nameList.ArrayValues[i];
+		UList<ParsingExpression> pegList = new UList<ParsingExpression>(new ParsingExpression[definedNameList.size()]);
+		for(int i = 0; i < definedNameList.size(); i++) {
+			String ruleName = definedNameList.ArrayValues[i];
 			pegList.add(this.getRule(ruleName).expr);
 		}
 		return pegList;
@@ -173,38 +181,38 @@ public class Grammar {
 		this.getExportRuleList();
 		if(stats != null) {
 			stats.setText("PEG", this.getName());
-			stats.setCount("PEG.NonTerminal", nameList.size());
+			stats.setCount("PEG.NonTerminal", definedNameList.size());
 		}
 		UList<String> stack = new UList<String>(new String[64]);
-		for(int i = 0; i < nameList.size(); i++) {
-			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
-			String uName = rule.getUniqueName();
+		for(int i = 0; i < definedNameList.size(); i++) {
+			ParsingRule rule = this.getRule(definedNameList.ArrayValues[i]);
 			stack.clear(0);
-			stack.add(uName);
-			rule.minlen = rule.expr.checkLength(uName, 0, 0, stack);
+			rule.checkAlwaysConsumed(null, stack);
 		}
 		if(this.foundError) {
 			Main._Exit(1, "PegError found");
 		}
 		if(stats != null) {
-			stats.setCount("PEG.Rules", nameList.size());
+			stats.setCount("PEG.Rules", definedNameList.size());
 		}
-
 		// type check
-		UMap<String> flagMap = new UMap<String>();
-		for(int i = 0; i < nameList.size(); i++) {
-			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
-			ParsingExpression.typeCheck(rule, flagMap);
-			rule.expr = rule.expr.uniquefy();
+		for(int i = 0; i < definedNameList.size(); i++) {
+			ParsingRule r = this.getRule(definedNameList.ArrayValues[i]);
+			r.checkNodeTransition(new NodeTransition());
+		}
+		for(int i = 0; i < definedNameList.size(); i++) {
+			ParsingRule rule = this.getRule(definedNameList.ArrayValues[i]);
+			//ParsingExpression.typeCheck(rule, flagMap);
+			rule.expr = rule.expr.intern();
 			//ParsingExpression.dumpId(rule.ruleName+ " ", rule.expr);
 		}
-
-		int size = nameList.size();
-		TreeMap<String,String> withoutMap = new TreeMap<String,String>();
+		int size = definedNameList.size();
+		TreeMap<String,String> undefedFlags = new TreeMap<String,String>();
 		for(int i = 0; i < size; i++) {
-			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
+			ParsingRule rule = this.getRule(definedNameList.ArrayValues[i]);
 			if(rule.getGrammar() == this) {
-				ParsingExpression e = rule.expr.norm(false, withoutMap).uniquefy();
+				rule.expr = rule.expr.removeFlag(undefedFlags).intern();
+//				ParsingExpression e = rule.expr.norm(false, undefedFlags).intern();
 //				if(rule.expr.uniqueId != e.uniqueId) {
 //					System.out.println("RULE; " + rule.ruleName);
 //					System.out.println("\tBEFORE; " + rule.expr);
@@ -212,29 +220,32 @@ public class Grammar {
 //					ParsingExpression.dumpId("", rule.expr);
 //					ParsingExpression.dumpId("", e);
 //				}
-				rule.expr = e;
+//				rule.expr = e;
 			}
 		}
 		if(stats != null) {
-			stats.setCount("PEG.NormalizedRules", nameList.size());
+			stats.setCount("PEG.NormalizedRules", definedNameList.size());
 			int count = 0;
-			for(int i = 0; i < nameList.size(); i++) {
-				ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
+			UMap<String> flagMap = new UMap<String>();
+			for(int i = 0; i < definedNameList.size(); i++) {
+				ParsingRule rule = this.getRule(definedNameList.ArrayValues[i]);
 				flagMap.clear();
 				if(ParsingDef.checkContextSensitivity(rule.expr, flagMap)) {
 					count+=1;
 				}
 			}
 			stats.setCount("PEG.ContextSensitiveRules", count);
-			stats.setRatio("PEG.ContextSensitivity", count, nameList.size());
+			stats.setRatio("PEG.ContextSensitivity", count, definedNameList.size());
 		}
-
-
-		
-		new Optimizer().optimize(this, stats);
+		try {
+			new Optimizer().optimize(this, stats);
+		}
+		catch(Exception e) {
+			System.out.println("Optimizer error: " + e);
+		}
 		ParsingContext context = new ParsingContext(null);
-		for(int i = 0; i < nameList.size(); i++) {
-			ParsingRule rule = this.getRule(nameList.ArrayValues[i]);
+		for(int i = 0; i < definedNameList.size(); i++) {
+			ParsingRule rule = this.getRule(definedNameList.ArrayValues[i]);
 			if(rule.getGrammar() == this) {
 				rule.testExample1(this, context);
 			}
@@ -257,7 +268,7 @@ public class Grammar {
 		if(e instanceof NonTerminal) {
 			ParsingRule rule = this.getRule(((NonTerminal) e).ruleName);
 			l.add(rule);
-			Main.printVerbose("export", rule.ruleName);
+			Main.printVerbose("export", rule.localName);
 		}
 		if(e instanceof ParsingChoice) {
 			for(int i = 0; i < e.size(); i++) {
@@ -296,6 +307,7 @@ public class Grammar {
 	public final ParsingTag newStartTag() {
 		return model.get("Text");
 	}
+
 
 }
 

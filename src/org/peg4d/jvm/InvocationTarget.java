@@ -7,6 +7,7 @@ public class InvocationTarget {
 	public static enum InvocationType {
 		INVOKE_STATIC,
 		INVOKE_VIRTUAL,
+		INVOKE_INTERFACE,
 		;
 	}
 
@@ -59,6 +60,8 @@ public class InvocationTarget {
 		case INVOKE_VIRTUAL:
 			sBuilder.append("<virtual> ");
 			break;
+		case INVOKE_INTERFACE:
+			sBuilder.append("<interface>");
 		default:
 			break;
 		}
@@ -89,6 +92,12 @@ public class InvocationTarget {
 	public static InvocationTarget newVirtualTarget(Class<?> ownerClass, 
 			Class<?> returnClass, String methodName, Class<?>... paramClasses) {
 		return new InvocationTarget(InvocationType.INVOKE_VIRTUAL, ownerClass, 
+				returnClass, methodName, paramClasses);
+	}
+
+	public static InvocationTarget newInterfaceTarget(Class<?> ownerClass, 
+			Class<?> returnClass, String methodName, Class<?>... paramClasses) {
+		return new InvocationTarget(InvocationType.INVOKE_INTERFACE, ownerClass, 
 				returnClass, methodName, paramClasses);
 	}
 }

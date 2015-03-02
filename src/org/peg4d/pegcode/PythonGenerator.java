@@ -13,8 +13,8 @@ import org.peg4d.expression.ParsingCatch;
 import org.peg4d.expression.ParsingChoice;
 import org.peg4d.expression.ParsingConnector;
 import org.peg4d.expression.ParsingConstructor;
+import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingEmpty;
-import org.peg4d.expression.ParsingExport;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingIf;
@@ -22,10 +22,8 @@ import org.peg4d.expression.ParsingIndent;
 import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingMatch;
-import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
-import org.peg4d.expression.ParsingPermutation;
 import org.peg4d.expression.ParsingRepeat;
 import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingScan;
@@ -86,7 +84,7 @@ public class PythonGenerator extends GrammarGenerator {
 	}
 	void popFailureJumpPoint(ParsingRule r) {
 		this.closeIndent();
-		writeLine("except :" + " ## " + r.ruleName );
+		writeLine("except :" + " ## " + r.localName );
 		this.openIndent();
 		fLabel = fLabel.prev;
 	}
@@ -118,7 +116,7 @@ public class PythonGenerator extends GrammarGenerator {
 	@Override
 	public void visitRule(ParsingRule e) {
 		this.initFailureJumpPoint();
-		writeLine("def " + funcName(e.ruleName) + "(c) :");
+		writeLine("def " + funcName(e.localName) + "(c) :");
 		openIndent();
 		this.let("long", "pos", "c.pos");
 		this.pushFailureJumpPoint();
@@ -323,12 +321,6 @@ public class PythonGenerator extends GrammarGenerator {
 	}
 
 	@Override
-	public void visitExport(ParsingExport e) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
 	public void visitMatch(ParsingMatch e) {
 		// TODO Auto-generated method stub
 
@@ -390,12 +382,6 @@ public class PythonGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitApply(ParsingApply e) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void visitPermutation(ParsingPermutation e) {
 		// TODO Auto-generated method stub
 
 	}

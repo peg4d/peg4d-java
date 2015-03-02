@@ -3,6 +3,11 @@ package org.peg4d.expression;
 import java.util.AbstractList;
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.ReportLevel;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.CharacterReader;
 import org.peg4d.Main;
 import org.peg4d.ParsingCharset;
@@ -11,94 +16,95 @@ import org.peg4d.ParsingObject;
 import org.peg4d.ParsingRule;
 import org.peg4d.ParsingSource;
 import org.peg4d.ParsingTag;
-import org.peg4d.ReportLevel;
-import org.peg4d.UList;
-import org.peg4d.UMap;
 import org.peg4d.pegcode.GrammarGenerator;
 import org.peg4d.pegcode.GrammarVisitor;
 import org.peg4d.pegcode.PEG4dFormatter;
 
 public abstract class ParsingExpression extends AbstractList<ParsingExpression> implements Recognizer {
-//	public  static boolean  VerboseStack = false;
-//
-	public final static int LeftRecursion     = 1 << 10;
-	public final static int HasSyntaxError    = 1 << 16;
-	public final static int HasTypeError      = 1 << 17;
-
-	public final static int DisabledOperation = 1 << 18;
-	public final static int ExpectedConnector = 1 << 19;
-	public final static int NothingConnected  = 1 << 20;
-	public final static int RedundantUnary    = 1 << 21;
-
-	int           flag       = 0;
-	public int    uniqueId   = 0;
-	public ParsingObject po      = null;
-	int           minlen = -1;
-	public Recognizer  matcher;
 		
 	protected ParsingExpression() {
 		this.matcher = this;
 	}
-	
+
+	public Recognizer  matcher;
 	public final boolean isOptimized() {
 		return (this.matcher != this);
 	}
 
-	public final boolean isUnique() {
-		return (this.uniqueId > 0);
+	public int    internId   = 0;
+	public ParsingObject po      = null;
+	public final boolean isInterned() {
+		return (this.internId > 0);
+	}
+	public abstract String getInterningKey();
+	public final ParsingExpression intern() {
+		return ParsingExpression.intern(this);
+	}
+	
+	public boolean isAlwaysConsumed() {
+		return this.checkAlwaysConsumed(null, null);
+	}
+	public abstract boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack);
+
+	public final int inferNodeTransition() {
+		return this.inferNodeTransition(null);
 	}
 
-	final boolean isAllUnique() {
-		for(int i = 0; i < this.size(); i++) {
-			if(!this.get(i).isUnique()) {
+	public abstract int inferNodeTransition(UMap<String> visited);
+	public abstract ParsingExpression checkNodeTransition(NodeTransition c);
+	
+	public abstract ParsingExpression removeNodeOperator();
+	public abstract ParsingExpression removeFlag(TreeMap<String,String> undefedFlags);	
+
+	public static boolean hasReachableFlag(ParsingExpression e, String flagName, UMap<String> visited) {
+		if(e instanceof ParsingWithFlag) {
+			if(flagName.equals(((ParsingWithFlag) e).flagName)) {
 				return false;
 			}
 		}
-		return true;
-	}
-	
-	final boolean isExpectedConnector() {
-		return (this.uniqueId == 0 && this.is(ExpectedConnector));
-	}
-
-	final boolean isNothingConnected() {
-		return (this.uniqueId == 0 && this.is(NothingConnected));
-	}
-
-	final boolean isRemovedOperation() {
-		return (this.uniqueId == 0 && this.is(DisabledOperation));
-	}
-	
-	public boolean hasObjectOperation() {
+		for(ParsingExpression se : e) {
+			if(hasReachableFlag(se, flagName, visited)) {
+				return true;
+			}
+		}
+		if(e instanceof ParsingIf) {
+			return flagName.equals(((ParsingIf) e).flagName);
+		}
+		if(e instanceof NonTerminal) {
+			NonTerminal ne = (NonTerminal)e;
+			String un = ne.getUniqueName();
+			if(!visited.hasKey(un)) {
+				visited.put(un, un);
+				ParsingRule r = ne.getRule();
+				return hasReachableFlag(r.expr, flagName, visited);
+			}
+		}
 		return false;
 	}
-	
-	public ParsingExpression uniquefy() {
-		ParsingExpression e = this.uniquefyImpl();
-		assert(e.getClass() == this.getClass());
-//		if(e.getClass() != this.getClass()) {
-//			System.out.println("@@@@ " + this.getClass() + " " + this);
-//		}
-		return e;
-	}
-	ParsingExpression uniquefyImpl() { return null; }
-	
-	static void dumpId(String indent, ParsingExpression e) {
-		System.out.println(indent + e.uniqueId + " " + e);
-		for(int i = 0; i < e.size(); i++) {
-			dumpId(indent + " ", e.get(i));
-		}
+
+	public static boolean hasReachableFlag(ParsingExpression e, String flagName) {
+		return hasReachableFlag(e, flagName, new UMap<String>());
 	}
 	
-	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
-		return this.minlen + minlen;
-	}
 	
-	public abstract ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap);	
-	// Expr[Expr -> Expr2]
-	// public abstract ParsingExpression replace(Grammar peg, String oldName, String newName, UMap<ParsingRule>  visited);
+	public final static short Reject         = 0;
+	public final static short Accept         = 1;
+	public final static short Unconsumed     = 2;  // depending on the next
+	
+	public abstract short acceptByte(int ch);
 
 	public abstract void visit(GrammarVisitor visitor);
+
+	
+	@Override
+	public int size() {
+		return 0;
+	}
+	
+	@Override
+	public ParsingExpression get(int index) {
+		return null;
+	}
 	
 	public final boolean debugMatch(ParsingContext c) {
 //		int d = cc; cc++;
@@ -108,7 +114,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 //			System.out.println("["+(pos/(1024 * 1024))+"] calling: " + this + " mark=" + c.markObjectStack() + " free" + Runtime.getRuntime().freeMemory());
 //		}
 //		dstack.add(this);
-		boolean b = this.matcher.simpleMatch(c);
+		boolean b = this.matcher.match(c);
 //		if(this instanceof NonTerminal) {
 ////			c.dumpCallStack("["+pos+"] called: " + b + " ");
 //		}
@@ -120,28 +126,6 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 		return b;
 	}
 	
-	public final static short Reject         = 0;
-	public final static short Accept         = 1;
-	public final static short LazyAccept     = 2;  // depending on the next
-	
-	public abstract short acceptByte(int ch);
-	
-	public final boolean is(int uflag) {
-		return ((this.flag & uflag) == uflag);
-	}
-
-	public void set(int uflag) {
-		this.flag = this.flag | uflag;
-	}
-	
-	public int size() {
-		return 0;
-	}
-	
-	public ParsingExpression get(int index) {
-		return null;
-	}
-
 	private final static GrammarGenerator DefaultFormatter = new PEG4dFormatter();
 	
 	@Override public String toString() {
@@ -152,93 +136,151 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	
 	public static int WarningLevel = 1;
 
-	final void report(ReportLevel level, String msg) {
+	public final void report(ReportLevel level, String msg) {
 		if(WarningLevel == 0 && level.compareTo(ReportLevel.error) != 0) {
 			return;
 		}
 		if(this.po != null) {
 			Main._PrintLine(po.formatSourceMessage(level.toString(), msg));
 		}
-		else {
-			System.out.println("" + level.toString() + ": " + msg + " in " + this);
-		}
-	}
-		
-	private static boolean checkRecursion(String uName, UList<String> stack) {
-		for(int i = 0; i < stack.size() - 1; i++) {
-			if(uName.equals(stack.ArrayValues[i])) {
-				return true;
-			}
-		}
-		return false;
+//		else {
+//			System.out.println("" + level.toString() + ": " + msg + " in " + this);
+//		}
 	}
 
-	public static int checkLeftRecursion(ParsingExpression e, String uName, int start, int minlen, UList<String> stack) {
-		if(e instanceof NonTerminal) {
-			NonTerminal ne = (NonTerminal) e;
-			ne.checkReference();
-			if(minlen == 0) {
-				String n = ne.getUniqueName();
-				if(n.equals(uName) && !e.is(LeftRecursion)) {
-					ParsingRule r = ne.getRule();
-					e.set(LeftRecursion);
-					e.report(ReportLevel.error, "left recursion: " + r);
-					r.peg.foundError = true;
-				}
-				if(!checkRecursion(n, stack)) {
-					int pos = stack.size();
-					stack.add(n);
-					int nc = checkLeftRecursion(ne.deReference(), uName, start, minlen, stack);
-					e.minlen = nc - minlen;
-					stack.clear(pos);
-				}
-				if(e.minlen == -1) {
-					e.minlen = 1; // FIXME: assuming no left recursion
-				}
-			}
-			else if(e.minlen == -1) {
-				e.minlen = 0;
-			}
-		}
-		if(e instanceof ParsingChoice) {
-			int lmin = Integer.MAX_VALUE;
-			for(int i = 0; i < e.size(); i++) {
-				int nc = checkLeftRecursion(e.get(i), uName, start, minlen, stack);
-				if(nc < lmin) {
-					lmin = nc;
-				}
-			}
-			e.minlen = lmin - minlen;
-		}
-		else if(e instanceof ParsingSequence || e instanceof ParsingConstructor) {
-			int nc = minlen;
-			for(int i = 0; i < e.size(); i++) {
-				ParsingExpression eN = e.get(i);
-				nc = checkLeftRecursion(eN, uName, start, nc, stack);
-			}
-			e.minlen = nc - minlen;
-		}
-		else if(e instanceof ParsingUnary) {
-			int lmin = checkLeftRecursion(((ParsingUnary) e).inner, uName, start, minlen, stack); // skip count
-			if(e instanceof ParsingOption || e instanceof ParsingRepetition || e instanceof ParsingNot || e instanceof ParsingAnd ) {
-				e.minlen = 0;
-			}
-			else {
-				e.minlen = lmin - minlen;
-			}
-		}
-		else {
-			if(e.minlen == -1) {
-				e.minlen = 0;
-			}
-		}
-//		if(e.minlen == -1) {
-//			System.out.println("@@@@ " + uName + "," + e);
-//		}
-		assert(e.minlen != -1);
-		minlen += e.minlen;
-		return minlen;
+	// ======================================================================
+	
+	
+	// ======================================================================
+	
+	int           minlen = -1;
+
+	public int checkLength(String ruleName, int start, int minlen, UList<String> stack) {
+		return this.minlen + minlen;
 	}
+
+	static int ObjectContext    = 1 << 0;
+	static int OperationContext = 1 << 1;
+	
+	public final static int LeftRecursion     = 1 << 10;
+	public final static int HasSyntaxError    = 1 << 16;
+	public final static int HasTypeError      = 1 << 17;
+
+	public final static int DisabledOperation = 1 << 18;
+	public final static int ExpectedConnector = 1 << 19;
+	public final static int NothingConnected  = 1 << 20;
+	public final static int RedundantUnary    = 1 << 21;
+
+	int           flag       = 0;
+
+	final boolean isExpectedConnector() {
+		return (this.internId == 0 && this.is(ExpectedConnector));
+	}
+
+	final boolean isNothingConnected() {
+		return (this.internId == 0 && this.is(NothingConnected));
+	}
+
+	final boolean isRemovedOperation() {
+		return (this.internId == 0 && this.is(DisabledOperation));
+	}
+	
+	public boolean hasObjectOperation() {
+		return false;
+	}
+		
+	static void dumpId(String indent, ParsingExpression e) {
+		System.out.println(indent + e.internId + " " + e);
+		for(int i = 0; i < e.size(); i++) {
+			dumpId(indent + " ", e.get(i));
+		}
+	}
+
+	public final boolean is(int uflag) {
+		return ((this.flag & uflag) == uflag);
+	}
+
+	public void set(int uflag) {
+		this.flag = this.flag | uflag;
+	}
+
+	public abstract ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags);	
+		
+//	private static boolean checkRecursion(String uName, UList<String> stack) {
+//		for(int i = 0; i < stack.size() - 1; i++) {
+//			if(uName.equals(stack.ArrayValues[i])) {
+//				return true;
+//			}
+//		}
+//		return false;
+//	}
+//
+//	public static int checkLeftRecursion(ParsingExpression e, String uName, int start, int minlen, UList<String> stack) {
+//		if(e instanceof NonTerminal) {
+//			NonTerminal ne = (NonTerminal) e;
+//			ne.checkReference();
+//			if(minlen == 0) {
+//				String n = ne.getUniqueName();
+//				if(n.equals(uName) && !e.is(LeftRecursion)) {
+//					ParsingRule r = ne.getRule();
+//					e.set(LeftRecursion);
+//					e.report(ReportLevel.error, "left recursion: " + r);
+//					r.peg.foundError = true;
+//				}
+//				if(!checkRecursion(n, stack)) {
+//					int pos = stack.size();
+//					stack.add(n);
+//					int nc = checkLeftRecursion(ne.deReference(), uName, start, minlen, stack);
+//					e.minlen = nc - minlen;
+//					stack.clear(pos);
+//				}
+//				if(e.minlen == -1) {
+//					e.minlen = 1; // FIXME: assuming no left recursion
+//				}
+//			}
+//			else if(e.minlen == -1) {
+//				e.minlen = 0;
+//			}
+//		}
+//		if(e instanceof ParsingChoice) {
+//			int lmin = Integer.MAX_VALUE;
+//			for(int i = 0; i < e.size(); i++) {
+//				int nc = checkLeftRecursion(e.get(i), uName, start, minlen, stack);
+//				if(nc < lmin) {
+//					lmin = nc;
+//				}
+//			}
+//			e.minlen = lmin - minlen;
+//		}
+//		else if(e instanceof ParsingSequence || e instanceof ParsingConstructor) {
+//			int nc = minlen;
+//			for(int i = 0; i < e.size(); i++) {
+//				ParsingExpression eN = e.get(i);
+//				nc = checkLeftRecursion(eN, uName, start, nc, stack);
+//			}
+//			e.minlen = nc - minlen;
+//		}
+//		else if(e instanceof ParsingUnary) {
+//			int lmin = checkLeftRecursion(((ParsingUnary) e).inner, uName, start, minlen, stack); // skip count
+//			if(e instanceof ParsingOption || e instanceof ParsingRepetition || e instanceof ParsingNot || e instanceof ParsingAnd ) {
+//				e.minlen = 0;
+//			}
+//			else {
+//				e.minlen = lmin - minlen;
+//			}
+//		}
+//		else {
+//			if(e.minlen == -1) {
+//				e.minlen = 0;
+//			}
+//		}
+////		if(e.minlen == -1) {
+////			System.out.println("@@@@ " + uName + "," + e);
+////		}
+//		assert(e.minlen != -1);
+//		minlen += e.minlen;
+//		return minlen;
+//	}
 	
 	static boolean containFlag(ParsingExpression e, String flagName, UMap<String> visited) {
 		for(int i = 0; i < e.size(); i++) {
@@ -265,10 +307,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 		return containFlag(e, flagName, new UMap<String>());
 	}
 	
-	static int ObjectContext    = 1 << 0;
-	static int OperationContext = 1 << 1;
-	
-	private static int checkObjectConstruction(ParsingExpression e, int status) {
+	protected final static int checkObjectConstruction(ParsingExpression e, int status) {
 		if(status == ParsingRule.ReservedRule) {
 			return status;
 		}
@@ -285,7 +324,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 		return OperationContext;
 	}
 
-	private static void checkObjectOperation(ParsingExpression e, int status) {
+	protected final static void checkObjectOperation(ParsingExpression e, int status) {
 		if(status == ParsingRule.ReservedRule) {
 			return;
 		}
@@ -296,62 +335,62 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 		}
 	}
 
-	static int typeCheckImpl(ParsingExpression e, int status, UMap<String> flagMap) {
+	static int typeCheckImpl(ParsingExpression e, int typeStatus, UMap<String> flagMap) {
 		if(e instanceof NonTerminal) {
 			ParsingRule r = ((NonTerminal) e).getRule();
 			int ruleType = r.type;
 			if(ruleType == ParsingRule.ObjectRule) {
-				return checkObjectConstruction(e, status);
+				return checkObjectConstruction(e, typeStatus);
 			}
 			if(ruleType == ParsingRule.OperationRule) {
-				checkObjectOperation(e, status);
+				checkObjectOperation(e, typeStatus);
 			}
-			return status;
+			return typeStatus;
 		}
 		if(e instanceof ParsingConstructor) {
 			boolean LeftJoin = ((ParsingConstructor) e).leftJoin;
 			if(LeftJoin) {
-				checkObjectOperation(e, status);
+				checkObjectOperation(e, typeStatus);
 			}
 			else {
-				status = checkObjectConstruction(e, status);
+				typeStatus = checkObjectConstruction(e, typeStatus);
 			}
 			int newstatus = OperationContext;
 			for(int i = 0; i < e.size(); i++) {
 				newstatus = typeCheckImpl(e.get(i), newstatus, flagMap);
 			}
-			return status;
+			return typeStatus;
 		}
 		if(e instanceof ParsingConnector) {
-			checkObjectOperation(e, status);
+			checkObjectOperation(e, typeStatus);
 			int scope = typeCheckImpl(e.get(0), ObjectContext, flagMap);
 			if(scope != OperationContext) {
 				e.set(NothingConnected);
 				e.report(ReportLevel.warning, "nothing is connected");
 			}
-			return status;
+			return typeStatus;
 		}
 		if(e instanceof ParsingTagging || e instanceof ParsingValue) {
-			checkObjectOperation(e, status);
-			return status;
+			checkObjectOperation(e, typeStatus);
+			return typeStatus;
 		}
 		if(e instanceof ParsingSequence) {
 			for(int i = 0; i < e.size(); i++) {
-				status = typeCheckImpl(e.get(i), status, flagMap);
+				typeStatus = typeCheckImpl(e.get(i), typeStatus, flagMap);
 			}
-			return status;
+			return typeStatus;
 		}
 		if(e instanceof ParsingOption || e instanceof ParsingRepetition) {
-			int r = typeCheckImpl(((ParsingUnary) e).inner, status, flagMap);
-			if(r != status) {
+			int r = typeCheckImpl(((ParsingUnary) e).inner, typeStatus, flagMap);
+			if(r != typeStatus) {
 				e.report(ReportLevel.warning, "mixed results");
 			}
-			return status;
+			return typeStatus;
 		}
 		if(e instanceof ParsingChoice) {
-			int first = typeCheckImpl(e.get(0), status, flagMap);
+			int first = typeCheckImpl(e.get(0), typeStatus, flagMap);
 			for(int i = 1; i < e.size(); i++) {
-				int r = typeCheckImpl(e.get(i), status, flagMap);
+				int r = typeCheckImpl(e.get(i), typeStatus, flagMap);
 				if(r != first) {
 					e.get(i).report(ReportLevel.warning, "mixed type in the choice");
 				}
@@ -364,7 +403,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 //				((ParsingNot) e).inner = reduced;
 //			}
 			int r = typeCheckImpl(e.get(0), ObjectContext, flagMap);
-			return status;
+			return typeStatus;
 		}
 		if(e instanceof ParsingWithFlag) {
 			ParsingWithFlag we = (ParsingWithFlag)e;
@@ -372,7 +411,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 				we.report(ReportLevel.warning, "no such a flag: " + we.flagName);
 				we.set(RedundantUnary);
 			}
-			return typeCheckImpl(we.inner, status, flagMap);
+			return typeCheckImpl(we.inner, typeStatus, flagMap);
 		}
 		if(e instanceof ParsingWithoutFlag) {
 			ParsingWithoutFlag we = (ParsingWithoutFlag)e;
@@ -380,23 +419,24 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 				we.report(ReportLevel.warning, "no such a flag: " + we.flagName);
 				we.set(RedundantUnary);
 			}
-			return typeCheckImpl(we.inner, status, flagMap);
+			return typeCheckImpl(we.inner, typeStatus, flagMap);
 		}
 		if(e instanceof ParsingUnary) {
-			return typeCheckImpl(((ParsingUnary) e).inner, status, flagMap);
+			return typeCheckImpl(((ParsingUnary) e).inner, typeStatus, flagMap);
 		}
-		return status;
+		return typeStatus;
 	}
 
 	public static void typeCheck(ParsingRule rule, UMap<String> flagMap) {
 		int result = typeCheckImpl(rule.expr, rule.type, flagMap);
 		if(rule.type == ParsingRule.ObjectRule) {
 			if(result != OperationContext) {
-				rule.report(ReportLevel.warning, "object construction is expected: " + rule);
+				//rule.report(ReportLevel.warning, "object construction is expected: " + rule);
 			}
 		}
 	}
 	
+	// ======================================================================
 	// factory
 	
 	private static boolean Conservative = false;
@@ -584,23 +624,23 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 	
 	public final static ParsingExpression newOption(ParsingExpression p) {
-		return checkUnique(new ParsingOption(p), p.isUnique());
+		return checkUnique(new ParsingOption(p), p.isInterned());
 	}
 	
 	public final static ParsingExpression newMatch(ParsingExpression p) {
-		return checkUnique(new ParsingMatch(p), p.isUnique());
+		return checkUnique(new ParsingMatch(p), p.isInterned());
 	}
 		
 	public final static ParsingExpression newRepetition(ParsingExpression p) {
-		return checkUnique(new ParsingRepetition(p), p.isUnique());
+		return checkUnique(new ParsingRepetition(p), p.isInterned());
 	}
 
 	public final static ParsingExpression newAnd(ParsingExpression p) {
-		return checkUnique(new ParsingAnd(p), p.isUnique());
+		return checkUnique(new ParsingAnd(p), p.isInterned());
 	}
 	
 	public final static ParsingExpression newNot(ParsingExpression p) {
-		return checkUnique(new ParsingNot(p), p.isUnique());
+		return checkUnique(new ParsingNot(p), p.isInterned());
 	}
 		
 	public final static ParsingExpression newChoice(UList<ParsingExpression> l) {
@@ -626,7 +666,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 
 	final static boolean isUnique(UList<ParsingExpression> l) {
 		for(int i = 0; i < l.size(); i++) {
-			if(!l.ArrayValues[i].isUnique()) {
+			if(!l.ArrayValues[i].isInterned()) {
 				return false;
 			}
 		}
@@ -665,7 +705,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 		
 	public final static ParsingExpression newConnector(ParsingExpression p, int index) {
-		return checkUnique(new ParsingConnector(p, index), p.isUnique());
+		return checkUnique(new ParsingConnector(p, index), p.isInterned());
 	}
 
 	public final static ParsingExpression newTagging(ParsingTag tag) {
@@ -677,7 +717,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 	
 	public final static ParsingExpression newDebug(ParsingExpression e) {
-		return checkUnique(new ParsingAssert(e), e.isUnique());
+		return checkUnique(new ParsingAssert(e), e.isInterned());
 	}
 
 	public final static ParsingExpression newFail(String message) {
@@ -693,30 +733,30 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 
 	public final static ParsingExpression newWithFlag(String flagName, ParsingExpression e) {
-		return checkUnique(new ParsingWithFlag(flagName, e), e.isUnique());
+		return checkUnique(new ParsingWithFlag(flagName, e), e.isInterned());
 	}
 
 	public final static ParsingExpression newWithoutFlag(String flagName, ParsingExpression e) {
-		return checkUnique(new ParsingWithoutFlag(flagName, e), e.isUnique());
+		return checkUnique(new ParsingWithoutFlag(flagName, e), e.isInterned());
 	}
 
 	public final static ParsingExpression newBlock(ParsingExpression e) {
-		return checkUnique(new ParsingBlock(e), e.isUnique());
+		return checkUnique(new ParsingBlock(e), e.isInterned());
 	}
 
 	public final static ParsingExpression newIndent() {
 		return new ParsingIndent();
 	}
 
-	public final static ParsingExpression newPermutation(UList<ParsingExpression> l) {
-		if(l.size() == 0) {
-			return newEmpty();
-		}
-		if(l.size() == 1) {
-			return l.ArrayValues[0];
-		}
-		return new ParsingPermutation(l);
-	}
+//	public final static ParsingExpression newPermutation(UList<ParsingExpression> l) {
+//		if(l.size() == 0) {
+//			return newEmpty();
+//		}
+//		if(l.size() == 1) {
+//			return l.ArrayValues[0];
+//		}
+//		return new ParsingPermutation(l);
+//	}
 	
 	public final static ParsingExpression newScan(int number, ParsingExpression scan, ParsingExpression repeat) {
 		return new ParsingScan(number, scan, repeat);
@@ -727,7 +767,7 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 	}
 
 	public static ParsingExpression newDef(int tagId, ParsingExpression e) {
-		return checkUnique(new ParsingDef(tagId, e), e.isUnique());
+		return checkUnique(new ParsingDef(tagId, e), e.isInterned());
 	}
 
 	public static ParsingExpression newIs(int tagId) {
@@ -740,17 +780,43 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 
 	public final static UMap<ParsingExpression> uniqueMap = new UMap<ParsingExpression>();
 	
-	static ParsingExpression uniqueExpression(String key, ParsingExpression e) {
-		if(e.uniqueId == 0) {
-			if(!e.isAllUnique()) {
-				dumpId("debug ", e);
+//	static ParsingExpression intern(String key, ParsingExpression e) {
+//		if(e.internId == 0) {
+//			if(!e.isAllUnique()) {
+//				dumpId("debug ", e);
+//			}
+//			assert(e.isAllUnique());
+//			ParsingExpression u = uniqueMap.get(key);
+//			if(u == null) {
+//				u = e;
+//				e.po = null;
+//				e.internId = uniqueMap.size() + 1;
+//				uniqueMap.put(key, e);
+//			}
+//			assert(u.getClass() == e.getClass());
+//			return u;
+//		}
+//		return e;
+//	}
+
+	static ParsingExpression intern(ParsingExpression e) {
+		if(e.internId == 0) {
+			StringBuilder sb = new StringBuilder();
+			sb.append(e.getInterningKey());
+			for(int i = 0; i < e.size(); i++) {
+				ParsingExpression sube = e.get(i);
+				if(!sube.isInterned()) {
+					sube = ParsingExpression.intern(sube);
+					e.set(i, sube);
+				}
+				sb.append("#" + sube.internId);
 			}
-			assert(e.isAllUnique());
+			String key = sb.toString();
 			ParsingExpression u = uniqueMap.get(key);
 			if(u == null) {
 				u = e;
 				e.po = null;
-				e.uniqueId = uniqueMap.size() + 1;
+				e.internId = uniqueMap.size() + 1;
 				uniqueMap.put(key, e);
 			}
 			assert(u.getClass() == e.getClass());
@@ -758,12 +824,32 @@ public abstract class ParsingExpression extends AbstractList<ParsingExpression> 
 		}
 		return e;
 	}
-
 	private static ParsingExpression checkUnique(ParsingExpression e, boolean unique) {
 		if(unique) {
-			e = e.uniquefy();
+			e = e.intern();
 		}
 		return e;
+	}
+	public static ParsingExpression dupUnary(ParsingUnary u, ParsingExpression e) {
+		if(u.inner != e) {
+			if(u instanceof ParsingNot) {
+				return newNot(e);
+			}
+			if(u instanceof ParsingOption) {
+				return newOption(e);
+			}
+			if(u instanceof ParsingRepetition) {
+				return newRepetition(e);
+			}
+			if(u instanceof ParsingAnd) {
+				return newAnd(e);
+			}
+			if(u instanceof ParsingConnector) {
+				return newConnector(e, ((ParsingConnector) u).index);
+			}
+			throw new RuntimeException("undefined unary: " + u.getClass().getSimpleName());
+		}
+		return u;
 	}
 }
 

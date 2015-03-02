@@ -1,13 +1,15 @@
 <project name="libbun" default="jar">
 	<!-- directory / file definition -->
-	<property name="BinaryName" value="nez-0.9.2" />
+	<property name="BinaryName" value="nez-0.9.3" />
 	<property name="source_dir" value="src" />
 	<property name="build_dir"  value="build" />
 	<property name="root_dir"   value="." />
 	<property name="jline_jar"  value="ext/jline-1.0.jar" />
 	<property name="asm_jar"    value="ext/asm-all-4.0.jar" />
-	<property name="lib.cobertura.dir" location="/opt/java/cobertura" />
-	<property name="lib.pmd.dir" location="/opt/java/pmd" />
+	<property name="test_dir"       value="unit_test" />
+	<property name="junit_jar"      value="ext/junit-4.10.jar" />
+	<property name="build_test_dir" value="build_test" />
+	<property name="test_result"    value="test_result" />
 
 	<condition property="have.cobertura">
 		<available file="${lib.cobertura.dir}" />
@@ -56,108 +58,39 @@
 	<target name="clean">
 		<delete dir="${build_dir}" />
 		<delete file="${BinaryName}.jar" />
+		<delete dir="${build_test_dir}"/>
+	</target>
+
+	<!-- ================================== -->
+	<!--             TEST PREPARE           -->
+	<!-- ================================== -->
+	<target name ="test_prepare" depends="jar">
+		<mkdir dir="${build_test_dir}" />
+		<mkdir dir="${test_result}" />
+		<javac srcdir="${test_dir}/java" destdir="${build_test_dir}" debug="on" target="1.8" source="1.8" includeantruntime="false">
+			<classpath path="${BinaryName}.jar" />
+			<classpath path="${junit_jar}" />
+			<compilerarg value="-Xlint:deprecation" />
+			<compilerarg value="-Xlint:unchecked" />
+		</javac>
 	</target>
 
 	<!-- ================================== -->
 	<!--               TEST                 -->
 	<!-- ================================== -->
-	<target name="pre-test" depends="build">
-		<javac fork="true" srcdir="${source_dir}" destdir="${build_dir}" target="1.7" source="1.7"
-			debug="yes" debuglevel="lines,vars,source" includeantruntime="false">
-			<classpath path="java/ext/asm-all-4.0.jar" />
-			<classpath path="java/ext/junit-4.10.jar" />
-			<classpath path="${jline_jar}" />
-			<include name="**/*Test.java" />
-		</javac>
-	</target>
-
-	<target name="pre-coverage" depends="pre-test" if="have.cobertura">
-		<property name="run_coverage" location="true" />
-		<delete file="cobertura.ser" />
-		<path id="cobertura.classpath">
-			<fileset dir="${lib.cobertura.dir}">
-				<include name="*.jar"/>
-			</fileset>
-		</path>
-		<taskdef classpathref="cobertura.classpath" resource="tasks.properties"/>
-		<cobertura-instrument todir="${build_dir}/instrumented">
-			<fileset dir="${build_dir}" includes="**/*.class" />
-		</cobertura-instrument>
-	</target>
-
-	<target name="run-test1" if="run_coverage">
-		<mkdir dir="${build_dir}/test-reports" />
-		<junit fork="yes" forkmode="once">
-			<classpath location="${build_dir}/instrumented"/>
-			<classpath location="${build_dir}"/>
+	<target name="test" depends="test_prepare">
+		<junit printsummary="yes" haltonfailure="yes">
 			<classpath>
-				<fileset dir="${lib.cobertura.dir}">
-					<include name="*.jar"/>
-				</fileset>
-				<fileset dir="ext">
-					<include name="**/*.jar" />
-				</fileset>
+				<pathelement path="${junit_jar}" />
+				<pathelement path="${BinaryName}.jar" />
+				<pathelement location="${build_test_dir}" />
+				<pathelement location="${test_dir}/resources" />
 			</classpath>
-			<batchtest todir="${build_dir}/test-reports">
-				<fileset dir="${build_dir}/instrumented">
-					<include name="**/*Test*" />
-				</fileset>
+			<formatter type="plain" />
+			<batchtest fork="yes" todir="${test_result}">
+				<fileset dir="${test_dir}/java" includes="**/*Test.java" />
 			</batchtest>
-			<formatter type="xml" usefile="true" />
 		</junit>
-	</target>
-
-	<target name="run-test2" unless="run_coverage">
-		<mkdir dir="${build_dir}/test-reports" />
-		<junit fork="yes" forkmode="once">
-			<classpath location="${build_dir}"/>
-			<classpath>
-				<fileset dir="ext">
-					<include name="**/*.jar" />
-				</fileset>
-			</classpath>
-			<batchtest todir="${build_dir}/test-reports">
-				<fileset dir="${build_dir}">
-					<include name="**/*Test*" />
-				</fileset>
-			</batchtest>
-			<formatter type="xml" usefile="true" />
-		</junit>
-	</target>
-
-	<target name="post-coverage" if="run_coverage">
-		<cobertura-report destdir="build/coverage" format="xml">
-			<fileset dir="${source_dir}" includes="**/*.java"/>
-		</cobertura-report>
-	</target>
-
-	<target name="test" depends="pre-coverage, run-test1, run-test2, post-coverage">
-	</target>
-
-	<!-- ================================== -->
-	<!--                PMD                 -->
-	<!-- ================================== -->
-	<path id="pmd.classpath">
-		<fileset dir="${lib.pmd.dir}">
-			<include name="*.jar"/>
-		</fileset>
-	</path>
-
-	<target name="pmd" depends="build">
-		<taskdef classpathref="pmd.classpath" name="pmd" classname="net.sourceforge.pmd.ant.PMDTask"/>
-		<pmd shortFilenames="true">
-			<sourceLanguage name="java" version="1.7"/>
-			<ruleset>java-basic</ruleset>
-			<ruleset>java-imports</ruleset>
-			<ruleset>java-strings</ruleset>
-			<formatter type="xml" toFile="${build_dir}/pmd.xml" />
-			<!--
-			<formatter type="text" toConsole="true" />
-			//-->
-			<fileset dir="${source_dir}">
-				<include name="**/*.java" />
-			</fileset>
-		</pmd>
 	</target>
 
 </project>

@@ -2,6 +2,10 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
 import org.peg4d.pegcode.GrammarVisitor;
 
@@ -17,11 +21,32 @@ public class ParsingFailure extends ParsingExpression {
 		this.message = "expecting " + m;
 	}
 	@Override
-	ParsingExpression uniquefyImpl() {
-		return ParsingExpression.uniqueExpression("!!\b"+message, this);
+	public
+	String getInterningKey() {
+		return "!!";
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return false;
+	}
+	@Override
+	public int inferNodeTransition(UMap<String> visited) {
+		return NodeTransition.BooleanType;
+	}
+	@Override
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		return this;
+	}
+	@Override
+	public ParsingExpression removeNodeOperator() {
+		return this;
+	}
+	@Override
+	public ParsingExpression removeFlag(TreeMap<String, String> undefedFlags) {
+		return this;
+	}
+	@Override
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> undefedFlags) {
 		return this;
 	}
 	@Override
@@ -29,7 +54,7 @@ public class ParsingFailure extends ParsingExpression {
 		return Reject;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		context.failure(this);
 		return false;
 	}

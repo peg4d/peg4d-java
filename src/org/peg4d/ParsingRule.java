@@ -2,40 +2,216 @@ package org.peg4d;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.ReportLevel;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.Optimizer;
 import org.peg4d.expression.ParsingExpression;
+import org.peg4d.pegcode.GrammarVisitor;
 
-public class ParsingRule {
-	public final static int LexicalRule   = 0;
-	public final static int ObjectRule    = 1;
-	public final static int OperationRule = 1 << 1;
-	public final static int ReservedRule  = 1 << 15;
-	
-	public Grammar  peg;
-	String baseName;
-	public String ruleName;
-
-	ParsingObject po;
-	public int type;
+public class ParsingRule extends ParsingExpression {
+	public Grammar           peg;
+	public String            localName;
+	public ParsingRule       definedRule;
 	public ParsingExpression expr;
-	
+
 	public int minlen = -1;
-	public int refc = 0;
+
+	@Override
+	public boolean isAlwaysConsumed() {
+		return this.checkAlwaysConsumed(null, null);
+	}
+	
+	@Override
+	public final boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		if(stack != null && this.minlen != 0 && stack.size() > 0) {
+			for(String n : stack) { // Check Unconsumed Recursion
+				String uName = this.getUniqueName();
+				if(uName.equals(n)) {
+					this.minlen = 0;
+					break;
+				}
+			}
+		}
+		if(minlen == -1) {
+			if(stack == null) {
+				stack = new UList<String>(new String[4]);
+			}
+			if(startNonTerminal == null) {
+				startNonTerminal = this.getUniqueName();
+			}
+			stack.add(this.getUniqueName());
+			this.minlen = this.expr.checkAlwaysConsumed(startNonTerminal, stack) ? 1 : 0;
+			stack.pop();
+		}
+		return minlen > 0;
+	}
+	
+	public int transType = NodeTransition.Undefined;
+
+	@Override
+	public int inferNodeTransition(UMap<String> visited) {
+		if(this.transType != NodeTransition.Undefined) {
+			return this.transType;
+		}
+		String uname = this.getUniqueName();
+		if(visited != null) {
+			if(visited.hasKey(uname)) {
+				this.transType = NodeTransition.BooleanType;
+				return this.transType;
+			}
+		}
+		else {
+			visited = new UMap<String>();
+		}
+		visited.put(uname, uname);
+		int t = expr.inferNodeTransition(visited);
+		assert(t != NodeTransition.Undefined);
+		if(this.transType == NodeTransition.Undefined) {
+			this.transType = t;
+		}
+		else {
+			assert(transType == t);
+		}
+		return this.transType;
+	}
+
+	@Override
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		int t = checkNamingConvention(this.localName);
+		c.required = this.inferNodeTransition();
+		if(t != NodeTransition.Undefined && c.required != t) {
+			this.report(ReportLevel.warning, "invalid naming convention: " + this.localName);
+		}
+		this.expr = this.expr.checkNodeTransition(c);
+		return this;
+	}
+
+	public final static int checkNamingConvention(String ruleName) {
+		int start = 0;
+		if(ruleName.startsWith("~") || ruleName.startsWith("\"")) {
+			return NodeTransition.BooleanType;
+		}
+		for(;ruleName.charAt(start) == '_'; start++) {
+			if(start + 1 == ruleName.length()) {
+				return NodeTransition.BooleanType;
+			}
+		}
+		boolean firstUpperCase = Character.isUpperCase(ruleName.charAt(start));
+		for(int i = start+1; i < ruleName.length(); i++) {
+			char ch = ruleName.charAt(i);
+			if(ch == '!') break; // option
+			if(Character.isUpperCase(ch) && !firstUpperCase) {
+				return NodeTransition.OperationType;
+			}
+			if(Character.isLowerCase(ch) && firstUpperCase) {
+				return NodeTransition.ObjectType;
+			}
+		}
+		return firstUpperCase ? NodeTransition.BooleanType : NodeTransition.Undefined;
+	}
+
+	@Override
+	public ParsingExpression removeNodeOperator() {
+		if(this.inferNodeTransition() == NodeTransition.BooleanType) {
+			return this;
+		}
+		String name = "~" + this.localName;
+		ParsingRule r = this.peg.getRule(name);
+		if(r == null) {
+			r = this.peg.newRule(name, this.expr);
+			r.definedRule = this;
+			r.transType = NodeTransition.BooleanType;
+			r.expr = this.expr.removeNodeOperator();
+		}
+		return r;
+	}
+
+	@Override
+	public ParsingExpression removeFlag(TreeMap<String, String> undefedFlags) {
+		if(undefedFlags.size() > 0) {
+			StringBuilder sb = new StringBuilder();
+			int loc = localName.indexOf('!');
+			if(loc > 0) {
+				sb.append(this.localName.substring(0, loc));
+			}
+			else {
+				sb.append(this.localName);
+			}
+			for(String flag: undefedFlags.keySet()) {
+				if(ParsingExpression.hasReachableFlag(this.expr, flag)) {
+					sb.append("!");
+					sb.append(flag);
+				}
+			}
+			String rName = sb.toString();
+			ParsingRule rRule = peg.getRule(rName);
+			if(rRule == null) {
+				rRule = peg.newRule(rName, ParsingExpression.newEmpty());
+				rRule.expr = expr.removeFlag(undefedFlags).intern();
+			}
+			return rRule;
+		}
+		return this;
+	}
+	
+	@Override
+	public String getInterningKey() {
+		return "=";
+	}
+
+	@Override
+	public ParsingExpression norm(boolean lexOnly,
+			TreeMap<String, String> undefedFlags) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+	@Override
+	public void visit(GrammarVisitor visitor) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public short acceptByte(int ch) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public boolean match(ParsingContext context) {
+		return this.expr.match(context);
+	}
 
 	public ParsingRule(Grammar peg, String ruleName, ParsingObject po, ParsingExpression e) {
 		this.peg = peg;
 		this.po = po;
 		this.baseName = ruleName;
-		this.ruleName = ruleName;
+		this.localName = ruleName;
 		this.expr = e;
-		this.type = ParsingRule.typeOf(ruleName);
+		this.type = ParsingRule.checkNamingConvention(ruleName);
 	}
-	
-	final String getUniqueName() {
-		return this.peg.uniqueRuleName(ruleName);
+
+	public final String getUniqueName() {
+		return this.peg.uniqueRuleName(localName);
 	}
+
+	public final static int LexicalRule   = NodeTransition.BooleanType;
+	public final static int ObjectRule    = NodeTransition.ObjectType;
+	public final static int OperationRule = NodeTransition.OperationType;
+	public final static int ReservedRule  = NodeTransition.Undefined;
+	String baseName;
+
+	ParsingObject po;
+	public int type;
 	
+	public int refc = 0;
+
 	@Override
 	public String toString() {
 		String t = "";
@@ -44,19 +220,9 @@ public class ParsingRule {
 		case ObjectRule:    t = "Object "; break;
 		case OperationRule: t = "void "; break;
 		}
-		return t + this.ruleName + "[" + this.minlen + "]" + "=" + this.expr;
+		return t + this.localName + "[" + this.minlen + "]" + "=" + this.expr;
 	}
-	
-	
-	public final void report(ReportLevel level, String msg) {
-		if(this.po != null) {
-			Main._PrintLine(po.formatSourceMessage(level.toString(), msg));
-		}
-		else {
-			System.out.println("" + level.toString() + ": " + msg);
-		}
-	}
-	
+		
 	Grammar getGrammar() {
 		return this.peg;
 	}
@@ -87,7 +253,7 @@ public class ParsingRule {
 				boolean ok = true;
 				ParsingSource s = ParsingSource.newStringSource(a.value);
 				context.resetSource(s, 0);
-				context.parse2(peg, this.ruleName, new ParsingObject(), null);
+				context.parse2(peg, this.localName, new ParsingObject(), null);
 				//System.out.println("@@ fail? " + context.isFailure() + " unconsumed? " + context.hasByteChar() + " example " + isExample + " " + isBadExample);
 				if(context.isFailure() || context.hasByteChar()) {
 					if(isExample) ok = false;
@@ -95,9 +261,9 @@ public class ParsingRule {
 				else {
 					if(isBadExample) ok = false;
 				}
-				String msg = ( ok ? "[PASS]" : "[FAIL]" ) + " " + this.ruleName + " " + a.value.getText();
+				String msg = ( ok ? "[PASS]" : "[FAIL]" ) + " " + this.localName + " " + a.value.getText();
 				if(Main.TestMode && !ok) {	
-					Main._Exit(1, "[FAIL] tested " + a.value.getText() + " by " + peg.getRule(this.ruleName));
+					Main._Exit(1, "[FAIL] tested " + a.value.getText() + " by " + peg.getRule(this.localName));
 				}
 				Main.printVerbose("Testing", msg);
 			}
@@ -109,38 +275,18 @@ public class ParsingRule {
 		return this.type == ParsingRule.ObjectRule;
 	}
 
-	public final static int typeOf(String ruleName) {
-		int start = 0;
-		for(;ruleName.charAt(start) == '_'; start++) {
-			if(start + 1 == ruleName.length()) {
-				return LexicalRule;
-			}
-		}
-		boolean firstUpperCase = Character.isUpperCase(ruleName.charAt(start));
-		for(int i = start+1; i < ruleName.length(); i++) {
-			char ch = ruleName.charAt(i);
-			if(ch == '!') break; // option
-			if(Character.isUpperCase(ch) && !firstUpperCase) {
-				return OperationRule;
-			}
-			if(Character.isLowerCase(ch) && firstUpperCase) {
-				return ObjectRule;
-			}
-		}
-		return firstUpperCase ? LexicalRule : ReservedRule;
-	}
 
 	public static boolean isLexicalName(String ruleName) {
-		return typeOf(ruleName) == ParsingRule.LexicalRule;
+		return checkNamingConvention(ruleName) == ParsingRule.LexicalRule;
 	}
 
-	public static String toOptionName(ParsingRule rule, boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public static String toOptionName(ParsingRule rule, boolean lexOnly, TreeMap<String,String> undefedFlags) {
 		String ruleName = rule.baseName;
 		if(lexOnly && !isLexicalName(ruleName)) {
 			ruleName = "__" + ruleName.toUpperCase();
 		}
-		if(withoutMap != null) {
-			for(String flag : withoutMap.keySet()) {
+		if(undefedFlags != null) {
+			for(String flag : undefedFlags.keySet()) {
 				ParsingExpression.containFlag(rule.expr, flag);
 				ruleName += "!" + flag;
 			}
@@ -165,70 +311,18 @@ public class ParsingRule {
 		}
 		if(e instanceof NonTerminal) {
 			NonTerminal ne = (NonTerminal)e;
-			assert(e.isUnique());
+			assert(e.isInterned());
 			String un = ne.getUniqueName();
 			ParsingRule memoed = visited.get(un);
 			if(memoed == null) {
 				memoed = ne.getRule();
-				visited.put(un, memoed);
-				makeSubRule(memoed.expr, visited);
+				if(memoed != null) {
+					visited.put(un, memoed);
+					makeSubRule(memoed.expr, visited);
+				}
 			}
 		}
 	}
 
-//	private static final boolean hasNonTerminal(ParsingExpression e, String name, UMap<ParsingRule>  visited) {
-//		for(int i = 0; i < e.size(); i++) {
-//			if(hasNonTerminal(e.get(i), name, visited)) {
-//				return true;
-//			}
-//		}
-//		if(e instanceof NonTerminal) {
-//			NonTerminal ne = (NonTerminal)e;
-//			assert(e.isUnique());
-//			if(name != null && name.equals(ne.ruleName)) {
-//				return true;
-//			}
-//			String un = ne.getUniqueName();
-//			ParsingRule memoed = visited.get(un);
-//			if(memoed == null) {
-//				memoed = ne.getRule();
-//				visited.put(un, memoed);
-//				return hasNonTerminal(memoed.expr, name, visited);
-//			}
-//		}
-//		return false;
-//	}
-//
-//	public void newReplacedNonTerminal(String oldName, String newName) {
-//		// TODO Auto-generated method stub
-//		
-//	}
-//
-//	private static final void replacedNonTerminal(Grammar peg, ParsingExpression e, String oldName, String newName, UMap<ParsingRule>  visited) {
-//		for(int i = 0; i < e.size(); i++) {
-//			if(e.get(i) instanceof NonTerminal) {
-//				NonTerminal ne = (NonTerminal)e.get(i);
-//				if(ne.ruleName.equals(oldName)) {
-//					e.set(i, peg.newNonTerminal(newName).uniquefy());
-//					continue;
-//				}
-//				ParsingExpression ref = ne.deReference();
-//				visited.clear();
-//				if(hasNonTerminal(ref, oldName, visited)) {
-//					e.set(i, peg.newNonTerminal(replacedName(ne.ruleName, oldName, newName)).uniquefy());
-//					continue;
-//				}
-//			}
-//			else {
-//				replacedNonTerminal(peg, e.get(i), oldName, newName, visited);
-//			}
-//		}
-//	}
-//
-//	private static String replacedName(String ruleName, String oldName, String newName) {
-//		return ruleName + "[" + oldName + "->" + newName + "]";
-//	}
 
-	
-	
 }

@@ -2,6 +2,11 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.ReportLevel;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTree;
 import org.peg4d.pegcode.GrammarVisitor;
@@ -14,22 +19,44 @@ public class ParsingConnector extends ParsingUnary {
 	}
 	@Override
 	public
-	boolean hasObjectOperation() {
+	String getInterningKey() {
+		return (index != -1) ? "@" + index : "@";
+	}
+	@Override
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return this.inner.checkAlwaysConsumed(startNonTerminal, stack);
+	}
+	@Override
+	public int inferNodeTransition(UMap<String> visited) {
+		return NodeTransition.OperationType;
+	}
+	@Override
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		if(c.required != NodeTransition.OperationType) {
+			this.report(ReportLevel.warning, "unexpected connector");
+			return this.inner.removeNodeOperator();
+		}
+		c.required = NodeTransition.ObjectType;
+		ParsingExpression inn = inner.checkNodeTransition(c);
+		if(c.required != NodeTransition.OperationType) {
+			this.report(ReportLevel.warning, "no object created");
+			c.required = NodeTransition.OperationType;
+			return inn;
+		}
+		c.required = NodeTransition.OperationType;
+		this.inner = inn;
+		return this;
+	}
+	@Override
+	public boolean hasObjectOperation() {
 		return true;
 	}
 	@Override
-	ParsingExpression uniquefyImpl() {
-		if(index != -1) {
-			return ParsingExpression.uniqueExpression("@" + index + "\b" + this.uniqueKey(), this);
-		}
-		return ParsingExpression.uniqueExpression("@\b" + this.uniqueKey(), this);
-	}
-	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
 		if(this.isRemovedOperation()) {
 			lexOnly = true;
 		}
-		ParsingExpression e = this.inner.norm(lexOnly, withoutMap);
+		ParsingExpression e = this.inner.norm(lexOnly, undefedFlags);
 		if(this.isNothingConnected() || lexOnly) {
 			return e;
 		}
@@ -41,10 +68,10 @@ public class ParsingConnector extends ParsingUnary {
 		return inner.acceptByte(ch);
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		ParsingTree left = context.left;
 		int mark = context.markLogStack();
-		if(this.inner.matcher.simpleMatch(context)) {
+		if(this.inner.matcher.match(context)) {
 			if(context.left != left) {
 				context.commitLog(mark, context.left);
 				context.lazyLink(left, this.index, context.left);

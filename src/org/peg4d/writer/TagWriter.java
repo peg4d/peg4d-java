@@ -18,16 +18,18 @@ public class TagWriter extends ParsingWriter {
 		this.out.println("");
 	}
 	private void tagCount(ParsingObject po, TreeMap<String,Integer> m) {
-		for(int i = 0; i < po.size(); i++) {
-			tagCount(po.get(i), m);
-		}
-		String key = po.getTag().toString();
-		Integer n = m.get(key);
-		if(n == null) {
-			m.put(key, 1);
-		}
-		else {
-			m.put(key, n+1);
+		if(po != null) {
+			for(int i = 0; i < po.size(); i++) {
+				tagCount(po.get(i), m);
+			}
+			String key = po.getTag().toString();
+			Integer n = m.get(key);
+			if(n == null) {
+				m.put(key, 1);
+			}
+			else {
+				m.put(key, n+1);
+			}
 		}
 	}
 }

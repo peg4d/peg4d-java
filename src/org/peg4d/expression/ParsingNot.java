@@ -2,6 +2,10 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTree;
 import org.peg4d.pegcode.GrammarVisitor;
@@ -10,12 +14,29 @@ public class ParsingNot extends ParsingUnary {
 	ParsingNot(ParsingExpression e) {
 		super(e);
 	}
-	@Override ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniqueExpression("!\b" + this.uniqueKey(), this);
+	@Override
+	public String getInterningKey() { 
+		return "!";
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
-		ParsingExpression e = inner.norm(true, withoutMap);
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return false;
+	}
+	@Override
+	public int inferNodeTransition(UMap<String> visited) {
+		return NodeTransition.BooleanType;
+	}
+	@Override
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		int t = this.inner.inferNodeTransition(null);
+		if(t == NodeTransition.ObjectType || t == NodeTransition.OperationType) {
+			this.inner = this.inner.removeNodeOperator();
+		}
+		return this;
+	}
+	@Override
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
+		ParsingExpression e = inner.norm(true, undefedFlags);
 		if(e == inner) {
 			return this;
 		}
@@ -29,14 +50,14 @@ public class ParsingNot extends ParsingUnary {
 //		if(r == Accept || r == LazyAccept) {
 //			return Reject;
 //		}
-		return LazyAccept;
+		return Unconsumed;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		long pos = context.getPosition();
 		long f   = context.rememberFailure();
 		ParsingTree left = context.left;
-		if(this.inner.matcher.simpleMatch(context)) {
+		if(this.inner.matcher.match(context)) {
 			context.rollback(pos);
 			context.failure(this);
 			left = null;

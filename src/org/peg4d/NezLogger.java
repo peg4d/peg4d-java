@@ -7,6 +7,8 @@ import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import nez.util.UMap;
+
 public class NezLogger {
 	final String logFile;
 	NezLogger(String logFile) {

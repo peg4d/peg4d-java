@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import nez.util.StringUtils;
+
 import org.peg4d.ParsingRule;
 import org.peg4d.Utils;
 import org.peg4d.expression.NonTerminal;
@@ -17,11 +19,10 @@ import org.peg4d.expression.ParsingByte;
 import org.peg4d.expression.ParsingByteRange;
 import org.peg4d.expression.ParsingCatch;
 import org.peg4d.expression.ParsingChoice;
-import org.peg4d.expression.ParsingCommand;
 import org.peg4d.expression.ParsingConnector;
 import org.peg4d.expression.ParsingConstructor;
+import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingEmpty;
-import org.peg4d.expression.ParsingExport;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingFunction;
@@ -31,10 +32,8 @@ import org.peg4d.expression.ParsingIs;
 import org.peg4d.expression.ParsingIsa;
 import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
-import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
-import org.peg4d.expression.ParsingPermutation;
 import org.peg4d.expression.ParsingRepeat;
 import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingScan;
@@ -72,7 +71,7 @@ public class PEGjsFormatter extends GrammarGenerator {
 	@Override
 	public void visitRule(ParsingRule rule) {
 		ParsingExpression e = rule.expr;
-		this.formatRuleName(rule.ruleName, e);
+		this.formatRuleName(rule.localName, e);
 		this.formatString(this.getNewLine());
 		this.formatString(this.getSetter());
 		this.formatString(" ");
@@ -140,9 +139,9 @@ public class PEGjsFormatter extends GrammarGenerator {
 	@Override
 	public void visitByteRange(ParsingByteRange e) {
 		this.formatString("[");
-		this.formatString(GrammarGenerator.stringfyByte2(e.startByteChar));
+		this.formatString(StringUtils.stringfyByte2(e.startByteChar));
 		this.formatString("-");
-		this.formatString(GrammarGenerator.stringfyByte2(e.endByteChar));
+		this.formatString(StringUtils.stringfyByte2(e.endByteChar));
 		this.formatString("]");
 	}
 
@@ -275,30 +274,17 @@ public class PEGjsFormatter extends GrammarGenerator {
 		this.formatString(")");
 	}
 
-
-	public void formatParsingCommand(ParsingCommand e) {
-		this.formatString("<");
-		this.formatString(e.funcName);
-		this.formatString(e.getParameters());
-		this.formatString(">");
-	}
-
 	public void formatParsingFunction(ParsingFunction e) {
 		this.formatString("<");
 		this.formatString(e.funcName);
 		this.formatString(e.getParameters());
-		this.formatString(" ");
-		e.inner.visit(this);
+		if(e.inner != null) {
+			this.formatString(" ");
+			e.inner.visit(this);
+		}
 		this.formatString(">");
 	}
-
-
-	@Override
-	public void visitExport(ParsingExport e) {
-		// TODO Auto-generated method stub
-
-	}
-
+	
 	@Override
 	public void visitMatch(ParsingMatch e) {
 		this.formatParsingFunction(e);
@@ -307,7 +293,7 @@ public class PEGjsFormatter extends GrammarGenerator {
 	@Override
 	public void visitCatch(ParsingCatch e) {
 		// TODO Auto-generated method stub
-		this.formatParsingCommand(e);
+		this.formatParsingFunction(e);
 	}
 
 	@Override
@@ -318,7 +304,7 @@ public class PEGjsFormatter extends GrammarGenerator {
 	@Override
 	public void visitIfFlag(ParsingIf e) {
 		// TODO Auto-generated method stub
-		this.formatParsingCommand(e);
+		this.formatParsingFunction(e);
 	}
 
 	@Override
@@ -338,7 +324,7 @@ public class PEGjsFormatter extends GrammarGenerator {
 
 	@Override
 	public void visitIndent(ParsingIndent e) {
-		this.formatParsingCommand(e);
+		this.formatParsingFunction(e);
 	}
 
 	@Override
@@ -349,19 +335,13 @@ public class PEGjsFormatter extends GrammarGenerator {
 	@Override
 	public void visitIsa(ParsingIsa e) {
 		// TODO Auto-generated method stub
-		this.formatParsingCommand(e);
+		this.formatParsingFunction(e);
 	}
 
 	@Override
 	public void visitApply(ParsingApply e) {
 		//this.formatParsingFunction(e);
 		this.formatParsingFunction(e);
-	}
-
-	@Override
-	public void visitPermutation(ParsingPermutation e) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override

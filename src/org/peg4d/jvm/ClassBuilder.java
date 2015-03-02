@@ -339,6 +339,12 @@ public class ClassBuilder extends ClassWriter implements Opcodes {
 			this.invokeStatic(Type.getType(ownerClass), methodDesc);
 		}
 
+		public void callInterfaceMethod(Class<?> ownerClass, Class<?> returnClass, 
+				String methodName, Class<?>... paramClasses) {
+			Method methodDesc = Methods.method(returnClass, methodName, paramClasses);
+			this.invokeInterface(Type.getType(ownerClass), methodDesc);
+		}
+
 		/**
 		 * only support invokestatic, invokevirtual
 		 * @param target
@@ -351,6 +357,8 @@ public class ClassBuilder extends ClassWriter implements Opcodes {
 			case INVOKE_VIRTUAL:
 				this.invokeVirtual(target.getOwnerTypeDesc(), target.getMethodDesc());
 				break;
+			case INVOKE_INTERFACE:
+				this.invokeInterface(target.getOwnerTypeDesc(), target.getMethodDesc());
 			default:
 				break;
 			}

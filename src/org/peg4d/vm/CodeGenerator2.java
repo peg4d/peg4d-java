@@ -2,8 +2,9 @@ package org.peg4d.vm;
 
 import java.util.HashMap;
 
+import nez.util.UList;
+
 import org.peg4d.Grammar;
-import org.peg4d.UList;
 
 public class CodeGenerator2 {
 	

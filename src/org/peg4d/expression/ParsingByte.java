@@ -2,6 +2,10 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
 import org.peg4d.pegcode.GrammarVisitor;
 
@@ -13,14 +17,32 @@ public class ParsingByte extends ParsingExpression {
 		this.byteChar = ch;
 		this.minlen = 1;
 	}
-	@Override ParsingExpression uniquefyImpl() { 
-		if(this.errorToken == null) {
-			return ParsingExpression.uniqueExpression("'\b" + byteChar, this);
-		}
-		return ParsingExpression.uniqueExpression("'\b" + this.errorToken + "\b" + byteChar, this);
+	@Override
+	public String getInterningKey() { 
+		return "'" + byteChar;
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return true;
+	}
+	@Override
+	public int inferNodeTransition(UMap<String> visited) {
+		return NodeTransition.BooleanType;
+	}
+	@Override
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		return this;
+	}
+	@Override
+	public ParsingExpression removeNodeOperator() {
+		return this;
+	}
+	@Override
+	public ParsingExpression removeFlag(TreeMap<String, String> undefedFlags) {
+		return this;
+	}
+	@Override
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> undefedFlags) {
 		return this;
 	}
 //	public String expectedToken() {
@@ -38,7 +60,7 @@ public class ParsingByte extends ParsingExpression {
 		return (byteChar == ch) ? Accept : Reject;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		if(context.source.byteAt(context.pos) == this.byteChar) {
 			context.consume(1);
 			return true;

@@ -1,5 +1,7 @@
 package org.peg4d.expression;
 
+import java.util.TreeMap;
+
 
 public abstract class ParsingFunction extends ParsingUnary {
 	public String funcName;
@@ -8,15 +10,22 @@ public abstract class ParsingFunction extends ParsingUnary {
 		this.funcName = funcName;
 		this.inner = inner;
 	}
-	@Override final ParsingExpression uniquefyImpl() {
-		return 	ParsingExpression.uniqueExpression("<"+this.funcName+this.getParameters()+"+"+this.uniqueKey(), this);
+	@Override
+	public final String getInterningKey() {
+		return "<"+this.funcName+this.getParameters();
 	}
 	public String getParameters() {
 		return "";
 	}
 	@Override
 	public short acceptByte(int ch) {
-		return this.inner.acceptByte(ch);
+		if(this.inner != null) {
+			return this.inner.acceptByte(ch);
+		}
+		return Accept;
 	}
-
+	@Override
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> undefedFlags) {
+		return null;
+	}
 }

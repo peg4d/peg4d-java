@@ -1,11 +1,12 @@
 package org.peg4d.expression;
 
+import nez.util.UList;
+
 import org.peg4d.Grammar;
 import org.peg4d.Main;
 import org.peg4d.NezLogger;
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingRule;
-import org.peg4d.UList;
 
 public class Optimizer {
 	public int OptimizeLevel = 2;
@@ -96,13 +97,13 @@ public class Optimizer {
 					
 			}
 		}
-		for(int i = 0; i < peg.nameList.size(); i++) {
-			ParsingRule rule = peg.getRule(peg.nameList.ArrayValues[i]);
+		for(int i = 0; i < peg.definedNameList.size(); i++) {
+			ParsingRule rule = peg.getRule(peg.definedNameList.ArrayValues[i]);
 			this.optimize(rule.expr);
 		}
 		if(this.is(O_Inline)) {
-			for(int i = 0; i < peg.nameList.size(); i++) {
-				ParsingRule rule = peg.getRule(peg.nameList.ArrayValues[i]);
+			for(int i = 0; i < peg.definedNameList.size(); i++) {
+				ParsingRule rule = peg.getRule(peg.definedNameList.ArrayValues[i]);
 				this.optimizeInline(rule.expr);
 			}
 		}
@@ -196,7 +197,7 @@ public class Optimizer {
 					this.byteChar = byteChar;
 				}
 				@Override
-				public boolean simpleMatch(ParsingContext context) {
+				public boolean match(ParsingContext context) {
 					int c = context.source.byteAt(context.pos);
 					if(c == byteChar) {
 						context.failure(this);
@@ -217,7 +218,7 @@ public class Optimizer {
 					this.bitMap = bitMap;
 				}
 				@Override
-				public boolean simpleMatch(ParsingContext context) {
+				public boolean match(ParsingContext context) {
 					int c = context.source.byteAt(context.pos);
 					if(this.bitMap[c]) {
 						context.failure(this);
@@ -237,7 +238,7 @@ public class Optimizer {
 					this.utf8 = utf8;
 				}
 				@Override
-				public boolean simpleMatch(ParsingContext context) {
+				public boolean match(ParsingContext context) {
 					if(context.source.match(context.pos, this.utf8)) {
 						context.failure(this);
 						return false;
@@ -264,7 +265,7 @@ public class Optimizer {
 					this.byteChar = byteChar;
 				}
 				@Override
-				public boolean simpleMatch(ParsingContext context) {
+				public boolean match(ParsingContext context) {
 					int c = context.source.byteAt(context.pos);
 					if(c == byteChar) {
 						context.consume(1);
@@ -284,7 +285,7 @@ public class Optimizer {
 					this.bitMap = bitMap;
 				}
 				@Override
-				public boolean simpleMatch(ParsingContext context) {
+				public boolean match(ParsingContext context) {
 					int c = context.source.byteAt(context.pos);
 					if(this.bitMap[c]) {
 						context.consume(1);
@@ -303,7 +304,7 @@ public class Optimizer {
 					this.utf8 = utf8;
 				}
 				@Override
-				public boolean simpleMatch(ParsingContext context) {
+				public boolean match(ParsingContext context) {
 					if(context.source.match(context.pos, this.utf8)) {
 						context.consume(this.utf8.length);
 					}
@@ -345,7 +346,7 @@ public class Optimizer {
 					this.bitMap = bitMap;
 				}
 				@Override
-				public boolean simpleMatch(ParsingContext context) {
+				public boolean match(ParsingContext context) {
 					while(true) {
 						int c = context.source.byteAt(context.pos);
 						if(!this.bitMap[c]) {
@@ -436,14 +437,14 @@ public class Optimizer {
 				ParsingExpression[] matchCase = new ParsingExpression[257];
 				ParsingExpression empty = ParsingExpression.newEmpty();
 				makeStringChoice(choice, matchCase, empty, empty);
-				ParsingExpression f = new ParsingFailure(choice).uniquefy();
+				ParsingExpression f = new ParsingFailure(choice).intern();
 	//			System.out.println("StringChoice: " + choice);
 				for(int ch = 0; ch < matchCase.length; ch++) {
 					if(matchCase[ch] == null) {
 						matchCase[ch] = f;
 					}
 					else {
-						matchCase[ch] = matchCase[ch].uniquefy();
+						matchCase[ch] = matchCase[ch].intern();
 	//					System.out.println("|2 " + GrammarFormatter.stringfyByte(ch) + ":\t" + matchCase[ch]);
 						if(matchCase[ch] instanceof ParsingChoice && !matchCase[ch].isOptimized()) {
 							optimizeChoice((ParsingChoice)matchCase[ch]);
@@ -608,7 +609,7 @@ public class Optimizer {
 		if(l.size() == 0) {
 			l.add(failed);
 		}
-		return ParsingExpression.newChoice(l).uniquefy();
+		return ParsingExpression.newChoice(l).intern();
 	}
 
 	private static void selectChoice(ParsingChoice choice, int ch, ParsingExpression failed, UList<ParsingExpression> l) {
@@ -634,7 +635,7 @@ class NonZeroByteMatcher implements Recognizer {
 		this.byteChar = byteChar;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		int c = context.source.fastByteAt(context.pos);
 		if(c == byteChar) {
 			context.consume(1);
@@ -673,7 +674,7 @@ class StringMatcher implements Recognizer {
 		this.utf8 = utf8;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		if(context.source.match(context.pos, this.utf8)) {
 			context.consume(utf8.length);
 			return true;
@@ -690,7 +691,7 @@ class OptionalStringSequenceMatcher implements Recognizer {
 		this.utf8 = utf8;
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		if(context.source.match(context.pos, this.utf8)) {
 			context.consume(utf8.length);
 		}
@@ -706,11 +707,11 @@ class StringChoiceMatcher implements Recognizer {
 	}
 	
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		int c = context.source.byteAt(context.pos);
 		long pos = context.getPosition();
 		context.consume(1);
-		if(this.matchCase[c].matcher.simpleMatch(context)) {
+		if(this.matchCase[c].matcher.match(context)) {
 			return true;
 		}
 		context.rollback(pos);
@@ -729,10 +730,10 @@ class MappedChoiceMatcher implements Recognizer {
 	}
 	
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		int c = context.source.byteAt(context.pos);
 		//System.out.println("pos="+context.pos + ", c=" + (char)c + " in " + choice);
-		return this.matchCase[c].matcher.simpleMatch(context);
+		return this.matchCase[c].matcher.match(context);
 	}
 }
 
@@ -746,12 +747,12 @@ class MappedSelfChoiceMatcher implements Recognizer {
 	}
 	
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		int c = context.source.byteAt(context.pos);
 		//System.out.println("pos="+context.pos + ", c=" + (char)c + " in " + choice);
 		if(this.matchCase[c] == choice) {
-			return choice.simpleMatch(context);
+			return choice.match(context);
 		}
-		return this.matchCase[c].matcher.simpleMatch(context);
+		return this.matchCase[c].matcher.match(context);
 	}
 }

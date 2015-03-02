@@ -6,9 +6,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 
+import nez.util.UList;
 import org.peg4d.Grammar;
 import org.peg4d.ParsingRule;
-import org.peg4d.UList;
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.ParsingAnd;
 import org.peg4d.expression.ParsingAny;
@@ -23,7 +23,6 @@ import org.peg4d.expression.ParsingConnector;
 import org.peg4d.expression.ParsingConstructor;
 import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingEmpty;
-import org.peg4d.expression.ParsingExport;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingIf;
@@ -34,7 +33,6 @@ import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
-import org.peg4d.expression.ParsingPermutation;
 import org.peg4d.expression.ParsingRepeat;
 import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingScan;
@@ -449,14 +447,14 @@ public class Compiler extends GrammarGenerator {
 		this.peg = peg;
 		this.formatHeader();
 		for(ParsingRule r: peg.getRuleList()) {
-			if (r.ruleName.equals("File")) {
+			if (r.localName.equals("File")) {
 				this.formatRule(r, sb);
 				break;
 			}
 		}
 		for(ParsingRule r: peg.getRuleList()) {
-			if (!r.ruleName.equals("File")) {
-				if (!r.ruleName.startsWith("\"")) {
+			if (!r.localName.equals("File")) {
+				if (!r.localName.startsWith("\"")) {
 					this.formatRule(r, sb);
 				}
 			}
@@ -781,7 +779,7 @@ public class Compiler extends GrammarGenerator {
 		if(l.size() == 0) {
 			l.add(failed);
 		}
-		return ParsingExpression.newChoice(l).uniquefy();
+		return ParsingExpression.newChoice(l).intern();
 	}
 	
 	private void checkChoice(ParsingChoice choice, int c, UList<ParsingExpression> l) {
@@ -958,7 +956,7 @@ public class Compiler extends GrammarGenerator {
 				bb = new BasicBlock(this.func);
 				this.setCurrentBasicBlock(bb);
 				ParsingExpression caseElement = caseList.get(i);
-				choiceMap.put(caseElement.uniqueId, bb);
+				choiceMap.put(caseElement.internId, bb);
 				caseElement.visit(this);
 				bb = this.getCurrentBasicBlock();
 				if (caseElement instanceof ParsingFailure) {
@@ -977,7 +975,7 @@ public class Compiler extends GrammarGenerator {
 			this.setCurrentBasicBlock(end);
 			this.createPOPp(e, end);
 			for(int i = 0; i < matchCase.length; i++) {
-				inst.append(choiceMap.get(matchCase[i].uniqueId));
+				inst.append(choiceMap.get(matchCase[i].internId));
 			}
 		}
 	}
@@ -1369,7 +1367,7 @@ public class Compiler extends GrammarGenerator {
 
 	@Override
 	public void visitRule(ParsingRule e) {
-		this.func = new Function(this.module, e.ruleName);
+		this.func = new Function(this.module, e.localName);
 		this.setCurrentBasicBlock(new BasicBlock(this.func));
 		BasicBlock fbb = new BasicBlock();
 		this.pushFailureJumpPoint(fbb);
@@ -1695,11 +1693,6 @@ public class Compiler extends GrammarGenerator {
 	}
 
 	@Override
-	public void visitExport(ParsingExport e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
-	}
-
-	@Override
 	public void visitMatch(ParsingMatch e) {
 		throw new RuntimeException("unimplemented visit method: " + e.getClass());
 	}
@@ -1756,11 +1749,6 @@ public class Compiler extends GrammarGenerator {
 
 	@Override
 	public void visitApply(ParsingApply e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
-	}
-
-	@Override
-	public void visitPermutation(ParsingPermutation e) {
 		throw new RuntimeException("unimplemented visit method: " + e.getClass());
 	}
 

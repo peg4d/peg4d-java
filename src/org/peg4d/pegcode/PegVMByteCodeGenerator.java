@@ -7,10 +7,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import nez.util.UList;
+
 import org.peg4d.Grammar;
 import org.peg4d.PEG4d;
 import org.peg4d.ParsingRule;
-import org.peg4d.UList;
 import org.peg4d.expression.NonTerminal;
 import org.peg4d.expression.ParsingAnd;
 import org.peg4d.expression.ParsingAny;
@@ -25,7 +26,6 @@ import org.peg4d.expression.ParsingConnector;
 import org.peg4d.expression.ParsingConstructor;
 import org.peg4d.expression.ParsingDef;
 import org.peg4d.expression.ParsingEmpty;
-import org.peg4d.expression.ParsingExport;
 import org.peg4d.expression.ParsingExpression;
 import org.peg4d.expression.ParsingFailure;
 import org.peg4d.expression.ParsingIf;
@@ -36,7 +36,6 @@ import org.peg4d.expression.ParsingList;
 import org.peg4d.expression.ParsingMatch;
 import org.peg4d.expression.ParsingNot;
 import org.peg4d.expression.ParsingOption;
-import org.peg4d.expression.ParsingPermutation;
 import org.peg4d.expression.ParsingRepeat;
 import org.peg4d.expression.ParsingRepetition;
 import org.peg4d.expression.ParsingScan;
@@ -47,8 +46,8 @@ import org.peg4d.expression.ParsingUnary;
 import org.peg4d.expression.ParsingValue;
 import org.peg4d.expression.ParsingWithFlag;
 import org.peg4d.expression.ParsingWithoutFlag;
-import org.peg4d.vm.Opcode;
 import org.peg4d.vm.Instruction;
+import org.peg4d.vm.Opcode;
 
 public class PegVMByteCodeGenerator extends GrammarGenerator {
 	
@@ -410,9 +409,9 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		grammerName = grammerName.substring(0, grammerName.length() - 4);
 		System.out.println("#define PEGVM_PROFILE_" + grammerName + "_EACH(RULE) \\");
 		for(ParsingRule r: peg.getRuleList()) {
-			if (!r.ruleName.startsWith("\"")) {
-				ruleMap.put(r.ruleName, count);
-				System.out.println("  RULE("+ r.ruleName + ") \\");
+			if (!r.localName.startsWith("\"")) {
+				ruleMap.put(r.localName, count);
+				System.out.println("  RULE("+ r.localName + ") \\");
 				count++;
 			}
 		}
@@ -917,7 +916,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		if(l.size() == 0) {
 			l.add(failed);
 		}
-		return ParsingExpression.newChoice(l).uniquefy();
+		return ParsingExpression.newChoice(l).intern();
 	}
 	
 	private void checkChoice(ParsingChoice choice, int c, UList<ParsingExpression> l) {
@@ -1080,7 +1079,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			int label = newLabel();
 			for(int i = 0; i < caseList.size(); i++) {
 				ParsingExpression caseElement = caseList.get(i);
-				choiceMap.put(caseElement.uniqueId, codeIndex);
+				choiceMap.put(caseElement.internId, codeIndex);
 				caseElement.visit(this);
 				if (caseElement instanceof ParsingFailure) {
 					writeJumpCode(Instruction.JUMP, this.jumpFailureJump());
@@ -1092,7 +1091,7 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			writeLabel(label);
 			optChoiceMode = true;
 			for(int i = 0; i < matchCase.length; i++) {
-				code.append(choiceMap.get(matchCase[i].uniqueId));
+				code.append(choiceMap.get(matchCase[i].internId));
 			}
 		}
 	}
@@ -1199,9 +1198,9 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		this.peg = peg;
 		this.formatHeader();
 		for(ParsingRule r: peg.getRuleList()) {
-			if (r.ruleName.equals("File")) {
+			if (r.localName.equals("File")) {
 				EntryRule entry = new EntryRule();
-				entry.ruleName = r.ruleName;
+				entry.ruleName = r.localName;
 				entry.entryPoint = this.codeIndex;
 				entryRuleList.add(entry);
 				this.formatRule(r, sb);		//string builder is not used.
@@ -1209,12 +1208,12 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 			}
 		}
 		for(ParsingRule r: peg.getRuleList()) {
-			if (!r.ruleName.equals("File")) {
+			if (!r.localName.equals("File")) {
 				EntryRule entry = new EntryRule();
-				entry.ruleName = r.ruleName;
+				entry.ruleName = r.localName;
 				entry.entryPoint = this.codeIndex;
 				entryRuleList.add(entry);
-				if (!r.ruleName.startsWith("\"")) {
+				if (!r.localName.startsWith("\"")) {
 					this.formatRule(r, sb);		//string builder is not used.
 				}
 			}
@@ -1269,8 +1268,8 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 
 	@Override
 	public void visitRule(ParsingRule e) {
-		this.callMap.put(e.ruleName, this.codeIndex);
-		System.out.println(e.ruleName + ":");
+		this.callMap.put(e.localName, this.codeIndex);
+		System.out.println(e.localName + ":");
 		this.pushFailureJumpPoint();
 		e.expr.visit(this);
 		this.popFailureJumpPoint(e);
@@ -1535,11 +1534,6 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 	}
 
 	@Override
-	public void visitExport(ParsingExport e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
-	}
-
-	@Override
 	public void visitMatch(ParsingMatch e) {
 		throw new RuntimeException("unimplemented visit method: " + e.getClass());
 	}
@@ -1591,11 +1585,11 @@ public class PegVMByteCodeGenerator extends GrammarGenerator {
 		throw new RuntimeException("unimplemented visit method: " + e.getClass());
 	}
 
-	@Override
-	public void visitPermutation(ParsingPermutation e) {
-		throw new RuntimeException("unimplemented visit method: " + e.getClass());
-	}
-
+//	@Override
+//	public void visitPermutation(ParsingPermutation e) {
+//		throw new RuntimeException("unimplemented visit method: " + e.getClass());
+//	}
+//
 	@Override
 	public void visitScan(ParsingScan e) {
 		writeCode(Instruction.PUSHp1);

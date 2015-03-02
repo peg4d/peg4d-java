@@ -2,6 +2,10 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingSource;
 import org.peg4d.pegcode.GrammarVisitor;
@@ -11,11 +15,32 @@ public class ParsingAny extends ParsingExpression {
 		super();
 		this.minlen = 1;
 	}
-	@Override ParsingExpression uniquefyImpl() { 
-		return ParsingExpression.uniqueExpression(".\b", this);
+	@Override
+	public String getInterningKey() { 
+		return ".";
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> withoutMap) {
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		return true;
+	}
+	@Override
+	public int inferNodeTransition(UMap<String> visited) {
+		return NodeTransition.BooleanType;
+	}
+	@Override
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		return this;
+	}
+	@Override
+	public ParsingExpression removeNodeOperator() {
+		return this;
+	}
+	@Override
+	public ParsingExpression removeFlag(TreeMap<String, String> undefedFlags) {
+		return this;
+	}
+	@Override
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String, String> undefedFlags) {
 		return this;
 	}
 	@Override
@@ -27,7 +52,7 @@ public class ParsingAny extends ParsingExpression {
 		visitor.visitAny(this);
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		if(context.source.charAt(context.pos) != -1) {
 			int len = context.source.charLength(context.pos);
 			context.consume(len);

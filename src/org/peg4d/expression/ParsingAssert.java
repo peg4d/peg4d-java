@@ -2,6 +2,10 @@ package org.peg4d.expression;
 
 import java.util.TreeMap;
 
+import nez.expr.NodeTransition;
+import nez.util.UList;
+import nez.util.UMap;
+
 import org.peg4d.ParsingContext;
 import org.peg4d.ParsingTree;
 import org.peg4d.pegcode.GrammarVisitor;
@@ -11,18 +15,30 @@ public class ParsingAssert extends ParsingFunction {
 		super("assert", inner);
 	}
 	@Override
-	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> withoutMap) {
-		ParsingExpression e = inner.norm(lexOnly, withoutMap);
+	public boolean checkAlwaysConsumed(String startNonTerminal, UList<String> stack) {
+		throw new RuntimeException("TODO");
+	}
+	@Override
+	public int inferNodeTransition(UMap<String> visited) {
+		throw new RuntimeException("TODO");
+	}
+	@Override
+	public ParsingExpression checkNodeTransition(NodeTransition c) {
+		throw new RuntimeException("TODO");
+	}
+	@Override
+	public ParsingExpression norm(boolean lexOnly, TreeMap<String,String> undefedFlags) {
+		ParsingExpression e = inner.norm(lexOnly, undefedFlags);
 		if(e == inner) {
 			return this;
 		}
 		return ParsingExpression.newDebug(e);
 	}
 	@Override
-	public boolean simpleMatch(ParsingContext context) {
+	public boolean match(ParsingContext context) {
 		long pos = context.getPosition();
 		ParsingTree left = context.left;
-		this.inner.matcher.simpleMatch(context);
+		this.inner.matcher.match(context);
 		if(context.isFailure()) {
 			assert(pos == context.getPosition());
 			System.out.println(context.source.formatPositionLine("debug", context.getPosition(), "failure at pos=" + pos  + " in " + inner));
