@@ -214,10 +214,11 @@ public class Main {
 				PegVMByteCodeOptimizedLevel = Utils.parseInt(args[index], 0);
 				index = index + 1;
 			}
-			else if (argument.equals("--nezvm")) {
+			else if (argument.startsWith("--nezvm")) {
 				NEZVMByteCodeGeneration = true;
-				NEZVMByteCodeOptimizationLevel = Utils.parseInt(args[index], 0);
-				index = index + 1;
+				if(argument.startsWith("--nezvm:")) {
+					NEZVMByteCodeOptimizationLevel = Utils.parseInt(argument.substring(7), 2);
+				}
 			}
 			else {
 				showUsage("unknown option: " + argument);
