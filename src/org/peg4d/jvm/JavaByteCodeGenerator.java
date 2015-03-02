@@ -106,7 +106,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param ruleName
 	 * @return
 	 * if ruleName is java identifier, return it,
@@ -165,7 +165,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 
 	private void createMethod(String methodName, ParsingExpression e) { // not use string builder
 		/**
-		 * create new method builder. 
+		 * create new method builder.
 		 * ex. FILE ->  public static boolean FILE(ParsingContext ctx)
 		 */
 		this.mBuilder = this.cBuilder.newMethodBuilder(ACC_PUBLIC | ACC_STATIC, boolean.class, methodName, ParsingContext.class);
@@ -308,7 +308,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		this.mBuilder.push(true);
 		this.mBuilder.goTo(mergeLabel);
 
-		// else 
+		// else
 		this.mBuilder.mark(elseLabel);
 		this.generateFailure();
 		this.mBuilder.push(false);
@@ -370,7 +370,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 
 		this.mBuilder.ifCmp(Type.INT_TYPE, GeneratorAdapter.NE, thenLabel);
 
-		// else 
+		// else
 		this.generateFailure();
 		this.mBuilder.push(false);
 		this.mBuilder.goTo(mergeLabel);
@@ -496,7 +496,7 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 		this.mBuilder.loadFromVar(this.entry_context);
 		this.mBuilder.loadFromVar(entry_pos);
 		this.mBuilder.callInvocationTarget(this.target_rollback);
-		
+
 //		// generate isFailure
 //		this.mBuilder.loadFromVar(this.entry_context);
 //		this.mBuilder.callInvocationTarget(this.target_isFailure);
@@ -825,7 +825,6 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.getFieldOfContext("left", ParsingTree.class);
 			this.mBuilder.callInstanceMethod(ParsingContext.class, void.class, "lazyJoin", ParsingTree.class);
-
 			this.mBuilder.loadFromVar(this.entry_context);
 			this.mBuilder.loadFromVar(entry_newnode);
 			this.mBuilder.push(0);
@@ -1119,13 +1118,13 @@ public class JavaByteCodeGenerator extends GrammarGenerator implements Opcodes {
 
 	@Override
 	public void visitScan(ParsingScan e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
+		// TODO Auto-generated method stub
+
 	}
 
 	@Override
 	public void visitRepeat(ParsingRepeat e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
+		// TODO Auto-generated method stub
+
 	}
 }

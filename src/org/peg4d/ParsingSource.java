@@ -104,7 +104,7 @@ public abstract class ParsingSource {
 	}
 	
 	public final long getLineStartPosition(long fromPostion) {
-		long startIndex = fromPostion;
+		long startIndex = fromPostion; 
 		if(!(startIndex < this.length())) {
 			startIndex = this.length() - 1;
 		}

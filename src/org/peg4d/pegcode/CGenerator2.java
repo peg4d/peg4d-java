@@ -41,13 +41,13 @@ public class CGenerator2 extends GrammarGenerator {
 	public String getDesc() {
 		return "c";
 	}
-	
+
 	String indent = "";
 
 	protected void writeLine(String s) {
 		formatString("\n" + indent + s);
 	}
-	
+
 	protected void openIndent() {
 		writeLine("{");
 		indent = "  " + indent;
@@ -56,7 +56,7 @@ public class CGenerator2 extends GrammarGenerator {
 		indent = indent.substring(2);
 		writeLine("}");
 	}
-		
+
 	class FailurePoint {
 		int id;
 		FailurePoint prev;
@@ -99,7 +99,7 @@ public class CGenerator2 extends GrammarGenerator {
 	}
 	void let(String type, String var, String expr) {
 		if(type != null) {
-			writeLine(type + " " + var + " = " + expr + ";");		
+			writeLine(type + " " + var + " = " + expr + ";");
 		}
 		else {
 			writeLine("" + var + " = " + expr + ";");
@@ -107,11 +107,11 @@ public class CGenerator2 extends GrammarGenerator {
 	}
 	void letO(String type, String var, String expr) {
 		if(type != null) {
-			writeLine(type + " " + var + " = NULL;");		
-			writeLine("P4D_setObject(c, &" + var + ", " + expr + ");");		
+			writeLine(type + " " + var + " = NULL;");
+			writeLine("P4D_setObject(c, &" + var + ", " + expr + ");");
 		}
 		else {
-			writeLine("P4D_setObject(c, &" + var + ", " + expr + ");");		
+			writeLine("P4D_setObject(c, &" + var + ", " + expr + ");");
 		}
 	}
 	void gotoLabel(String label) {
@@ -124,7 +124,7 @@ public class CGenerator2 extends GrammarGenerator {
 	String funcName(String symbol) {
 		return "p" + symbol;
 	}
-	
+
 	void generateMainFunction() {
 		writeLine("int main(int argc, char * const argv[])");
 		writeLine("{");
@@ -172,7 +172,7 @@ public class CGenerator2 extends GrammarGenerator {
 		writeLine("    return 0;");
 		writeLine("}");
 	}
-	
+
 	@Override
 	public void formatGrammar(Grammar peg, StringBuilder sb) {
 		this.formatHeader();
@@ -209,7 +209,7 @@ public class CGenerator2 extends GrammarGenerator {
 		e.expr.visit(this);
 		//let(null, "c->pos", "pos");
 		writeLine("return 0;");
-		
+
 		this.popFailureJumpPoint(e);
 		let(null, "c->pos", "pos");
 		writeLine("return -1;");
@@ -265,7 +265,7 @@ public class CGenerator2 extends GrammarGenerator {
 	@Override
 	public void visitString(ParsingString e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -424,61 +424,61 @@ public class CGenerator2 extends GrammarGenerator {
 	@Override
 	public void visitCatch(ParsingCatch e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitAssert(ParsingAssert e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitIfFlag(ParsingIf e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitWithFlag(ParsingWithFlag e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitWithoutFlag(ParsingWithoutFlag e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitBlock(ParsingBlock e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitIndent(ParsingIndent e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitDef(ParsingDef e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitIsa(ParsingIsa e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitApply(ParsingApply e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 //	@Override
@@ -490,19 +490,19 @@ public class CGenerator2 extends GrammarGenerator {
 	@Override
 	public void visitIs(ParsingIs e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitScan(ParsingScan e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
+		// TODO Auto-generated method stub
+
 	}
 
 	@Override
 	public void visitRepeat(ParsingRepeat e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
+		// TODO Auto-generated method stub
+
 	}
 
 	@Override

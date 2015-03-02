@@ -1,12 +1,11 @@
-TopLevel
-	= <{ (Line^)* #array }>
-	;
+File
+	= { (@Line)* #array }
+
 Line
-	= <{ CSV^ (',' CSV^)* ( '\n' / EOT ) #array }>
-	;
-CSV
-	= [ \t]* <{ (![,\n] .)* #value }>
-	;
+	= { @Csv (',' @Csv)* ( '\n' / EOT ) #array }
+	
+Csv
+	= [ \t]* { (![,\n] .)* #value }
+	
 EOT
 	= !.
-	;

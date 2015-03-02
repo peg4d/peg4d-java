@@ -43,4 +43,8 @@ public class ParsingIsa extends ParsingFunction {
 	public String getParameters() {
 		return " " + ParsingTag.tagName(this.tableType);
 	}
+	
+	public int getTableType() {
+		return this.tableType;
+	}
 }

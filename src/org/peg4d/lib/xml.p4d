@@ -48,3 +48,5 @@ COMMENT
 Text
 	= { (!'<' .)+ #Text }
 
+S
+	= [ \n\t\r]

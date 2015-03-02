@@ -39,8 +39,13 @@ public class ParsingIs extends ParsingFunction {
 	public void visit(GrammarVisitor visitor) {
 		visitor.visitIs(this);
 	}
+
 	@Override
 	public String getParameters() {
 		return " " + ParsingTag.tagName(this.tagId);
+	}
+	
+	public int getTagId() {
+		return this.tagId;
 	}
 }

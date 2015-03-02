@@ -12,6 +12,7 @@ import nez.util.UMap;
 
 import org.peg4d.data.RelationBuilder;
 import org.peg4d.jvm.JavaByteCodeGenerator;
+import org.peg4d.nezvm.Compiler;
 import org.peg4d.pegcode.GrammarGenerator;
 import org.peg4d.pegcode.PegVMByteCodeGenerator;
 import org.peg4d.regex.RegexObject;
@@ -82,6 +83,13 @@ public class Main {
 	
 	// --pegvm
 	public static boolean PegVMByteCodeGeneration = false;
+	
+	public static int PegVMByteCodeOptimizedLevel = 0;
+	
+	// --nezvm
+	public static boolean NEZVMByteCodeGeneration = false;
+	
+	public static int NEZVMByteCodeOptimizationLevel = 0;
 
 	// -O
 	public static int OptimizationLevel = 2;
@@ -198,6 +206,14 @@ public class Main {
 			}
 			else if(argument.equals("--pegvm")) {
 				PegVMByteCodeGeneration = true;
+				PegVMByteCodeOptimizedLevel = Utils.parseInt(args[index], 0);
+				index = index + 1;
+			}
+			else if (argument.startsWith("--nezvm")) {
+				NEZVMByteCodeGeneration = true;
+				if(argument.startsWith("--nezvm:")) {
+					NEZVMByteCodeOptimizationLevel = Utils.parseInt(argument.substring(7), 2);
+				}
 			}
 			else {
 				showUsage("unknown option: " + argument);
@@ -212,7 +228,7 @@ public class Main {
 				GrammarFile = guessGrammarFile(InputFileName);
 			}
 		}
-		if(InputFileName == null && InputString == null && !PegVMByteCodeGeneration) {
+		if(InputFileName == null && InputString == null && !PegVMByteCodeGeneration && !NEZVMByteCodeGeneration) {
 			System.out.println("unspecified inputs: invoking interactive shell");
 			Command = "shell";
 		}
@@ -391,9 +407,14 @@ public class Main {
 	public static void conv() {
 		Grammar peg = newGrammar();
 		if (PegVMByteCodeGeneration) {
-			PegVMByteCodeGenerator g = new PegVMByteCodeGenerator();
+			PegVMByteCodeGenerator g = new PegVMByteCodeGenerator(Main.PegVMByteCodeOptimizedLevel);
 			g.formatGrammar(peg, null);
 			g.writeByteCode(GrammarFile, OutputFileName, peg);
+		}
+		else if (NEZVMByteCodeGeneration) {
+			Compiler c = new Compiler(Main.NEZVMByteCodeOptimizationLevel);
+			c.formatGrammar(peg, new StringBuilder());
+			c.writeByteCode(GrammarFile, OutputFileName, peg);
 		}
 	}
 

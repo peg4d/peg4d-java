@@ -1,6 +1,6 @@
-package org.peg4d.vm;
+package org.peg4d.pegcode;
 
-public enum Instruction {
+public enum Opcode {
 	EXIT,
 	JUMP,
 	CALL,
@@ -13,7 +13,7 @@ public enum Instruction {
 	ANY,
 	PUSHo,
 	PUSHconnect,
-	PUSHp1,
+	PUSHp,
 	LOADp1,
 	LOADp2,
 	LOADp3,
@@ -54,5 +54,6 @@ public enum Instruction {
 	ZEROMOREBYTERANGE,
 	ZEROMORECHARSET,
 	ZEROMOREWS,
-	REPEATANY
+	REPEATANY,
+	NOTCHARANY
 }

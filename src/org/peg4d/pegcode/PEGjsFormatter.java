@@ -47,27 +47,27 @@ import org.peg4d.expression.ParsingWithoutFlag;
 
 public class PEGjsFormatter extends GrammarGenerator {
 	protected StringBuilder sb = null;
-	
+
 	private Map<String, Integer> doubleQuotedToken = new HashMap<String, Integer>();
 	private Set<String> definedDoubleQuotedTokenSet = new HashSet<String>();
 	private int doubleQuotedTokenCount = 0;
-	
+
 	private String getDoubleQuotedTokenName(String quotedString){
 		if(!this.doubleQuotedToken.containsKey(quotedString)){
 			doubleQuotedToken.put(quotedString, ++doubleQuotedTokenCount);
 		}
 		return "tk" + doubleQuotedToken.get(quotedString);
 	}
-	
+
 	public PEGjsFormatter() {
 		this.sb = null;
 	}
-		
+
 	@Override
 	public String getDesc() {
 		return "PEG.js";
 	}
-	
+
 	@Override
 	public void visitRule(ParsingRule rule) {
 		ParsingExpression e = rule.expr;
@@ -96,7 +96,7 @@ public class PEGjsFormatter extends GrammarGenerator {
 	public String getSetter() {
 		return "=";
 	}
-	
+
 	public void formatRuleName(String ruleName, ParsingExpression e) {
 		if(ruleName.equals("File")){
 			this.formatString("start");
@@ -107,7 +107,7 @@ public class PEGjsFormatter extends GrammarGenerator {
 			this.formatString(ruleName);
 		}
 	}
-	
+
 	@Override
 	public void visitEmpty(ParsingEmpty e) {
 		this.formatString("''");
@@ -135,7 +135,7 @@ public class PEGjsFormatter extends GrammarGenerator {
 		char quote = '\'';
 		this.formatString(Utils.quoteString(quote, e.text, quote));
 	}
-	
+
 	@Override
 	public void visitByteRange(ParsingByteRange e) {
 		this.formatString("[");
@@ -144,12 +144,12 @@ public class PEGjsFormatter extends GrammarGenerator {
 		this.formatString(StringUtils.stringfyByte2(e.endByteChar));
 		this.formatString("]");
 	}
-	
+
 	@Override
 	public void visitAny(ParsingAny e) {
 		this.formatString(".");
 	}
-	
+
 	@Override
 	public void visitTagging(ParsingTagging e) {
 //		this.formatString("#");
@@ -159,7 +159,7 @@ public class PEGjsFormatter extends GrammarGenerator {
 	public void visitValue(ParsingValue e) {
 		this.formatString("{ return '" + e.value + "'; }");
 	}
-	
+
 	protected void format(String prefix, ParsingUnary e, String suffix) {
 		if(prefix != null) {
 			this.formatString(prefix);
@@ -244,7 +244,7 @@ public class PEGjsFormatter extends GrammarGenerator {
 		}
 		return end - 1;
 	}
-	
+
 	@Override
 	public void visitSequence(ParsingSequence e) {
 		//this.formatString("( ");
@@ -273,7 +273,7 @@ public class PEGjsFormatter extends GrammarGenerator {
 		this.formatSequence(e);
 		this.formatString(")");
 	}
-	
+
 	public void formatParsingFunction(ParsingFunction e) {
 		this.formatString("<");
 		this.formatString(e.funcName);
@@ -284,7 +284,7 @@ public class PEGjsFormatter extends GrammarGenerator {
 		}
 		this.formatString(">");
 	}
-
+	
 	@Override
 	public void visitMatch(ParsingMatch e) {
 		this.formatParsingFunction(e);
@@ -344,29 +344,23 @@ public class PEGjsFormatter extends GrammarGenerator {
 		this.formatParsingFunction(e);
 	}
 
-//	@Override
-//	public void visitPermutation(ParsingPermutation e) {
-//		// TODO Auto-generated method stub
-//		
-//	}
-
 	@Override
 	public void visitIs(ParsingIs e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void visitScan(ParsingScan e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
+		// TODO Auto-generated method stub
+
 	}
 
 	@Override
 	public void visitRepeat(ParsingRepeat e) {
-		// TODO 自動生成されたメソッド・スタブ
-		
-	}	
+		// TODO Auto-generated method stub
+
+	}
 
 
 
